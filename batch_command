@@ -1,0 +1,8 @@
+#!/bin/csh
+#
+
+set path = (/home/disk/ekman/rtardif/nobackup/lib/pylibs/User/bin $path)
+
+cd /home/disk/ekman/rtardif/codes/LMR/pyLMR
+rm -f LMR_output_listing.txt
+./LMR_driver.py >& LMR_output_listing.txt
