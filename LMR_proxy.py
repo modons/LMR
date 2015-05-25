@@ -162,10 +162,9 @@ class proxy_master(object):
                     # Figure (scatter plot w/ summary statistics)
                     import pylab
                     line = self.slope*reg_xa+self.intercept
-                    pylab.plot(reg_xa,line,'r-',reg_xa,reg_ya,'o')
+                    pylab.plot(reg_xa,line,'r-',reg_xa,reg_ya,'o',markersize=7,markerfacecolor='#5CB8E6',markeredgecolor='black',markeredgewidth=1)
 # GH: I don't know how this ran in the first place; must exploit some global namespace                    
-#                    pylab.title('Proxy site: %s' % proxy_site)
-                    pylab.title('Proxy site: %s' % self.id)
+                    pylab.title('%s: %s' % (self.proxy_type, self.id))
                     pylab.xlabel('Calibration data')
                     pylab.ylabel('Proxy data')
                     xmin,xmax,ymin,ymax = pylab.axis()
@@ -184,8 +183,8 @@ class proxy_master(object):
                     ypos = ypos-0.05*(ymax-ymin)
                     pylab.text(xpos,ypos,'StdErr = %s' %"{:.4f}".format(std_err),fontsize=12,fontweight='bold') 
                     ypos = ypos-0.05*(ymax-ymin)
-                    pylab.text(xpos,ypos,'SNR = %s' %"{:.4f}".format(self.snr),fontsize=12,fontweight='bold') 
-                    pylab.savefig('proxy_%s_LinearModel_calib.png' % (proxy_site),bbox_inches='tight')
+                    pylab.text(xpos,ypos,'Res.MSE = %s' %"{:.4f}".format(MSE),fontsize=12,fontweight='bold') 
+                    pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (self.proxy_type.replace(" ", "_"),self.id),bbox_inches='tight')
                     pylab.close()
 
         if X is not None:
@@ -233,7 +232,7 @@ class proxy_tree_ring_width(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -259,7 +258,7 @@ class proxy_tree_ring_density(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -280,7 +279,7 @@ class proxy_coral_d18O(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -301,7 +300,7 @@ class proxy_coral_luminescence(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -322,7 +321,7 @@ class proxy_ice_core_d18O(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -343,7 +342,7 @@ class proxy_ice_core_d2H(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -364,7 +363,7 @@ class proxy_ice_core_accumulation(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -385,7 +384,7 @@ class proxy_lake_sediment_all(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -406,7 +405,7 @@ class proxy_marine_sediment_all(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 
@@ -427,7 +426,7 @@ class proxy_speleothem_all(proxy_master):
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
-        print 'Number of proxy obs. uploaded:', self.nobs
+        print self.id, ': Number of proxy obs. uploaded:', self.nobs
 
         return
 

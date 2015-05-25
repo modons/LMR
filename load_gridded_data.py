@@ -196,6 +196,19 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars):
         #value[i,:,:] = np.nanmean(data.variables['temperature_anomaly'][ind],axis=0)
         value[i,:,:] = np.nanmean(tmp[ind],axis=0)
 
+
+
+#    # ... test RT ... return monthly values ...
+#    print '=>', np.min(value), np.max(value)
+#    time_yrs  = np.empty(len(years_all), dtype=int)
+#    value = np.empty([len(years_all), len(lat), len(lon)], dtype=float)
+#    time_yrs = years_all
+#    value = np.copy(data.variables['temperature_anomaly'])
+#    value[value == -1e+30] = np.NAN
+#    print '=>', np.nanmin(value), np.nanmax(value)
+#    # ... test RT ... return monthly values ...
+
+
     return time_yrs, lat, lon, value
 
 #==========================================================================================

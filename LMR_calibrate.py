@@ -11,8 +11,8 @@ def calibration_assignment(icalib):
         calib_object = calibration_HadCRUT()
     elif icalib == 'BerkeleyEarth':
         calib_object = calibration_BerkeleyEarth()
-    elif icalib == 'ccsm4_last_millenium':
-        calib_object = calibration_ccsm4_last_millenium()
+    elif icalib == 'NOAA':
+        calib_object = calibration_NOAA()
     else:
         print 'Error in calibration data specification! Exiting ...'
         exit(1)

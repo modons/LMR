@@ -41,8 +41,13 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
     ye = np.subtract(Ye, mye)
 
     # innovation
-    innov = obvalue - mye
-
+    try:
+        innov = obvalue - mye
+    except:
+        print 'innovation error. obvalue = ' + str(obvalue) + ' mye = ' + str(mye)
+        print 'returning Xb unchanged...'
+        return Xb
+    
     # innovation variance (denominator of serial Kalman gain)
     kdenom = (varye + ob_err)
 

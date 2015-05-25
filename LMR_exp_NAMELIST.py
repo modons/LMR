@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 #nexp = 'ReconDevTest_1000_allproxies_r_0.2' # *** this one was excellent 
 #nexp = 'ReconDevTest_100_testing_MXD'
 #nexp = 'ReconDevTest_100_testing_MXD_coral'
-nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
+nexp = 'testdev_1000_75pct'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
 LMRpath = '/home/disk/kalman3/rtardif/LMR'
@@ -24,23 +25,26 @@ clean_start = True
 
 # Reconstruction period (years)
 #recon_period = [1500,2000]
-recon_period = [1850,2000]
+#recon_period = [1850,2000]
 #recon_period = [1800,2000]
-#recon_period = [1000,2000]
+recon_period = [1000,2000]
 
 # Ensemble size
 Nens = 100
 
 # Fraction of available proxy data (sites) to assimilate 
 # (=1.0 for all, 0.5 for half etc.)
+#proxy_frac = 0.05
 #proxy_frac = 0.25
-proxy_frac = 0.5
-#proxy_frac = 0.75
+#proxy_frac = 0.5
+proxy_frac = 0.75
 #proxy_frac = 1.0
 
 # Number of Monte-Carlo iterations
 #iter_range = [0,20]
-iter_range = [51,75]
+#iter_range = [6,12]
+iter_range = [0,10]
+#iter_range = [0,10]
 
 # Localization radius for DA (in km)
 locRad = None
@@ -63,16 +67,19 @@ regions = ['Antarctica','Arctic','Asia','Australasia','Europe','North America','
 # Define proxies to be assimilated
 # Use dictionary with structure: {<<proxy type>>:[... list of all measurement tags ...]}
 # where "proxy type" is written as "<<archive type>>_<<measurement type>>"
-# this one has it all?
-proxy_assim = {'01:Tree ring_Width': ['Ring width','Tree ring width','Total ring width','TRW'],'02:Tree ring_Density': ['Maximum density','Minimum density','Earlywood density','Latewood density','MXD'],'03:Ice core_d18O': ['d18O'],'04:Ice core_d2H': ['d2H'],'05:Ice core_Accumulation':['Accumulation'],'06:Coral_d18O': ['d18O'],'07:Coral_Luminescence':['Luminescence'],'08:Lake sediment_All':['Varve thickness','Thickness','Mass accumulation rate','Particle-size distribution','Organic matter','X-ray density'],'09:Marine sediment_All':['Mg/Ca'],'10:Speleothem_All':['Lamina thickness']}
-#proxy_assim = {'01:Tree ring_Width': ['Ring width','Tree ring width','Total ring width','TRW']}
-#proxy_assim = {'01:Ice core_d18O': ['d18O']}
-#proxy_assim = {'01:Coral_d18O': ['d18O']}
-#proxy_assim = {'01:Tree ring_Width': ['Ring width','Tree ring width','Total ring width','TRW'],'02:Ice core_d18O': ['d18O']}
-#proxy_assim = {'01:Tree ring_Density': ['Maximum density','Minimum density','Earlywood density','Latewood density','MXD']}
-#proxy_assim = {'01:Tree ring_Density': ['Maximum density','Minimum density','Earlywood density','Latewood density','MXD'],'02:Coral_d18O': ['d18O']}
-#proxy_assim = {'01:Lake sediment_All':['Varve thickness','Thickness','Mass accumulation rate','Particle-size distribution','Organic matter','X-ray density'],'02:Ice core_Accumulation':['Accumulation'],'03:Marine sediment_All':['Mg/Ca'],'04:Speleothem_All':['Lamina thickness'],'05:Coral_Luminescence': ['Luminescence']}
-
+# DO NOT CHANGE FORMAT BELOW
+proxy_assim = {\
+    '01:Tree ring_Width': ['Ring width','Tree ring width','Total ring width','TRW'],\
+    '02:Tree ring_Density': ['Maximum density','Minimum density','Earlywood density','Latewood density','MXD'],\
+    '03:Ice core_d18O': ['d18O'],\
+    '04:Ice core_d2H': ['d2H'],\
+    '05:Ice core_Accumulation':['Accumulation'],\
+    '06:Coral_d18O': ['d18O'],\
+    '07:Coral_Luminescence':['Luminescence'],\
+    '08:Lake sediment_All':['Varve thickness','Thickness','Mass accumulation rate','Particle-size distribution','Organic matter','X-ray density'],\
+    '09:Marine sediment_All':['Mg/Ca'],\
+    '10:Speleothem_All':['Lamina thickness'],\
+    }
 
 # Proxy temporal resolution (in yrs)
 #proxy_resolution = [1.0,5.0]
@@ -106,6 +113,6 @@ state_variables = ['Tsfc']
 # =============================================================================
 
 # Output
-datadir_output  = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output  = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
-#datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
+datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'

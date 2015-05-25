@@ -4,9 +4,7 @@
 # -------------------------------------------------------------------------------
 # All logic for prior object assignment
 def prior_assignment(iprior):
-    if iprior == 'generic':
-        prior_object = prior_generic()
-    elif iprior == 'GISTEMP':
+    if iprior == 'GISTEMP':
         prior_object = prior_gistemp()
     elif iprior == 'ccsm4_last_millenium':
         prior_object = prior_ccsm4_last_millenium()
@@ -77,10 +75,6 @@ class prior_master(object):
 # -------------------------------------------------------------------------------
 # Classes for specific model/simulation -----------------------------------------
 # -------------------------------------------------------------------------------
-
-# class for generic object
-class prior_generic(prior_master):
-    pass
 
 # class for GISTEMP gridded surface temperature dataset
 class prior_gistemp(prior_master):
