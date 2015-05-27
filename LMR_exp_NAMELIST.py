@@ -1,6 +1,3 @@
-
-from datetime import datetime, timedelta
-
 # =============================================================================
 # Section 1: High-level parameters of reconstruction experiment
 # =============================================================================
@@ -16,7 +13,7 @@ from datetime import datetime, timedelta
 nexp = 'testdev_1000_75pct'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
-LMRpath = '/home/disk/kalman3/rtardif/LMR'
+LMRpath = '/home/chaos2/wperkins/data/LMR'
 #LMRpath = '/home/disk/ekman/rtardif/nobackup/LMR'
 
 # set clean_start to True to delete existing files in the outpout directory (otherwise they will be used as the prior!)
@@ -56,9 +53,9 @@ locRad = None
 # =============================================================================
 
 # Proxy data directory & file
-datadir_proxy    = LMRpath+'/data/proxies';
-datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx';
-dataformat_proxy = 'CSV';
+datadir_proxy    = LMRpath+'/proxies'
+datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
+dataformat_proxy = 'CSV'
 
 #regions = ['Arctic','Europe','Australasia']
 #regions = ['Europe']
@@ -68,17 +65,17 @@ regions = ['Antarctica','Arctic','Asia','Australasia','Europe','North America','
 # Use dictionary with structure: {<<proxy type>>:[... list of all measurement tags ...]}
 # where "proxy type" is written as "<<archive type>>_<<measurement type>>"
 # DO NOT CHANGE FORMAT BELOW
-proxy_assim = {\
-    '01:Tree ring_Width': ['Ring width','Tree ring width','Total ring width','TRW'],\
-    '02:Tree ring_Density': ['Maximum density','Minimum density','Earlywood density','Latewood density','MXD'],\
-    '03:Ice core_d18O': ['d18O'],\
-    '04:Ice core_d2H': ['d2H'],\
-    '05:Ice core_Accumulation':['Accumulation'],\
-    '06:Coral_d18O': ['d18O'],\
-    '07:Coral_Luminescence':['Luminescence'],\
-    '08:Lake sediment_All':['Varve thickness','Thickness','Mass accumulation rate','Particle-size distribution','Organic matter','X-ray density'],\
-    '09:Marine sediment_All':['Mg/Ca'],\
-    '10:Speleothem_All':['Lamina thickness'],\
+proxy_assim = {
+    '01:Tree ring_Width': ['Ring width','Tree ring width','Total ring width','TRW'],
+    '02:Tree ring_Density': ['Maximum density','Minimum density','Earlywood density','Latewood density','MXD'],
+    '03:Ice core_d18O': ['d18O'],
+    '04:Ice core_d2H': ['d2H'],
+    '05:Ice core_Accumulation':['Accumulation'],
+    '06:Coral_d18O': ['d18O'],
+    '07:Coral_Luminescence':['Luminescence'],
+    '08:Lake sediment_All':['Varve thickness','Thickness','Mass accumulation rate','Particle-size distribution','Organic matter','X-ray density'],
+    '09:Marine sediment_All':['Mg/Ca'],
+    '10:Speleothem_All':['Lamina thickness'],
     }
 
 # Proxy temporal resolution (in yrs)
@@ -89,7 +86,7 @@ proxy_resolution = [1.0]
 datatag_calib = 'GISTEMP'
 #datatag_calib = 'HadCRUT'
 #datatag_calib = 'BerkeleyEarth'
-datadir_calib = LMRpath+'/data/analyses';
+datadir_calib = LMRpath+'/analyses'
 
 # Threshold correlation of linear PSM 
 PSM_r_crit = 0.2
@@ -99,9 +96,9 @@ PSM_r_crit = 0.2
 # =============================================================================
 
 # Prior data directory & model source
-prior_source     = 'ccsm4_last_millenium'
-datadir_prior    = LMRpath+'/data/model'
-datafile_prior   = 'tas_Amon_CCSM4_past1000_085001-185012.nc'
+prior_source = 'ccsm4_last_millenium'
+datadir_prior = '/home/chaos2/wperkins/data/'
+datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
 dataformat_prior = 'NCD'
 
 # Define variables in state vector (will be updated by assimilation)
@@ -115,4 +112,4 @@ state_variables = ['Tsfc']
 # Output
 #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
-datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
+datadir_output = '/home/chaos2/wperkins/data/LMR/output'

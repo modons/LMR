@@ -41,6 +41,7 @@ def LMR_driver_callable(state):
 
     verbose = 3 # verbose controls print comments (0 = none; 1 = most important; 2 = many; >=3 = all)
 
+    # TODO: AP Fix Configuration
     # daylight the variables passed in the state object (easier for code migration than leaving attached)
     nexp             = state.nexp
     workdir          = state.workdir
@@ -65,6 +66,7 @@ def LMR_driver_callable(state):
     # ===============================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # ===============================================================================
+    #TODO: AP Logging instead of print statements
     if verbose > 0:
         print ''
         print '====================================================='
@@ -94,6 +96,7 @@ def LMR_driver_callable(state):
     # Assign calibration object according to "datatag_calib" (from namelist)
     C = LMR_calibrate.calibration_assignment(datatag_calib)
 
+    # TODO: AP Required attributes need to be explicitly declared in method/class
     # the path to the calibration directory is specified in the namelist file; bind it here
     C.datadir_calib = datadir_calib;
 
@@ -112,6 +115,7 @@ def LMR_driver_callable(state):
     # Assign prior object according to "prior_source" (from namelist)
     X = LMR_prior.prior_assignment(prior_source)
 
+    # TODO: AP explicit requirements
     # add namelist attributes to the prior object
     X.prior_datadir = datadir_prior
     X.prior_datafile = datafile_prior
