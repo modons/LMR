@@ -86,7 +86,10 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars):
     fillval = np.power(2,15)-1
     tmp = np.copy(data.variables['tempanomaly'])
     tmp[tmp == fillval] = np.NAN
+
     # Loop over years in dataset
+    # TODO: AP finds indices corresponding to year and averages them, list comp.
+    #       is somewhat inefficient (searches entire series even though it's sorted)
     for i in xrange(0,len(years)):        
         # find indices in time array where "years[i]" appear
         ind = [j for j, k in enumerate(years_all) if k == years[i]]
@@ -444,7 +447,8 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
     import os.path
 
     # Check if file exists
-    infile = data_dir+'/ccsm4_last_millenium/'+data_file
+    # TODO: AP why is the directory hard coded when we specify it in Namelist?
+    infile = data_dir+'ccsm4_last_mil/'+data_file
     if not os.path.isfile(infile):
         print 'Error in specification of gridded dataset'
         print 'File ', infile, ' does not exist! - Exiting ...'

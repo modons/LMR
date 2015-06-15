@@ -37,10 +37,12 @@ class prior_master(object):
         # Array containing the prior ensemble
         Xb = np.zeros(shape=[Nx,self.Nens]) # no time dimension now...
 
+        # TODO: AP sorting might help read faster
         print 'Random selection of', str(self.Nens), 'ensemble members'
         # Populate prior ensemble from randomly sampled states
         ind_ens = sample(range(0,ntime-1),self.Nens)
 
+        # TODO: AP use np.meshgrid
         # Keep lat/lon of gridpoints (needed geo. information)
         X_lat = np.zeros(shape=[nlat,nlon])
         X_lon = np.zeros(shape=[nlat,nlon])
