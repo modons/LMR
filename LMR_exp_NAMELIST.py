@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 #nexp = 'ReconDevTest_100_testing_MXD'
 #nexp = 'ReconDevTest_100_testing_MXD_coral'
 #nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
-nexp = 'testdev_1000_75pct'
+nexp = 'testdev'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
 LMRpath = '/home/disk/kalman3/rtardif/LMR'
@@ -25,26 +25,24 @@ clean_start = True
 
 # Reconstruction period (years)
 #recon_period = [1500,2000]
-#recon_period = [1850,2000]
+recon_period = [1850,2000]
 #recon_period = [1800,2000]
-recon_period = [1000,2000]
+#recon_period = [1000,2000]
 
 # Ensemble size
 Nens = 100
 
 # Fraction of available proxy data (sites) to assimilate 
 # (=1.0 for all, 0.5 for half etc.)
-#proxy_frac = 0.05
+#proxy_frac = 0.1
 #proxy_frac = 0.25
-#proxy_frac = 0.5
-proxy_frac = 0.75
+proxy_frac = 0.5
+#proxy_frac = 0.75
 #proxy_frac = 1.0
 
 # Number of Monte-Carlo iterations
 #iter_range = [0,20]
-#iter_range = [6,12]
-iter_range = [0,10]
-#iter_range = [0,10]
+iter_range = [0,0]
 
 # Localization radius for DA (in km)
 locRad = None
@@ -105,14 +103,18 @@ datafile_prior   = 'tas_Amon_CCSM4_past1000_085001-185012.nc'
 dataformat_prior = 'NCD'
 
 # Define variables in state vector (will be updated by assimilation)
-state_variables = ['Tsfc']
-#state_variables = ['Tsfc', 'h500']
+state_variables = ['tas']
+#state_variables = ['tas', 'zg500hPa']
 
 # =============================================================================
 # Section 4: OUTPUT
 # =============================================================================
 
-# Output
-#datadir_output  = '/home/disk/kalman3/rtardif/LMR/output'
+# Run time output
+#datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
 #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
 datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
+
+# Archive directory
+#archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+archive_dir = '/home/disk/kalman3/hakim/LMR/'

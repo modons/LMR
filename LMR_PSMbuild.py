@@ -55,9 +55,9 @@ proxy_resolution = [1.0]
 # Section 3: Calibration
 
 # Source of calibration data (for PSM)
-datatag_calib = 'GISTEMP'
+#datatag_calib = 'GISTEMP'
 #datatag_calib = 'HadCRUT'
-#datatag_calib = 'BerkeleyEarth'
+datatag_calib = 'BerkeleyEarth'
 #datatag_calib = 'NOAA'
 datadir_calib = LMRpath+'/data/analyses';
 

@@ -23,9 +23,11 @@ def haversine(lon1, lat1, lon2, lat2):
     km = 6367.0 * c
     return km
 
-# pad the year with leading zeros for file I/O
 def year_fix(it):
 
+    """
+    pad the year with leading zeros for file I/O
+    """
     # Originator: Greg Hakim
     #             University of Washington
     #             March 2015
@@ -45,10 +47,6 @@ def year_fix(it):
 
 def smooth2D(im, n=15):
 
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             May 2015
-
     """
     Smooth a 2D array im by convolving with a Gaussian kernel of size n
     Input:
@@ -57,6 +55,9 @@ def smooth2D(im, n=15):
     Output:
     improc(2D array): smoothed array (same dimensions as the input array)
     """
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
 
     import numpy
     from scipy import signal
@@ -74,8 +75,6 @@ def smooth2D(im, n=15):
 
 def global_mean(field,lat,lon):
 
-    import numpy as np
-
     """
      compute global mean value for all times in the input array
      input: field[ntime,nlat,nlon] or field{nlat,nlon]
@@ -88,6 +87,8 @@ def global_mean(field,lat,lon):
     #             May 2015
 
 
+    import numpy as np
+
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3:
         ntime,nlat,nlon = np.shape(field)
@@ -99,17 +100,17 @@ def global_mean(field,lat,lon):
         lati = 0
         loni = 1
 
-    # step 1: zonal mean 
-    zm = np.nanmean(field,loni)
-
     # latitude weighting for global mean
-    lat_weight = np.cos(np.deg2rad(lat[:,0]))
+    lat_weight = np.cos(np.deg2rad(lat))
+    lat_weight = np.cos(np.deg2rad(lat))
+    tmp = np.ones([len(lat),len(lon)])
+    W = np.multiply(lat_weight,tmp.T).T
     gm = np.zeros(ntime)
     for t in xrange(ntime):
         if lati == 0:
-            gm[t] = (np.nanmean(np.multiply(lat_weight,zm)))
+            gm[t] = np.nansum(np.multiply(W,field))/(np.sum(np.sum(W)))
         else:
-            gm[t] = (np.nanmean(np.multiply(lat_weight,zm[t,:])))
+            gm[t] = np.nansum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
  
     return gm
 
@@ -183,6 +184,9 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
     X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)
     """
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
 
     from spharm import Spharmt, getspecindx, regrid
     import numpy as np
@@ -216,3 +220,30 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
         X_new[:,k] = vectmp
 
     return X_new,lat_new,lon_new
+
+def assimilated_proxies(workdir):
+
+    """
+    Read the files written by LMR_driver_callable as written to directory workdir. Returns a dictionary with a count by proxy type.
+    
+    """
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
+
+    import numpy as np
+
+    apfile = workdir + 'assimilated_proxies.npy'
+    assimilated_proxies = np.load(apfile)
+    nrecords = np.size(assimilated_proxies)
+
+    ptypes = {}
+    for rec in range(nrecords):
+        key = assimilated_proxies[rec].keys()[0]
+        if key in ptypes:
+            pc = ptypes[key]
+            ptypes[key] = pc + 1
+        else:
+            ptypes[key] = 1
+            
+    return ptypes,nrecords

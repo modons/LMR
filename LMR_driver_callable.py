@@ -11,7 +11,7 @@
 # Originators: Greg Hakim    | Dept. of Atmospheric Sciences, Univ. of Washington
 #              Robert Tardif | January 2015
 # 
-# Revision: 
+# Revisions: 
 #  April 2015:
 #            - This version is callable by an outside script, accepts a single object, 
 #              called state, which has everything needed for the driver (G. Hakim)
@@ -20,7 +20,10 @@
 #              Code now assumes PSM parameters have been pre-calulated and Ye's are 
 #              calculated up-front for all proxy types/sites. All proxy data are now also 
 #              loaded up-front, prior to any loops. Ye's are appended to state vector to
-#              form an augmented state vector and are also updated by DA.
+#              form an augmented state vector and are also updated by DA. (R. Tardif)
+#  May 2015:
+#            - Bug fix in calculation of global mean temperature + function now part of
+#              LMR_utils.py (G. Hakim)
 #
 #==========================================================================================
 
@@ -39,7 +42,7 @@ def LMR_driver_callable(state):
     from LMR_DA import enkf_update_array, cov_localization
     from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
 
-    verbose = 3 # verbose controls print comments (0 = none; 1 = most important; 2 = many; >=3 = all)
+    verbose = 1 # verbose controls print comments (0 = none; 1 = most important; 2 = many; >=3 = all)
 
     # daylight the variables passed in the state object (easier for code migration than leaving attached)
     nexp             = state.nexp
@@ -272,7 +275,7 @@ def LMR_driver_callable(state):
     gmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
     xbm = np.mean(Xb_one[0:stateDim,:],axis=1) # ensemble-mean
     xbm_lalo = np.reshape(xbm,(nlat_new,nlon_new))
-    gmt = LMR_utils.global_mean(xbm_lalo,lat_new,lon_new)
+    gmt = LMR_utils.global_mean(xbm_lalo,lat_new[:,0],lon_new[0,:])
     gmt_save[0,:] = gmt # First prior
     gmt_save[1,:] = gmt # Prior for first proxy assimilated
 
@@ -378,7 +381,7 @@ def LMR_driver_callable(state):
 
                 # compute and store the global mean
                 xam_lalo = np.reshape(xam[0:stateDim],(nlat_new,nlon_new))
-                gmt = LMR_utils.global_mean(xam_lalo,lat_new,lon_new)
+                gmt = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
                 gmt_save[apcount,int(t-recon_period[0])] = gmt
                 
                 thistime = time()
@@ -408,7 +411,21 @@ def LMR_driver_callable(state):
     np.savez(filen,gmt_save=gmt_save,recon_times=recon_times,apcount=apcount,tpcount=total_proxy_count)    
     filen = workdir + '/' + 'assimilated_proxies'
     np.save(filen,assimilated_proxies)
-        
+    
+    # collecting info on non-assimilated proxies and save to file
+    nonassimilated_proxies = []
+    proxy_types_eval = sites_eval.keys()
+    for proxy_key in sorted(proxy_types_eval):
+        # Strip the assim. order info & keep only proxy type
+        proxy = proxy_key.split(':', 1)[1]
+        for site in sites_eval[proxy_key]:
+            if (proxy,site) in psm_data.keys():
+                site_dict = {proxy:[site,psm_data[(proxy,site)]['lat'],psm_data[(proxy,site)]['lon']]}
+                nonassimilated_proxies.append(site_dict)
+    filen = workdir + '/' + 'nonassimilated_proxies'
+    np.save(filen,nonassimilated_proxies)
+
+
     exp_end_time = time() - begin_time
     if verbose > 0:
         print ''
