@@ -99,12 +99,12 @@ PSM_r_crit = 0.2
 # Prior data directory & model source
 prior_source     = 'ccsm4_last_millenium'
 datadir_prior    = LMRpath+'/data/model'
-datafile_prior   = 'tas_Amon_CCSM4_past1000_085001-185012.nc'
+datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 dataformat_prior = 'NCD'
 
 # Define variables in state vector (will be updated by assimilation)
-state_variables = ['tas']
-#state_variables = ['tas', 'zg500hPa']
+#state_variables = ['tas_sfc_Amon']
+state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
 
 # =============================================================================
 # Section 4: OUTPUT
