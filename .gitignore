@@ -1,0 +1,4 @@
+*.pyc
+Figs/*
+Archive/*
+*.nc
