@@ -1,3 +1,5 @@
+import load_gridded_data as lgd
+
 
 # -------------------------------------------------------------------------------
 # *** Calibration type assignment  ----------------------------------------------
@@ -41,8 +43,7 @@ class calibration_GISTEMP(calibration_master):
 
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_GISTEMP
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GISTEMP(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = lgd.read_gridded_data_GISTEMP(self.datadir_calib,self.datafile_calib,self.calib_vars)
 
 
 # -------------------------------------------------------------------------------
@@ -57,8 +58,7 @@ class calibration_HadCRUT(calibration_master):
 
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_HadCRUT
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_HadCRUT(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = lgd.read_gridded_data_HadCRUT(self.datadir_calib,self.datafile_calib,self.calib_vars)
 
 
 # -------------------------------------------------------------------------------
@@ -73,9 +73,7 @@ class calibration_BerkeleyEarth(calibration_master):
 
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_BerkeleyEarth
-
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = lgd.read_gridded_data_BerkeleyEarth(self.datadir_calib,self.datafile_calib,self.calib_vars)
 
 # -------------------------------------------------------------------------------
 # *** NOAA class --------------------------------------------------
@@ -89,7 +87,5 @@ class calibration_NOAA(calibration_master):
 
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_NOAA
-
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_NOAA(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = lgd.read_gridded_data_NOAA(self.datadir_calib,self.datafile_calib,self.calib_vars)
 

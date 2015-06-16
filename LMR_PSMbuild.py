@@ -1,3 +1,13 @@
+from time import time
+import numpy as np
+import cPickle
+
+import LMR_calibrate
+import LMR_proxy
+from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
+
+# TODO: AP - This function can be worked into the main LMR Process:
+#     Check for PSMpickle ==> if not there run this
 
 #==========================================================================================
 # 
@@ -72,15 +82,6 @@ psm_output  = '/home/disk/kalman3/hakim/LMR/PSM/PAGES2kS1'
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<< Main code >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # =============================================================================
 def main():
-
-    from time import time
-    import numpy as np
-    import cPickle    
-
-    import LMR_calibrate
-    import LMR_proxy
-
-    from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
 
     begin_time = time()
 

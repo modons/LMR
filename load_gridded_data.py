@@ -1,3 +1,7 @@
+from netCDF4 import Dataset
+from datetime import datetime, timedelta
+import numpy as np
+import os.path
 
 #==========================================================================================
 # 
@@ -30,12 +34,7 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars):
 #      - value        : Array with the annually-averaged data calculated from monthly data 
 #                       dims: [time,lat,lon]
 # 
-#========================================================================================== 
-
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+#==========================================================================================
 
     # Check if file exists
     infile = data_dir+'/GISTEMP/'+data_file
@@ -131,12 +130,7 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars):
 #      - value        : Array with the annually-averaged data calculated from monthly data 
 #                       dims: [time,lat,lon]
 # 
-#========================================================================================== 
-
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+#==========================================================================================
 
     # Check if file exists
     infile = data_dir+'/HadCRUT/'+data_file
@@ -242,12 +236,7 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars):
 #      - value        : Array with the annually-averaged data calculated from monthly data 
 #                       dims: [time,lat,lon]
 # 
-#========================================================================================== 
-
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+#==========================================================================================
 
     # Check if file exists
     infile = data_dir+'/BerkeleyEarth/'+data_file
@@ -343,12 +332,7 @@ def read_gridded_data_NOAA(data_dir,data_file,data_vars):
 #      - value        : Array with the annually-averaged data calculated from monthly data 
 #                       dims: [time,lat,lon]
 # 
-#========================================================================================== 
-
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+#==========================================================================================
 
     # Check if file exists
     infile = data_dir+'/NOAA/'+data_file
@@ -439,12 +423,7 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
 #      - value        : Array with the annually-averaged data calculated from monthly data 
 #                       dims: [time,lat,lon]
 # 
-#========================================================================================== 
-
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+#==========================================================================================
 
     # Check if file exists
     # TODO: AP why is the directory hard coded when we specify it in Namelist?

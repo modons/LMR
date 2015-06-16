@@ -27,20 +27,20 @@
 #
 #==========================================================================================
 
+import numpy as np
+import os.path
+from time import time
+from random import sample
+import cPickle
+
+import LMR_proxy
+import LMR_prior
+import LMR_calibrate
+import LMR_utils
+from LMR_DA import enkf_update_array, cov_localization
+from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
+
 def LMR_driver_callable(state):
-
-    import numpy as np
-    import os.path
-    from time import time
-    from random import sample
-    import cPickle
-
-    import LMR_proxy
-    import LMR_prior
-    import LMR_calibrate
-    import LMR_utils
-    from LMR_DA import enkf_update_array, cov_localization
-    from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
 
     verbose = 1 # verbose controls print comments (0 = none; 1 = most important; 2 = many; >=3 = all)
 

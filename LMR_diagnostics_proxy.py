@@ -9,17 +9,23 @@
 #  
 #========================================================================================== 
 
-# Import parameters for the verification
+import numpy as np
+from time import time
+import cPickle
+
+import LMR_utils
+import LMR_calibrate
+import LMR_proxy
+import LMR_prior
 from LMR_verif_NAMELIST import *
+from load_proxy_data import read_proxy_metadata_S1csv as read_proxy_metadata
 
 #==========================================================================================
 def rmse(predictions, targets):
-    import numpy as np
     return np.sqrt(((predictions - targets) ** 2).mean())
 
 #==========================================================================================
 def CE(predictions, targets):
-    import numpy as np
     return 1.0 - ( (np.sum((targets-predictions)**2))/(np.sum((targets-np.mean(targets))**2)) )
 
 
@@ -41,10 +47,6 @@ def recon_proxy_eval_stats(sites_eval,recon_period,recondir,calib,prior,datadir_
 #   Output: None
 # 
 #==========================================================================================
-
-    import LMR_proxy
-    import LMR_utils
-    import numpy as np
 
     # Output dictionary
     evald = {}
@@ -175,16 +177,6 @@ def recon_proxy_eval_stats(sites_eval,recon_period,recondir,calib,prior,datadir_
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<< Main code >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # =============================================================================
 def main():
-
-    from time import time
-    import numpy as np
-    import cPickle    
-
-    import LMR_calibrate
-    import LMR_proxy
-    import LMR_prior
-
-    from load_proxy_data import read_proxy_metadata_S1csv as read_proxy_metadata
     
     # Loop over the Monte-Carlo reconstructions
     MCiters = np.arange(iter_range[0], iter_range[1]+1)

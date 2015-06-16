@@ -8,12 +8,21 @@ import matplotlib
 matplotlib.use('Agg')
 
 import csv
-from LMR_plot_support import *
-from LMR_exp_NAMELIST import *
 import numpy as np
 import mpl_toolkits.basemap as bm
 import matplotlib.pyplot as plt
+import glob, os, fnmatch
+from LMR_plot_support import *
+from LMR_exp_NAMELIST import *
 from LMR_utils import global_mean, assimilated_proxies
+
+from load_gridded_data import read_gridded_data_GISTEMP
+from load_gridded_data import read_gridded_data_HadCRUT
+from load_gridded_data import read_gridded_data_BerkeleyEarth
+from netCDF4 import Dataset
+from datetime import datetime, timedelta
+from LMR_plot_support import *
+
 
 #iplot = False
 iplot = True
@@ -85,7 +94,6 @@ workdir = datadir_output + '/' + nexp
 
 # get directory and information for later use
 
-import glob, os, fnmatch
 print workdir
 
 # get number of mc realizations from directory count
@@ -138,13 +146,6 @@ print 'Total: ' + str(nrecords)
 # load GISTEMP, HadCRU, and HadCET
 
 datadir_calib = '../data/'
-
-from load_gridded_data import read_gridded_data_GISTEMP
-from load_gridded_data import read_gridded_data_HadCRUT
-from load_gridded_data import read_gridded_data_BerkeleyEarth
-from netCDF4 import Dataset
-from datetime import datetime, timedelta
-from LMR_plot_support import *
 
 # load GISTEMP
 datafile_calib   = 'gistemp1200_ERSST.nc'

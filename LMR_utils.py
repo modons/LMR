@@ -1,3 +1,8 @@
+import glob
+import numpy as np
+from scipy import signal
+from spharm import Spharmt, getspecindx, regrid
+from math import radians, cos, sin, asin, sqrt
 
 #==========================================================================================
 #
@@ -10,8 +15,6 @@ def haversine(lon1, lat1, lon2, lat2):
     Calculate the great circle distance between two points 
     on the earth (specified in decimal degrees)
     """
-
-    from math import radians, cos, sin, asin, sqrt
 
     # convert decimal degrees to radians 
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
@@ -59,8 +62,6 @@ def smooth2D(im, n=15):
     #             University of Washington
     #             May 2015
 
-    import numpy
-    from scipy import signal
 
     # Calculate a normalised Gaussian kernel to apply as the smoothing function.
     size = int(n)
@@ -87,7 +88,6 @@ def global_mean(field,lat,lon):
     #             May 2015
 
 
-    import numpy as np
 
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3:
@@ -124,9 +124,6 @@ def ensemble_mean(workdir):
     # Originator: Greg Hakim
     #             University of Washington
     #             May 2015
-
-    import glob
-    import numpy as np
 
     prior_filn = workdir + '/Xb_one.npz'
     
@@ -188,9 +185,6 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     #             University of Washington
     #             May 2015
 
-    from spharm import Spharmt, getspecindx, regrid
-    import numpy as np
-
     # create the spectral object on the original grid
     specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
 
@@ -231,7 +225,6 @@ def assimilated_proxies(workdir):
     #             University of Washington
     #             May 2015
 
-    import numpy as np
 
     apfile = workdir + 'assimilated_proxies.npy'
     assimilated_proxies = np.load(apfile)

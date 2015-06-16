@@ -5,7 +5,10 @@
 # This version uses passed arrays, and updates the ensemble for a single time
 # (& single ob).
 #
-#========================================================================================== 
+#==========================================================================================
+
+import numpy as np
+import LMR_utils
 
 def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
     """
@@ -23,8 +26,6 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
          loc: localization vector (Nx x 1) [optional]
      inflate: scalar inflation factor [optional]
     """
-
-    import numpy as np
 
     # Get ensemble size from passed array: Xb has dims [state vect.,ens. members]
     Nens = Xb.shape[1]
@@ -104,9 +105,6 @@ def cov_localization(locRad,X,Y):
      Note: Uses the Gaspari-Cohn localization function.
 
     """
-
-    import numpy as np
-    import LMR_utils
 
     nlat  = X.nlat
     nlon  = X.nlon

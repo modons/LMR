@@ -16,12 +16,14 @@ import matplotlib
 # generic imports
 import numpy as np
 import glob, os
-from datetime import datetime, timedelta
-from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
 import matplotlib.pyplot as plt
+from random import sample
+from netCDF4 import Dataset
+from datetime import datetime, timedelta
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
+
 # LMR specific imports
 from LMR_utils import global_mean, assimilated_proxies
 from load_gridded_data import read_gridded_data_GISTEMP
@@ -30,6 +32,8 @@ from load_gridded_data import read_gridded_data_BerkeleyEarth
 from LMR_plot_support import *
 from LMR_exp_NAMELIST import *
 from LMR_plot_support import *
+from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
+from LMR_exp_NAMELIST import *
 
 # change default value of latlon kwarg to True.
 bm.latlon_default = True
@@ -793,8 +797,6 @@ X3plt = X2plt - X1plt
 # In[ ]:
 
 # draw random numbers in the range of the calibration data
-from random import sample
-
 ncalib = gis_ntimes
 print gis_ntimes
 ind_rand = sample(range(0,gis_ntimes),ncalib)
@@ -806,8 +808,6 @@ print np.max(ind_rand),np.min(ind_rand)
 #
 # test proxy count code for LMR_driver
 #
-from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
-from LMR_exp_NAMELIST import *
 
 [sites_assim, sites_eval] = create_proxy_lists_from_metadata(datadir_proxy,datafile_proxy,regions,proxy_resolution,proxy_assim,proxy_frac)
 #print sites_assim
@@ -829,7 +829,6 @@ for proxy_key in sorted(proxy_types_assim):
 # In[ ]:
 
 # read 20th century reanalysis data (downloaded especially for this comparison)
-from netCDF4 import Dataset
 #ncfile = '20threanalysis_1965_1000_T.nc'
 ncfile = '20threanalysis_1979_1000_T.nc'
 nc = Dataset(ncfile, mode='r')
@@ -915,8 +914,6 @@ if iplot:
 
 
 # In[ ]:
-
-import LMR_proxy as LMR_proxy
 
 print assimilated_proxies[0]
 tmp = assimilated_proxies[0].keys()
