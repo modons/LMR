@@ -28,43 +28,50 @@
 #==========================================================================================
 
 import numpy as np
-import os.path
-from time import time
-from random import sample
 import cPickle
+from time import time
 
 import LMR_proxy
 import LMR_prior
 import LMR_calibrate
 import LMR_utils
+import LMR_config as basecfg
 from LMR_DA import enkf_update_array, cov_localization
 from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
 
-def LMR_driver_callable(state):
+def LMR_driver_callable(cfg=None):
+
+    if cfg is None:
+        cfg = basecfg  # Use base configuration from LMR_config
+
+    #Temporary fix for old 'state usage'
+    core = cfg.core
+    prior = cfg.prior
+    proxies = cfg.proxies
 
     verbose = 1 # verbose controls print comments (0 = none; 1 = most important; 2 = many; >=3 = all)
 
     # TODO: AP Fix Configuration
     # daylight the variables passed in the state object (easier for code migration than leaving attached)
-    nexp             = state.nexp
-    workdir          = state.workdir
-    recon_period     = state.recon_period
-    datatag_calib    = state.datatag_calib
-    datadir_calib    = state.datadir_calib
-    prior_source     = state.prior_source
-    datadir_prior    = state.datadir_prior
-    datafile_prior   = state.datafile_prior
-    state_variables  = state.state_variables
-    Nens             = state.Nens
-    datadir_proxy    = state.datadir_proxy
-    datafile_proxy   = state.datafile_proxy
-    regions          = state.regions
-    proxy_resolution = state.proxy_resolution
-    proxy_assim      = state.proxy_assim
-    proxy_frac       = state.proxy_frac
-    locRad           = state.locRad
-    PSM_r_crit       = state.PSM_r_crit
-    LMRpath          = state.LMRpath
+    nexp             = core.nexp
+    workdir          = core.workdir
+    recon_period     = core.recon_period
+    Nens             = core.nens
+    datadir_proxy    = core.datadir_proxy
+    datafile_proxy   = core.datafile_proxy
+    regions          = core.regions
+    locRad           = core.locRad
+    PSM_r_crit       = core.PSM_r_crit
+    LMRpath          = core.LMRpath
+    datatag_calib    = proxies.datatag_calib
+    datadir_calib    = proxies.datadir_calib
+    proxy_resolution = proxies.proxy_resolution
+    proxy_assim      = proxies.proxy_assim
+    proxy_frac       = proxies.proxy_frac
+    prior_source     = prior.prior_source
+    datadir_prior    = prior.datadir_prior
+    datafile_prior   = prior.datafile_prior
+    state_variables  = prior.state_variables
 
     # ===============================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -75,8 +82,8 @@ def LMR_driver_callable(state):
         print '====================================================='
         print 'Running LMR reconstruction...'
         print '====================================================='
-        print 'Name of experiment: ', state.nexp
-        print ' Monte Carlo iter : ', state.iter
+        print 'Name of experiment: ', nexp
+        print ' Monte Carlo iter : ', 
         print ''
         
     begin_time = time()

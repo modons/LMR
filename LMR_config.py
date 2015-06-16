@@ -37,6 +37,7 @@ class core:
     nexp = 'testdev_1000_75pct'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     clean_start = True
+    # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1000, 2000]
     nens = 100
     proxy_frac = 0.75
