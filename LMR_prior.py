@@ -30,7 +30,7 @@ class prior_master(object):
         import numpy as np
         from random import sample
         
-        # Load prior **annually averaged** data from file
+        # Load prior **annually averaged** data from file(s) - multiple state variables
         self.read_prior()
 
         [ntime,nlat,nlon] = self.value.shape
