@@ -103,6 +103,7 @@ def LMR_driver_callable(cfg=None):
         print 'Source for calibration: ' + datatag_calib
         print ''
 
+    #TODO: Doesn't appear to use C at all...
     # Assign calibration object according to "datatag_calib" (from namelist)
     C = LMR_calibrate.calibration_assignment(datatag_calib)
 
@@ -214,6 +215,7 @@ def LMR_driver_callable(cfg=None):
             Ywk.proxy_region = regions
             Ywk.nobs = 0            
 
+            # TODO: This is non-general to the PSM type
             # Check if PSM for (proxy,site) has been pre-calibrated
             if Ywk.pid in psm_data.keys():
                 Ywk.calibrate = True
