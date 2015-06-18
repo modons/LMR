@@ -70,7 +70,8 @@ class proxy_master(object):
             # ------------------------
             diag_output       = True
             diag_output_figs  = False
-            calib_spatial_avg = False ; Npts = 9 # nb of neighboring pts used in smoothing
+            calib_spatial_avg = False
+            Npts = 9 # nb of neighboring pts used in smoothing
             # ------------------------
 
             # --------------------------------------------
@@ -96,7 +97,9 @@ class proxy_master(object):
             jind,kind = np.unravel_index(dist.argmin(), dist.shape) 
             
             # overlapping years
-            sc = set(C.time); sp = set(self.time)
+            sc = set(C.time)
+            sp = set(self.time)
+
             common_time = list(sc.intersection(sp))
             # respective indices in calib and proxy times
             ind_c = [j for j, k in enumerate(C.time) if k in common_time]
