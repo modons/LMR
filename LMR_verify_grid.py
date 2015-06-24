@@ -135,7 +135,7 @@ print '\n reading LMR ensemble-mean data...\n'
 
 first = True
 for dir in mcdir:
-    ensfiln = workdir + '/' + dir + '/ensemble_mean.npz'
+    ensfiln = workdir + '/' + dir + '/ensemble_mean_tas_sfc_Amon.npz' # only surface temperature (tas_sfc_Amon)
     print ensfiln
     npzfile = np.load(ensfiln)
     npzfile.files

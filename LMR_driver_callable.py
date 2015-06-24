@@ -218,7 +218,7 @@ def LMR_driver_callable(state):
             # --------------------------------------------------------------
             # Call PSM to get ensemble of prior estimates of proxy data (Ye)
             # --------------------------------------------------------------
-            Ywk.Ye = Ywk.psm(C,Xb_one_full,X.lat,X.lon)
+            Ywk.Ye = Ywk.psm(C,Xb_one_full,X.full_state_info,X.lat,X.lon)
 
             # -------------------------------------------
             # Read data for current proxy type/chronology
@@ -238,10 +238,39 @@ def LMR_driver_callable(state):
     # ================================================================================
     # Calculate truncated state from prior, if option chosen -------------------------
     # ================================================================================
+    # Handle state vector with multiple state variables
 
-    [Xb_one,lat_new,lon_new] = LMR_utils.regrid_sphere(nlat,nlon,Nens,Xb_one_full,42)
-    nlat_new = np.shape(lat_new)[0]
-    nlon_new = np.shape(lat_new)[1]
+    # Declare dictionary w/ info on content of truncated state vector
+    new_state_info = {}
+    
+    # Transform every 2D state variable, one at a time
+    Nx = 0
+    for var in X.full_state_info.keys():
+        # variable indices in full state vector
+        ibeg_full = X.full_state_info[var][0]
+        iend_full = X.full_state_info[var][1]
+        # extract array corresponding to state variable "var" 
+        var_array_full = Xb_one_full[ibeg_full:iend_full+1,:]
+        # calculate the truncated field
+        [var_array_new,lat_new,lon_new] = LMR_utils.regrid_sphere(nlat,nlon,Nens,var_array_full,42)
+
+        nlat_new = np.shape(lat_new)[0]
+        nlon_new = np.shape(lat_new)[1]
+
+        # corresponding indices in truncated state vector
+        ibeg_new = Nx
+        iend_new = Nx+(nlat_new*nlon_new)-1
+        # into new state info dictionary
+        new_state_info[var] = (ibeg_new,iend_new)
+        
+        if Nx == 0: # if 1st time in loop over state variables, create Xb_one array as copy of var_array_new
+            Xb_one = np.copy(var_array_new)
+        else: # if not 1st time, append to existing array
+            Xb_one = np.append(Xb_one,var_array_new,axis=0)
+
+        Nx = Nx + (nlat_new*nlon_new)
+
+    X.trunc_state_info = new_state_info
 
     # Keep dimension of pre-augmented version of state vector
     [stateDim, _] = Xb_one.shape
@@ -260,7 +289,7 @@ def LMR_driver_callable(state):
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
     #np.savez(filen,Xb_one = Xb_one,stateDim = stateDim,lat = X.lat,lon = X.lon, nlat = X.nlat, nlon = X.nlon)
-    np.savez(filen,Xb_one = Xb_one,Xb_one_aug = Xb_one_aug, stateDim = stateDim,lat = lat_new,lon = lon_new, nlat = nlat_new, nlon = nlon_new)
+    np.savez(filen,Xb_one = Xb_one,Xb_one_aug = Xb_one_aug,stateDim = stateDim,lat = lat_new,lon = lon_new,nlat = nlat_new,nlon = nlon_new,state_info=X.trunc_state_info)
 
     # ===============================================================================
     # Loop over all proxies and perform assimilation --------------------------------
@@ -272,8 +301,12 @@ def LMR_driver_callable(state):
     apcount = 0 # running counter of accepted proxies
 
     # Array containing the global-mean state (for diagnostic purposes)
+    # Now doing surface air temperature only (var = tas_sfc_Amon)!
     gmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    xbm = np.mean(Xb_one[0:stateDim,:],axis=1) # ensemble-mean
+    # get state vector indices where to find surface air temperature 
+    ibeg = X.trunc_state_info['tas_sfc_Amon'][0]
+    iend = X.trunc_state_info['tas_sfc_Amon'][1]
+    xbm = np.mean(Xb_one[ibeg:iend+1,:],axis=1) # ensemble-mean
     xbm_lalo = np.reshape(xbm,(nlat_new,nlon_new))
     gmt = LMR_utils.global_mean(xbm_lalo,lat_new[:,0],lon_new[0,:])
     gmt_save[0,:] = gmt # First prior
@@ -379,8 +412,8 @@ def LMR_driver_callable(state):
                 # Dump Xa to file (to be used as prior for next assimilation)
                 np.save(filen,Xa)
 
-                # compute and store the global mean
-                xam_lalo = np.reshape(xam[0:stateDim],(nlat_new,nlon_new))
+                # compute and store the global mean (temperature only)
+                xam_lalo = np.reshape(xam[ibeg:iend+1],(nlat_new,nlon_new))
                 gmt = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
                 gmt_save[apcount,int(t-recon_period[0])] = gmt
                 

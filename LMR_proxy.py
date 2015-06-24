@@ -44,7 +44,7 @@ class proxy_master(object):
     proxy_type         = 'master---do not instantiate here'
 
     # Define the basic proxy system model (PSM)
-    def psm(self,C,X,X_lat,X_lon):
+    def psm(self,C,X,state_info,X_lat,X_lon):
 
         import os.path
         import numpy as np
@@ -192,19 +192,32 @@ class proxy_master(object):
             # Calculate the Ye's ...
             # ----------------------
 
+            # Looking for position of 'tas_sfc_Amon' variable in state vector 
+            # (now only considering forward models calibrated against surface air temperature)
+            # Check it is there! 
+            if 'tas_sfc_Amon' not in state_info.keys():
+                print "Needed variable not in state vector. Cannot calculate the Ye's. Exiting!"
+                exit(1)
+
+            tas_indbegin = state_info['tas_sfc_Amon'][0]
+            tas_indend   = state_info['tas_sfc_Amon'][1]
+
             # Find row index of X for which [X_lat,X_lon] corresponds to closest grid point to 
             # location of proxy site [self.lat,self.lon]
             # Calclulate distances from proxy site.
-            stateDim = X.shape[0]
+            #stateDim = X.shape[0]
+            varDim = (tas_indend+1) - tas_indbegin
             ensDim = X.shape[1]
-            dist = np.empty(stateDim)
-            dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_lon[k],X_lat[k]) for k in xrange(stateDim) ])
+            dist = np.empty(varDim)
+            dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_lon[k],X_lat[k]) for k in range(tas_indbegin,tas_indend+1) ])
 
-            # row index of nearest grid pt. in prior (minimum distance)
+            # row index in dist array corresponding to nearest grid pt. in prior (minimum distance)
             kind = np.unravel_index(dist.argmin(), dist.shape) 
+            # corresponding index in state vector
+            kind_state = tas_indbegin + kind[0]
 
             Ye = np.zeros(shape=ensDim)
-            Ye = self.slope*np.squeeze(X[kind,:]) + self.intercept
+            Ye = self.slope*np.squeeze(X[kind_state,:]) + self.intercept
 
         else:
             Ye = None

@@ -1,14 +1,8 @@
 
-# coding: utf-8
-
-# In[ ]:
-
 import numpy as np
 import mpl_toolkits.basemap as bm
 import matplotlib.pyplot as plt
 
-
-# In[ ]:
 
 # this is a plotting convenience function for quick LMR plots
 def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None):
@@ -43,7 +37,6 @@ def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None):
     m.colorbar(cs)
     #cbar = m.colorbar(ticks=cints)
 
-# In[ ]:
 
 #
 # read the Central England Temperature dataset
@@ -62,8 +55,6 @@ def load_HadCET():
     return HadCET_years,HadCET_T
 
 
-# In[ ]:
-
 def moving_average(data,xvals,window=5):
 
     # data is the input series 
@@ -80,8 +71,6 @@ def moving_average(data,xvals,window=5):
     return data_smoothed,xvals_smoothed
 
 
-# In[ ]:
-
 def plot_direction(CL,fname=''):
     
     if CL:
@@ -93,6 +82,7 @@ def plot_direction(CL,fname=''):
     plt.clf()
 
     return None
+
     
 def find_date_indices(time,stime,etime):
 

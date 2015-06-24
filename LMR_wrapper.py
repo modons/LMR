@@ -25,6 +25,9 @@ import numpy as np
 import LMR_driver_callable as LMR
 import LMR_utils
 from LMR_exp_NAMELIST import *
+import datetime
+
+print '\n' + str(datetime.datetime.now()) + '\n'
 
 # object a from empty class state is a convenience to pass information from the "namelist"
 a = state()
@@ -71,8 +74,8 @@ for iter in MCiters:
     # Call the driver
     LMR.LMR_driver_callable(a)
 
-    # write the analysis ensemble mean to a separate file
-    LMR_utils.ensemble_mean(a.workdir)
+    # write the analysis ensemble mean and variance to separate files (per state variable)
+    LMR_utils.ensemble_stats(a.workdir)
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
@@ -92,8 +95,8 @@ for iter in MCiters:
     cmd = 'rm -f ' + a.workdir + '/year* ' 
     # option to move the whole directory
     #cmd = 'mv -f ' + loc_dir + ' ' + mc_dir
-    #print cmd
-    #os.system(cmd)
+    print cmd
+    os.system(cmd)
 
     # or just move select files and delete the rest NEED TO CREATE THE DIRECTORY IN THIS CASE!
     if not os.path.isdir(mc_dir):
@@ -117,6 +120,8 @@ for iter in MCiters:
     print cmd
     os.system(cmd)
     
+    print '\n' + str(datetime.datetime.now()) + '\n'
+
     #   end: DO NOT DELETE
     
 #==========================================================================================

@@ -4,14 +4,17 @@
 # 
 #========================================================================================== 
 
+import glob
+import numpy as np
+from math import radians, cos, sin, asin, sqrt
+from scipy import signal
+from spharm import Spharmt, getspecindx, regrid
 
 def haversine(lon1, lat1, lon2, lat2):
     """
     Calculate the great circle distance between two points 
     on the earth (specified in decimal degrees)
     """
-
-    from math import radians, cos, sin, asin, sqrt
 
     # convert decimal degrees to radians 
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
@@ -23,7 +26,7 @@ def haversine(lon1, lat1, lon2, lat2):
     km = 6367.0 * c
     return km
 
-def year_fix(it):
+def year_fix(t):
 
     """
     pad the year with leading zeros for file I/O
@@ -31,9 +34,9 @@ def year_fix(it):
     # Originator: Greg Hakim
     #             University of Washington
     #             March 2015
+    #
+    #             revised 16 June 2015 (GJH)
 
-
-    t = str(int(round(it)))
     if t < 10:
         ypad = '000'+str(t)
     elif t >= 10 and t < 100:
@@ -59,13 +62,11 @@ def smooth2D(im, n=15):
     #             University of Washington
     #             May 2015
 
-    import numpy
-    from scipy import signal
 
     # Calculate a normalised Gaussian kernel to apply as the smoothing function.
     size = int(n)
-    x,y = numpy.mgrid[-n:n+1,-n:n+1]
-    gk = numpy.exp(-(x**2/float(n)+y**2/float(n)))
+    x,y = np.mgrid[-n:n+1,-n:n+1]
+    gk = np.exp(-(x**2/float(n)+y**2/float(n)))
     g = gk / gk.sum()
 
     #bndy = 'symm'
@@ -85,9 +86,8 @@ def global_mean(field,lat,lon):
     # Originator: Greg Hakim
     #             University of Washington
     #             May 2015
-
-
-    import numpy as np
+    #
+    #             revised 16 June 2015 (GJH)
 
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3:
@@ -102,9 +102,13 @@ def global_mean(field,lat,lon):
 
     # latitude weighting for global mean
     lat_weight = np.cos(np.deg2rad(lat))
-    lat_weight = np.cos(np.deg2rad(lat))
-    tmp = np.ones([len(lat),len(lon)])
-    W = np.multiply(lat_weight,tmp.T).T
+    #--old
+    #tmp = np.ones([len(lat),len(lon)])
+    #W = np.multiply(lat_weight,tmp.T).T
+    #--new
+    tmp = np.ones([nlon,nlat])
+    W = np.multiply(lat_weight,tmp).T
+
     gm = np.zeros(ntime)
     for t in xrange(ntime):
         if lati == 0:
@@ -114,19 +118,24 @@ def global_mean(field,lat,lon):
  
     return gm
 
-def ensemble_mean(workdir):
+
+def ensemble_stats(workdir):
 
     """
-    Compute the ensemble mean for files in the input directory
+    Compute the ensemble mean and variance for files in the input directory
 
     """
 
     # Originator: Greg Hakim
     #             University of Washington
     #             May 2015
+    #
+    #             revised 16 June 2015 (GJH)
+    #             revised 24 June 2015 (R Tardif, UW)
+    #               : func. renamed from ensemble_mean to ensemble_stats
+    #               : computes and output the ensemble variance as well
+    #               : now handles state vector possibly containing multiple variables
 
-    import glob
-    import numpy as np
 
     prior_filn = workdir + '/Xb_one.npz'
     
@@ -136,33 +145,57 @@ def ensemble_mean(workdir):
     Xbtmp = npzfile['Xb_one']
     nlat = npzfile['nlat']
     nlon = npzfile['nlon']
-    nens = np.size(Xbtmp,1)
     lat = npzfile['lat']
     lon = npzfile['lon']
-    Xb = np.reshape(Xbtmp,(nlat,nlon,nens))
-    xbm = np.mean(Xb,axis=2)
-    [stateDim, _] = Xbtmp.shape
+    # get state vector content info (state variables and their position in vector)
+    # note: the .item() is necessary to access a dict stored in a npz file 
+    state_info = npzfile['state_info'].item() 
+    nens = np.size(Xbtmp,1)
 
     # get a listing of the analysis files
     files = glob.glob(workdir+"/year*")
-    
-    # process the analysis files
-    nyears = len(files)
-    years = []
-    xam = np.zeros([nyears,nlat,nlon])
-    k = -1
-    for f in files:
-        k = k + 1
-        i = f.find('year')
-        year = f[i+4:i+8]
-        years.append(year)
-        Xatmp = np.load(f)
-        Xa = np.reshape(Xatmp[0:stateDim,:],(nlat,nlon,nens))
-        xam[k,:,:] = np.mean(Xa,axis=2)
-        
-    filen = workdir + '/ensemble_mean'
-    print 'writing the new ensemble mean file...' + filen
-    np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbm=xbm, xam=xam)
+
+    # sorted
+    files.sort()
+
+    # loop on state variables 
+    for var in state_info.keys():
+
+        print 'State variable:', var
+
+        ibeg = state_info[var][0]
+        iend = state_info[var][1]
+
+        Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(nlat,nlon,nens))
+        xbm = np.mean(Xb,axis=2) # ensemble mean
+        xbv = np.var(Xb,axis=2) # ensemble variance
+
+        # process the analysis files
+        nyears = len(files)
+        years = []
+        xam = np.zeros([nyears,nlat,nlon])
+        xav = np.zeros([nyears,nlat,nlon],dtype=np.float64)
+        k = -1
+        for f in files:
+            #print 'file = ' + f
+            k = k + 1
+            i = f.find('year')
+            year = f[i+4:i+8]
+            years.append(year)
+            Xatmp = np.load(f)
+            Xa = np.reshape(Xatmp[ibeg:iend+1,:],(nlat,nlon,nens))
+            xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
+            xav[k,:,:] = np.var(Xa,axis=2) # ensemble variance     
+
+        # ens. mean to file
+        filen = workdir + '/ensemble_mean_' + var
+        print 'writing the new ensemble mean file...' + filen
+        np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbm=xbm, xam=xam)
+        # ens. variance to file
+        filen = workdir + '/ensemble_var_' + var
+        print 'writing the new ensemble variance file...' + filen
+        np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
+
         
     return
 
@@ -173,11 +206,11 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     Truncate lat,lon grid to another resolution in spherical harmonic space. Triangular truncation
 
     Inputs:
-    nlat  : number of latitudes
-    nlon  : number of longitudes
-    Nens  : number of ensemble members
-    X     : data array of shape (nlat*nlon,Nens) 
-    ntrunc: triangular truncation (e.g., use 42 for T42)
+    nlat            : number of latitudes
+    nlon            : number of longitudes
+    Nens            : number of ensemble members
+    X               : data array of shape (nlat*nlon,Nens) 
+    ntrunc          : triangular truncation (e.g., use 42 for T42)
 
     Outputs :
     lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
@@ -187,9 +220,6 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     # Originator: Greg Hakim
     #             University of Washington
     #             May 2015
-
-    from spharm import Spharmt, getspecindx, regrid
-    import numpy as np
 
     # create the spectral object on the original grid
     specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
@@ -210,7 +240,7 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     blank = np.zeros([nlat_new,nlon_new])
     lat_new = (veclat + blank.T).T  
     lon_new = (veclon + blank)
-
+     
     # transform each ensemble member, one at a time
     X_new = np.zeros([nlat_new*nlon_new,Nens])
     for k in range(Nens):
@@ -221,6 +251,7 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
 
     return X_new,lat_new,lon_new
 
+
 def assimilated_proxies(workdir):
 
     """
@@ -230,8 +261,6 @@ def assimilated_proxies(workdir):
     # Originator: Greg Hakim
     #             University of Washington
     #             May 2015
-
-    import numpy as np
 
     apfile = workdir + 'assimilated_proxies.npy'
     assimilated_proxies = np.load(apfile)
