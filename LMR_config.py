@@ -5,6 +5,8 @@ reconstruction experiments.
 Adapted from LMR_exp_NAMELIST by AndreP
 """
 
+from os.path import join
+
 
 class core:
     """
@@ -35,7 +37,8 @@ class core:
         Absolute path to LMR reconstruction archive directory
     """
     nexp = 'testdev_1000_75pct'
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    #lmr_path = '/home/chaos2/wperkins/data/LMR'
+    lmr_path = r'G:\Research\Hakim Research\data\LMR'
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1000, 2000]
@@ -88,8 +91,9 @@ class proxies:
         Threshold correlation of linear PSM
     """
     #TODO: Most of this is very specific to proxies from Pages, not general
-    datadir_proxy    = core.lmr_path+'/proxies'
+    datadir_proxy    = join(core.lmr_path, 'proxies')
     datafile_proxy   = 'Pages2k_db_metadata.df'
+    datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
     dataformat_proxy = 'DF'
     regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                'North America', 'South America']
@@ -124,7 +128,7 @@ class proxies:
                    'Resolution (yr)': proxy_resolution,
                    'Proxy measurement': proxy_assim}
     datatag_calib = 'GISTEMP'
-    datadir_calib = core.lmr_path+'/analyses'
+    datadir_calib = join(core.lmr_path, 'analyses')
     datafile_calib = 'gistemp1200_ERSST.nc'
     dataformat_calib = 'NCD'
     psm_r_crit = 0.2
