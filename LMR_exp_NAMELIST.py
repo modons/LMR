@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 #nexp = 'ReconDevTest_100_testing_MXD'
 #nexp = 'ReconDevTest_100_testing_MXD_coral'
 #nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
-nexp = 'testdev'
+nexp = 'testdev2'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
 LMRpath = '/home/disk/kalman3/rtardif/LMR'
@@ -36,9 +36,9 @@ Nens = 100
 # (=1.0 for all, 0.5 for half etc.)
 #proxy_frac = 0.1
 #proxy_frac = 0.25
-proxy_frac = 0.5
+#proxy_frac = 0.5
 #proxy_frac = 0.75
-#proxy_frac = 1.0
+proxy_frac = 1.0
 
 # Number of Monte-Carlo iterations
 #iter_range = [0,20]
