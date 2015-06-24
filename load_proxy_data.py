@@ -947,3 +947,25 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
     #return id, lat, lon, alt, time, value
     return id, lat, lon, alt, time_annual, value_annual
 
+
+if __name__ == '__main__':
+    from LMR_config import core, proxies
+    from os.path import join
+    import cPickle
+
+    datatag_calib    = proxies.datatag_calib
+    fnamePSM = join(join(core.lmr_path, 'psms'), 'PSMs_'+datatag_calib+'.pckl')
+    infile   = open(fnamePSM, 'rb')
+    psm_data = cPickle.load(infile)
+    infile.close()
+
+    locRad           = core.loc_rad
+    datadir_proxy    = proxies.datadir_proxy
+    datafile_proxy   = proxies.datafile_proxy
+    regions          = proxies.regions
+    PSM_r_crit       = proxies.psm_r_crit
+    proxy_resolution = proxies.proxy_resolution
+    proxy_assim      = proxies.proxy_assim
+    LMRpath          = core.lmr_path
+    proxy_frac       = core.proxy_frac
+    [sites_assim, sites_eval] = create_proxy_lists_from_metadata_S1csv(datadir_proxy,datafile_proxy,regions,proxy_resolution,proxy_assim,proxy_frac,psm_data,PSM_r_crit)
