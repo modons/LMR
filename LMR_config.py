@@ -43,7 +43,6 @@ class core:
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1000, 2000]
     nens = 100
-    proxy_frac = 0.75
     # TODO: Monte-Carlo section, also can replace with single int
     iter_range = [0, 10]
     loc_rad = None
@@ -95,6 +94,8 @@ class proxies:
     datafile_proxy   = 'Pages2k_db_metadata.df'
     datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
     dataformat_proxy = 'DF'
+
+    proxy_frac = 0.75
     regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                'North America', 'South America']
     proxy_resolution = [1.0]
