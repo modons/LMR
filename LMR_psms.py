@@ -28,16 +28,16 @@ class BasePSM:
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, config, proxy_obj):
+    def __init__(self, config, proxy_obj, **psm_kwargs):
         pass
 
     @abstractmethod
     def psm(self, prior_obj):
         pass
-
-    @abstractmethod
-    def diag(self):
-        pass
+		
+	@abstractmethod
+	def error(self):
+		pass
 
 
 class LinearPSM(BasePSM):
@@ -51,7 +51,7 @@ class LinearPSM(BasePSM):
             #Try using pre-calibrated psm_data
             if psm_data is None:
                 fname_psm = (config.core.lmr_path + '/PSM/PSMs_' +
-                             config.proxies.datatag_calib + '.pckl')
+                             config.psm.datatag_calib + '.pckl')
                 infile = open(fname_psm, 'rb')
                 psm_data = cPickle.load(infile)
                 infile.close()
@@ -73,14 +73,15 @@ class LinearPSM(BasePSM):
             #TODO: Fix call and Calib Module
             datag_calib = config.proxies.datag_calib
             C = LMR_calibrate.calibration_assignment(datag_calib)
-            C.datadir_calib = config.proxis.datadir_calib
+            C.datadir_calib = config.proxies.datadir_calib
             C.read_calibration()
             self.calibrate(C)
 
     def psm(self, X):
 
         """
-        Main function to be inserted into each proxy object
+        Main function to be exposed to each proxy object
+		
         :param X:
         :return:
         """
