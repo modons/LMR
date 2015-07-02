@@ -89,61 +89,65 @@ class proxies:
     psm_r_crit: float
         Threshold correlation of linear PSM
     """
-	
 
-	#TODO: Most of this is very specific to proxies from Pages, not general
-	datadir_proxy    = join(core.lmr_path, 'proxies')
-	datafile_proxy   = 'Pages2k_db_metadata.df'
-	datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
-	dataformat_proxy = 'DF'
-	use_from = ['pages']
-	
-	class pages:
+    # TODO: Most of this is very specific to proxies from Pages, not general
+    use_from = ['pages']
 
-		proxy_frac = 0.75
-		regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
-				   'North America', 'South America']
-		proxy_resolution = [1.0]
+    class pages:
 
-		# DO NOT CHANGE FORMAT BELOW
-		proxy_assim = {
-			'01:Tree ring_Width': ['Ring width',
-								   'Tree ring width',
-								   'Total ring width',
-								   'TRW'],
-			'02:Tree ring_Density': ['Maximum density',
-									 'Minimum density',
-									 'Earlywood density',
-									 'Latewood density',
-									 'MXD'],
-			'03:Ice core_d18O': ['d18O'],
-			'04:Ice core_d2H': ['d2H'],
-			'05:Ice core_Accumulation': ['Accumulation'],
-			'06:Coral_d18O': ['d18O'],
-			'07:Coral_Luminescence': ['Luminescence'],
-			'08:Lake sediment_All': ['Varve thickness',
-									 'Thickness',
-									 'Mass accumulation rate',
-									 'Particle-size distribution',
-									 'Organic matter',
-									 'X-ray density'],
-			'09:Marine sediment_All': ['Mg/Ca'],
-			'10:Speleothem_All': ['Lamina thickness'],
-			}
-		dat_filters = {'PAGES 2k Region': regions,
-					   'Resolution (yr)': proxy_resolution,
-					   'Proxy measurement': proxy_assim}
-					   
+        datadir_proxy = join(core.lmr_path, 'proxies')
+        datafile_proxy = join(core.lmr_path, 'proxies',
+                              'Pages2k_Proxies.df.pckl')
+        metafile_proxy = join(core.lmr_path, 'proxies',
+                              'Pages2k_Metadata.df.pckl')
+        dataformat_proxy = 'DF'
+
+        proxy_frac = 0.75
+        regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
+                   'North America', 'South America']
+        proxy_resolution = [1.0]
+
+        # DO NOT CHANGE FORMAT BELOW
+        proxy_assim = {
+            '01:Tree ring_Width': ['Ring width',
+                                   'Tree ring width',
+                                   'Total ring width',
+                                   'TRW'],
+            '02:Tree ring_Density': ['Maximum density',
+                                     'Minimum density',
+                                     'Earlywood density',
+                                     'Latewood density',
+                                     'MXD'],
+            '03:Ice core_d18O': ['d18O'],
+            '04:Ice core_d2H': ['d2H'],
+            '05:Ice core_Accumulation': ['Accumulation'],
+            '06:Coral_d18O': ['d18O'],
+            '07:Coral_Luminescence': ['Luminescence'],
+            '08:Lake sediment_All': ['Varve thickness',
+                                     'Thickness',
+                                     'Mass accumulation rate',
+                                     'Particle-size distribution',
+                                     'Organic matter',
+                                     'X-ray density'],
+            '09:Marine sediment_All': ['Mg/Ca'],
+            '10:Speleothem_All': ['Lamina thickness'],
+            }
+        dat_filters = {'PAGES 2k Region': regions,
+                       'Resolution (yr)': proxy_resolution,
+                       'Proxy measurement': proxy_assim}
+
+
 class psm:
 
-	use_psm = {'pages': 'linear'}
-    datatag_calib = 'GISTEMP'
-    datadir_calib = join(core.lmr_path, 'analyses')
-    datafile_calib = 'gistemp1200_ERSST.nc'
-    dataformat_calib = 'NCD'
-	
-	class linear:
-		psm_r_crit = 0.2
+    use_psm = {'pages': 'linear'}
+
+    class linear:
+
+        datatag_calib = 'GISTEMP'
+        datadir_calib = join(core.lmr_path, 'analyses')
+        datafile_calib = 'gistemp1200_ERSST.nc'
+        dataformat_calib = 'NCD'
+        psm_r_crit = 0.2
 
 # =============================================================================
 # Section 3: MODEL (PRIOR)
