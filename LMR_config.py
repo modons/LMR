@@ -90,7 +90,6 @@ class proxies:
         Threshold correlation of linear PSM
     """
 
-    # TODO: Most of this is very specific to proxies from Pages, not general
     use_from = ['pages']
 
     class pages:
@@ -132,9 +131,65 @@ class proxies:
             '09:Marine sediment_All': ['Mg/Ca'],
             '10:Speleothem_All': ['Lamina thickness'],
             }
-        dat_filters = {'PAGES 2k Region': regions,
-                       'Resolution (yr)': proxy_resolution,
-                       'Proxy measurement': proxy_assim}
+
+        proxy_order = ['Tree ring_Width',
+                       'Tree ring_Density',
+                       'Ice core_d180',
+                       'Ice core_d2H',
+                       'Ice core_Accumulation',
+                       'Coral_d180',
+                       'Coral_Luminescence',
+                       'Lake sediment_All',
+                       'Marine sediment_All',
+                       'Speleothem_All']
+
+        measure_types = {
+            'Width': ['Ring width',
+                      'Tree ring width',
+                      'Total ring width',
+                      'TRW'],
+            'Density': ['Maximum density',
+                        'Minimum density',
+                        'Earlywood density',
+                        'Latewood density'],
+
+        }
+
+        proxy_assim2 = {
+            'Tree ring_Width': ['Ring width',
+                                'Tree ring width',
+                                'Total ring width',
+                                'TRW'],
+            'Tree ring_Density': ['Maximum density',
+                                  'Minimum density',
+                                  'Earlywood density',
+                                  'Latewood density',
+                                  'MXD'],
+            'Ice core_d18O': ['d18O'],
+            'Ice core_d2H': ['d2H'],
+            'Ice core_Accumulation': ['Accumulation'],
+            'Coral_d18O': ['d18O'],
+            'Coral_Luminescence': ['Luminescence'],
+            'Lake sediment_All': ['Varve thickness',
+                                  'Thickness',
+                                  'Mass accumulation rate',
+                                  'Particle-size distribution',
+                                  'Organic matter',
+                                  'X-ray density'],
+            'Marine sediment_All': ['Mg/Ca'],
+            'Speleothem_All': ['Lamina thickness'],
+            }
+
+        # Create mapping for Proxy Type/Measurement Type to type names above
+        proxy_type_mapping = {}
+        for type, measurements in proxy_assim2.iteritems():
+            # Fetch proxy type name that occurs before underscore
+            type_name = type.split('_', 1)[0]
+            for measure in measurements:
+                proxy_type_mapping[(type_name, measure)] = type
+
+        simple_filters = {'PAGES 2k Region': regions,
+                          'Resolution (yr)': proxy_resolution}
 
 
 class psm:
