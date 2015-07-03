@@ -144,6 +144,7 @@ class LinearPSM(BasePSM):
         # indices of nearest grid pt.
         jind, kind = np.unravel_index(dist.argmin(), dist.shape)
 
+        # TODO: need to fix this to use proxy2 style time
         # overlapping years
         sc = set(C.time)
         sp = set(proxy_data.time)

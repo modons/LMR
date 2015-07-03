@@ -98,6 +98,11 @@ class BaseProxyObject:
                   data_range, **psm_kwargs):
         pass
 
+    @classmethod
+    @abstractmethod
+    def load_all(cls, config, data_range, **psm_kwargs):
+        pass
+
     @abstractmethod
     def error(self):
         pass
@@ -132,15 +137,17 @@ class ProxyPages(BaseProxyObject):
         end_yr = site_meta['Oldest (C.E.)']
         lat = site_meta['Lat (N)']
         lon = site_meta['Lon (E)']
-        # TODO: Figure out how to handle non-consecutive time series with missing
-        values = data_src[start <= data_src[site] <= finish]
+        site_data = data_src[site]
+        values = data_src[(site_data.index >= start) &
+                          (site_data.index <= finish)]
+        # Might need to remove following line
+        values = values[values.notnull()]
 
-        try:
-            return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
-                       values, **psm_kwargs)
-        except ValueError as e:
-            # TODO: logger statement
-            return None
+        if len(values) == 0:
+            raise ValueError('No observations in specified time range.')
+
+        return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
+                   values, **psm_kwargs)
 
     @classmethod
     def load_all(cls, config, data_range, **psm_kwargs):
@@ -197,10 +204,15 @@ class ProxyPages(BaseProxyObject):
         # Create proxy objects list
         all_proxies = []
         for site in all_proxy_ids:
-            pobj = cls.load_site(config, site, meta_src, data_src, data_range,
-                                 **psm_kwargs)
-            if pobj is not None:
+            try:
+                pobj = cls.load_site(config, site, meta_src, data_src,
+                                     data_range, **psm_kwargs)
                 all_proxies.append(pobj)
+            except ValueError as e:
+                # Proxy had no obs or didn't meet psm r crit
+                all_proxy_ids.remove(site)
+                for group in proxy_id_by_type.values():
+                    group.remove(site)
 
         return proxy_id_by_type, all_proxies
 

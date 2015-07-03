@@ -47,6 +47,7 @@ def pages_xcel_to_dataframes(filename, metaout, dataout):
     df = df.ix[1:]
     df.sort_index(inplace=True)
 
+    # TODO: make sure year index is consecutive
     #write data to file
     df.to_pickle(dataout)
 
