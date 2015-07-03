@@ -91,6 +91,7 @@ class proxies:
     """
 
     use_from = ['pages']
+    proxy_frac = 0.75
 
     class pages:
 
@@ -101,7 +102,6 @@ class proxies:
                               'Pages2k_Metadata.df.pckl')
         dataformat_proxy = 'DF'
 
-        proxy_frac = 0.75
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
         proxy_resolution = [1.0]
@@ -197,11 +197,14 @@ class psm:
     use_psm = {'pages': 'linear'}
 
     class linear:
-
         datatag_calib = 'GISTEMP'
         datadir_calib = join(core.lmr_path, 'analyses')
         datafile_calib = 'gistemp1200_ERSST.nc'
         dataformat_calib = 'NCD'
+
+        pre_calib_datafile = join(core.lmr_path,
+                                  'PSM',
+                                  'PSMs_' + datatag_calib + '.pckl')
         psm_r_crit = 0.2
 
 # =============================================================================

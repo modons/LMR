@@ -35,8 +35,14 @@ class BasePSM:
     def error(self):
         pass
 
+    @staticmethod
+    @abstractmethod
+    def get_kwargs(config):
+        pass
+
 
 class LinearPSM(BasePSM):
+
     def __init__(self, config, proxy_obj, psm_data=None):
 
         proxy = proxy_obj.type
@@ -46,11 +52,7 @@ class LinearPSM(BasePSM):
         try:
             # Try using pre-calibrated psm_data
             if psm_data is None:
-                fname_psm = (config.core.lmr_path + '/PSM/PSMs_' +
-                             config.psm.datatag_calib + '.pckl')
-                infile = open(fname_psm, 'rb')
-                psm_data = cPickle.load(infile)
-                infile.close()
+                psm_data = self._load_psm_data(config)
 
             psm_site_data = psm_data[(proxy, site)]
 
@@ -257,6 +259,22 @@ class LinearPSM(BasePSM):
                     proxy_data.type.replace(" ", "_"), proxy_data.id),
                               bbox_inches='tight')
                 pylab.close()
+
+    @staticmethod
+    def get_kwargs(config):
+        psm_data = LinearPSM._load_psm_data(config)
+        return {'psm_data': psm_data}
+
+    @staticmethod
+    def _load_psm_data(config):
+        pre_calib_file = config.psm.linear.pre_calib_datafile
+
+        infile = open(pre_calib_file, 'rb')
+        psm_data = cpickle.load(infile)
+        infile.close()
+
+        return psm_data
+
 
 _psm_classes = {'linear': LinearPSM}
 

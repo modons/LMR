@@ -4,12 +4,62 @@ __author__ = 'frodre'
 Module containing proxy classes
 """
 
-from abc import ABCMeta, abstractmethod
 import LMR_psms
+from abc import ABCMeta, abstractmethod
+from itertools import chain
+from collections import defaultdict
+from random import sample
+
 from load_data import load_data_frame
 
 class ProxyManager:
-    pass
+
+    def __init__(self, config, data_range):
+
+        self.all_proxies = []
+        self.all_ids_by_group = defaultdict(list)
+
+        for proxy_class_key in config.proxies.use_from:
+            pclass = get_proxy_class(proxy_class_key)
+
+            #Get PSM kwargs
+            proxy_psm_key = config.psm.use_psm[proxy_class_key]
+            psm_class = LMR_psms.get_psm_class(proxy_psm_key)
+            psm_kwargs = psm_class.get_kwargs(config)
+
+            # Load proxies for current class
+            ids_by_grp, proxies = pclass.load_all(config,
+                                                  data_range,
+                                                  **psm_kwargs)
+
+            # Add to total lists
+            self.all_proxies += proxies
+            for k, v in ids_by_grp:
+                self.all_ids_by_group[k] += v
+
+        proxy_frac = config.proxies.proxy_frac
+        nsites = len(self.all_proxies)
+
+        if proxy_frac < 1.0:
+            nsites_assim = int(nsites * proxy_frac)
+
+            self.ind_assim = sample(range(nsites), nsites_assim)
+            self.ind_eval = set(range(nsites)) - set(self.ind_assim)
+        else:
+            self.ind_assim = range(nsites)
+            self.ind_eval = None
+
+    def proxy_obj_generator(self, indexes):
+        for idx in indexes:
+            yield self.all_proxies[idx]
+
+    def sites_assim_proxy_objs(self):
+        return self.proxy_obj_generator(self.ind_assim)
+
+    def sites_eval_proxy_objs(self):
+        return self.proxy_obj_generator(self.ind_eval)
+
+
 
 
 class BaseProxyObject:
@@ -95,6 +145,7 @@ class ProxyPages(BaseProxyObject):
     @classmethod
     def load_all(cls, config, data_range, **psm_kwargs):
 
+        # Load source data files
         meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
         data_src = load_data_frame(config.proxies.pages.datafile_proxy)
 
@@ -141,7 +192,7 @@ class ProxyPages(BaseProxyObject):
             # Extract proxy ids using mask and append to lists
             proxies = meta_src['PAGES ID'][measure_mask & type_mask].values
             proxy_id_by_type[name] = proxies.tolist()
-            all_proxy_ids.append(proxies.tolist())
+            all_proxy_ids += proxies.tolist()
 
         # Create proxy objects list
         all_proxies = []
