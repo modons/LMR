@@ -76,6 +76,7 @@ class BaseProxyObject:
         self.missing = missing
         self.lat = lat
         self.lon = fix_lon(lon)
+        self.time = values.index.values
 
         # Retrieve appropriate PSM function
         psm_obj = self.get_psm_obj()
