@@ -4,7 +4,6 @@ Module containing methods for various PSMs
 Adapted from LMR_proxy and LMR_calibrate by Andre Perkins
 """
 
-import cPickle
 import matplotlib.pyplot as pylab
 import numpy as np
 import logging
@@ -13,6 +12,7 @@ import LMR_calibrate
 
 from scipy.stats import linregress
 from abc import ABCMeta, abstractmethod
+from load_data import load_cpickle
 
 # Logging output utility, configuration controlled by driver
 logger = logging.getLogger(__name__)
@@ -69,14 +69,14 @@ class LinearPSM(BasePSM):
             logger.info('PSM not calibrated for:' + str((proxy, site)))
 
             # TODO: Fix call and Calib Module
-            datag_calib = config.proxies.datag_calib
+            datag_calib = config.psm.linear.datatag_calib
             C = LMR_calibrate.calibration_assignment(datag_calib)
-            C.datadir_calib = config.proxies.datadir_calib
+            C.datadir_calib = config.psm.linear.datadir_calib
             C.read_calibration()
             self.calibrate(C)
 
         if self.corr < r_crit:
-            raise ValueError(('Proxy model correlation ({:.2f}) does not meet ',
+            raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
                               'critical threshold ({:.2f}).'
                               ).format(self.corr, r_crit))
 
@@ -270,11 +270,7 @@ class LinearPSM(BasePSM):
     def _load_psm_data(config):
         pre_calib_file = config.psm.linear.pre_calib_datafile
 
-        infile = open(pre_calib_file, 'rb')
-        psm_data = cpickle.load(infile)
-        infile.close()
-
-        return psm_data
+        return load_cpickle(pre_calib_file)
 
 
 _psm_classes = {'linear': LinearPSM}
