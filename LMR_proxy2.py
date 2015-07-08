@@ -66,8 +66,14 @@ class BaseProxyObject:
     __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
-                 lat, lon, values,
-                 missing=None, psm_kwargs=None):
+                 lat, lon, values, time,
+                 missing=None, **psm_kwargs):
+
+        if (values is None) or len(values) == 0:
+            raise ValueError('No proxy data given for object initialization')
+
+        assert len(values) == len(time), 'Time and value dimensions must match'
+
         self.id = pid
         self.type = prox_type
         self.start_yr = start_yr
@@ -76,10 +82,10 @@ class BaseProxyObject:
         self.missing = missing
         self.lat = lat
         self.lon = fix_lon(lon)
-        self.time = values.index.values
+        self.time = time
 
         # Retrieve appropriate PSM function
-        psm_obj = self.get_psm_obj()
+        psm_obj = self.get_psm_obj(config)
         psm_obj = psm_obj(config, self, **psm_kwargs)
         self.psm = psm_obj.psm
 
@@ -112,8 +118,9 @@ class BaseProxyObject:
 class ProxyPages(BaseProxyObject):
 
     @staticmethod
-    def get_psm_obj():
-        return LMR_psms.get_psm_class('pages')
+    def get_psm_obj(config):
+        psm_key = config.psm.use_psm['pages']
+        return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
     def load_site(cls, config, site, meta_src, data_src,
@@ -129,26 +136,27 @@ class ProxyPages(BaseProxyObject):
         start, finish = data_range
 
         site_meta = meta_src[meta_src['PAGES ID'] == site]
-        pid = site_meta['PAGES ID']
-        pmeasure = site_meta['Proxy measurement']
-        pages_type = site_meta['Archive Type']
+        pid = site_meta['PAGES ID'].iloc[0]
+        pmeasure = site_meta['Proxy measurement'].iloc[0]
+        pages_type = site_meta['Archive type'].iloc[0]
         proxy_type = config.proxies.pages.proxy_type_mapping[(pages_type,
                                                               pmeasure)]
-        start_yr = site_meta['Youngest (C.E.)']
-        end_yr = site_meta['Oldest (C.E.)']
-        lat = site_meta['Lat (N)']
-        lon = site_meta['Lon (E)']
+        start_yr = site_meta['Youngest (C.E.)'].iloc[0]
+        end_yr = site_meta['Oldest (C.E.)'].iloc[0]
+        lat = site_meta['Lat (N)'].iloc[0]
+        lon = site_meta['Lon (E)'].iloc[0]
         site_data = data_src[site]
-        values = data_src[(site_data.index >= start) &
-                          (site_data.index <= finish)]
+        values = site_data[(site_data.index >= start) &
+                           (site_data.index <= finish)]
         # Might need to remove following line
         values = values[values.notnull()]
+        times = values.index.values
 
         if len(values) == 0:
             raise ValueError('No observations in specified time range.')
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
-                   values, **psm_kwargs)
+                   values, times, **psm_kwargs)
 
     @classmethod
     def load_all(cls, config, data_range, **psm_kwargs):
@@ -230,4 +238,4 @@ def fix_lon(lon):
 _proxy_classes = {'pages': ProxyPages}
 
 def get_proxy_class(key):
-    return _proxy_classes
+    return _proxy_classes[key]

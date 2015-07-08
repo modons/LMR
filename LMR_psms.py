@@ -75,7 +75,7 @@ class LinearPSM(BasePSM):
             C.read_calibration()
             self.calibrate(C)
 
-        if self.corr < r_crit:
+        if abs(self.corr) < r_crit:
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
                               'critical threshold ({:.2f}).'
                               ).format(self.corr, r_crit))
