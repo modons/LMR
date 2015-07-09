@@ -123,6 +123,24 @@ class proxy_master(object):
             if nobs < 10: # skip rest if insufficient overlapping data 
                 return
 
+            # START NEW (GH) 21 June 2015
+            # detrend both the proxy and the calibration data
+            #
+            # save copies of the original data for residual estimates later
+            reg_xa_all = np.copy(reg_xa)
+            reg_ya_all = np.copy(reg_ya)
+            # proxy detrend: (1) linear regression, (2) fit, (3) detrend
+            xvar = range(len(reg_ya))
+            proxy_slope, proxy_intercept, r_value, p_value, std_err = stats.linregress(xvar,reg_ya)
+            proxy_fit = proxy_slope*np.squeeze(xvar) + proxy_intercept
+            #reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy
+            # calibration detrend: (1) linear regression, (2) fit, (3) detrend
+            xvar = range(len(reg_xa))
+            calib_slope, calib_intercept, r_value, p_value, std_err = stats.linregress(xvar,reg_xa)
+            calib_fit = calib_slope*np.squeeze(xvar) + calib_intercept
+            #reg_xa = reg_xa - calib_fit
+            # END NEW (GH) 21 June 2015
+            
             print 'Calib stats (x)              [min, max, mean, std]:', np.nanmin(reg_xa), np.nanmax(reg_xa), np.nanmean(reg_xa), np.nanstd(reg_xa)
             print 'Proxy stats (y:original)     [min, max, mean, std]:', np.nanmin(reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
             # standardize proxy values over period of overlap with calibration data
@@ -134,8 +152,12 @@ class proxy_master(object):
 
             # Calculate stats on regression residuals
             # GH: residuals have to be computed "by hand"
-            fit = self.slope*np.squeeze(reg_xa) + self.intercept
-            residuals = fit - reg_ya
+            # this is the original approach, which when detrending misses error unless the original x and y are used
+            #fit = self.slope*np.squeeze(reg_xa) + self.intercept
+            #residuals = fit - reg_ya
+            # this is the proper way to do it, including detrending
+            fit = self.slope*np.squeeze(reg_xa_all) + self.intercept
+            residuals = fit - reg_ya_all
             MSE = np.mean((residuals)**2)
             self.R = MSE
             self.corr = r_value

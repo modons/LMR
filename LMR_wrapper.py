@@ -22,9 +22,12 @@ class state():
 
 import os
 import numpy as np
+import datetime
 import LMR_driver_callable as LMR
 import LMR_utils
 from LMR_exp_NAMELIST import *
+
+print '\n' + str(datetime.datetime.now()) + '\n'
 
 # object a from empty class state is a convenience to pass information from the "namelist"
 a = state()
@@ -71,46 +74,60 @@ for iter in MCiters:
     # Call the driver
     LMR.LMR_driver_callable(a)
 
-    # write the ensemble mean to a separate file
+    # write the analysis ensemble mean to a separate file
     LMR_utils.ensemble_mean(a.workdir)
 
-    # remove the individual years
-    cmd = 'rm -f ' + a.workdir + '/year* ' 
-
-    
     # start: DO NOT DELETE
     # move files from local disk to an archive location
-    src_dir = a.workdir
-    exp_dir = '/home/disk/kalman3/hakim/LMR/' + nexp
-    mc_dir = exp_dir + '/r' + str(iter)
-    
-    # Check if the experiment directory exists; if not create it
-    if not os.path.isdir(exp_dir):
-        os.system('mkdir %s' % exp_dir)
 
+    loc_dir = a.workdir
+    arc_dir = archive_dir + '/' + nexp
+    mc_dir  = arc_dir + '/r' + str(iter)
+    
+    # Check if the experiment archive directory exists; if not create it
+    if not os.path.isdir(arc_dir):
+        os.system('mkdir %s' % arc_dir)
     # scrub the monte carlo subdirectory if this is a clean start
     if os.path.isdir(mc_dir) and clean_start:
         print ' **** clean start --- removing existing files in iteration output directory'
         os.system('rm -f -r %s' % mc_dir)
 
+    # GH redundant with directory rm below???
+    # remove the individual years
+    cmd = 'rm -f ' + a.workdir + '/year* ' 
     # option to move the whole directory
-    #cmd = 'mv -f ' + src_dir + ' ' + mc_dir
-    #print cmd
+    #cmd = 'mv -f ' + loc_dir + ' ' + mc_dir
+    print cmd
     #os.system(cmd)
 
     # or just move select files and delete the rest NEED TO CREATE THE DIRECTORY IN THIS CASE!
     if not os.path.isdir(mc_dir):
         os.system('mkdir %s' % mc_dir)
 
-    cmd = 'mv -f ' + src_dir+'/*.npz' + ' ' + mc_dir + '/'
+    cmd = 'mv -f ' + loc_dir+'/*.npz' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)
-    cmd = 'mv -f ' + src_dir+'/assim*' + ' ' + mc_dir + '/'
+    cmd = 'mv -f ' + loc_dir+'/assim*' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)    
-    cmd = 'rm -f -r ' + src_dir
+    cmd = 'mv -f ' + loc_dir+'/nonassim*' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)    
+    cmd = 'mv -f ' + loc_dir+'/gmt_ensemble*' + ' ' + mc_dir + '/'
+    print cmd
+    os.system(cmd)    
+
+    cmd = 'rm -f -r ' + loc_dir
+    print cmd
+    os.system(cmd)
+
+    # copy the namelist file to archive directory
+    cmd = 'cp ./LMR_exp_NAMELIST.py ' + mc_dir + '/'
+    print cmd
+    os.system(cmd)
+    
+    print '\n' + str(datetime.datetime.now()) + '\n'
+
     #   end: DO NOT DELETE
     
 #==========================================================================================

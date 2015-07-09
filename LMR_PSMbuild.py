@@ -21,6 +21,7 @@ Proxies built using a linear PSM based on 2m air temperature.
 # set the absolute path the experiment (could make this cwd with some os coding)
 LMRpath = '/home/disk/kalman3/rtardif/LMR'
 #LMRpath = '/home/disk/ekman/rtardif/nobackup/LMR'
+#LMRpath = '../'
 
 # Section 2: PROXIES
 
@@ -55,9 +56,9 @@ proxy_resolution = [1.0]
 # Section 3: Calibration
 
 # Source of calibration data (for PSM)
-datatag_calib = 'GISTEMP'
+#datatag_calib = 'GISTEMP'
 #datatag_calib = 'HadCRUT'
-#datatag_calib = 'BerkeleyEarth'
+datatag_calib = 'BerkeleyEarth'
 #datatag_calib = 'NOAA'
 datadir_calib = LMRpath+'/data/analyses';
 
@@ -66,7 +67,7 @@ datadir_calib = LMRpath+'/data/analyses';
 psm_output  = '/home/disk/kalman3/hakim/LMR/PSM/PAGES2kS1'
 #psm_output  = '/home/disk/kalman3/rtardif/LMR/PSM/PAGES2kS1'
 #psm_output  = '/home/disk/ekman/rtardif/nobackup/LMR/PSM'
-
+#psm_output = '../data/PSM/PAGES2kS1'
 
 # =============================================================================
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<< Main code >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -176,7 +177,7 @@ def main():
             
 
     # Dump dictionary to pickle file
-    outfile = open('%s/PSMs_%s.pckl' % (psm_output, datatag_calib),'w')
+    outfile = open('%s/PSMs_detrend4_%s.pckl' % (psm_output, datatag_calib),'w')
     cPickle.dump(psm_dict,outfile)
     cPickle.dump(psm_info,outfile)
     outfile.close()

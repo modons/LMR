@@ -258,6 +258,7 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
 
     # Library needed to read CSV file format
     xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
+    #xlrd_dir = '/Users/hakim/svnwork/python-lib/trunk/src/xlrd/xlrd/'
     sys.path.append(xlrd_dir)
     import xlrd
 
