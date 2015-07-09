@@ -37,8 +37,8 @@ class core:
         Absolute path to LMR reconstruction archive directory
     """
     nexp = 'testdev_1000_75pct'
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = r'G:\Research\Hakim Research\data\LMR'
+    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    #lmr_path = r'G:\Research\Hakim Research\data\LMR'
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1000, 2000]
@@ -134,10 +134,10 @@ class proxies:
 
         proxy_order = ['Tree ring_Width',
                        'Tree ring_Density',
-                       'Ice core_d180',
+                       'Ice core_d18O',
                        'Ice core_d2H',
                        'Ice core_Accumulation',
-                       'Coral_d180',
+                       'Coral_d18O',
                        'Coral_Luminescence',
                        'Lake sediment_All',
                        'Marine sediment_All',

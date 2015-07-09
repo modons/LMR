@@ -5,12 +5,11 @@ Module containing proxy classes
 """
 
 import LMR_psms
+from load_data import load_data_frame
+
 from abc import ABCMeta, abstractmethod
-from itertools import chain
 from collections import defaultdict
 from random import sample
-
-from load_data import load_data_frame
 
 class ProxyManager:
 
@@ -34,7 +33,7 @@ class ProxyManager:
 
             # Add to total lists
             self.all_proxies += proxies
-            for k, v in ids_by_grp:
+            for k, v in ids_by_grp.iteritems():
                 self.all_ids_by_group[k] += v
 
         proxy_frac = config.proxies.proxy_frac
@@ -123,16 +122,18 @@ class ProxyPages(BaseProxyObject):
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
-    def load_site(cls, config, site, meta_src, data_src,
-                  data_range, **psm_kwargs):
+    def load_site(cls, config, site, data_range, meta_src=None, data_src=None,
+                  **psm_kwargs):
         """
         Initializes proxy object from source data.  Source data
         can be a string or pandas dataframe at this point.
         """
 
         # TODO: Figure out if this is the correct scope to load
-        meta_src = load_data_frame(meta_src)
-        data_src = load_data_frame(data_src)
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.pages.datafile_proxy)
         start, finish = data_range
 
         site_meta = meta_src[meta_src['PAGES ID'] == site]
@@ -159,11 +160,14 @@ class ProxyPages(BaseProxyObject):
                    values, times, **psm_kwargs)
 
     @classmethod
-    def load_all(cls, config, data_range, **psm_kwargs):
+    def load_all(cls, config, data_range, meta_src=None,
+                 data_src=None, **psm_kwargs):
 
         # Load source data files
-        meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
-        data_src = load_data_frame(config.proxies.pages.datafile_proxy)
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.pages.datafile_proxy)
 
         filters = config.proxies.pages.simple_filters
         proxy_order = config.proxies.pages.proxy_order
@@ -206,22 +210,29 @@ class ProxyPages(BaseProxyObject):
                 measure_mask |= meta_src[measure_col] == measure
 
             # Extract proxy ids using mask and append to lists
-            proxies = meta_src['PAGES ID'][measure_mask & type_mask].values
-            proxy_id_by_type[name] = proxies.tolist()
+            proxies = meta_src['PAGES ID'][measure_mask & type_mask &
+                                           useable].values
+
+            # If we have ids after filtering add them to the type list
+            if len(proxies) > 0:
+                proxy_id_by_type[name] = proxies.tolist()
+
             all_proxy_ids += proxies.tolist()
 
         # Create proxy objects list
         all_proxies = []
         for site in all_proxy_ids:
             try:
-                pobj = cls.load_site(config, site, meta_src, data_src,
-                                     data_range, **psm_kwargs)
+                pobj = cls.load_site(config, site, data_range,
+                                     meta_src=meta_src, data_src=data_src,
+                                     **psm_kwargs)
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
-                all_proxy_ids.remove(site)
                 for group in proxy_id_by_type.values():
-                    group.remove(site)
+                    if site in group:
+                        group.remove(site)
+                        break  # Should only be one instance
 
         return proxy_id_by_type, all_proxies
 

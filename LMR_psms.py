@@ -7,8 +7,8 @@ Adapted from LMR_proxy and LMR_calibrate by Andre Perkins
 import matplotlib.pyplot as pylab
 import numpy as np
 import logging
-import LMR_utils
 import LMR_calibrate
+from LMR_utils import haversine, smooth2D
 
 from scipy.stats import linregress
 from abc import ABCMeta, abstractmethod
@@ -102,7 +102,7 @@ class LinearPSM(BasePSM):
         X_lon = X.lon
         dist = np.empty(stateDim)
         dist = np.array(
-            [LMR_utils.haversine(self.lon, self.lat, X_lon[k], X_lat[k]) for k
+            [haversine(self.lon, self.lat, X_lon[k], X_lat[k]) for k
              in xrange(stateDim)])
 
         # row index of nearest grid pt. in prior (minimum distance)
@@ -138,7 +138,7 @@ class LinearPSM(BasePSM):
         # Look for indices of calibration grid point closest in space (in 2D) to proxy site
         dist = np.empty([C.lat.shape[0], C.lon.shape[0]])
         tmp = np.array(
-            [LMR_utils.haversine(self.lon, self.lat, C.lon[k], C.lat[j]) for j
+            [haversine(self.lon, self.lat, C.lon[k], C.lat[j]) for j
              in xrange(len(C.lat)) for k in xrange(len(C.lon))])
         dist = np.reshape(tmp, [len(C.lat), len(C.lon)])
         # indices of nearest grid pt.
@@ -158,8 +158,7 @@ class LinearPSM(BasePSM):
             C2Dsmooth = np.zeros(
                 [C.time.shape[0], C.lat.shape[0], C.lon.shape[0]])
             for m in ind_c:
-                C2Dsmooth[m, :, :] = LMR_utils.smooth2D(C.temp_anomaly[m, :, :],
-                                                        n=Npts)
+                C2Dsmooth[m, :, :] = smooth2D(C.temp_anomaly[m, :, :], n=Npts)
             reg_x = [C2Dsmooth[m, jind, kind] for m in ind_c]
         else:
             reg_x = [C.temp_anomaly[m, jind, kind] for m in ind_c]
