@@ -240,8 +240,7 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
 # ... reads data from a selected site (chronology) in PAGES2K_DatabaseS1 ... 
 # ... site is passed as argument ...
 # 
-#========================================================================================== 
-
+#==========================================================================================
 
     # Uploading proxy data
     proxy_file = datadir_proxy + '/'+datafile_proxy;

@@ -141,9 +141,6 @@ def LMR_driver_callable(cfg=None):
     nlat = X.nlat
     nlon = X.nlon
 
-    # Prepare to check for files in the prior (work) directory (this object just points to a directory)
-    prior_check = np.DataSource(workdir)
-
     load_time = time() - begin_time
     if verbose > 2:
         print '-----------------------------------------------------'
@@ -166,7 +163,8 @@ def LMR_driver_callable(cfg=None):
     if verbose > 0: print 'Reading the proxy metadata & building list of chronologies to assimilate...'
 
     # Load pre-calibrated PSM parameters 
-    fnamePSM = LMRpath+'/PSM/PSMs_'+datatag_calib+'.pckl'
+    #fnamePSM = LMRpath+'/PSM/PSMs_'+datatag_calib+'.pckl'
+    fnamePSM = '/home/disk/kalman3/hakim/LMR/PSM/PAGES2kS1/PSMs_'+datatag_calib+'.pckl'
     infile   = open(fnamePSM,'rb')
     psm_data = cPickle.load(infile)
     infile.close()
@@ -274,6 +272,16 @@ def LMR_driver_callable(cfg=None):
     filen = workdir + '/' + 'Xb_one'
     #np.savez(filen,Xb_one = Xb_one,stateDim = stateDim,lat = X.lat,lon = X.lon, nlat = X.nlat, nlon = X.nlon)
     np.savez(filen,Xb_one = Xb_one,Xb_one_aug = Xb_one_aug, stateDim = stateDim,lat = lat_new,lon = lon_new, nlat = nlat_new, nlon = nlon_new)
+    
+    # 25 June 2015 save a prior file, with the augmented state, for each year as a starting point for the analysis
+    for yr in range(recon_period[0],recon_period[1]+1):
+        ypad = LMR_utils.year_fix(yr)          
+        filen = workdir + '/' + 'year' + ypad
+        #print 'writing initial prior file...' + filen
+        np.save(filen,Xb_one_aug)
+    
+    # Prepare to check for files in the prior (work) directory (this object just points to a directory)
+    prior_check = np.DataSource(workdir)
 
     # ===============================================================================
     # Loop over all proxies and perform assimilation --------------------------------
@@ -341,6 +349,9 @@ def LMR_driver_callable(cfg=None):
             first_time = True
             for t in Y.time:
 
+                # make sure t is an integer (something changed so that there are floats now???)
+                t = int(t)
+
                 # if proxy ob is outside of period of reconstruction, continue to next ob time
                 if t < recon_period[0] or t > recon_period[1]:
                     continue
@@ -356,7 +367,7 @@ def LMR_driver_callable(cfg=None):
                     if verbose > 2: print 'prior file exists:' + filen
                     Xb = np.load(filen+'.npy')
                 else:
-                    if verbose > 2: print 'prior file does not exist...using template for prior'
+                    if verbose > 2: print 'prior file ' + filen+'.npy does not exist...using template for prior'
                     Xb = np.copy(Xb_one_aug)
 
                 # Extract the Ye values for current (proxy,site) from augmented state vector
@@ -419,6 +430,23 @@ def LMR_driver_callable(cfg=None):
     # save global mean temperature history and the proxies assimilated
     #
     
+    # 3 July 2015: compute and save the GMT for the full ensemble
+    # need to fix this so that every year is counted
+    gmt_ensemble = np.zeros([Ntimes,Nens])
+    iyr = -1
+    for yr in range(recon_period[0],recon_period[1]+1):
+        iyr = iyr + 1
+        ypad = LMR_utils.year_fix(yr)          
+        filen = workdir + '/' + 'year' + ypad
+        Xa = np.load(filen+'.npy')
+        for k in range(Nens):
+            xam_lalo = np.reshape(Xa[0:stateDim,k],(nlat_new,nlon_new))
+            gmt = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
+            gmt_ensemble[iyr,k] = gmt
+
+    filen = workdir + '/' + 'gmt_ensemble'
+    np.savez(filen,gmt_ensemble=gmt_ensemble,recon_times=recon_times)
+
     print 'saving global mean temperature update history and assimilated proxies...'
     filen = workdir + '/' + 'gmt'
     np.savez(filen,gmt_save=gmt_save,recon_times=recon_times,apcount=apcount,tpcount=total_proxy_count)    
