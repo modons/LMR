@@ -22,9 +22,12 @@ class state():
 
 import os
 import numpy as np
+import datetime
 import LMR_driver_callable as LMR
 import LMR_utils
 from LMR_exp_NAMELIST import *
+
+print '\n' + str(datetime.datetime.now()) + '\n'
 
 # object a from empty class state is a convenience to pass information from the "namelist"
 a = state()
@@ -76,6 +79,7 @@ for iter in MCiters:
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
+
     loc_dir = a.workdir
     arc_dir = archive_dir + '/' + nexp
     mc_dir  = arc_dir + '/r' + str(iter)
@@ -88,11 +92,12 @@ for iter in MCiters:
         print ' **** clean start --- removing existing files in iteration output directory'
         os.system('rm -f -r %s' % mc_dir)
 
+    # GH redundant with directory rm below???
     # remove the individual years
     cmd = 'rm -f ' + a.workdir + '/year* ' 
     # option to move the whole directory
     #cmd = 'mv -f ' + loc_dir + ' ' + mc_dir
-    #print cmd
+    print cmd
     #os.system(cmd)
 
     # or just move select files and delete the rest NEED TO CREATE THE DIRECTORY IN THIS CASE!
@@ -108,15 +113,21 @@ for iter in MCiters:
     cmd = 'mv -f ' + loc_dir+'/nonassim*' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)    
+
+    cmd = 'mv -f ' + loc_dir+'/gmt_ensemble*' + ' ' + mc_dir + '/'
+    print cmd
+    os.system(cmd)    
+
     cmd = 'rm -f -r ' + loc_dir
     print cmd
     os.system(cmd)
+
     # copy the namelist file to archive directory
-    #cmd = 'cp /home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/tardif/LMR_exp_NAMELIST.py ' + mc_dir + '/'
     cmd = 'cp ./LMR_exp_NAMELIST.py ' + mc_dir + '/'
     print cmd
     os.system(cmd)
-    
+
+    print '\n' + str(datetime.datetime.now()) + '\n'
     #   end: DO NOT DELETE
     
 #==========================================================================================
