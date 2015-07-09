@@ -38,6 +38,7 @@ class core:
     """
     nexp = 'testdev_1000_75pct'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
+    online_reconstruction = False
     #lmr_path = r'G:\Research\Hakim Research\data\LMR'
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge

@@ -24,20 +24,20 @@
 #  May 2015:
 #            - Bug fix in calculation of global mean temperature + function now part of
 #              LMR_utils.py (G. Hakim)
+#  July 2015:
+#            - Switched time & proxy loops, simplified logic so more of the proxy
+#              and PSM specifics are contained within their classes (A. Perkins)
 #
 #==========================================================================================
 
 import numpy as np
-import cPickle
 from time import time
 
-import LMR_proxy
+import LMR_proxy2
 import LMR_prior
-import LMR_calibrate
 import LMR_utils
 import LMR_config as basecfg
 from LMR_DA import enkf_update_array, cov_localization
-from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
 
 def LMR_driver_callable(cfg=None):
 
@@ -56,18 +56,9 @@ def LMR_driver_callable(cfg=None):
     nexp             = core.nexp
     workdir          = core.workdir
     recon_period     = core.recon_period
+    online           = core.online_reconstruction
     Nens             = core.nens
-    datadir_proxy    = core.datadir_proxy
-    datafile_proxy   = core.datafile_proxy
-    regions          = core.regions
     locRad           = core.locRad
-    PSM_r_crit       = core.PSM_r_crit
-    LMRpath          = core.LMRpath
-    datatag_calib    = proxies.datatag_calib
-    datadir_calib    = proxies.datadir_calib
-    proxy_resolution = proxies.proxy_resolution
-    proxy_assim      = proxies.proxy_assim
-    proxy_frac       = proxies.proxy_frac
     prior_source     = prior.prior_source
     datadir_prior    = prior.datadir_prior
     datafile_prior   = prior.datafile_prior
@@ -95,24 +86,24 @@ def LMR_driver_callable(cfg=None):
 
     # ===============================================================================
     # Load calibration data ---------------------------------------------------------
-    # ===============================================================================
-    if verbose > 0:
-        print '------------------------------'
-        print 'Creating calibration object...'
-        print '------------------------------'
-        print 'Source for calibration: ' + datatag_calib
-        print ''
+    # # ===============================================================================
+    # if verbose > 0:
+    #     print '------------------------------'
+    #     print 'Creating calibration object...'
+    #     print '------------------------------'
+    #     print 'Source for calibration: ' + datatag_calib
+    #     print ''
 
     #TODO: Doesn't appear to use C at all...
     # Assign calibration object according to "datatag_calib" (from namelist)
-    C = LMR_calibrate.calibration_assignment(datatag_calib)
-
-    # TODO: AP Required attributes need to be explicitly declared in method/class
-    # the path to the calibration directory is specified in the namelist file; bind it here
-    C.datadir_calib = datadir_calib;
-
-    # read the data !!!!!!!!!!!!!!!!!! don't need this with all pre-calculated PSMs !!!!!!!!!!!!!!!!!!
-    C.read_calibration()
+    # C = LMR_calibrate.calibration_assignment(datatag_calib)
+    #
+    # # TODO: AP Required attributes need to be explicitly declared in method/class
+    # # the path to the calibration directory is specified in the namelist file; bind it here
+    # C.datadir_calib = datadir_calib;
+    #
+    # # read the data !!!!!!!!!!!!!!!!!! don't need this with all pre-calculated PSMs !!!!!!!!!!!!!!!!!!
+    # C.read_calibration()
 
     # ===============================================================================
     # Load prior data ---------------------------------------------------------------
@@ -147,13 +138,13 @@ def LMR_driver_callable(cfg=None):
     load_time = time() - begin_time
     if verbose > 2:
         print '-----------------------------------------------------'
-        print 'Loading completed in '+ str(load_time)+' seconds'
+        print 'Loading completed in ' + str(load_time)+' seconds'
         print '-----------------------------------------------------'
 
 
-    # ===============================================================================
-    # Get information on proxies to assimilate --------------------------------------
-    # ===============================================================================
+    # ==========================================================================
+    # Get information on proxies to assimilate ---------------------------------
+    # ==========================================================================
 
     begin_time_proxy_load = time()
     if verbose > 0:
@@ -162,89 +153,30 @@ def LMR_driver_callable(cfg=None):
         print 'Uploading proxy data & PSM info ...'
         print '-----------------------------------'
 
-    # Read proxy metadata & extract list of proxy sites for wanted proxy type & measurement
-    if verbose > 0: print 'Reading the proxy metadata & building list of chronologies to assimilate...'
-
-    # Load pre-calibrated PSM parameters 
-    fnamePSM = LMRpath+'/PSM/PSMs_'+datatag_calib+'.pckl'
-    infile   = open(fnamePSM,'rb')
-    psm_data = cPickle.load(infile)
-    infile.close()
-
     # Build dictionaries of proxy sites to assimilate and those set aside for verification
-    [sites_assim, sites_eval] = create_proxy_lists_from_metadata(datadir_proxy,datafile_proxy,regions,proxy_resolution,proxy_assim,proxy_frac,psm_data,PSM_r_crit)
+    prox_manager = LMR_proxy2.ProxyManager(basecfg, recon_period)
+    type_site_assim = prox_manager.all_ids_by_group
 
-    if verbose > 0: print 'Assimilating proxy types/sites:', sites_assim
+    if verbose > 0:
+        print 'Assimilating proxy types/sites:', type_site_assim
 
-    # ================================================================================
-    # Calculate all Ye's (for all sites in sites_assim) ------------------------------
-    # ================================================================================
-
-    proxy_types_assim = sites_assim.keys()
+    # ==========================================================================
+    # Calculate all Ye's (for all sites in sites_assim) ------------------------
+    # ==========================================================================
 
     print '-----------------------------------------------------------------------'
     print 'Proxy counts for experiment:'
     # count the total number of proxies
-    total_proxy_count = 0
-    for proxy_key in sorted(proxy_types_assim):
-        proxy_count = len(sites_assim[proxy_key]) 
-        total_proxy_count = total_proxy_count + proxy_count
-        print('%45s : %5d' % (proxy_key,proxy_count))
+    total_proxy_count = len(prox_manager.all_proxies)
+    for pkey, plist in type_site_assim.iteritems():
+        print('%45s : %5d' % (pkey, len(plist)))
     print('%45s : %5d' %('TOTAL', total_proxy_count))
     print '-----------------------------------------------------------------------'
-
-    # RT-NEW: Master list of ***proxy objects***
-    Yall = []
-
-    # Loop over proxy types
-    scount = -1 # counter of all proxy sites
-    for proxy_key in sorted(proxy_types_assim):
-        # Strip the assim. order info & keep only proxy type
-        proxy = proxy_key.split(':', 1)[1]
-
-        # Loop over sites (chronologies) for this proxy type
-        # & populate proxy object with site info and data
-        for site in sites_assim[proxy_key]:
-            scount = scount + 1
-            Ywk = LMR_proxy.proxy_assignment(proxy)
-
-            # Add attributes to the proxy object
-            Ywk.pid = (proxy,site)
-            Ywk.proxy_datadir = datadir_proxy
-            Ywk.proxy_datafile = datafile_proxy
-            Ywk.proxy_region = regions
-            Ywk.nobs = 0            
-
-            # TODO: This is non-general to the PSM type
-            # Check if PSM for (proxy,site) has been pre-calibrated
-            if Ywk.pid in psm_data.keys():
-                Ywk.calibrate = True
-                Ywk.lat       = psm_data[(proxy,site)]['lat']
-                Ywk.lon       = psm_data[(proxy,site)]['lon']
-                Ywk.corr      = psm_data[(proxy,site)]['PSMcorrel']
-                Ywk.slope     = psm_data[(proxy,site)]['PSMslope']
-                Ywk.intercept = psm_data[(proxy,site)]['PSMintercept']
-                Ywk.R         = psm_data[(proxy,site)]['PSMmse']
-            else:
-                print 'PSM not calibrated for:' + str((proxy,site))
-
-            # --------------------------------------------------------------
-            # Call PSM to get ensemble of prior estimates of proxy data (Ye)
-            # --------------------------------------------------------------
-            Ywk.Ye = Ywk.psm(C, Xb_one_full, X.lat, X.lon)
-
-            # -------------------------------------------
-            # Read data for current proxy type/chronology
-            # -------------------------------------------
-            Ywk.read_proxy(site)
-
-            # Append proxy object to master list
-            Yall.append(Ywk)
 
     proxy_load_time = time() - begin_time_proxy_load
     if verbose > 2:
         print '-----------------------------------------------------'
-        print 'Loading completed in '+ str(proxy_load_time)+' seconds'
+        print 'Loading completed in ' + str(proxy_load_time) + ' seconds'
         print '-----------------------------------------------------'
 
 
@@ -252,7 +184,8 @@ def LMR_driver_callable(cfg=None):
     # Calculate truncated state from prior, if option chosen -------------------------
     # ================================================================================
 
-    [Xb_one,lat_new,lon_new] = LMR_utils.regrid_sphere(nlat,nlon,Nens,Xb_one_full,42)
+    [Xb_one, lat_new, lon_new] = LMR_utils.regrid_sphere(nlat, nlon, Nens,
+                                                         Xb_one_full, 42)
     nlat_new = np.shape(lat_new)[0]
     nlon_new = np.shape(lat_new)[1]
 
@@ -264,33 +197,41 @@ def LMR_driver_callable(cfg=None):
     # ----------------------------------
 
     # Extract all the Ye's from master list of proxy objects into numpy array
-    Ye_all = np.empty(shape=[len(Yall),Nens])
-    for k in range(len(Yall)): Ye_all[k,:] = Yall[k].Ye
+    if not online:
+        Ye_all = np.empty(shape=[total_proxy_count, Nens])
+        for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
+            Ye_all[k, :] = proxy.psm(X)
 
-    # Append ensemble of Ye's to prior state vector 
-    Xb_one_aug = np.append(Xb_one,Ye_all,axis=0)
+        # Append ensemble of Ye's to prior state vector
+        Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
+    else:
+        Xb_one_aug = Xb_one
 
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    #np.savez(filen,Xb_one = Xb_one,stateDim = stateDim,lat = X.lat,lon = X.lon, nlat = X.nlat, nlon = X.nlon)
-    np.savez(filen,Xb_one = Xb_one,Xb_one_aug = Xb_one_aug, stateDim = stateDim,lat = lat_new,lon = lon_new, nlat = nlat_new, nlon = nlon_new)
+    np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=stateDim,
+             lat=lat_new, lon=lon_new, nlat=nlat_new, nlon=nlon_new)
 
-    # ===============================================================================
-    # Loop over all proxies and perform assimilation --------------------------------
-    # ===============================================================================
+    # ==========================================================================
+    # Loop over all proxies and perform assimilation ---------------------------
+    # ==========================================================================
 
     # ---------------------
     # Loop over proxy types
     # ---------------------
-    apcount = 0 # running counter of accepted proxies
+    apcount = 0  # running counter of accepted proxies
 
     # Array containing the global-mean state (for diagnostic purposes)
-    gmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    xbm = np.mean(Xb_one[0:stateDim,:],axis=1) # ensemble-mean
-    xbm_lalo = np.reshape(xbm,(nlat_new,nlon_new))
-    gmt = LMR_utils.global_mean(xbm_lalo,lat_new[:,0],lon_new[0,:])
-    gmt_save[0,:] = gmt # First prior
-    gmt_save[1,:] = gmt # Prior for first proxy assimilated
+    gmt_save = np.zeros([total_proxy_count+1,
+                         recon_period[1] - recon_period[0] + 1])
+    xbm = Xb_one[0:stateDim, :].mean(axis=1)  # ensemble-mean
+    xbm_lalo = xbm.reshape(nlat_new, nlon_new)
+    gmt = LMR_utils.global_mean(xbm_lalo, lat_new[:, 0], lon_new[0, :])
+    gmt_save[0, :] = gmt  # First prior
+    gmt_save[1, :] = gmt  # Prior for first proxy assimilated
+
+    for t in xrange(recon_period[0], recon_period[1]+1):
+        pass
 
     assimilated_proxies= []
     for proxy_key in sorted(proxy_types_assim):
@@ -330,7 +271,7 @@ def LMR_driver_callable(cfg=None):
             # Calculate array for covariance localization
             if locRad is not None:
                 if verbose > 2: print '...computing localization...'
-                loc = cov_localization(locRad,X,Y)
+                loc = cov_localization(locRad, X, Y)
             else:
                 loc = None
 
