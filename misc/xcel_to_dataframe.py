@@ -26,7 +26,8 @@ def pages_xcel_to_dataframes(filename, metaout, dataout):
     metadata.to_pickle(metaout)
 
     record_sheet_names = ['AntProxies', 'ArcProxies', 'AsiaProxies',
-                          'AusProxies', 'EurProxies', 'NAmPol', 'NAmTR']
+                          'AusProxies', 'EurProxies', 'NAmPol', 'NAmTR',
+                          'SAmProxies']
 
     for i, sheet in enumerate(record_sheet_names):
         tmp = pd.read_excel(filename, sheet)
