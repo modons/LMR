@@ -73,14 +73,14 @@ class LinearPSM(BasePSM):
             C = LMR_calibrate.calibration_assignment(datag_calib)
             C.datadir_calib = config.psm.linear.datadir_calib
             C.read_calibration()
-            self.calibrate(C)
+            self.calibrate(C, proxy_obj)
 
         if abs(self.corr) < r_crit:
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
                               'critical threshold ({:.2f}).'
                               ).format(self.corr, r_crit))
 
-    def psm(self, X):
+    def psm(self, Xb, Xb_lats, Xb_lons):
 
         """
         Main function to be exposed to each proxy object
@@ -96,19 +96,17 @@ class LinearPSM(BasePSM):
         # Find row index of X for which [X_lat,X_lon] corresponds to closest grid point to
         # location of proxy site [self.lat,self.lon]
         # Calclulate distances from proxy site.
-        stateDim = X.shape[0]
-        ensDim = X.shape[1]
-        X_lat = X.lat
-        X_lon = X.lon
+        stateDim = Xb.shape[0]
+        ensDim = Xb.shape[1]
         dist = np.empty(stateDim)
         dist = np.array(
-            [haversine(self.lon, self.lat, X_lon[k], X_lat[k]) for k
+            [haversine(self.lon, self.lat, Xb_lons[k], Xb_lats[k]) for k
              in xrange(stateDim)])
 
         # row index of nearest grid pt. in prior (minimum distance)
         kind = np.unravel_index(dist.argmin(), dist.shape)
 
-        Ye = self.slope * np.squeeze(X[kind, :]) + self.intercept
+        Ye = self.slope * np.squeeze(Xb[kind, :]) + self.intercept
 
         return Ye
 
@@ -118,8 +116,8 @@ class LinearPSM(BasePSM):
         return 0.1
 
     # TODO: Simplify a lot of the actions in the calibration
-    def calibrate(self, C, proxy_data,
-                  diag_output=False, diag_output_figs=False):
+    def calibrate(self, C, proxy, diag_output=False,
+                  diag_output_figs=False):
 
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
@@ -135,10 +133,11 @@ class LinearPSM(BasePSM):
         for i in rantimes:
         """
 
+        # TODO: Distance calculation should probably be a function
         # Look for indices of calibration grid point closest in space (in 2D) to proxy site
         dist = np.empty([C.lat.shape[0], C.lon.shape[0]])
         tmp = np.array(
-            [haversine(self.lon, self.lat, C.lon[k], C.lat[j]) for j
+            [haversine(proxy.lon, proxy.lat, C.lon[k], C.lat[j]) for j
              in xrange(len(C.lat)) for k in xrange(len(C.lon))])
         dist = np.reshape(tmp, [len(C.lat), len(C.lon)])
         # indices of nearest grid pt.
@@ -147,12 +146,13 @@ class LinearPSM(BasePSM):
         # TODO: need to fix this to use proxy2 style time
         # overlapping years
         sc = set(C.time)
-        sp = set(proxy_data.time)
+        sp = set(proxy.time)
 
-        common_time = list(sc.intersection(sp))
+        common_time = sorted(list(sc.intersection(sp)))
         # respective indices in calib and proxy times
         ind_c = [j for j, k in enumerate(C.time) if k in common_time]
-        ind_p = [j for j, k in enumerate(proxy_data.time) if k in common_time]
+        #ind_p = [j for j, k in enumerate(proxy.time) if k in common_time]
+        ind_p = common_time
 
         if calib_spatial_avg:
             C2Dsmooth = np.zeros(
@@ -163,11 +163,11 @@ class LinearPSM(BasePSM):
         else:
             reg_x = [C.temp_anomaly[m, jind, kind] for m in ind_c]
 
-        reg_y = [proxy_data.values[m] for m in ind_p]
+        reg_y = [proxy.values[m] for m in ind_p]
         # check for valid values
         ind_c_ok = [j for j, k in enumerate(reg_x) if np.isfinite(k)]
         ind_p_ok = [j for j, k in enumerate(reg_y) if np.isfinite(k)]
-        common_ok = list(set(ind_c_ok).intersection(set(ind_p_ok)))
+        common_ok = sorted(list(set(ind_c_ok).intersection(set(ind_p_ok))))
         # fill numpy arrays with values used in regression
         reg_xa = np.array([reg_x[k] for k in common_ok])  # calib. values
         reg_ya = np.array([reg_y[k] for k in common_ok])  # proxy values
@@ -177,7 +177,28 @@ class LinearPSM(BasePSM):
         # -------------------------
         nobs = reg_ya.shape[0]
         if nobs < 10:  # skip rest if insufficient overlapping data
-            return
+            raise(ValueError('Insufficent observation/calibration overlap'
+                             ' to calibrate psm.'))
+
+        # START NEW (GH) 21 June 2015
+        # detrend both the proxy and the calibration data
+        #
+        # save copies of the original data for residual estimates later
+        reg_xa_all = np.copy(reg_xa)
+        reg_ya_all = np.copy(reg_ya)
+        # proxy detrend: (1) linear regression, (2) fit, (3) detrend
+        xvar = range(len(reg_ya))
+        proxy_slope, proxy_intercept, r_value, p_value, std_err = \
+            linregress(xvar, reg_ya)
+        proxy_fit = proxy_slope*np.squeeze(xvar) + proxy_intercept
+        # reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy
+        # calibration detrend: (1) linear regression, (2) fit, (3) detrend
+        xvar = range(len(reg_xa))
+        calib_slope, calib_intercept, r_value, p_value, std_err = \
+            linregress(xvar, reg_xa)
+        calib_fit = calib_slope*np.squeeze(xvar) + calib_intercept
+        # reg_xa = reg_xa - calib_fit
+        # END NEW (GH) 21 June 2015
 
         print 'Calib stats (x)              [min, max, mean, std]:', np.nanmin(
             reg_xa), np.nanmax(reg_xa), np.nanmean(reg_xa), np.nanstd(reg_xa)
@@ -225,7 +246,7 @@ class LinearPSM(BasePSM):
                            markersize=7, markerfacecolor='#5CB8E6',
                            markeredgecolor='black', markeredgewidth=1)
                 # GH: I don't know how this ran in the first place; must exploit some global namespace
-                pylab.title('%s: %s' % (proxy_data.type, proxy_data.id))
+                pylab.title('%s: %s' % (proxy.type, proxy.id))
                 pylab.xlabel('Calibration data')
                 pylab.ylabel('Proxy data')
                 xmin, xmax, ymin, ymax = pylab.axis()
@@ -256,7 +277,7 @@ class LinearPSM(BasePSM):
                 pylab.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(MSE),
                            fontsize=12, fontweight='bold')
                 pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (
-                    proxy_data.type.replace(" ", "_"), proxy_data.id),
+                    proxy.type.replace(" ", "_"), proxy.id),
                               bbox_inches='tight')
                 pylab.close()
 
