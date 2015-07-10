@@ -199,7 +199,7 @@ def LMR_driver_callable(cfg=None):
     nlon_new = lat_new.shape[1]
 
     # Keep dimension of pre-augmented version of state vector
-    [stateDim, _] = Xb_one.shape
+    [state_dim, _] = Xb_one.shape
 
     # ----------------------------------
     # Augment state vector with the Ye's
@@ -209,7 +209,7 @@ def LMR_driver_callable(cfg=None):
     if not online:
         Ye_all = np.empty(shape=[total_proxy_count, nens])
         for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-            Ye_all[k, :] = proxy.psm(X)
+            Ye_all[k, :] = proxy.psm(Xb_one, X.lat, X.lon)
 
         # Append ensemble of Ye's to prior state vector
         Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
@@ -218,7 +218,7 @@ def LMR_driver_callable(cfg=None):
 
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=stateDim,
+    np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
              lat=lat_new, lon=lon_new, nlat=nlat_new, nlon=nlon_new)
 
     # ==========================================================================
@@ -232,7 +232,7 @@ def LMR_driver_callable(cfg=None):
     # Array containing the global-mean state (for diagnostic purposes)
     gmt_save = np.zeros([total_proxy_count+1,
                          recon_period[1] - recon_period[0] + 1])
-    xbm = Xb_one[0:stateDim, :].mean(axis=1)  # ensemble-mean
+    xbm = Xb_one[0:state_dim, :].mean(axis=1)  # ensemble-mean
     xbm_lalo = xbm.reshape(nlat_new, nlon_new)
     gmt = LMR_utils.global_mean(xbm_lalo, lat_new[:, 0], lon_new[0, :])
     gmt_save[0, :] = gmt  # First prior
@@ -241,7 +241,7 @@ def LMR_driver_callable(cfg=None):
     lasttime = time()
     for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1)):
 
-        if verbose > 2:
+        if verbose > 0:
             print 'working on year: ' + str(t)
 
         ypad = '{:04d}'.format(t)
@@ -262,7 +262,7 @@ def LMR_driver_callable(cfg=None):
             except KeyError:
                 continue
 
-            if verbose > 0:
+            if verbose > 2:
                 print '--------------- Processing proxy: ' + Y.id
 
             if verbose > 1:
@@ -280,7 +280,7 @@ def LMR_driver_callable(cfg=None):
             if online:
                 Ye = Y.psm(Xb)
             else:
-                Ye = Xb[proxy_idx+stateDim]
+                Ye = Xb[proxy_idx+state_dim]
 
             # Define the ob error variance
             ob_err = Y.psm_obj.R
@@ -296,7 +296,7 @@ def LMR_driver_callable(cfg=None):
             # Update the state
             Xa = enkf_update_array(Xb, Y.values[t], Ye, ob_err, loc)
             Xb = Xa
-            xam = Xa[0:stateDim].mean(axis=1)
+            xam = Xa[0:state_dim].mean(axis=1)
             xam_lalo = xam.reshape((nlat_new, nlon_new))
             gmt = LMR_utils.global_mean(xam_lalo, lat_new[:, 0], lon_new[0, :])
             gmt_save[proxy_idx, yr_idx] = gmt
@@ -314,7 +314,7 @@ def LMR_driver_callable(cfg=None):
             if proxy_idx+1 < total_proxy_count:
                 gmt_save[proxy_idx+1, yr_idx] = gmt
 
-        # Dump Xa to file (to be used as prior for next assimilation)
+        # Dump Xa to file
         np.save(filen, Xa)
 
     end_time = time() - begin_time
@@ -333,13 +333,14 @@ def LMR_driver_callable(cfg=None):
     np.savez(filen, gmt_save=gmt_save, recon_times=recon_times,
              apcount=total_proxy_count, tpcount=total_proxy_count)
 
-    assimilated_proxies = [{p.type: [p.site, p.lat, p.lon, p.time]}
+    # TODO: (AP) The assim/eval lists of lists instead of lists of 1-item dicts
+    assimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time]}
                            for p in prox_manager.sites_assim_proxy_objs()]
     filen = join(workdir, 'assimilated_proxies')
     np.save(filen, assimilated_proxies)
     
     # collecting info on non-assimilated proxies and save to file
-    nonassimilated_proxies = [{p.type: [p.site, p.lat, p.lon, p.time]}
+    nonassimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time]}
                               for p in prox_manager.sites_eval_proxy_objs()]
     if nonassimilated_proxies:
         filen = join(workdir, 'nonassimilated_proxies')
@@ -355,3 +356,6 @@ def LMR_driver_callable(cfg=None):
 # ------------------------------------------------------------------------------
 # --------------------------- end of main code ---------------------------------
 # ------------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    LMR_driver_callable()

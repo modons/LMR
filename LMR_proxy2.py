@@ -85,8 +85,8 @@ class BaseProxyObject:
 
         # Retrieve appropriate PSM function
         psm_obj = self.get_psm_obj(config)
-        psm_obj = psm_obj(config, self, **psm_kwargs)
-        self.psm = psm_obj.psm
+        self.psm_obj = psm_obj(config, self, **psm_kwargs)
+        self.psm = self.psm_obj.psm
 
     # TODO: Might not need this read_proxy method, it was in consideration
     #   of different data backends which may or may not be used.

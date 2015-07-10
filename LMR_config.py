@@ -36,13 +36,13 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_1000_75pct'
+    nexp = 'testdev_500yr_75pct'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     #lmr_path = r'G:\Research\Hakim Research\data\LMR'
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1000, 2000]
+    recon_period = [1500, 2000]
     nens = 100
     # TODO: Monte-Carlo section, also can replace with single int
     iter_range = [0, 10]
@@ -108,30 +108,6 @@ class proxies:
         proxy_resolution = [1.0]
 
         # DO NOT CHANGE FORMAT BELOW
-        proxy_assim = {
-            '01:Tree ring_Width': ['Ring width',
-                                   'Tree ring width',
-                                   'Total ring width',
-                                   'TRW'],
-            '02:Tree ring_Density': ['Maximum density',
-                                     'Minimum density',
-                                     'Earlywood density',
-                                     'Latewood density',
-                                     'MXD'],
-            '03:Ice core_d18O': ['d18O'],
-            '04:Ice core_d2H': ['d2H'],
-            '05:Ice core_Accumulation': ['Accumulation'],
-            '06:Coral_d18O': ['d18O'],
-            '07:Coral_Luminescence': ['Luminescence'],
-            '08:Lake sediment_All': ['Varve thickness',
-                                     'Thickness',
-                                     'Mass accumulation rate',
-                                     'Particle-size distribution',
-                                     'Organic matter',
-                                     'X-ray density'],
-            '09:Marine sediment_All': ['Mg/Ca'],
-            '10:Speleothem_All': ['Lamina thickness'],
-            }
 
         proxy_order = ['Tree ring_Width',
                        'Tree ring_Density',
@@ -143,18 +119,6 @@ class proxies:
                        'Lake sediment_All',
                        'Marine sediment_All',
                        'Speleothem_All']
-
-        measure_types = {
-            'Width': ['Ring width',
-                      'Tree ring width',
-                      'Total ring width',
-                      'TRW'],
-            'Density': ['Maximum density',
-                        'Minimum density',
-                        'Earlywood density',
-                        'Latewood density'],
-
-        }
 
         proxy_assim2 = {
             'Tree ring_Width': ['Ring width',
