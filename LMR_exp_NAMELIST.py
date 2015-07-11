@@ -104,7 +104,8 @@ dataformat_prior = 'NCD'
 
 # Define variables in state vector (will be updated by assimilation)
 #state_variables = ['tas_sfc_Amon']
-state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+#state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
 
 # =============================================================================
 # Section 4: OUTPUT

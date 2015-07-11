@@ -431,7 +431,7 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
 #
 #========================================================================================== 
 
-    from netCDF4 import Dataset
+    from netCDF4 import Dataset, date2num, num2date
     from datetime import datetime, timedelta
     import numpy as np
     import os.path
@@ -453,52 +453,112 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
         else:
             print 'Reading file: ', infile
 
-        dateref = datetime(850,1,1,0)
-        
+        # Load entire dataset from file
         data = Dataset(infile,'r')
 
-        lat   = data.variables['lat'][:]
-        lon   = data.variables['lon'][:]
+        # Dimensions used to store the data
+        nc_dims = [dim for dim in data.dimensions]
+        dictdims = {}
+        for dim in nc_dims:
+            dictdims[dim] = len(data.dimensions[dim])
+
+        # Define the name of the variable to extract from the variable definition (from namelist)
+        var_to_extract = vardef.split('_')[0]
+
+        # Query its dimensions
+        vardims = data.variables[var_to_extract].dimensions
+        nbdims  = len(vardims)
+        # names of variable dims
+        vardimnames = []
+        for d in vardims:
+            vardimnames.append(d)
+        
+        # put everything in lower case for homogeneity
+        vardimnames = [item.lower() for item in vardimnames]
+
+        # One of the dims has to be time! 
+        if 'time' not in vardimnames:
+            print 'Variable does not have *time* as a dimension! Exiting!'
+            exit(1)
+        else:
+            # read in the time netCDF4.Variable
+            time = data.variables['time']
+
+        # Transform into calendar dates using netCDF4 variable attributes (units & calendar)
+        time_yrs = num2date(time[:],units=time.units,calendar=time.calendar)
+        time_yrs_list = time_yrs.tolist()
+
+        # To convert monthly data to annual: List years available in dataset and sort
+        years_all = [int(time_yrs_list[i].strftime('%Y')) for i in range(0,len(time_yrs_list))]
+        years     = list(set(years_all)) # 'set' is used to retain unique values in list
+        years.sort # sort the list
+        time_yrs  = np.empty(len(years), dtype=int)
+
+        # Query info on spatial coordinates ...
+        # get rid of time in list        
+        varspacecoordnames = [item for item in vardimnames if item != 'time'] 
+        nbspacecoords = len(varspacecoordnames)
+
+        #print vardimnames, nbspacecoords, dictdims
+
+        if nbspacecoords == 0: # data => simple time series
+            vartype = '1D:time series'
+            value = np.empty([len(years)], dtype=float)            
+            spacecoords = None
+        elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
+            # get rid of plev in list        
+            varspacecoordnames = [item for item in varspacecoordnames if item != 'plev'] 
+            spacecoords = (varspacecoordnames[0],varspacecoordnames[1])
+            spacevar1 = data.variables[spacecoords[0]][:]
+            spacevar2 = data.variables[spacecoords[1]][:]
+            value = np.empty([len(years), len(spacevar1), len(spacevar2)], dtype=float)
+
+            #print spacecoords
+            if 'lat' in spacecoords and 'lon' in spacecoords:
+                vartype = '2D:horizontal'
+            elif 'lat' in spacecoords and 'lev' in spacecoords:
+                vartype = '2D:meridional_vertical'
+            else:
+                print 'Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!'
+                exit(1)
+        else:
+            print 'Cannot handle this variable yet! To many dimensions... Exiting!'
+            exit(1)
 
         # Transform longitudes from [-180,180] domain to [0,360] domain if needed
-        indneg = np.where(lon < 0)[0]
-        if len(indneg) > 0: # if non-empty
-            lon[indneg] = 360.0 + lon[indneg]
-
-        # -------------------------------------------------------------
-        # Convert time from "nb of days from dateref" to absolute years 
-        # -------------------------------------------------------------
-        time_yrs = []
-        for i in range(0,len(data.variables['time'][:])):
-            time_yrs.append(dateref + timedelta(days=int(data.variables['time'][i])))
-
-        
-        var_to_extract = vardef.split('_')[0]
-        # ------------------------------
-        # Convert monthly data to annual
-        # ------------------------------
-        # List years available in dataset and sort
-        years_all = []
-        for i in range(0,len(time_yrs)):
-            isotime = time_yrs[i].isoformat()
-            years_all.append(int(isotime.split("-")[0]))
-        years = list(set(years_all)) # 'set' is used to get unique values in list
-        years.sort # sort the list
-
-        time_yrs  = np.empty(len(years), dtype=int)
-        value = np.empty([len(years), len(lat), len(lon)], dtype=float)
-
+        if vartype == '2D:horizontal':
+            # which dim is lon?
+            indlon = spacecoords.index('lon')
+            if indlon == 0:
+                vartmp = spacevar1
+            elif indlon == 1:
+                vartmp = spacevar2
+            indneg = np.where(vartmp < 0)[0]
+            if len(indneg) > 0: # if non-empty
+                vartmp[indneg] = 360.0 + vartmp[indneg]
+            # Back into right array
+            if indlon == 0:
+                spacevar1 = vartmp
+            elif indlon == 1:
+                spacevar2 = vartmp
+            
         # Loop over years in dataset
-        for i in range(0,len(years)):        
+        for i in range(0,len(years)): 
             # find indices in time array where "years[i]" appear
             ind = [j for j, k in enumerate(years_all) if k == years[i]]
             time_yrs[i] = years[i]
-            # ---------------------------------------
-            # Calculate annual mean from monthly data
-            # Note: data has dims [time,lat,lon]
-            # ---------------------------------------
-            value[i,:,:] = np.nanmean(data.variables[var_to_extract][ind],axis=0)
 
+            # -----------------------------------------
+            # Calculate annual mean from monthly data
+            # Note: assume data has dims [time,lat,lon]
+            # -----------------------------------------
+            if vartype == '1D:time series':
+                value[i] = np.nanmean(data.variables[var_to_extract][ind],axis=0)    
+            elif '2D' in vartype: 
+                if nbdims > 3:
+                    value[i,:,:] = np.nanmean(np.squeeze(data.variables[var_to_extract][ind]),axis=0)
+                else:
+                    value[i,:,:] = np.nanmean(data.variables[var_to_extract][ind],axis=0)
 
         # Model data, so need to standardize (i.e. calculate anomalies)
         #print 'Standardizing the prior...'
@@ -510,13 +570,17 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
         print var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
 
         # Dictionary of dictionaries
-        # ex data access : datadict['tas_sfc_Amon']['years'] => arrays containing years of the 'tas' data
-        #                  datadict['tas_sfc_Amon']['value'] => array of 'tas' data values etc ...
+        # ex. data access : datadict['tas_sfc_Amon']['years'] => arrays containing years of the 'tas' data
+        #                   datadict['tas_sfc_Amon']['value'] => array of 'tas' data values etc ...
         d = {}
-        d['years'] = time_yrs
-        d['lat']   = lat
-        d['lon']   = lon
-        d['value'] = value
+        d['vartype'] = vartype
+        d['years']   = time_yrs
+        d['value']   = value
+        d['spacecoords'] = spacecoords
+        if '2D' in vartype:
+            d[spacecoords[0]] = spacevar1
+            d[spacecoords[1]] = spacevar2
+
         datadict[vardef] = d
 
 

@@ -37,6 +37,9 @@ def year_fix(t):
     #
     #             revised 16 June 2015 (GJH)
 
+    # make sure t is an integer
+    t = int(t)
+
     if t < 10:
         ypad = '000'+str(t)
     elif t >= 10 and t < 100:
@@ -143,60 +146,108 @@ def ensemble_stats(workdir):
     npzfile = np.load(prior_filn)
     npzfile.files
     Xbtmp = npzfile['Xb_one']
-    nlat = npzfile['nlat']
-    nlon = npzfile['nlon']
-    lat = npzfile['lat']
-    lon = npzfile['lon']
+    Xb_coords = npzfile['Xb_one_coords']
+
     # get state vector content info (state variables and their position in vector)
     # note: the .item() is necessary to access a dict stored in a npz file 
-    state_info = npzfile['state_info'].item() 
+    state_info = npzfile['state_info'].item()
     nens = np.size(Xbtmp,1)
 
     # get a listing of the analysis files
     files = glob.glob(workdir+"/year*")
-
     # sorted
     files.sort()
+
+    nyears = len(files)
 
     # loop on state variables 
     for var in state_info.keys():
 
         print 'State variable:', var
 
-        ibeg = state_info[var][0]
-        iend = state_info[var][1]
+        ibeg = state_info[var]['pos'][0]
+        iend = state_info[var]['pos'][1]
 
-        Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(nlat,nlon,nens))
-        xbm = np.mean(Xb,axis=2) # ensemble mean
-        xbv = np.var(Xb,axis=2) # ensemble variance
+        # variable type (2D lat/lon, 2D lat/depth, time series etc ...)
 
-        # process the analysis files
-        nyears = len(files)
-        years = []
-        xam = np.zeros([nyears,nlat,nlon])
-        xav = np.zeros([nyears,nlat,nlon],dtype=np.float64)
-        k = -1
-        for f in files:
-            #print 'file = ' + f
-            k = k + 1
-            i = f.find('year')
-            year = f[i+4:i+8]
-            years.append(year)
-            Xatmp = np.load(f)
-            Xa = np.reshape(Xatmp[ibeg:iend+1,:],(nlat,nlon,nens))
-            xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
-            xav[k,:,:] = np.var(Xa,axis=2) # ensemble variance     
+        if state_info[var]['spacedims']: # var has spatial dimensions (not None)
+            if len(state_info[var]['spacecoords']) == 2: # 2D variable
+                ndim1 = state_info[var]['spacedims'][0]
+                ndim2 = state_info[var]['spacedims'][1]
+                
+                Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                xbm = np.mean(Xb,axis=2) # ensemble mean
+                xbv = np.var(Xb,axis=2,ddof=1)  # ensemble variance
 
+                # process the **analysis** files
+                years = []
+                xam = np.zeros([nyears,ndim1,ndim2])
+                xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
+                k = -1
+                for f in files:
+                    k = k + 1
+                    i = f.find('year')
+                    year = f[i+4:i+8]
+                    years.append(year)
+                    Xatmp = np.load(f)
+                    Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                    xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
+                    xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
+
+                # form dictionary containing variables to save, including info on array dimensions
+                coordname1 = state_info[var]['spacecoords'][0]
+                coordname2 = state_info[var]['spacecoords'][1]
+                dimcoord1 = 'n'+coordname1
+                dimcoord2 = 'n'+coordname2
+
+                coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+                coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+
+                vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                         coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
+                vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                         coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
+    
+            else:
+                print 'ERROR in ensemble_stats: Variable of unrecognized dimensions! Exiting'
+                exit(1)
+
+
+        else: # var has no spatial dims
+            Xb = Xbtmp[ibeg:iend+1,:]
+            xbm = np.mean(Xb,axis=1) # ensemble mean
+            xbv = np.var(Xb,axis=1)  # ensemble variance
+            
+            # process the **analysis** files
+            years = []
+            xam = np.zeros([nyears])
+            xav = np.zeros([nyears],dtype=np.float64)
+            k = -1
+            for f in files:
+                k = k + 1
+                i = f.find('year')
+                year = f[i+4:i+8]
+                years.append(year)
+                Xatmp = np.load(f)
+                Xa = Xatmp[ibeg:iend+1,:]
+                xam[k] = np.mean(Xa,axis=1) # ensemble mean
+                xav[k] = np.var(Xa,axis=1)  # ensemble variance     
+                
+            vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
+            
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
         print 'writing the new ensemble mean file...' + filen
-        np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbm=xbm, xam=xam)
-        # ens. variance to file
-        filen = workdir + '/ensemble_var_' + var
-        print 'writing the new ensemble variance file...' + filen
-        np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
+        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbm=xbm, xam=xam)
+        np.savez(filen, **vars_to_save_mean)
 
-        
+        # ens. variance to file
+        filen = workdir + '/ensemble_variance_' + var
+        print 'writing the new ensemble variance file...' + filen
+        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
+        np.savez(filen, **vars_to_save_var)
+
     return
 
 
@@ -276,3 +327,59 @@ def assimilated_proxies(workdir):
             ptypes[key] = 1
             
     return ptypes,nrecords
+
+def coefficient_efficiency(ref,test):
+    """
+    Compute the coefficient of efficiency for a test time series, with respect to a reference time series.
+
+    Inputs:
+    test: one-dimensional test array
+    ref: one-dimensional reference array, of same size as test
+
+    Outputs:
+    CE: scalar CE score
+    """
+
+    # error
+    error = test - ref
+
+    # error variance
+    evar = np.var(error,ddof=1)
+
+    # variance in the reference 
+    rvar = np.var(ref,ddof=1)
+
+    # CE
+    CE = 1. - (evar/rvar)
+
+    return CE
+
+def rank_histogram(ensemble, value):
+
+    """
+    Compute the rank of a measurement in the contex of an ensemble. 
+    
+    Input:
+    * the observation (value)
+    * the ensemble evaluated at the observation position (ensemble)
+
+    Output:
+    * the rank of the observation in the ensemble (rank)
+    """
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             July 2015
+
+    # convert the numpy array to a list so that the "truth" can be appended
+    Lensemble = ensemble.tolist()
+    Lensemble.append(value)
+
+    # convert the list back to a numpy array so we have access to a sorting function
+    Nensemble = np.array(Lensemble)
+    sort_index = np.argsort(Nensemble)
+
+    # convert the numpy array containing the ranked list indices back to an ordinary list for indexing
+    Lsort_index = sort_index.tolist()
+    rank = Lsort_index.index(len(Lensemble)-1)
+
+    return rank
