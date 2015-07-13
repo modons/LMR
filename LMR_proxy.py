@@ -1,4 +1,5 @@
 
+
 # -------------------------------------------------------------------------------
 # *** Proxy type assignment  ----------------------------------------------------
 # -------------------------------------------------------------------------------
@@ -44,7 +45,7 @@ class proxy_master(object):
     proxy_type         = 'master---do not instantiate here'
 
     # Define the basic proxy system model (PSM)
-    def psm(self,C,X,X_lat,X_lon):
+    def psm(self,C,X,state_info,X_coords):
 
         import os.path
         import numpy as np
@@ -133,14 +134,14 @@ class proxy_master(object):
             xvar = range(len(reg_ya))
             proxy_slope, proxy_intercept, r_value, p_value, std_err = stats.linregress(xvar,reg_ya)
             proxy_fit = proxy_slope*np.squeeze(xvar) + proxy_intercept
-            #reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy
+            #reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy when commented out
             # calibration detrend: (1) linear regression, (2) fit, (3) detrend
             xvar = range(len(reg_xa))
             calib_slope, calib_intercept, r_value, p_value, std_err = stats.linregress(xvar,reg_xa)
             calib_fit = calib_slope*np.squeeze(xvar) + calib_intercept
-            #reg_xa = reg_xa - calib_fit
+            #reg_xa = reg_xa - calib_fit # expt 4: no detrend for calib when commented out
             # END NEW (GH) 21 June 2015
-            
+
             print 'Calib stats (x)              [min, max, mean, std]:', np.nanmin(reg_xa), np.nanmax(reg_xa), np.nanmean(reg_xa), np.nanstd(reg_xa)
             print 'Proxy stats (y:original)     [min, max, mean, std]:', np.nanmin(reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
             # standardize proxy values over period of overlap with calibration data
@@ -214,19 +215,37 @@ class proxy_master(object):
             # Calculate the Ye's ...
             # ----------------------
 
+            # Looking for position of 'tas_sfc_Amon' variable in state vector 
+            # (now only considering forward models calibrated against surface air temperature)
+            # Check it is there! 
+            if 'tas_sfc_Amon' not in state_info.keys():
+                print "Needed variable not in state vector. Cannot calculate the Ye's. Exiting!"
+                exit(1)
+
+            # positions in state vector
+            tas_indbegin = state_info['tas_sfc_Amon']['pos'][0]
+            tas_indend   = state_info['tas_sfc_Amon']['pos'][1]
+            # lat/lon column indices in X_coords 
+            ind_lon = state_info['tas_sfc_Amon']['spacecoords'].index('lon')
+            ind_lat = state_info['tas_sfc_Amon']['spacecoords'].index('lat')
+
             # Find row index of X for which [X_lat,X_lon] corresponds to closest grid point to 
             # location of proxy site [self.lat,self.lon]
             # Calclulate distances from proxy site.
-            stateDim = X.shape[0]
+            #stateDim = X.shape[0]
+            varDim = (tas_indend+1) - tas_indbegin
             ensDim = X.shape[1]
-            dist = np.empty(stateDim)
-            dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_lon[k],X_lat[k]) for k in xrange(stateDim) ])
+            dist = np.empty(varDim)
+            #rt dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_lon[k],X_lat[k]) for k in range(tas_indbegin,tas_indend+1) ])
+            dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_coords[k,ind_lon],X_coords[k,ind_lat]) for k in range(tas_indbegin,tas_indend+1) ])
 
-            # row index of nearest grid pt. in prior (minimum distance)
+            # row index in dist array corresponding to nearest grid pt. in prior (minimum distance)
             kind = np.unravel_index(dist.argmin(), dist.shape) 
+            # corresponding index in state vector
+            kind_state = tas_indbegin + kind[0]
 
             Ye = np.zeros(shape=ensDim)
-            Ye = self.slope*np.squeeze(X[kind,:]) + self.intercept
+            Ye = self.slope*np.squeeze(X[kind_state,:]) + self.intercept
 
         else:
             Ye = None
@@ -468,4 +487,4 @@ class pseudo_proxy_temperature(proxy_master):
         # do we need self.alt? (see S1 read)
         [self.time,self.lat,self.lon,self.value] = read_gridded_data_ccsm4_last_millenium(self.proxy_datadir,self.proxy_datafile,self.statevars)
 
-        return 
+        return

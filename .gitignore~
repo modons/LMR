@@ -1,0 +1,5 @@
+*.pyc
+Figs/*
+Archive/*
+*.nc
+PSMstats_*.txt

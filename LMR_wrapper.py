@@ -1,4 +1,5 @@
 
+
 #==========================================================================================
 # Program: LMR_wrapper.py
 # 
@@ -74,8 +75,8 @@ for iter in MCiters:
     # Call the driver
     LMR.LMR_driver_callable(a)
 
-    # write the analysis ensemble mean to a separate file
-    LMR_utils.ensemble_mean(a.workdir)
+    # write the analysis ensemble mean and variance to separate files (per state variable)
+    LMR_utils.ensemble_stats(a.workdir)
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
@@ -92,12 +93,11 @@ for iter in MCiters:
         print ' **** clean start --- removing existing files in iteration output directory'
         os.system('rm -f -r %s' % mc_dir)
 
-    # GH redundant with directory rm below???
     # remove the individual years
     cmd = 'rm -f ' + a.workdir + '/year* ' 
     # option to move the whole directory
     #cmd = 'mv -f ' + loc_dir + ' ' + mc_dir
-    print cmd
+    #print cmd
     #os.system(cmd)
 
     # or just move select files and delete the rest NEED TO CREATE THE DIRECTORY IN THIS CASE!
@@ -115,8 +115,9 @@ for iter in MCiters:
     os.system(cmd)    
     cmd = 'mv -f ' + loc_dir+'/gmt_ensemble*' + ' ' + mc_dir + '/'
     print cmd
-    os.system(cmd)    
+    os.system(cmd)
 
+    # removing the work output directory once selected files have been moved
     cmd = 'rm -f -r ' + loc_dir
     print cmd
     os.system(cmd)

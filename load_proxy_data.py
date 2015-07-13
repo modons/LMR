@@ -258,7 +258,6 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
 
     # Library needed to read CSV file format
     xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
-    #xlrd_dir = '/Users/hakim/svnwork/python-lib/trunk/src/xlrd/xlrd/'
     sys.path.append(xlrd_dir)
     import xlrd
 
@@ -601,8 +600,6 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
 
         nbsites = len(mergedlist)
         nbsites_assim = int(nbsites*proxy_frac)
-        print 'HELLO! nbsites_assim = ' + str(nbsites_assim)
-
         # random selection over merged site list
         ind_assim = sample(range(0, nbsites), nbsites_assim)
         ind_eval = set(range(0,nbsites)) - set(ind_assim) # list indices of sites not chosen

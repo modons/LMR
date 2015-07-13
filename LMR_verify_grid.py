@@ -1,7 +1,11 @@
 
-# coding: utf-8
-
-# In[8]:
+#
+# verify statistics related to the global-mean 2m air temperature
+#
+# started from LMR_plots.py r-86
+#
+# CRU data too coarse to include in the analysis
+#
 
 import matplotlib
 # need to do this when running remotely
@@ -31,8 +35,6 @@ from LMR_plot_support import *
 # change default value of latlon kwarg to True.
 bm.latlon_default = True
 
-
-# In[20]:
 
 
 ##################################
@@ -110,7 +112,6 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-# In[52]:
 
 workdir = datadir_output + '/' + nexp
 print 'working directory = ' + workdir
@@ -188,7 +189,7 @@ print np.shape(xam_var)
 print '\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
 print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
 
-# In[22]:
+
 
 #################################################################
 # BEGIN: load verification data (GISTEMP, HadCRU, BE, and 20CR) #
@@ -276,7 +277,6 @@ tcr_gm = tcr_gm - np.mean(tcr_gm[smatch:ematch])
 ###############################################################
 
 
-# In[53]:
 
 print '\n regridding data to a common T42 grid...\n'
 
@@ -477,9 +477,6 @@ for yr in cyears:
 
     
 
-
-# In[54]:
-
 # plots for anomaly correlation statistics
 
 # number of bins in the histograms
@@ -533,10 +530,7 @@ fig.suptitle('2m air temperature anomaly correlation')
 if fsave:
     print 'saving to .png'
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1]))
-  
 
-
-# In[55]:
 
 #
 # BEGIN r and CE calculations
@@ -622,7 +616,6 @@ print 'tcr-gis 60S-60N median ce: ' + str(tg_cemean60)
 #
 
 
-# In[56]:
 
 # r and ce plots
 iplot = True
@@ -677,9 +670,6 @@ if iplot:
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1]))   
     
 
-
-# In[49]:
-
 #ensemble calibration
 
 print np.shape(lt_err)
@@ -694,7 +684,6 @@ print np.shape(calib)
 print calib[0:-1,:].mean()
 
 
-# In[50]:
 
 fig = plt.figure()
 cb = LMR_plotter(calib,lat2_new,lon2_new,'Oranges',10,0,10)

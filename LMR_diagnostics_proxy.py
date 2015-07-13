@@ -10,7 +10,7 @@
 #========================================================================================== 
 
 # Import parameters for the verification
-from LMR_verif_NAMELIST import *
+from LMR_diagProxy_NAMELIST import *
 
 #==========================================================================================
 def rmse(predictions, targets):

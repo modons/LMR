@@ -1,5 +1,6 @@
 
-#from datetime import datetime, timedelta
+
+from datetime import datetime, timedelta
 
 # =============================================================================
 # Section 1: High-level parameters of reconstruction experiment
@@ -11,19 +12,13 @@
 #nexp = 'ReconDevTest_1000_full_r_0.2' # *** this one was excellent 
 #nexp = 'ReconDevTest_1000_allproxies_r_0.2' # *** this one was excellent 
 #nexp = 'ReconDevTest_100_testing_MXD'
-#nexp = 'ReconDevTest_1000_testing_coral'
-#nexp = 'ReconDevTest_1000_testing_icecore'
+#nexp = 'ReconDevTest_100_testing_MXD_coral'
 #nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
-#nexp = 'testdev_check_1000_75pct'
-#nexp = 'testdev_detrend4_1000_75pct'
-#nexp = 'test_saving_gmt_ensemble'
-#nexp = 'testing_1000_75pct_200members'
-nexp = 'testing_1000_75pct_ens_size'
+nexp = 'testdev2'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
 LMRpath = '/home/disk/kalman3/rtardif/LMR'
 #LMRpath = '/home/disk/ekman/rtardif/nobackup/LMR'
-#LMRpath = '/home/disk/kalman3/hakim/LMR'
 
 # set clean_start to True to delete existing files in the outpout directory (otherwise they will be used as the prior!)
 clean_start = True
@@ -31,26 +26,24 @@ clean_start = True
 
 # Reconstruction period (years)
 #recon_period = [1500,2000]
-#recon_period = [1850,2000]
+recon_period = [1850,2000]
 #recon_period = [1800,2000]
-recon_period = [1000,2000]
+#recon_period = [1000,2000]
 
 # Ensemble size
-Nens = 200
+Nens = 100
 
 # Fraction of available proxy data (sites) to assimilate 
 # (=1.0 for all, 0.5 for half etc.)
 #proxy_frac = 0.1
 #proxy_frac = 0.25
 #proxy_frac = 0.5
-proxy_frac = 0.75
-#proxy_frac = 1.0
+#proxy_frac = 0.75
+proxy_frac = 1.0
 
 # Number of Monte-Carlo iterations
-#iter_range = [0,1]
-iter_range = [0,10]
-#iter_range = [61,100]
-#iter_range = [101,101]
+#iter_range = [0,20]
+iter_range = [0,0]
 
 # Localization radius for DA (in km)
 locRad = None
@@ -107,22 +100,23 @@ PSM_r_crit = 0.2
 # Prior data directory & model source
 prior_source     = 'ccsm4_last_millenium'
 datadir_prior    = LMRpath+'/data/model'
-datafile_prior   = 'tas_Amon_CCSM4_past1000_085001-185012.nc'
+datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 dataformat_prior = 'NCD'
 
 # Define variables in state vector (will be updated by assimilation)
-state_variables = ['tas']
-#state_variables = ['tas', 'zg500hPa']
+#state_variables = ['tas_sfc_Amon']
+#state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
 
 # =============================================================================
 # Section 4: OUTPUT
 # =============================================================================
 
 # Run time output
-#datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
 #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
-datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
+#datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
 # Archive directory
-#archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
-archive_dir = '/home/disk/kalman3/hakim/LMR/'
+archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+#archive_dir = '/home/disk/kalman3/hakim/LMR/'

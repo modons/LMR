@@ -73,3 +73,6 @@ matplotlibrc
 *.gif
 *.avi
 *.mp4
+Figs/*
+Archive/*
+*.nc
