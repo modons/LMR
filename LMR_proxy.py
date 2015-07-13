@@ -1,10 +1,4 @@
-import numpy as np
-import pylab
-from scipy import stats
 
-import LMR_utils
-from load_proxy_data import read_proxy_data_S1csv_site
-from load_gridded_data import read_gridded_data_ccsm4_last_millenium
 
 
 # -------------------------------------------------------------------------------
@@ -52,8 +46,13 @@ class proxy_master(object):
     proxy_type         = 'master---do not instantiate here'
 
     # Define the basic proxy system model (PSM)
-    def psm(self,C,X,X_lat,X_lon):
+    def psm(self,C,X,state_info,X_coords):
 
+        import os.path
+        import numpy as np
+        from scipy import stats
+        import LMR_utils
+        from random import sample
 
         try:
           self.calibrate
@@ -70,8 +69,7 @@ class proxy_master(object):
             # ------------------------
             diag_output       = True
             diag_output_figs  = False
-            calib_spatial_avg = False
-            Npts = 9 # nb of neighboring pts used in smoothing
+            calib_spatial_avg = False ; Npts = 9 # nb of neighboring pts used in smoothing
             # ------------------------
 
             # --------------------------------------------
@@ -97,9 +95,7 @@ class proxy_master(object):
             jind,kind = np.unravel_index(dist.argmin(), dist.shape) 
             
             # overlapping years
-            sc = set(C.time)
-            sp = set(self.time)
-
+            sc = set(C.time); sp = set(self.time)
             common_time = list(sc.intersection(sp))
             # respective indices in calib and proxy times
             ind_c = [j for j, k in enumerate(C.time) if k in common_time]
@@ -139,14 +135,14 @@ class proxy_master(object):
             xvar = range(len(reg_ya))
             proxy_slope, proxy_intercept, r_value, p_value, std_err = stats.linregress(xvar,reg_ya)
             proxy_fit = proxy_slope*np.squeeze(xvar) + proxy_intercept
-            #reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy
+            #reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy when commented out
             # calibration detrend: (1) linear regression, (2) fit, (3) detrend
             xvar = range(len(reg_xa))
             calib_slope, calib_intercept, r_value, p_value, std_err = stats.linregress(xvar,reg_xa)
             calib_fit = calib_slope*np.squeeze(xvar) + calib_intercept
-            #reg_xa = reg_xa - calib_fit
+            #reg_xa = reg_xa - calib_fit # expt 4: no detrend for calib when commented out
             # END NEW (GH) 21 June 2015
-            
+
             print 'Calib stats (x)              [min, max, mean, std]:', np.nanmin(reg_xa), np.nanmax(reg_xa), np.nanmean(reg_xa), np.nanstd(reg_xa)
             print 'Proxy stats (y:original)     [min, max, mean, std]:', np.nanmin(reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
             # standardize proxy values over period of overlap with calibration data
@@ -188,6 +184,7 @@ class proxy_master(object):
 
                 if diag_output_figs:
                     # Figure (scatter plot w/ summary statistics)
+                    import pylab
                     line = self.slope*reg_xa+self.intercept
                     pylab.plot(reg_xa,line,'r-',reg_xa,reg_ya,'o',markersize=7,markerfacecolor='#5CB8E6',markeredgecolor='black',markeredgewidth=1)
 # GH: I don't know how this ran in the first place; must exploit some global namespace                    
@@ -219,19 +216,37 @@ class proxy_master(object):
             # Calculate the Ye's ...
             # ----------------------
 
+            # Looking for position of 'tas_sfc_Amon' variable in state vector 
+            # (now only considering forward models calibrated against surface air temperature)
+            # Check it is there! 
+            if 'tas_sfc_Amon' not in state_info.keys():
+                print "Needed variable not in state vector. Cannot calculate the Ye's. Exiting!"
+                exit(1)
+
+            # positions in state vector
+            tas_indbegin = state_info['tas_sfc_Amon']['pos'][0]
+            tas_indend   = state_info['tas_sfc_Amon']['pos'][1]
+            # lat/lon column indices in X_coords 
+            ind_lon = state_info['tas_sfc_Amon']['spacecoords'].index('lon')
+            ind_lat = state_info['tas_sfc_Amon']['spacecoords'].index('lat')
+
             # Find row index of X for which [X_lat,X_lon] corresponds to closest grid point to 
             # location of proxy site [self.lat,self.lon]
             # Calclulate distances from proxy site.
-            stateDim = X.shape[0]
+            #stateDim = X.shape[0]
+            varDim = (tas_indend+1) - tas_indbegin
             ensDim = X.shape[1]
-            dist = np.empty(stateDim)
-            dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_lon[k],X_lat[k]) for k in xrange(stateDim) ])
+            dist = np.empty(varDim)
+            #rt dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_lon[k],X_lat[k]) for k in range(tas_indbegin,tas_indend+1) ])
+            dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_coords[k,ind_lon],X_coords[k,ind_lat]) for k in range(tas_indbegin,tas_indend+1) ])
 
-            # row index of nearest grid pt. in prior (minimum distance)
+            # row index in dist array corresponding to nearest grid pt. in prior (minimum distance)
             kind = np.unravel_index(dist.argmin(), dist.shape) 
+            # corresponding index in state vector
+            kind_state = tas_indbegin + kind[0]
 
             Ye = np.zeros(shape=ensDim)
-            Ye = self.slope*np.squeeze(X[kind,:]) + self.intercept
+            Ye = self.slope*np.squeeze(X[kind_state,:]) + self.intercept
 
         else:
             Ye = None
@@ -252,6 +267,9 @@ class proxy_tree_ring_width(proxy_master):
     proxy_type         = 'Tree ring_Width'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -276,6 +294,9 @@ class proxy_tree_ring_density(proxy_master):
 
     def read_proxy(self,proxy_site):
 
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
+
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
         self.nobs = len(self.value)
@@ -288,9 +309,14 @@ class proxy_tree_ring_density(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_coral_d18O(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
+
     proxy_type         = 'Coral_d18O'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -304,9 +330,14 @@ class proxy_coral_d18O(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_coral_luminescence(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
+
     proxy_type         = 'Coral_Luminescence'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -320,9 +351,14 @@ class proxy_coral_luminescence(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_ice_core_d18O(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
+
     proxy_type         = 'Ice core_d18O'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -336,9 +372,14 @@ class proxy_ice_core_d18O(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_ice_core_d2H(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
+
     proxy_type         = 'Ice core_d2H'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -352,10 +393,14 @@ class proxy_ice_core_d2H(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_ice_core_accumulation(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Ice core_Accumulation'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -369,9 +414,14 @@ class proxy_ice_core_accumulation(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_lake_sediment_all(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
+
     proxy_type         = 'Lake sediment_All'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -385,9 +435,14 @@ class proxy_lake_sediment_all(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_marine_sediment_all(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
+
     proxy_type         = 'Marine sediment_All'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -401,9 +456,14 @@ class proxy_marine_sediment_all(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_speleothem_all(proxy_master):
     
+    from load_proxy_data import read_proxy_data_S1csv_site
+
     proxy_type         = 'Speleothem_All'
 
     def read_proxy(self,proxy_site):
+
+        import numpy as np
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -423,8 +483,9 @@ class pseudo_proxy_temperature(proxy_master):
 
     # variable proxy_site is empty and not used, but here for compatability
     def read_proxy(self,proxy_site):
+        from load_gridded_data import read_gridded_data_ccsm4_last_millenium
 
         # do we need self.alt? (see S1 read)
         [self.time,self.lat,self.lon,self.value] = read_gridded_data_ccsm4_last_millenium(self.proxy_datadir,self.proxy_datafile,self.statevars)
 
-        return 
+        return

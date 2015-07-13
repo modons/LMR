@@ -1,15 +1,3 @@
-import sys
-import numpy as np
-import unicodedata
-import os
-from random import sample
-
-
-xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
-sys.path.append(xlrd_dir)
-import xlrd
-
-
 class EmptyError(Exception):
     print Exception
 
@@ -26,9 +14,14 @@ def read_proxy_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_region, proxy
 # 
 #========================================================================================== 
 
+    import sys
+    import numpy as np
+    from random import sample
 
     # Library needed to read CSV file format
-
+    xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
+    sys.path.append(xlrd_dir)
+    import xlrd
 
     # Parsing dictionary of proxy definitions
     proxy_list  = {}; # dict list containing proxy types and associated proxy id's (sites)
@@ -91,7 +84,16 @@ def create_proxy_lists_from_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_
 #
 # ... reads metadata worksheet from PAGES2K_DatabaseS1 dataset ...
 # 
-#==========================================================================================
+#========================================================================================== 
+
+    import sys
+    import numpy as np
+    from random import sample
+
+    # Library needed to read CSV file format
+    xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
+    sys.path.append(xlrd_dir)
+    import xlrd
 
     # Parsing dictionary of proxy definitions
     proxy_list = {}; # dict list containing proxy types and associated proxy id's (sites)
@@ -194,7 +196,15 @@ def read_proxy_metadata_S1csv_old(datadir_proxy, datafile_proxy, proxy_region, p
 #
 # ... reads metadata worksheet from PAGES2K_DatabaseS1 dataset ...
 # 
-#==========================================================================================
+#========================================================================================== 
+
+    import sys
+    import numpy as np
+
+    # Library needed to read CSV file format
+    xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
+    sys.path.append(xlrd_dir)
+    import xlrd
 
     # Uploading proxy data
     proxy_file = datadir_proxy + '/'+datafile_proxy;
@@ -240,7 +250,15 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
 # ... reads data from a selected site (chronology) in PAGES2K_DatabaseS1 ... 
 # ... site is passed as argument ...
 # 
-#==========================================================================================
+#========================================================================================== 
+
+    import sys
+    import numpy as np
+
+    # Library needed to read CSV file format
+    xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
+    sys.path.append(xlrd_dir)
+    import xlrd
 
     # Uploading proxy data
     proxy_file = datadir_proxy + '/'+datafile_proxy;
@@ -355,7 +373,15 @@ def read_proxy_data_S1csv(self, datadir_proxy, datafile_proxy, proxy_region, pro
 # ... reads data from all sites (chronologies) in PAGES2K_DatabaseS1 dataset meeting 
 #     selection criteria from NAMELIST ... 
 # 
-#==========================================================================================
+#========================================================================================== 
+
+    import sys
+    import numpy as np
+
+    # Library needed to read CSV file format
+    xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
+    sys.path.append(xlrd_dir)
+    import xlrd
 
     # Uploading proxy data
     proxy_file = datadir_proxy + '/'+datafile_proxy;
@@ -472,6 +498,7 @@ def is_number(s):
     except ValueError:
         pass
     try:
+        import unicodedata
         unicodedata.numeric(s)
         return True
     except (TypeError, ValueError):
@@ -487,11 +514,18 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
 #
 # ... reads metadata worksheet for NCDC formatted proxy dataset ...
 # 
-#==========================================================================================
+#========================================================================================== 
+
+    import sys
+    import numpy as np
+    from random import sample
 
     # NEED TO THINK OF SOMETHING ELSE HERE... ... ... ... ... ... ... ... ...
     # ... provide this library as part of LMR distribution?
     # Library needed to read CSV file format
+    xlrd_dir = '/home/disk/ekman/rtardif/nobackup/lib/pylibs/xlrd/xlrd/'
+    sys.path.append(xlrd_dir)
+    import xlrd
 
     # Parsing dictionary of proxy definitions
     proxy_list = {}; # dict list containing proxy types and associated proxy id's (sites)
@@ -565,8 +599,6 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
 
         nbsites = len(mergedlist)
         nbsites_assim = int(nbsites*proxy_frac)
-        print 'HELLO! nbsites_assim = ' + str(nbsites_assim)
-
         # random selection over merged site list
         ind_assim = sample(range(0, nbsites), nbsites_assim)
         ind_eval = set(range(0,nbsites)) - set(ind_assim) # list indices of sites not chosen
@@ -674,7 +706,9 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
 # 
 #========================================================================================== 
     
-
+    import os
+    import numpy as np
+    
 
     # Possible header definitions of time in data files ...
     time_defs = ['age','Age_AD','age_AD','age_AD_ass','age_AD_int','Midpt_year',\
@@ -946,25 +980,3 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
     #return id, lat, lon, alt, time, value
     return id, lat, lon, alt, time_annual, value_annual
 
-
-if __name__ == '__main__':
-    from LMR_config import core, proxies
-    from os.path import join
-    import cPickle
-
-    datatag_calib    = proxies.datatag_calib
-    fnamePSM = join(join(core.lmr_path, 'psms'), 'PSMs_'+datatag_calib+'.pckl')
-    infile   = open(fnamePSM, 'rb')
-    psm_data = cPickle.load(infile)
-    infile.close()
-
-    locRad           = core.loc_rad
-    datadir_proxy    = proxies.datadir_proxy
-    datafile_proxy   = proxies.datafile_proxy
-    regions          = proxies.regions
-    PSM_r_crit       = proxies.psm_r_crit
-    proxy_resolution = proxies.proxy_resolution
-    proxy_assim      = proxies.proxy_assim
-    LMRpath          = core.lmr_path
-    proxy_frac       = core.proxy_frac
-    [sites_assim, sites_eval] = create_proxy_lists_from_metadata_S1csv(datadir_proxy,datafile_proxy,regions,proxy_resolution,proxy_assim,proxy_frac,psm_data,PSM_r_crit)

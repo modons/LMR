@@ -1,9 +1,12 @@
+
+
+#
 # verify statistics related to the global-mean 2m air temperature
 #
 # started from LMR_plots.py r-86
 
 import matplotlib
-# need to do this when running remotely, and to suppress figures
+# need to do this when running remotely
 matplotlib.use('Agg')
 
 import csv
@@ -645,3 +648,5 @@ if iplot:
 
 # display all figures at the end:
 plt.show()
+
+

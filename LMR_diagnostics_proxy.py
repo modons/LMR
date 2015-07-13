@@ -9,16 +9,9 @@
 #  
 #========================================================================================== 
 
-import numpy as np
-from time import time
-import cPickle
 
-import LMR_utils
-import LMR_calibrate
-import LMR_proxy
-import LMR_prior
-from LMR_verif_NAMELIST import *
-from load_proxy_data import read_proxy_metadata_S1csv as read_proxy_metadata
+# Import parameters for the verification
+from LMR_diagProxy_NAMELIST import *
 
 #==========================================================================================
 def rmse(predictions, targets):

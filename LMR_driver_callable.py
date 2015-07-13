@@ -1,4 +1,6 @@
 
+
+
 #==========================================================================================
 # Program: LMR_driver_callable.py
 # 
@@ -25,65 +27,61 @@
 #            - Bug fix in calculation of global mean temperature + function now part of
 #              LMR_utils.py (G. Hakim)
 #
+#  July 2015:
+#            - Version with state vector composed of several state variables, which may
+#              be 2D lat/lon, 2D lat/depth (e.g. AMOC streamfunction) or time series
+#              (e.g. AMOC index, basin averaged ocean heat content etc.) (R. Tardif)
+#
 #==========================================================================================
 
-import numpy as np
-import cPickle
-from time import time
+def LMR_driver_callable(state):
 
-import LMR_proxy
-import LMR_prior
-import LMR_calibrate
-import LMR_utils
-import LMR_config as basecfg
-from LMR_DA import enkf_update_array, cov_localization
-from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
+    import numpy as np
+    import os.path
+    from time import time
+    from random import sample
+    import cPickle
 
-def LMR_driver_callable(cfg=None):
-
-    if cfg is None:
-        cfg = basecfg  # Use base configuration from LMR_config
-
-    #Temporary fix for old 'state usage'
-    core = cfg.core
-    prior = cfg.prior
-    proxies = cfg.proxies
+    import LMR_proxy
+    import LMR_prior
+    import LMR_calibrate
+    import LMR_utils
+    from LMR_DA import enkf_update_array, cov_localization
+    from load_proxy_data import create_proxy_lists_from_metadata_S1csv as create_proxy_lists_from_metadata
 
     verbose = 1 # verbose controls print comments (0 = none; 1 = most important; 2 = many; >=3 = all)
 
-    # TODO: AP Fix Configuration
     # daylight the variables passed in the state object (easier for code migration than leaving attached)
-    nexp             = core.nexp
-    workdir          = core.workdir
-    recon_period     = core.recon_period
-    Nens             = core.nens
-    datadir_proxy    = core.datadir_proxy
-    datafile_proxy   = core.datafile_proxy
-    regions          = core.regions
-    locRad           = core.locRad
-    PSM_r_crit       = core.PSM_r_crit
-    LMRpath          = core.LMRpath
-    datatag_calib    = proxies.datatag_calib
-    datadir_calib    = proxies.datadir_calib
-    proxy_resolution = proxies.proxy_resolution
-    proxy_assim      = proxies.proxy_assim
-    proxy_frac       = proxies.proxy_frac
-    prior_source     = prior.prior_source
-    datadir_prior    = prior.datadir_prior
-    datafile_prior   = prior.datafile_prior
-    state_variables  = prior.state_variables
+    nexp             = state.nexp
+    workdir          = state.workdir
+    recon_period     = state.recon_period
+    datatag_calib    = state.datatag_calib
+    datadir_calib    = state.datadir_calib
+    prior_source     = state.prior_source
+    datadir_prior    = state.datadir_prior
+    datafile_prior   = state.datafile_prior
+    state_variables  = state.state_variables
+    Nens             = state.Nens
+    datadir_proxy    = state.datadir_proxy
+    datafile_proxy   = state.datafile_proxy
+    regions          = state.regions
+    proxy_resolution = state.proxy_resolution
+    proxy_assim      = state.proxy_assim
+    proxy_frac       = state.proxy_frac
+    locRad           = state.locRad
+    PSM_r_crit       = state.PSM_r_crit
+    LMRpath          = state.LMRpath
 
     # ===============================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # ===============================================================================
-    #TODO: AP Logging instead of print statements
     if verbose > 0:
         print ''
         print '====================================================='
         print 'Running LMR reconstruction...'
         print '====================================================='
-        print 'Name of experiment: ', nexp
-        print ' Monte Carlo iter : ', 
+        print 'Name of experiment: ', state.nexp
+        print ' Monte Carlo iter : ', state.iter
         print ''
         
     begin_time = time()
@@ -103,11 +101,9 @@ def LMR_driver_callable(cfg=None):
         print 'Source for calibration: ' + datatag_calib
         print ''
 
-    #TODO: Doesn't appear to use C at all...
     # Assign calibration object according to "datatag_calib" (from namelist)
     C = LMR_calibrate.calibration_assignment(datatag_calib)
 
-    # TODO: AP Required attributes need to be explicitly declared in method/class
     # the path to the calibration directory is specified in the namelist file; bind it here
     C.datadir_calib = datadir_calib;
 
@@ -126,7 +122,6 @@ def LMR_driver_callable(cfg=None):
     # Assign prior object according to "prior_source" (from namelist)
     X = LMR_prior.prior_assignment(prior_source)
 
-    # TODO: AP explicit requirements
     # add namelist attributes to the prior object
     X.prior_datadir = datadir_prior
     X.prior_datafile = datafile_prior
@@ -136,10 +131,6 @@ def LMR_driver_callable(cfg=None):
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source)
     Xb_one_full = X.ens
-
-    # number of lats and lons 
-    nlat = X.nlat
-    nlon = X.nlon
 
     load_time = time() - begin_time
     if verbose > 2:
@@ -163,8 +154,7 @@ def LMR_driver_callable(cfg=None):
     if verbose > 0: print 'Reading the proxy metadata & building list of chronologies to assimilate...'
 
     # Load pre-calibrated PSM parameters 
-    #fnamePSM = LMRpath+'/PSM/PSMs_'+datatag_calib+'.pckl'
-    fnamePSM = '/home/disk/kalman3/hakim/LMR/PSM/PAGES2kS1/PSMs_'+datatag_calib+'.pckl'
+    fnamePSM = LMRpath+'/PSM/PSMs_'+datatag_calib+'.pckl'
     infile   = open(fnamePSM,'rb')
     psm_data = cPickle.load(infile)
     infile.close()
@@ -213,7 +203,6 @@ def LMR_driver_callable(cfg=None):
             Ywk.proxy_region = regions
             Ywk.nobs = 0            
 
-            # TODO: This is non-general to the PSM type
             # Check if PSM for (proxy,site) has been pre-calibrated
             if Ywk.pid in psm_data.keys():
                 Ywk.calibrate = True
@@ -229,7 +218,7 @@ def LMR_driver_callable(cfg=None):
             # --------------------------------------------------------------
             # Call PSM to get ensemble of prior estimates of proxy data (Ye)
             # --------------------------------------------------------------
-            Ywk.Ye = Ywk.psm(C, Xb_one_full, X.lat, X.lon)
+            Ywk.Ye = Ywk.psm(C,Xb_one_full,X.full_state_info,X.coords)
 
             # -------------------------------------------
             # Read data for current proxy type/chronology
@@ -249,10 +238,81 @@ def LMR_driver_callable(cfg=None):
     # ================================================================================
     # Calculate truncated state from prior, if option chosen -------------------------
     # ================================================================================
+    # Handle state vector with multiple state variables
 
-    [Xb_one,lat_new,lon_new] = LMR_utils.regrid_sphere(nlat,nlon,Nens,Xb_one_full,42)
-    nlat_new = np.shape(lat_new)[0]
-    nlon_new = np.shape(lat_new)[1]
+    # Declare dictionary w/ info on content of truncated state vector
+    new_state_info = {}
+    
+    # Transform every 2D state variable, one at a time
+    Nx = 0
+    for var in X.full_state_info.keys():
+        dct = {}
+        # variable indices in full state vector
+        ibeg_full = X.full_state_info[var]['pos'][0]
+        iend_full = X.full_state_info[var]['pos'][1]
+        # extract array corresponding to state variable "var" 
+        var_array_full = Xb_one_full[ibeg_full:iend_full+1,:]
+        # corresponding spatial coordinates
+        coords_array_full = X.coords[ibeg_full:iend_full+1,:]
+        
+        # Are we truncating this variable? (i.e. is it a 2D lat/lon variable?)
+        if X.full_state_info[var]['spacecoords'] and 'lat' in X.full_state_info[var]['spacecoords'] and 'lon' in X.full_state_info[var]['spacecoords']:
+            print var, ' : 2D lat/lon variable, truncating this variable'
+            # lat/lon column indices in X.coords 
+            ind_lon = X.full_state_info[var]['spacecoords'].index('lon')
+            ind_lat = X.full_state_info[var]['spacecoords'].index('lat')
+            nlat = X.full_state_info[var]['spacedims'][ind_lat]
+            nlon = X.full_state_info[var]['spacedims'][ind_lon]
+            
+            # calculate the truncated field        
+            [var_array_new,lat_new,lon_new] = LMR_utils.regrid_sphere(nlat,nlon,Nens,var_array_full,42)
+            nlat_new = np.shape(lat_new)[0]
+            nlon_new = np.shape(lat_new)[1]
+
+            # corresponding indices in truncated state vector
+            ibeg_new = Nx
+            iend_new = Nx+(nlat_new*nlon_new)-1
+            # for new state info dictionary
+            dct['pos'] = (ibeg_new,iend_new)
+            dct['spacecoords'] =  X.full_state_info[var]['spacecoords']
+            dct['spacedims'] = (nlat_new,nlon_new)
+            # updated dimension
+            new_dims = (nlat_new*nlon_new)
+
+            # array with new spatial coords
+            coords_array_new = np.zeros(shape=[new_dims,2])
+            coords_array_new[:,0] = lat_new.flatten()
+            coords_array_new[:,1] = lon_new.flatten()
+
+        else:
+            print var, ' : not truncating this variable: no changes from full state'
+            var_array_new = var_array_full
+            coords_array_new = coords_array_full
+            # updated dimension
+            new_dims = var_array_new.shape[0]
+            ibeg_new = Nx
+            iend_new = Nx+(new_dims)-1
+            dct['pos'] = (ibeg_new,iend_new)
+            dct['spacecoords'] =  X.full_state_info[var]['spacecoords']
+            dct['spacedims'] = X.full_state_info[var]['spacedims']
+
+
+
+        # fill in new state info dictionary
+        new_state_info[var] = dct
+
+        if Nx == 0: # if 1st time in loop over state variables, create Xb_one array as copy of var_array_new
+            Xb_one = np.copy(var_array_new)
+            Xb_one_coords = np.copy(coords_array_new)
+        else: # if not 1st time, append to existing array
+            Xb_one = np.append(Xb_one,var_array_new,axis=0)
+            Xb_one_coords = np.append(Xb_one_coords,coords_array_new,axis=0)
+
+        # updating dimension of new state vector
+        Nx = Nx + new_dims
+
+
+    X.trunc_state_info = new_state_info
 
     # Keep dimension of pre-augmented version of state vector
     [stateDim, _] = Xb_one.shape
@@ -271,15 +331,16 @@ def LMR_driver_callable(cfg=None):
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
     #np.savez(filen,Xb_one = Xb_one,stateDim = stateDim,lat = X.lat,lon = X.lon, nlat = X.nlat, nlon = X.nlon)
-    np.savez(filen,Xb_one = Xb_one,Xb_one_aug = Xb_one_aug, stateDim = stateDim,lat = lat_new,lon = lon_new, nlat = nlat_new, nlon = nlon_new)
-    
-    # 25 June 2015 save a prior file, with the augmented state, for each year as a starting point for the analysis
+    #np.savez(filen,Xb_one = Xb_one,Xb_one_aug = Xb_one_aug,stateDim = stateDim,lat = lat_new,lon = lon_new,nlat = nlat_new,nlon = nlon_new,state_info=X.trunc_state_info)
+    np.savez(filen,Xb_one = Xb_one,Xb_one_aug = Xb_one_aug,stateDim = stateDim,Xb_one_coords = Xb_one_coords,state_info=X.trunc_state_info)
+
+    # 25 June 2015: save a prior file, with the augmented state, for each year as a starting point for the analysis
     for yr in range(recon_period[0],recon_period[1]+1):
         ypad = LMR_utils.year_fix(yr)          
         filen = workdir + '/' + 'year' + ypad
         #print 'writing initial prior file...' + filen
         np.save(filen,Xb_one_aug)
-    
+
     # Prepare to check for files in the prior (work) directory (this object just points to a directory)
     prior_check = np.DataSource(workdir)
 
@@ -293,8 +354,12 @@ def LMR_driver_callable(cfg=None):
     apcount = 0 # running counter of accepted proxies
 
     # Array containing the global-mean state (for diagnostic purposes)
+    # Now doing surface air temperature only (var = tas_sfc_Amon)!
     gmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    xbm = np.mean(Xb_one[0:stateDim,:],axis=1) # ensemble-mean
+    # get state vector indices where to find surface air temperature 
+    ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
+    iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
+    xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1,:],axis=1) # ensemble-mean
     xbm_lalo = np.reshape(xbm,(nlat_new,nlon_new))
     gmt = LMR_utils.global_mean(xbm_lalo,lat_new[:,0],lon_new[0,:])
     gmt_save[0,:] = gmt # First prior
@@ -349,7 +414,7 @@ def LMR_driver_callable(cfg=None):
             first_time = True
             for t in Y.time:
 
-                # make sure t is an integer (something changed so that there are floats now???)
+                # make sure t is an integer (necessary due to erratic cell formatting in PAGES excel proxy data file!)
                 t = int(t)
 
                 # if proxy ob is outside of period of reconstruction, continue to next ob time
@@ -403,8 +468,8 @@ def LMR_driver_callable(cfg=None):
                 # Dump Xa to file (to be used as prior for next assimilation)
                 np.save(filen,Xa)
 
-                # compute and store the global mean
-                xam_lalo = np.reshape(xam[0:stateDim],(nlat_new,nlon_new))
+                # compute and store the global mean (temperature only)
+                xam_lalo = np.reshape(xam[ibeg_tas:iend_tas+1],(nlat_new,nlon_new))
                 gmt = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
                 gmt_save[apcount,int(t-recon_period[0])] = gmt
                 
@@ -429,7 +494,7 @@ def LMR_driver_callable(cfg=None):
     #
     # save global mean temperature history and the proxies assimilated
     #
-    
+
     # 3 July 2015: compute and save the GMT for the full ensemble
     # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([Ntimes,Nens])
@@ -440,13 +505,13 @@ def LMR_driver_callable(cfg=None):
         filen = workdir + '/' + 'year' + ypad
         Xa = np.load(filen+'.npy')
         for k in range(Nens):
-            xam_lalo = np.reshape(Xa[0:stateDim,k],(nlat_new,nlon_new))
+            xam_lalo = np.reshape(Xa[ibeg_tas:iend_tas+1,k],(nlat_new,nlon_new))
             gmt = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
             gmt_ensemble[iyr,k] = gmt
 
     filen = workdir + '/' + 'gmt_ensemble'
     np.savez(filen,gmt_ensemble=gmt_ensemble,recon_times=recon_times)
-
+    
     print 'saving global mean temperature update history and assimilated proxies...'
     filen = workdir + '/' + 'gmt'
     np.savez(filen,gmt_save=gmt_save,recon_times=recon_times,apcount=apcount,tpcount=total_proxy_count)    
