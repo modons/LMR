@@ -254,3 +254,21 @@ class prior:
                        'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
                        'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon']
 
+
+class forecaster:
+    """
+    Parameters for the online DA forecasting method.
+    """
+
+    class LIM:
+        """
+        calib_filename: Filename for LIM calibration data.  Should be netcdf
+                        file or an HDF5 file from the DataTools.netcdf_to_hdf5_
+                        container.
+        calib_varname: Variable name to grab from calib_filename
+        fcast_times: A list of lead times (in years) to forecast
+        """
+        calib_filename = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
+        calib_varname = 'air'
+        fcast_times = [1]
+
