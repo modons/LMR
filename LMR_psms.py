@@ -80,7 +80,7 @@ class LinearPSM(BasePSM):
                               'critical threshold ({:.2f}).'
                               ).format(self.corr, r_crit))
 
-    def psm(self, Xb, Xb_lats, Xb_lons):
+    def psm(self, Xb, X_state_info, X_coords):
 
         """
         Main function to be exposed to each proxy object
@@ -92,19 +92,30 @@ class LinearPSM(BasePSM):
         # ----------------------
         # Calculate the Ye's ...
         # ----------------------
+        # TODO: state variable is hard coded for now...
+        state_var = 'tas_sfc_Amon'
+        if state_var not in X_state_info.keys():
+            raise KeyError('Needed variable not in state vector for Ye'
+                           ' calculation.')
+
+        # TODO: end index should already be +1
+        tas_startidx, tas_endidx = X_state_info[state_var]['pos']
+        ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
+        ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
 
         # Find row index of X for which [X_lat,X_lon] corresponds to closest grid point to
         # location of proxy site [self.lat,self.lon]
         # Calclulate distances from proxy site.
-        stateDim = Xb.shape[0]
+        stateDim = tas_endidx - tas_startidx + 1
         ensDim = Xb.shape[1]
         dist = np.empty(stateDim)
         dist = np.array(
-            [haversine(self.lon, self.lat, Xb_lons[k], Xb_lats[k]) for k
-             in xrange(stateDim)])
+            [haversine(self.lon, self.lat, X_coords[k, ind_lon],
+                       X_coords[k, ind_lat])
+             for k in xrange(tas_startidx, tas_endidx + 1)])
 
         # row index of nearest grid pt. in prior (minimum distance)
-        kind = np.unravel_index(dist.argmin(), dist.shape)
+        kind = np.unravel_index(dist.argmin(), dist.shape)[0] + tas_startidx
 
         Ye = self.slope * np.squeeze(Xb[kind, :]) + self.intercept
 

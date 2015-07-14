@@ -447,7 +447,7 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
         data_file_read = string.replace(data_file,'[vardef_template]',vardef)
         
         # Check if file exists
-        infile = data_dir+'/ccsm4_last_millenium/'+data_file_read
+        infile = data_dir+'/ccsm4_last_mil/'+data_file_read
         if not os.path.isfile(infile):
             print 'Error in specification of gridded dataset'
             print 'File ', infile, ' does not exist! - Exiting ...'
@@ -493,7 +493,7 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
         # To convert monthly data to annual: List years available in dataset and sort
         years_all = [int(time_yrs_list[i].strftime('%Y')) for i in range(0,len(time_yrs_list))]
         years     = list(set(years_all)) # 'set' is used to retain unique values in list
-        years.sort # sort the list
+        years.sort() # sort the list
         time_yrs  = np.empty(len(years), dtype=int)
 
         # Query info on spatial coordinates ...

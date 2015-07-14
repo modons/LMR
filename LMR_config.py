@@ -42,7 +42,7 @@ class core:
     #lmr_path = r'G:\Research\Hakim Research\data\LMR'
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1500, 2000]
+    recon_period = [1900, 2000]
     nens = 100
     # TODO: Monte-Carlo section, also can replace with single int
     iter_range = [0, 10]
@@ -194,6 +194,7 @@ class prior:
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
     datadir_prior = '/home/chaos2/wperkins/data/'
-    datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
+    #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
+    datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
     dataformat_prior = 'NCD'
-    state_variables = ['Tsfc']
+    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
