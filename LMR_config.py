@@ -36,13 +36,13 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_500yr_75pct'
+    nexp = 'testdev_150yr_75pct'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     #lmr_path = r'G:\Research\Hakim Research\data\LMR'
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1900, 2000]
+    recon_period = [1850, 2000]
     nens = 100
     # TODO: Monte-Carlo section, also can replace with single int
     iter_range = [0, 10]

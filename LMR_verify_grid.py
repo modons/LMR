@@ -1,19 +1,7 @@
 
-
-#
-# verify statistics related to the global-mean 2m air temperature
-#
-# started from LMR_plots.py r-86
-#
-# CRU data too coarse to include in the analysis
-#
-
 import matplotlib
-# need to do this when running remotely
-matplotlib.use('Agg')
-# use this line when running a notebook
-#get_ipython().magic(u'matplotlib inline')
-#%matplotlib
+# need to do this backend when running remotely or to suppress figures interactively
+#matplotlib.use('Agg')
 
 # generic imports
 import numpy as np
@@ -36,23 +24,23 @@ from LMR_plot_support import *
 # change default value of latlon kwarg to True.
 bm.latlon_default = True
 
-
-
-
 ##################################
 # START:  set user parameters here
 ##################################
 
 # option to suppress figures
-#iplot = False
-iplot = True
+iplot = False
+#iplot = True
 
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
 
 # option to print figures
-fsave = True
-#fsave = False
+#fsave = True
+fsave = False
+
+# variable
+var = 'tas_sfc_Amon'
 
 # set paths, the filename for plots, and global plotting preferences
 
@@ -60,7 +48,8 @@ fsave = True
 #
 # current datasets
 #
-nexp = 'testing_1000_75pct_ens_size_Nens_10'
+#nexp = 'testing_1000_75pct_ens_size_Nens_10'
+nexp = 'testdevMultiState'
 #nexp = 'testdev_check_1000_75pct'
 #nexp = 'ReconDevTest_1000_testing_coral'
 #nexp = 'ReconDevTest_1000_testing_icecore'
@@ -114,7 +103,7 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-
+# In[52]:
 
 workdir = datadir_output + '/' + nexp
 print 'working directory = ' + workdir
@@ -141,19 +130,6 @@ npzfile = np.load(gmtpfile)
 npzfile.files
 LMR_time = npzfile['recon_times']
 
-# get grid information from the prior file...
-prior_filn = workdir + '/r0/Xb_one.npz'
-npzfile = np.load(prior_filn)
-npzfile.files
-lat = npzfile['lat']
-lon = npzfile['lon']
-nlat = npzfile['nlat']
-nlon = npzfile['nlon']
-lat2 = np.reshape(lat,(nlat,nlon))
-lon2 = np.reshape(lon,(nlat,nlon))
-
-#print lat[7],lat[34]
-
 # read ensemble mean data
 print '\n reading LMR ensemble-mean data...\n'
 
@@ -161,19 +137,25 @@ first = True
 k = -1
 for dir in mcdir:
     k = k + 1
-    ensfiln = workdir + '/' + dir + '/ensemble_mean.npz'
-    print ensfiln
+    #ensfiln = workdir + '/' + dir + '/ensemble_mean.npz'
+    ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
     npzfile = np.load(ensfiln)
-    #npzfile.files
     print  npzfile.files
-    years = npzfile['years']
-    nyrs =  len(years)
     tmp = npzfile['xam']
     print 'shape of tmp: ' + str(np.shape(tmp))
     if first:
         first = False
+        lat = npzfile['lat']
+        lon = npzfile['lon']
+        nlat = npzfile['nlat']
+        nlon = npzfile['nlon']
+        lat2 = np.reshape(lat,(nlat,nlon))
+        lon2 = np.reshape(lon,(nlat,nlon))
+        years = npzfile['years']
+        nyrs =  len(years)
         xam = np.zeros([nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
         xam_all = np.zeros([niters,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
+
     xam = xam + tmp
     xam_all[k,:,:,:] = tmp
     
@@ -183,7 +165,9 @@ xam = xam/len(mcdir)
 xam_check = xam_all.mean(0)
 # check..
 max_err = np.max(np.max(np.max(xam_check - xam)))
-print 'max error = ' + str(max_err)
+if max_err > 1e-4:
+    print 'max error = ' + str(max_err)
+    raise Exception('sample mean does not match what is in the ensemble files!')
 
 # sample variance
 xam_var = xam_all.var(0)
@@ -191,9 +175,6 @@ print np.shape(xam_var)
 
 print '\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
 print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
-
-
-
 
 #################################################################
 # BEGIN: load verification data (GISTEMP, HadCRU, BE, and 20CR) #
@@ -280,12 +261,10 @@ tcr_gm = tcr_gm - np.mean(tcr_gm[smatch:ematch])
 # END: load verification data (GISTEMP, HadCRU, BE, and 20CR) #
 ###############################################################
 
-
-
 print '\n regridding data to a common T42 grid...\n'
 
-iplot= False
-#iplot= True
+iplot_loc= False
+#iplot_loc= True
 
 # create instance of the spherical harmonics object for each grid
 specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
@@ -310,9 +289,8 @@ lon2_new = (veclon + blank)
 # create instance of the spherical harmonics object for the new grid
 specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
 
-
-lmr_trunc = np.zeros([nyrs,nlat_new,nlon_new])
-print 'lmr_trunc shape: ' + str(np.shape(lmr_trunc))
+#lmr_trunc = np.zeros([nyrs,nlat_new,nlon_new])
+#print 'lmr_trunc shape: ' + str(np.shape(lmr_trunc))
 
 # loop over years of interest and transform...specify trange at top of file
 
@@ -326,10 +304,16 @@ lg_csave = np.zeros([len(cyears)])
 tg_csave = np.zeros([len(cyears)])
 lb_csave = np.zeros([len(cyears)])
 bg_csave = np.zeros([len(cyears)])
+
 lmr_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
 tcr_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
 gis_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
 be_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
+lmr_zm = np.zeros([len(cyears),nlat_new])
+tcr_zm = np.zeros([len(cyears),nlat_new])
+gis_zm = np.zeros([len(cyears),nlat_new])
+be_zm = np.zeros([len(cyears),nlat_new])
+
 k = -1
 for yr in cyears:
     k = k + 1
@@ -354,7 +338,7 @@ for yr in cyears:
     #LMR_plotter(lmr_trunc,lat2_new,lon2_new,'bwr',nlevs)
     #LMR_plotter(pdata_lmr,lat2,lon2,'bwr',nlevs)
     #plt.show()
-
+    
     # TCR
     pdata_tcr = np.mean(TCR[TCR_smatch:TCR_ematch,:,:],0)    
     #pdata_tcr = np.squeeze(TCR[TCR_smatch,:,:])
@@ -388,7 +372,13 @@ for yr in cyears:
     gis_allyears[k,:,:] = gis_trunc
     be_allyears[k,:,:] = be_trunc
 
-    if iplot:
+    # zonal-mean verification
+    lmr_zm[k,:] = np.mean(lmr_trunc,1)
+    tcr_zm[k,:] = tcr_trunc.mean(1)
+    gis_zm[k,:] = gis_trunc.mean(1)
+    be_zm[k,:] = be_trunc.mean(1)
+    
+    if iplot_loc:
         ncints = 30
         cmap = 'bwr'
         nticks = 6 # number of ticks on the colorbar
@@ -455,7 +445,6 @@ for yr in cyears:
         plt.subplots_adjust(left=0.05, bottom=0.45, right=0.95, top=0.95, wspace=0.1, hspace=0.0)
         # plt.tight_layout(pad=0.3)
         fig.suptitle('2m air temperature for ' +str(nya) +' year centered average')
-
     
     # anomaly correlation
     lmrvec = np.reshape(lmr_trunc,(1,nlat_new*nlon_new))
@@ -463,7 +452,6 @@ for yr in cyears:
     gisvec = np.reshape(gis_trunc,(1,nlat_new*nlon_new))
     bevec = np.reshape(be_trunc,(1,nlat_new*nlon_new))
     lmr_tcr_corr = np.corrcoef(lmrvec,tcrvec)
-
     #print 'lmr-tcr correlation: '+str(lmr_tcr_corr[0,1])
     lmr_gis_corr = np.corrcoef(lmrvec,gisvec)
     #print 'lmr-gis correlation: '+ str(lmr_gis_corr[0,1])
@@ -482,6 +470,9 @@ for yr in cyears:
     bg_csave[k] = be_gis_corr[0,1]
 
     
+
+
+# In[54]:
 
 # plots for anomaly correlation statistics
 
@@ -536,7 +527,10 @@ fig.suptitle('2m air temperature anomaly correlation')
 if fsave:
     print 'saving to .png'
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1]))
+  
 
+
+# In[55]:
 
 #
 # BEGIN r and CE calculations
@@ -584,7 +578,6 @@ for la in range(nlat_new):
         r_tg[la,lo] = tstmp[0,1]
         ce_tg[la,lo] = 1. - (evar/tvar)
    
-
 lt_rmean = str(float('%.2g' % np.median(np.median(r_lt)) ))
 print 'lmr-tcr all-grid median r: ' + str(lt_rmean)
 lt_rmean60 = str(float('%.2g' % np.median(np.median(r_lt[7:34,:])) ))
@@ -618,15 +611,69 @@ print 'tcr-gis all-grid median ce: ' + str(tg_cemean)
 tg_cemean60 = str(float('%.2g' % np.median(np.median(ce_tg[7:34,:])) ))
 print 'tcr-gis 60S-60N median ce: ' + str(tg_cemean60)
 
+# zonal mean verification
+r_lt_zm = np.zeros([nlat_new])
+ce_lt_zm = np.zeros([nlat_new])
+lt_err_zm = lmr_zm - tcr_zm
+# gis verification
+r_lg_zm = np.zeros([nlat_new])
+ce_lg_zm = np.zeros([nlat_new])
+lg_err_zm = lmr_zm - gis_zm
+for la in range(nlat_new):
+    # LMR-TCR
+    tstmp = np.corrcoef(lmr_zm[:,la],tcr_zm[:,la])
+    evar = np.var(lt_err_zm[:,la],ddof=1)
+    tvar = np.var(tcr_zm[:,la],ddof=1)
+    r_lt_zm[la] = tstmp[0,1]
+    ce_lt_zm[la] = 1. - (evar/tvar)
+    # LMR-GIS
+    tstmp = np.corrcoef(lmr_zm[:,la],gis_zm[:,la])
+    evar = np.var(lg_err_zm[:,la],ddof=1)
+    tvar = np.var(gis_zm[:,la],ddof=1)
+    r_lg_zm[la] = tstmp[0,1]
+    ce_lg_zm[la] = 1. - (evar/tvar)
+    
+#print 'LMR-TCR zonal mean r:'    
+#print r_lt_zm
+#print 'LMR-TCR ce zonal mean:'
+#print ce_lt_zm
+#print 'LMR-GIS zonal mean r:'    
+#print r_lg_zm
+#print 'LMR-GIS ce zonal mean:'
+#print ce_lg_zm
 #
 # END r and CE
 #
+major_ticks = np.arange(-90, 91, 30)
+fig = plt.figure()
+ax = fig.add_subplot(1,2,1)    
+ax.plot(r_lt_zm,veclat,'k-',linestyle='--')
+ax.plot(r_lg_zm,veclat,'k-',linestyle='-')
+ax.plot([0,0],[-90,90],'k:')
+ax.set_yticks(major_ticks)                                                       
+plt.ylim([-90,90])
+plt.xlim([-1,1])
+plt.ylabel('latitude',fontweight='bold')
+plt.xlabel('correlation',fontweight='bold')
+#plt.title('correlation (TCR dashed; GIS solid)')
+ax = fig.add_subplot(1,2,2)    
+ax.plot(ce_lt_zm,veclat,'k-',linestyle='--')
+ax.plot(ce_lg_zm,veclat,'k-',linestyle='-')
+ax.plot([0,0],[-90,90],'k:')
+ax.set_yticks([])                                                       
+plt.ylim([-90,90])
+plt.xlim([-1.5,1])
+plt.xlabel('cofficient of efficiency',fontweight='bold')
+#plt.title('CE (TCR dashed; GIS solid)')
+plt.suptitle('LMR zonal-mean comparison with GIS (solid) and 20CR(dashed)')
+fig.tight_layout(pad = 2.0)
+plt.show()
 
-
-
+#
 # r and ce plots
-iplot = True
+#
 
+# number of contour levels
 nlevs = 11
 
 if iplot:
@@ -677,6 +724,9 @@ if iplot:
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1]))   
     
 
+if iplot:
+    plt.show()
+
 #ensemble calibration
 
 print np.shape(lt_err)
@@ -701,7 +751,6 @@ if fsave:
     print 'saving to .png'
     plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1]))   
 
-if iplot:
-    plt.show()
 
 # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
+

@@ -6,14 +6,15 @@ from datetime import datetime, timedelta
 # =============================================================================
 
 # Name of reconstruction experiment to verify
-nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
+nexp = 'testdev_500yr_75pct'
 
 # Run diagnostics over this range of Monte-Carlo reconstructions
-iter_range = [29,50]
+iter_range = [0, 10]
 
 # set the absolute path the experiment (could make this cwd with some os coding)
-LMRpath = '/home/disk/kalman3/rtardif/LMR'
+#LMRpath = '/home/disk/kalman3/rtardif/LMR'
 #LMRpath = '/home/disk/ekman/rtardif/nobackup/LMR'
+LMRpath = '/home/chaos2/wperkins/data/LMR'
 
 # Input directory, where to find the reconstruction data
 datadir_input  = '/home/disk/kalman3/rtardif/LMR/output'
@@ -28,7 +29,7 @@ recon_period = [1850,2000]
 # =============================================================================
 
 # Proxy data directory & file
-datadir_proxy    = LMRpath+'/data/proxies';
+datadir_proxy    = LMRpath+'/proxies';
 datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx';
 dataformat_proxy = 'CSV';
 
@@ -53,7 +54,7 @@ proxy_resolution = [1.0]
 datatag_calib = 'GISTEMP'
 #datatag_calib = 'HadCRUT'
 #datatag_calib = 'BerkeleyEarth'
-datadir_calib = LMRpath+'/data/analyses';
+datadir_calib = LMRpath+'/analyses';
 
 # Threshold correlation of linear PSM 
 PSM_r_crit = 0.2
@@ -63,6 +64,9 @@ PSM_r_crit = 0.2
 # =============================================================================
 
 # Output
-datadir_output  = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output  = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
 #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
+datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+
+archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'

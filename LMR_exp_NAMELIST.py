@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 #nexp = 'ReconDevTest_100_testing_MXD'
 #nexp = 'ReconDevTest_100_testing_MXD_coral'
 #nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
-nexp = 'testdev2'
+nexp = 'testdev_150yr_75pct'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
 LMRpath = '/home/chaos2/wperkins/data/LMR'
@@ -99,7 +99,7 @@ PSM_r_crit = 0.2
 
 # Prior data directory & model source
 prior_source     = 'ccsm4_last_millenium'
-datadir_prior    = LMRpath+'/data/model'
+datadir_prior    = '/home/chaos2/wperkins/data/'
 datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 dataformat_prior = 'NCD'
 
@@ -113,10 +113,12 @@ state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
 # =============================================================================
 
 # Run time output
-datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+#datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
 #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
 #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
+datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
 
 # Archive directory
-archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+#archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
 #archive_dir = '/home/disk/kalman3/hakim/LMR/'
+archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'

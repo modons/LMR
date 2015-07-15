@@ -1,13 +1,11 @@
 
-
-#
 # verify statistics related to the global-mean 2m air temperature
 #
 # started from LMR_plots.py r-86
 
 import matplotlib
-# need to do this when running remotely
-matplotlib.use('Agg')
+# need to do this when running remotely, and to suppress figures
+#matplotlib.use('Agg')
 
 import csv
 import glob, os, fnmatch
@@ -43,16 +41,17 @@ nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
 iplot = True
 
 # option to save figures to a file
-fsave = True
-#fsave = False
+#fsave = True
+fsave = False
 
 # file specification
 #
 # current datasets
 #
+nexp = 'testdevMultiState'
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testing_1000_75pct_200members'
-nexp = 'testdev_check_1000_75pct'
+#nexp = 'testdev_check_1000_75pct'
 #nexp = 'ReconDevTest_1000_testing_coral'
 #nexp = 'ReconDevTest_1000_testing_icecore'
 #nexp = 'testdev_1000_100pct_icecoreonly'
@@ -242,7 +241,7 @@ for dir in dirset:
     if first:
         gmt_save = np.zeros([niters,gmt_shape[1]])
         first = False
-
+        
     gmt_save[kk,:] = gmt[apcount,:]
        
     if iplot:
@@ -274,7 +273,8 @@ if iplot:
 lmr_gm = sagmt
 LMR_time = recon_times
 
-# compute GIS & CRU global mean
+# 
+# compute GIS & CRU global mean 
 #
 
 gis_gm = global_mean(GIS_anomaly,GIS_lat,GIS_lon)
@@ -501,7 +501,7 @@ if iplot:
     else:
         xl = [stime,etime]
         yl = [-1,1]
-
+        
     plt.xlim(xl)
     plt.ylim(yl)
     plt.title('GMT (' + nexp[0:] + ') range (gray) and ' +str(nsyrs) + '-year moving average' ,weight='bold')
@@ -612,7 +612,11 @@ if iplot:
     yl_loc = [-.7,.7]
     plt.xlim(xl_loc)
     plt.ylim(yl_loc)
-    txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.05
+    # left side
+    #txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.05
+    #tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.01
+    # right side
+    txl = xl_loc[1] - (xl_loc[1]-xl_loc[0])*.4
     tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.01
     
     off = .05
@@ -647,6 +651,4 @@ if iplot:
         plt.savefig(fname)
 
 # display all figures at the end:
-plt.show()
-
-
+plt.show() 
