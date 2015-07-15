@@ -46,6 +46,7 @@ class core:
     nens = 100
     # TODO: Monte-Carlo section, also can replace with single int
     iter_range = [0, 10]
+    curr_iter = iter_range[0]
     loc_rad = None
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
