@@ -45,7 +45,7 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     # TODO: Monte-Carlo section, also can replace with single int
-    iter_range = [0, 10]
+    iter_range = [0, 9]
     curr_iter = iter_range[0]
     loc_rad = None
 

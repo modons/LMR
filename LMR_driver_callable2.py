@@ -89,6 +89,7 @@ def LMR_driver_callable(cfg=None):
     # Define the number of years of the reconstruction (nb of assimilation
     # times)
     # Note: recon_period is defined in namelist
+    ntimes = recon_period[1] - recon_period[0] + 1
     recon_times = np.arange(recon_period[0], recon_period[1]+1)
 
     # ==========================================================================
@@ -219,7 +220,7 @@ def LMR_driver_callable(cfg=None):
             nlat = X.full_state_info[var]['spacedims'][ind_lat]
             nlon = X.full_state_info[var]['spacedims'][ind_lon]
 
-            # calculate the truncated field
+            # calculate the truncated fieldNtimes
             [var_array_new, lat_new, lon_new] = \
                 LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
             nlat_new = np.shape(lat_new)[0]
@@ -291,7 +292,7 @@ def LMR_driver_callable(cfg=None):
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
     np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
-             lat=lat_new, lon=lon_new, nlat=nlat_new, nlon=nlon_new)
+             Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
 
     # ==========================================================================
     # Loop over all proxies and perform assimilation ---------------------------
@@ -400,6 +401,20 @@ def LMR_driver_callable(cfg=None):
         print '====================================================='
         print 'Reconstruction completed in ' + str(end_time/60.0)+' mins'
         print '====================================================='
+
+    # 3 July 2015: compute and save the GMT for the full ensemble
+    # need to fix this so that every year is counted
+    gmt_ensemble = np.zeros([ntimes, nens])
+    for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1)):
+        filen = join(workdir, 'year{:04d}'.format(yr))
+        Xa = np.load(filen+'.npy')
+        for k in xrange(nens):
+            xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
+            gmt = LMR_utils.global_mean(xam_lalo, lat_new[:, 0], lon_new[0, :])
+            gmt_ensemble[iyr, k] = gmt
+
+    filen = join(workdir, 'gmt_ensemble')
+    np.savez(filen, gmt_ensemble=gmt_ensemble, recon_times=recon_times)
 
     # save global mean temperature history and the proxies assimilated
     print ('saving global mean temperature update history and ',
