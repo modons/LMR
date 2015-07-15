@@ -11,6 +11,7 @@ from math import radians, cos, sin, asin, sqrt
 
 import glob
 import numpy as np
+import cPickle
 from math import radians, cos, sin, asin, sqrt
 from scipy import signal
 from spharm import Spharmt, getspecindx, regrid
@@ -130,7 +131,7 @@ def global_mean(field,lat,lon):
 
 
 
-def ensemble_stats(workdir):
+def ensemble_stats(workdir,Yall):
 
     """
     Compute the ensemble mean and variance for files in the input directory
@@ -146,7 +147,9 @@ def ensemble_stats(workdir):
     #               : func. renamed from ensemble_mean to ensemble_stats
     #               : computes and output the ensemble variance as well
     #               : now handles state vector possibly containing multiple variables
-
+    #             revised 15 July 2015 (R Tardif, UW)
+    #               : extracts Ye's from augmented state vector (Ye=HXa), match with corresponding
+    #                 proxy sites from master list of proxies and output to analysis_Ye.pckl file
 
     prior_filn = workdir + '/Xb_one.npz'
     
@@ -255,6 +258,45 @@ def ensemble_stats(workdir):
         print 'writing the new ensemble variance file...' + filen
         #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
         np.savez(filen, **vars_to_save_var)
+
+        # --------------------------------------------------------
+        # Extract the analyzed Ye ensemble for diagnostic purposes        
+        # --------------------------------------------------------
+        # get information on dim of state without the Ye's (before augmentation)
+        stateDim  = npzfile['stateDim']
+        Xbtmp_aug = npzfile['Xb_one_aug']
+        # dim of entire state vector (augmented)
+        totDim = Xbtmp_aug.shape[0]
+        nbye = (totDim - stateDim)
+        Ye_s = np.zeros([nbye,nyears,nens])
+
+        # Loop over **analysis** files & extract the Ye's
+        years = []
+        k = -1
+        for f in files:
+            k = k + 1
+            i = f.find('year')
+            year = f[i+4:i+8]
+            years.append(year)
+            Xatmp = np.load(f)
+            # Extract the Ye's from augmented state (beyond stateDim 'til end of state vector)
+            Ye_s[:,k,:] = Xatmp[stateDim:totDim,:]
+
+        # Build dictionary
+        YeDict = {}
+        # loop over assimilated proxies
+        for i in range(len(Yall)):
+            YeDict[Yall[i].pid] = {}
+            YeDict[Yall[i].pid]['lat']   = Yall[i].lat
+            YeDict[Yall[i].pid]['lon']   = Yall[i].lon
+            YeDict[Yall[i].pid]['R']     = Yall[i].R
+            YeDict[Yall[i].pid]['years'] = np.array(years,dtype=int)
+            YeDict[Yall[i].pid]['HXa']   = Ye_s[i,:,:]
+
+    # Dump dictionary to pickle file
+    outfile = open('%s/analysis_Ye.pckl' % (workdir),'w')
+    cPickle.dump(YeDict,outfile)
+    outfile.close()
 
     return
 
