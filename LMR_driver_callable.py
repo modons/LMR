@@ -226,6 +226,9 @@ def LMR_driver_callable(state):
             # Append proxy object to master list
             Yall.append(Ywk)
 
+    # attach Yall to state
+    state.Yall = Yall
+
     proxy_load_time = time() - begin_time_proxy_load
     if verbose > 2:
         print '-----------------------------------------------------'

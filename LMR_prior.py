@@ -11,7 +11,7 @@ def prior_assignment(iprior):
     elif iprior == 'ccsm4_last_millenium':
         prior_object = prior_ccsm4_last_millenium()
     elif iprior == 'ccsm4_preindustrial_control':
-        prior_object = prior_ccsm4_preindustrial_control()      
+        prior_object = prior_ccsm4_preindustrial_control()
 
     return prior_object
 
