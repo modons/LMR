@@ -43,8 +43,8 @@ class ProxyManager:
         if proxy_frac < 1.0:
             nsites_assim = int(nsites * proxy_frac)
 
-            self.ind_assim = sample(range(nsites), nsites_assim)
-            self.ind_eval = set(range(nsites)) - set(self.ind_assim)
+            self.ind_assim = sample(range(nsites), nsites_assim).sort()
+            self.ind_eval = (set(range(nsites)) - set(self.ind_assim)).sort()
 
             # Make list of assimilated proxies by group
             self.assim_ids_by_group = deepcopy(self.all_ids_by_group)
@@ -53,12 +53,14 @@ class ProxyManager:
                 grp = self.assim_ids_by_group[pobj.type]
                 if pobj.id in grp:
                     grp.remove(pobj.id)
+
+            self.ind_assim = sample(range(nsites), nsites_assim).sort()
+            self.ind_eval = (set(range(nsites)) - set(self.ind_assim)).sort()
+
         else:
             self.ind_assim = range(nsites)
             self.ind_eval = None
             self.assim_ids_by_group = self.all_ids_by_group
-
-
 
     def proxy_obj_generator(self, indexes):
         for idx in indexes:
