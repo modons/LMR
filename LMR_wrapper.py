@@ -76,7 +76,7 @@ for iter in MCiters:
     LMR.LMR_driver_callable(a)
 
     # write the analysis ensemble mean and variance to separate files (per state variable)
-    LMR_utils.ensemble_stats(a.workdir)
+    LMR_utils.ensemble_stats(a.workdir,a.Yall)
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
@@ -107,6 +107,9 @@ for iter in MCiters:
     cmd = 'mv -f ' + loc_dir+'/*.npz' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)
+    cmd = 'mv -f ' + loc_dir+'/*.pckl' + ' ' + mc_dir + '/'
+    print cmd
+    os.system(cmd)
     cmd = 'mv -f ' + loc_dir+'/assim*' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)    
@@ -121,7 +124,7 @@ for iter in MCiters:
     cmd = 'rm -f -r ' + loc_dir
     print cmd
     os.system(cmd)
-
+    
     # copy the namelist file to archive directory
     cmd = 'cp ./LMR_exp_NAMELIST.py ' + mc_dir + '/'
     print cmd
