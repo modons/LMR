@@ -36,7 +36,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_150yr_75pct'
+    nexp = 'testdev_150yr_75pct_gmttest_10iter'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     #lmr_path = r'G:\Research\Hakim Research\data\LMR'

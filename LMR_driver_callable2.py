@@ -311,7 +311,7 @@ def LMR_driver_callable(cfg=None):
     xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
     xbm_lalo = xbm.reshape(nlat_new, nlon_new)
     gmt = LMR_utils.global_mean(xbm_lalo, lat_new[:, 0], lon_new[0, :])
-    gmt_save[0, :] = gmt # First prior
+    gmt_save[0, :] = gmt # First row is prior GMT
     gmt_save[1, :] = gmt # Prior for first proxy assimilated
 
     lasttime = time()
@@ -332,10 +332,12 @@ def LMR_driver_callable(cfg=None):
             Xb = Xb_one_aug.copy()
 
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
-            # Crude check if we have ob for this time
+            # Crude check if we have proxy ob for current time
             try:
                 Y.values[t]
             except KeyError:
+                # Make sure GMT spot filled from previous proxy
+                gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
                 continue
 
             if verbose > 2:
@@ -375,7 +377,7 @@ def LMR_driver_callable(cfg=None):
             xam = Xa.mean(axis=1)
             xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
             gmt = LMR_utils.global_mean(xam_lalo, lat_new[:, 0], lon_new[0, :])
-            gmt_save[proxy_idx, yr_idx] = gmt
+            gmt_save[proxy_idx+1, yr_idx] = gmt
 
             # check the variance change for sign
             thistime = time()
@@ -386,9 +388,6 @@ def LMR_driver_callable(cfg=None):
                 print 'max change in variance:' + str(np.max(vardiff))
                 print 'update took ' + str(thistime-lasttime) + 'seconds'
             lasttime = thistime
-
-            if proxy_idx+1 < total_proxy_count:
-                gmt_save[proxy_idx+1, yr_idx] = gmt
 
         # Dump Xa to file
         np.save(filen, Xa)

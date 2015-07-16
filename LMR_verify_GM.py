@@ -48,7 +48,7 @@ fsave = True
 #
 # current datasets
 #
-nexp = 'testdev_150yr_75pct'
+nexp = 'testdev_150yr_75pct_gmttest_1iter'
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testing_1000_75pct_200members'
 #nexp = 'testdev_check_1000_75pct'
