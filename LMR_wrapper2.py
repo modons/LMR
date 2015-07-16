@@ -50,11 +50,11 @@ for iter_num in MCiters:
         os.system('rm -f {}'.format(core.datadir_output + '/*'))
 
     # Call the driver
-    LMR.LMR_driver_callable(cfg)
+    all_proxy_objs = LMR.LMR_driver_callable(cfg)
 
     # write the analysis ensemble mean and variance to separate files (per
     # state variable)
-    LMR_utils.ensemble_stats(core.datadir_output)
+    LMR_utils.ensemble_stats(core.datadir_output, all_proxy_objs)
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
@@ -87,6 +87,9 @@ for iter_num in MCiters:
     cmd = 'mv -f ' + loc_dir+'/*.npz' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)
+    cmd = 'mv -f ' + loc_dir+'/*.pckl' + ' ' + mc_dir + '/'
+    print cmd
+    os.system(cmd)
     cmd = 'mv -f ' + loc_dir+'/assim*' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)    
@@ -106,7 +109,7 @@ for iter_num in MCiters:
     cmd = 'cp ./LMR_config.py ' + mc_dir + '/'
     print cmd
     os.system(cmd)
-    
+
     print '\n' + str(datetime.datetime.now()) + '\n'
 
     #   end: DO NOT DELETE

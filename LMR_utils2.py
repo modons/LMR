@@ -131,7 +131,7 @@ def global_mean(field,lat,lon):
 
 
 
-def ensemble_stats(workdir,Yall):
+def ensemble_stats(workdir, y_assim):
 
     """
     Compute the ensemble mean and variance for files in the input directory
@@ -272,30 +272,29 @@ def ensemble_stats(workdir,Yall):
 
         # Loop over **analysis** files & extract the Ye's
         years = []
-        k = -1
-        for f in files:
-            k = k + 1
+        for k, f in enumerate(files):
             i = f.find('year')
             year = f[i+4:i+8]
             years.append(year)
             Xatmp = np.load(f)
-            # Extract the Ye's from augmented state (beyond stateDim 'til end of state vector)
-            Ye_s[:,k,:] = Xatmp[stateDim:totDim,:]
+            # Extract the Ye's from augmented state (beyond stateDim 'til end of
+            #  state vector)
+            Ye_s[:, k, :] = Xatmp[stateDim:, :]
 
         # Build dictionary
         YeDict = {}
         # loop over assimilated proxies
-        for i in range(len(Yall)):
-            YeDict[Yall[i].pid] = {}
-            YeDict[Yall[i].pid]['lat']   = Yall[i].lat
-            YeDict[Yall[i].pid]['lon']   = Yall[i].lon
-            YeDict[Yall[i].pid]['R']     = Yall[i].R
-            YeDict[Yall[i].pid]['years'] = np.array(years,dtype=int)
-            YeDict[Yall[i].pid]['HXa']   = Ye_s[i,:,:]
+        for pobj in y_assim:
+            YeDict[pobj.id] = {}
+            YeDict[pobj.id]['lat'] = pobj.lat
+            YeDict[pobj.id]['lon'] = pobj.lon
+            YeDict[pobj.id]['R'] = pobj.psm_obj.R
+            YeDict[pobj.id]['years'] = np.array(years, dtype=int)
+            YeDict[pobj.id]['HXa'] = Ye_s[i, :, :]
 
     # Dump dictionary to pickle file
-    outfile = open('%s/analysis_Ye.pckl' % (workdir),'w')
-    cPickle.dump(YeDict,outfile)
+    outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
+    cPickle.dump(YeDict, outfile)
     outfile.close()
 
     return

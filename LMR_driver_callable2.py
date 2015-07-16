@@ -81,7 +81,7 @@ def LMR_driver_callable(cfg=None):
         print 'Running LMR reconstruction...'
         print '====================================================='
         print 'Name of experiment: ', nexp
-        print ' Monte Carlo iter : ', 
+        print ' Monte Carlo iter : ', core.curr_iter
         print ''
         
     begin_time = time()
@@ -442,6 +442,8 @@ def LMR_driver_callable(cfg=None):
         print 'Experiment completed in ' + str(exp_end_time/60.0) + ' mins'
         print '====================================================='
 
+    # TODO: best method for Ye saving?
+    return prox_manager.sites_assim_proxy_objs()
 # ------------------------------------------------------------------------------
 # --------------------------- end of main code ---------------------------------
 # ------------------------------------------------------------------------------
