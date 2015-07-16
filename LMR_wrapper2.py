@@ -20,8 +20,9 @@ import os
 import numpy as np
 import datetime
 import LMR_driver_callable2 as LMR
-import LMR_utils
 import LMR_config as cfg
+
+from LMR_utils2 import ensemble_stats
 
 print '\n' + str(datetime.datetime.now()) + '\n'
 
@@ -38,7 +39,7 @@ if not os.path.isdir(expdir):
 # namelist)
 MCiters = np.arange(iter_range[0], iter_range[1]+1)
 for iter_num in MCiters:
-    cfg.curr_iter = iter_num
+    cfg.core.curr_iter = iter_num
     # Define work directory
     core.datadir_output = os.path.join(expdir, 'r' + str(iter_num))
     # Check if it exists, if not create it
@@ -54,7 +55,7 @@ for iter_num in MCiters:
 
     # write the analysis ensemble mean and variance to separate files (per
     # state variable)
-    LMR_utils.ensemble_stats(core.datadir_output, all_proxy_objs)
+    ensemble_stats(core.datadir_output, all_proxy_objs)
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
