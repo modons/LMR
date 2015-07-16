@@ -49,7 +49,7 @@ var = 'tas_sfc_Amon'
 # current datasets
 #
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
-nexp = 'testdevMultiState'
+nexp = 'testdev_150yr_75pct'
 #nexp = 'testdev_check_1000_75pct'
 #nexp = 'ReconDevTest_1000_testing_coral'
 #nexp = 'ReconDevTest_1000_testing_icecore'
@@ -76,7 +76,7 @@ nexp = 'testdevMultiState'
 #nexp = 'testdev_1000_75pct_BE_noTRW'
 
 # override datadir
-datadir_output = '/home/disk/kalman3/hakim/LMR/'
+datadir_output = '/home/chaos2/wperkins/data/LMR'
 #datadir_output = './data/'
 
 # number of contours for plots
@@ -87,7 +87,7 @@ alpha = 0.5
 
 # time range for verification (in years CE)
 #trange = [1960,1962]
-trange = [1880,2000] #works for nya = 0
+trange = [1850,2000] #works for nya = 0
 #trange = [1885,1995] #works for nya = 5
 #trange = [1890,1990] #works for nya = 10
 

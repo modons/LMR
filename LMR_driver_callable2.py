@@ -175,7 +175,7 @@ def LMR_driver_callable(cfg=None):
     print '--------------------------------------------------------------------'
     print 'Proxy counts for experiment:'
     # count the total number of proxies
-    total_proxy_count = len(prox_manager.all_proxies)
+    total_proxy_count = len(prox_manager.ind_assim)
     for pkey, plist in type_site_assim.iteritems():
         print('%45s : %5d' % (pkey, len(plist)))
     print('%45s : %5d' % ('TOTAL', total_proxy_count))

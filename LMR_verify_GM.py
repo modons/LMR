@@ -42,13 +42,13 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = False
+fsave = True
 
 # file specification
 #
 # current datasets
 #
-nexp = 'testdevMultiState'
+nexp = 'testdev_150yr_75pct'
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testing_1000_75pct_200members'
 #nexp = 'testdev_check_1000_75pct'
@@ -60,16 +60,16 @@ nexp = 'testdevMultiState'
 #nexp = 'testdev_detrend4_1000_75pct'
 
 # specify directories for LMR and calibration data
-datadir_output = '/home/disk/kalman3/hakim/LMR/'
+datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'
 #datadir_output = './data/'
-datadir_calib = '../data/'
+datadir_calib = '/home/chaos2/wperkins/data/LMR/analyses'
 
 # plotting preferences
 nlevs = 30 # number of contours
 alpha = 0.5 # alpha transpareny
 
 # time limit for plot axis in years CE
-xl = [1000,2000]
+xl = [1880,2000]
 
 # this sets the default size of the figure in inches. ['figure.figsize'] = width, height;  
 # aspect ratio appears preserved on smallest of the two
@@ -136,7 +136,7 @@ calib_vars = ['Tsfc']
 [BE_time,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars)
 
 # load NOAA MLOST
-path = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data/NOAA_MLOST/'
+path = datadir_calib + '/NOAA/'
 fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v3.5.4.201504.asc'
 f = open(path+fname,'r')
 dat = csv.reader(f)
@@ -155,7 +155,7 @@ MLOST_time = np.array(mlost_time)
 # load 20th century reanalysis
 # this is copied from R. Tardif's load_gridded_data.py routine
 
-infile = '/home/disk/ice4/hakim/data/20th_century_reanalysis_v2/T_0.995/air.sig995.mon.mean.nc'
+infile = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
 #infile = './data/500_allproxies_0/air.sig995.mon.mean.nc'
 
 data = Dataset(infile,'r')
@@ -175,7 +175,7 @@ for i in xrange(0,len(time_yrs)):
     isotime = time_yrs[i].isoformat()
     years_all.append(int(isotime.split("-")[0]))
 TCR_time = np.array(list(set(years_all))) # 'set' is used to get unique values in list
-TCR_time.sort # sort the list
+TCR_time.sort()  # sort the list
 
 time_yrs  = np.empty(len(TCR_time), dtype=int)
 TCR = np.empty([len(TCR_time), len(lat_20CR), len(lon_20CR)], dtype=float)
