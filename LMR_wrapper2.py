@@ -103,7 +103,7 @@ for iter_num in MCiters:
     os.system(cmd)
 
     # copy the namelist file to archive directory
-    cmd = 'cp ./LMR_exp_NAMELIST.py ' + mc_dir + '/'
+    cmd = 'cp ./LMR_config.py ' + mc_dir + '/'
     print cmd
     os.system(cmd)
     
