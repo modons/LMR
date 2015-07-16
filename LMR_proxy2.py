@@ -10,6 +10,7 @@ from load_data import load_data_frame
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from random import sample
+from copy import deepcopy
 
 class ProxyManager:
 
@@ -44,9 +45,20 @@ class ProxyManager:
 
             self.ind_assim = sample(range(nsites), nsites_assim)
             self.ind_eval = set(range(nsites)) - set(self.ind_assim)
+
+            # Make list of assimilated proxies by group
+            self.assim_ids_by_group = deepcopy(self.all_ids_by_group)
+            for idx in self.ind_eval:
+                pobj = self.all_proxies[idx]
+                grp = self.assim_ids_by_group[pobj.type]
+                if pobj.id in grp:
+                    grp.remove(pobj.id)
         else:
             self.ind_assim = range(nsites)
             self.ind_eval = None
+            self.assim_ids_by_group = self.all_ids_by_group
+
+
 
     def proxy_obj_generator(self, indexes):
         for idx in indexes:

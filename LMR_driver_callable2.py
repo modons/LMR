@@ -163,7 +163,7 @@ def LMR_driver_callable(cfg=None):
     # Build dictionaries of proxy sites to assimilate and those set aside for
     # verification
     prox_manager = LMR_proxy2.ProxyManager(BaseCfg, recon_period)
-    type_site_assim = prox_manager.all_ids_by_group
+    type_site_assim = prox_manager.assim_ids_by_group
 
     if verbose > 0:
         print 'Assimilating proxy types/sites:', type_site_assim
