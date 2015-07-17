@@ -271,11 +271,11 @@ def ensemble_stats(workdir, y_assim):
         Ye_s = np.zeros([nbye,nyears,nens])
 
         # Loop over **analysis** files & extract the Ye's
-        years = []
+        # years = []
         for k, f in enumerate(files):
             i = f.find('year')
-            year = f[i+4:i+8]
-            years.append(year)
+            # year = f[i+4:i+8]
+            # years.append(year)
             Xatmp = np.load(f)
             # Extract the Ye's from augmented state (beyond stateDim 'til end of
             #  state vector)
@@ -289,7 +289,7 @@ def ensemble_stats(workdir, y_assim):
             YeDict[pobj.id]['lat'] = pobj.lat
             YeDict[pobj.id]['lon'] = pobj.lon
             YeDict[pobj.id]['R'] = pobj.psm_obj.R
-            YeDict[pobj.id]['years'] = np.array(years, dtype=int)
+            YeDict[pobj.id]['years'] = pobj.time
             YeDict[pobj.id]['HXa'] = Ye_s[i, :, :]
 
     # Dump dictionary to pickle file
