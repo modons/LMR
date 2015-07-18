@@ -436,3 +436,29 @@ def rank_histogram(ensemble, value):
     return rank
 
 
+def class_docs_fixer(cls):
+    """Decorator to fix docstrings for subclasses"""
+    if not cls.__doc__:
+        for parent in cls.__bases__:
+            if parent.__doc__:
+                cls.__doc__ = parent.__doc__
+
+    for name, func in vars(cls).items():
+        if not func.__doc__ or '%%aug%%' in func.__doc__:
+            for parent in cls.__bases__:
+                parfunc = getattr(parent, name)
+                if parfunc and getattr(parfunc, '__doc__', None):
+                    if not func.__doc__:
+                        func.__doc__ = parfunc.__doc__
+                        break
+                    elif '%%aug%%' in func.__doc__:
+                        func.__doc__ = func.__doc__.replace('%%aug%%', '')
+                        func.__doc__ = parfunc.__doc__ + func.__doc__
+                        break
+
+    return cls
+
+def augment_docstr(func):
+    """ Decorator to mark augmented function docstrings. """
+    func.func_doc = '%%aug%%' + func.func_doc
+    return func
