@@ -1,11 +1,11 @@
-__author__ = 'frodre'
-
 """
-Module containing proxy classes
+Module containing proxy classes.  Rewritten by AndreP to incorporate features
+from the original LMR_proxy code using OOP.
 """
 
 import LMR_psms
 from load_data import load_data_frame
+from LMR_utils2 import augment_docstr, class_docs_fixer
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
@@ -13,6 +13,30 @@ from random import sample
 from copy import deepcopy
 
 class ProxyManager:
+    """
+    High-level manager to handle loading proxies from multiple sources and
+    randomly sampling the proxies.
+
+    Attributes
+    ----------
+    all_proxies: list(BaseProxyObject like)
+        A list of all proxy objects loaded for current reconstruction
+    all_ids_by_group: dict{str: list(str)}
+        A dictionary holding list of proxy site ids for each proxy type loaded.
+    ind_assim: list(int)
+        List of indices (pretaining to all_proxies)to be assimilated during the
+        reconstruction.
+    ind_eval: list(int)
+        List of indices of proxies withheld for verification purposes.
+
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module for current LMR run
+    data_range: list(int)
+        A two int list defining the beginning and ending time of the
+        reconstruction
+    """
 
     def __init__(self, config, data_range):
 
@@ -40,6 +64,7 @@ class ProxyManager:
         proxy_frac = config.proxies.proxy_frac
         nsites = len(self.all_proxies)
 
+        # Sample from all proxies if specified
         if proxy_frac < 1.0:
             nsites_assim = int(nsites * proxy_frac)
 
@@ -62,24 +87,99 @@ class ProxyManager:
             self.assim_ids_by_group = self.all_ids_by_group
 
     def proxy_obj_generator(self, indexes):
+        """
+        Generator to iterate over proxy objects in list at specified indexes
+
+        Parameters
+        ----------
+        indexes: list(int)
+            List of indices pertaining to self.all_proxies
+
+        Returns
+        -------
+        generator
+            A generator over all_proxies for each specified index
+        """
+
         for idx in indexes:
             yield self.all_proxies[idx]
 
     def sites_assim_proxy_objs(self):
+        """
+        Generator over ind_assim indices.
+
+        Yields
+        ------
+        BaseProxyObject like
+            Proxy object from the all_proxies list.
+        """
+
         return self.proxy_obj_generator(self.ind_assim)
 
     def sites_eval_proxy_objs(self):
+        """
+        Generator over ind_eval indices.
+
+        Yields
+        ------
+        BaseProxyObject like
+            Proxy object from the all_proxies list.
+        """
+
         return self.proxy_obj_generator(self.ind_eval)
 
 
-
-
 class BaseProxyObject:
+    """
+    Class defining attributes and methods for descendant proxy objects.
+
+    Attributes
+    ----------
+    id: str
+        Proxy site id
+    type: str
+        Proxy type
+    start_yr: int
+        Earliest year that data exists for this site
+    end_yr: int
+        Latest year that data exists for this site
+    values: pandas.DataFrame
+        Proxy record with time (in years) as the index
+    lat: float
+        Latitude of proxy site
+    lon: float
+        Longitude of proxy site
+    time: ndarray
+        List of times for which proxy contains valid data
+    psm_obj: BasePSM like
+        PSM for this proxy
+    psm: function
+        Exposed psm mapping function from the psm_obj
+
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module for current LMR run
+    pid -> id
+    prox_type -> type
+    start_yr
+    end_yr
+    lat
+    lon
+    values
+    time
+    psm_kwargs: dict(unpacked)
+        Keyword arguments to be passed to the PSM
+
+    Notes
+    -----
+    All proxy object classes should descend from the BaseProxyObject abstract
+    class.
+    """
     __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
-                 lat, lon, values, time,
-                 missing=None, **psm_kwargs):
+                 lat, lon, values, time, **psm_kwargs):
 
         if (values is None) or len(values) == 0:
             raise ValueError('No proxy data given for object initialization')
@@ -91,7 +191,6 @@ class BaseProxyObject:
         self.start_yr = start_yr
         self.end_yr = end_yr
         self.values = values
-        self.missing = missing
         self.lat = lat
         self.lon = fix_lon(lon)
         self.time = time
@@ -101,32 +200,88 @@ class BaseProxyObject:
         self.psm_obj = psm_obj(config, self, **psm_kwargs)
         self.psm = self.psm_obj.psm
 
-    # TODO: Might not need this read_proxy method, it was in consideration
-    #   of different data backends which may or may not be used.
-    def read_proxy(self):
-        return self.values[:]
-
     @staticmethod
     @abstractmethod
     def get_psm_obj():
+        """ Retrieves PSM object class to be attached to this proxy"""
         pass
 
     @classmethod
     @abstractmethod
-    def load_site(cls,  config, site, meta_src, data_src,
-                  data_range, **psm_kwargs):
+    def load_site(cls,  config, site, data_range, meta_src=None, data_src=None,
+                  **psm_kwargs):
+        """
+        Load proxy object from single site.
+
+        Parameters
+        ----------
+        config: LMR_config
+            Configuration for current LMR run
+        site: str
+            Key to identify which site to load from source data
+        meta_src: optional
+            Source for proxy metadata
+        data_src: optional
+            Source for proxy record data (might be same as meta_src)
+        data_range: iterable
+            Two-item container holding beginning and end date of reconstruction
+        psm_kwargs: dict(unpacked)
+            Keyword arguments to be passed to the psm.
+
+        Returns
+        -------
+        BaseProxyObject like
+            Proxy object instance at specified site
+
+        Notes
+        -----
+        If source data not specified, it should attempt to load data using
+        config file information.
+        """
         pass
 
     @classmethod
     @abstractmethod
     def load_all(cls, config, data_range, **psm_kwargs):
+        """
+        Load proxy objects from all sites matching filter criterion.
+
+        Parameters
+        ----------
+        config: LMR_config
+            Configuration for current LMR run
+        meta_src: optional
+            Source for proxy metadata
+        data_src: optional
+            Source for proxy record data (might be same as meta_src)
+        data_range: iterable
+            Two-item container holding beginning and end date of reconstruction
+        psm_kwargs: dict(unpacked)
+            Keyword arguments to be passed to the psm.
+
+        Returns
+        -------
+        dict
+            Dictionary of proxy types (keys) with associated site ids (values)
+        list
+            List of all proxy objects created
+
+        Notes
+        -----
+        If source data not specified, it should attempt to load data using
+        config file information.
+        """
         pass
 
     @abstractmethod
     def error(self):
+        """
+        error model for proxy data
+        """
         pass
 
 
+@class_docs_fixer
 class ProxyPages(BaseProxyObject):
 
     @staticmethod
@@ -135,14 +290,15 @@ class ProxyPages(BaseProxyObject):
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
+    @augment_docstr
     def load_site(cls, config, site, data_range, meta_src=None, data_src=None,
                   **psm_kwargs):
-        """
-        Initializes proxy object from source data.  Source data
-        can be a string or pandas dataframe at this point.
+        """%%aug%%
+
+        Expects meta_src, data_src to be pickled pandas DataFrame objects.
         """
 
-        # TODO: Figure out if this is the correct scope to load
+        #
         if meta_src is None:
             meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
         if data_src is None:
@@ -173,8 +329,13 @@ class ProxyPages(BaseProxyObject):
                    values, times, **psm_kwargs)
 
     @classmethod
+    @augment_docstr
     def load_all(cls, config, data_range, meta_src=None,
                  data_src=None, **psm_kwargs):
+        """%%aug%%
+
+        Expects meta_src, data_src to be pickled pandas DataFrame objects.
+        """
 
         # Load source data files
         if meta_src is None:
@@ -254,6 +415,14 @@ class ProxyPages(BaseProxyObject):
         return 0.1
 
 def fix_lon(lon):
+    """
+    Fixes negative longitude values.
+
+    Parameters
+    ----------
+    lon: ndarray like or value
+        Input longitude array or single value
+    """
     if lon < 0:
         lon += 360.
     return lon
@@ -261,5 +430,18 @@ def fix_lon(lon):
 
 _proxy_classes = {'pages': ProxyPages}
 
-def get_proxy_class(key):
-    return _proxy_classes[key]
+def get_proxy_class(proxy_key):
+    """
+    Retrieve proxy class type to be instantiated.
+
+    Parameters
+    ----------
+    proxy_key: str
+        Dict key to retrieve correct PSM class type.
+
+    Returns
+    -------
+    BaseProxyObject like:
+        Class type to be instantiated and attached to a proxy.
+    """
+    return _proxy_classes[proxy_key]

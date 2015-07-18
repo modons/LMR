@@ -8,7 +8,7 @@ import matplotlib.pyplot as pylab
 import numpy as np
 import logging
 import LMR_calibrate
-from LMR_utils import haversine, smooth2D
+from LMR_utils2 import haversine, smooth2D, class_docs_fixer
 
 from scipy.stats import linregress
 from abc import ABCMeta, abstractmethod
@@ -19,8 +19,16 @@ logger = logging.getLogger(__name__)
 
 class BasePSM:
     """
-    Abstract class defining what a PSM should look like.  Minimizes need to
-    adjust code in actual driver.
+    Proxy system model.
+
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module used for current LMR run.
+    proxy_obj: BaseProxyObject like
+        Proxy object that this PSM is being attached to
+    psm_kwargs: dict (unpacked)
+        Specfic arguments for the target PSM
     """
     __metaclass__ = ABCMeta
 
@@ -29,19 +37,82 @@ class BasePSM:
 
     @abstractmethod
     def psm(self, prior_obj):
+        """
+        Maps a given state to observations for the given proxy
+
+        Parameters
+        ----------
+        prior_obj BasePriorObject
+            Prior to be mapped to observation space (Ye).
+
+        Returns
+        -------
+        Ye:
+            Equivalent observation from prior
+        """
         pass
 
     @abstractmethod
     def error(self):
+        """
+        Error model for given PSM.
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def get_kwargs(config):
+        """
+        Returns keyword arguments required for instantiation of given PSM.
+
+        Parameters
+        ----------
+        config: LMR_config
+            Configuration module used for current LMR run.
+
+        Returns
+        -------
+        kwargs: dict
+            Keyword arguments for given PSM
+        """
         pass
 
 
+@class_docs_fixer
 class LinearPSM(BasePSM):
+    """
+    PSM based on linear regression.
+
+    Attributes
+    ----------
+    lat: float
+        Latitude of associated proxy site
+    lon: float
+        Longitude of associated proxy site
+    corr: float
+        Correlation of proxy record against calibration data
+    slope: float
+        Linear regression slope of proxy/calibration fit
+    intercept: float
+        Linear regression y-intercept of proxy/calibration fit
+    R: float
+        Mean-squared error of proxy/calibration fit
+
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module used for current LMR run.
+    proxy_obj: BaseProxyObject like
+        Proxy object that this PSM is being attached to
+    psm_data: dict
+        Pre-calibrated PSM dictionary containing current associated
+        proxy site's calibration information
+
+    Raises
+    ------
+    ValueError
+        If PSM is below critical correlation threshold.
+    """
 
     def __init__(self, config, proxy_obj, psm_data=None):
 
@@ -75,18 +146,30 @@ class LinearPSM(BasePSM):
             C.read_calibration()
             self.calibrate(C, proxy_obj)
 
+        # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
                               'critical threshold ({:.2f}).'
                               ).format(self.corr, r_crit))
 
+    # TODO: Ideally prior state info and coordinates should all be in single obj
     def psm(self, Xb, X_state_info, X_coords):
-
         """
-        Main function to be exposed to each proxy object
+        Maps a given state to observations for the given proxy
 
-        :param X:
-        :return:
+        Parameters
+        ----------
+        Xb: ndarray
+            State vector to be mapped into observation space (stateDim x ensDim)
+        X_state_info: dict
+            Information pertaining to variables in the state vector
+        X_coords: ndarray
+            Coordinates for the state vector (stateDim x 2)
+
+        Returns
+        -------
+        Ye:
+            Equivalent observation from prior
         """
 
         # ----------------------
@@ -98,12 +181,13 @@ class LinearPSM(BasePSM):
             raise KeyError('Needed variable not in state vector for Ye'
                            ' calculation.')
 
-        # TODO: end index should already be +1
+        # TODO: end index should already be +1, more pythonic
         tas_startidx, tas_endidx = X_state_info[state_var]['pos']
         ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
         ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
 
-        # Find row index of X for which [X_lat,X_lon] corresponds to closest grid point to
+        # Find row index of X for which [X_lat,X_lon] corresponds to closest
+        # grid point to
         # location of proxy site [self.lat,self.lon]
         # Calclulate distances from proxy site.
         stateDim = tas_endidx - tas_startidx + 1
@@ -127,8 +211,20 @@ class LinearPSM(BasePSM):
         return 0.1
 
     # TODO: Simplify a lot of the actions in the calibration
-    def calibrate(self, C, proxy, diag_output=False,
-                  diag_output_figs=False):
+    def calibrate(self, C, proxy, diag_output=False, diag_output_figs=False):
+        """
+        Calibrate given proxy record against observation data and set relevant
+        PSM attributes.
+
+        Parameters
+        ----------
+        C: calibration_master like
+            Calibration object containing data, time, lat, lon info
+        proxy: BaseProxyObject like
+            Proxy object to fit to the calibration data
+        diag_output, diag_output_figs: bool, optional
+            Diagnostic output flags for calibration method
+        """
 
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
@@ -137,15 +233,9 @@ class LinearPSM(BasePSM):
         # Use linear model (regression) as default PSM
         # --------------------------------------------
 
-        """ GH code block for random calibration year. not yet implemented in this new code
-        GH: new: random sample of calibration period. ncalib is the sample size (max = len(self.time))
-        ncalib = 75
-        rantimes = sample(range(0,len(self.time)),ncalib)
-        for i in rantimes:
-        """
-
         # TODO: Distance calculation should probably be a function
-        # Look for indices of calibration grid point closest in space (in 2D) to proxy site
+        # Look for indices of calibration grid point closest in space (in 2D)
+        # to proxy site
         dist = np.empty([C.lat.shape[0], C.lon.shape[0]])
         tmp = np.array(
             [haversine(proxy.lon, proxy.lat, C.lon[k], C.lat[j]) for j
@@ -217,7 +307,8 @@ class LinearPSM(BasePSM):
             reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
         # standardize proxy values over period of overlap with calibration data
         # reg_ya = (reg_ya - np.nanmean(reg_ya))/np.nanstd(reg_ya)
-        # print 'Proxy stats (y:standardized) [min, max, mean, std]:', np.nanmin(reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
+        # print 'Proxy stats (y:standardized) [min, max, mean, std]:', np.nanmin
+        # (reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
         # GH: note that std_err pertains to the slope, not the residuals!!!
 
         self.slope, self.intercept, r_value, p_value, std_err = linregress(
@@ -256,7 +347,8 @@ class LinearPSM(BasePSM):
                 pylab.plot(reg_xa, line, 'r-', reg_xa, reg_ya, 'o',
                            markersize=7, markerfacecolor='#5CB8E6',
                            markeredgecolor='black', markeredgewidth=1)
-                # GH: I don't know how this ran in the first place; must exploit some global namespace
+                # GH: I don't know how this ran in the first place; must exploit
+                #  some global namespace
                 pylab.title('%s: %s' % (proxy.type, proxy.id))
                 pylab.xlabel('Calibration data')
                 pylab.ylabel('Proxy data')
@@ -299,13 +391,29 @@ class LinearPSM(BasePSM):
 
     @staticmethod
     def _load_psm_data(config):
+        """Helper method for loading from dataframe"""
         pre_calib_file = config.psm.linear.pre_calib_datafile
 
         return load_cpickle(pre_calib_file)
 
 
+# Mapping dict to PSM object type, this is where proxy_type/psm relations
+# should be specified (I think.) - AP
 _psm_classes = {'linear': LinearPSM}
 
 def get_psm_class(psm_type):
+    """
+    Retrieve psm class type to be instantiated.
+
+    Parameters
+    ----------
+    psm_type: str
+        Dict key to retrieve correct PSM class type.
+
+    Returns
+    -------
+    BasePSM like:
+        Class type to be instantiated and attached to a proxy.
+    """
     return _psm_classes[psm_type]
 
