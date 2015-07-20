@@ -25,8 +25,6 @@ class core:
         Time period for reconstruction
     nens: int
         Ensemble size
-    proxy_frac: float
-        Fraction of available proxy data (sites) to assimilate
     iter_range: list(int)
         Number of Monte-Carlo iterations to perform
     loc_rad: float
@@ -36,16 +34,14 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_150yr_75pct_gmttest_10iter'
+    nexp = 'testdev_150yr_75pct_working_check'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
-    #lmr_path = r'G:\Research\Hakim Research\data\LMR'
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    # TODO: Monte-Carlo section, also can replace with single int
-    iter_range = [0, 9]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
 
@@ -64,38 +60,48 @@ class proxies:
 
     Attributes
     ----------
-    datadir_proxy: str
-        Absolute path to proxy data
-    datafile_proxy: str
-        Proxy data file name
-    dataformat_proxy: str
-        File format of the proxy data
-    regions: list(str)
-        List of proxy data regions (data keys) to use.
-    proxy_resolution: list(float)
-        List of proxy time resolutions to use
-    proxy_assim: dict{ str: list(str)}
-        Proxy types to be assimilated.
-        Uses dictionary with structure {<<proxy type>>: [.. list of measuremant
-        tags ..] where "proxy type" is written as
-        "<<archive type>>_<<measurement type>>"
-    dat_filters:
-    datatag_calib: str
-        Source of calibration data for PSM
-    datadir_calib: str
-        Absolute path to calibration data
-    datafile_calib: str
-        Filename for calibration data
-    dataformat_calib: str
-        Data storage type for calibration data
-    psm_r_crit: float
-        Threshold correlation of linear PSM
+    use_from: list(str)
+        A list of keys for proxy classes to load from.  Keys available are
+        stored in LMR_proxy2.
+    proxy_frac: float
+        Fraction of available proxy data (sites) to assimilate
     """
 
     use_from = ['pages']
     proxy_frac = 0.75
 
     class pages:
+        """
+        Parameters for PagesProxy class
+
+        Attributes
+        ----------
+        datadir_proxy: str
+            Absolute path to proxy data
+        datafile_proxy: str
+            Absolute path to proxy records file
+        metafile_proxy: str
+            Absolute path to proxy meta data
+        dataformat_proxy: str
+            File format of the proxy data
+        regions: list(str)
+            List of proxy data regions (data keys) to use.
+        proxy_resolution: list(float)
+            List of proxy time resolutions to use
+        proxy_order: list(str):
+            Order of assimilation by proxy type key
+        proxy_assim2: dict{ str: list(str)}
+            Proxy types to be assimilated.
+            Uses dictionary with structure {<<proxy type>>: [.. list of measuremant
+            tags ..] where "proxy type" is written as
+            "<<archive type>>_<<measurement type>>"
+        proxy_type_mapping: dict{(str,str): str}
+            Maps proxy type and measurement to our proxy type keys.
+            (e.g. {('Tree ring', 'TRW'): 'Tree ring_Width'} )
+        simple_filters: dict{'str': Iterable}
+            List mapping Pages2k metadata sheet columns to a list of values
+            to filter by.
+        """
 
         datadir_proxy = join(core.lmr_path, 'proxies')
         datafile_proxy = join(core.lmr_path, 'proxies',
@@ -159,10 +165,37 @@ class proxies:
 
 
 class psm:
+    """
+    Parameters for PSM classes
+
+    Attributes
+    ----------
+    use_psm: dict{str: str}
+        Maps proxy class key to psm class key.  Used to determine which psm
+        is associated with what Proxy type.
+    """
 
     use_psm = {'pages': 'linear'}
 
     class linear:
+        """
+        Parameters for the linear fit PSM.
+
+        Attributes
+        ----------
+        datatag_calib: str
+            Source of calibration data for PSM
+        datadir_calib: str
+            Absolute path to calibration data
+        datafile_calib: str
+            Filename for calibration data
+        dataformat_calib: str
+            Data storage type for calibration data
+        pre_calib_datafile: str
+            Absolute path to precalibrated Linear PSM data
+        psm_r_crit: float
+            Usage threshold for correlation of linear PSM
+        """
         datatag_calib = 'GISTEMP'
         datadir_calib = join(core.lmr_path, 'analyses')
         datafile_calib = 'gistemp1200_ERSST.nc'
@@ -173,14 +206,12 @@ class psm:
                                   'PSMs_' + datatag_calib + '.pckl')
         psm_r_crit = 0.2
 
-# =============================================================================
-# Section 3: MODEL (PRIOR)
-# =============================================================================
-
 class prior:
     """
     Parameters for the ensDA prior
 
+    Attributes
+    ----------
     prior_source: str
         Source of prior data
     datadir_prior: str
