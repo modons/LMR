@@ -259,38 +259,38 @@ def ensemble_stats(workdir, y_assim):
         #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
         np.savez(filen, **vars_to_save_var)
 
-        # --------------------------------------------------------
-        # Extract the analyzed Ye ensemble for diagnostic purposes        
-        # --------------------------------------------------------
-        # get information on dim of state without the Ye's (before augmentation)
-        stateDim  = npzfile['stateDim']
-        Xbtmp_aug = npzfile['Xb_one_aug']
-        # dim of entire state vector (augmented)
-        totDim = Xbtmp_aug.shape[0]
-        nbye = (totDim - stateDim)
-        Ye_s = np.zeros([nbye,nyears,nens])
+    # --------------------------------------------------------
+    # Extract the analyzed Ye ensemble for diagnostic purposes
+    # --------------------------------------------------------
+    # get information on dim of state without the Ye's (before augmentation)
+    stateDim  = npzfile['stateDim']
+    Xbtmp_aug = npzfile['Xb_one_aug']
+    # dim of entire state vector (augmented)
+    totDim = Xbtmp_aug.shape[0]
+    nbye = (totDim - stateDim)
+    Ye_s = np.zeros([nbye,nyears,nens])
 
-        # Loop over **analysis** files & extract the Ye's
-        # years = []
-        for k, f in enumerate(files):
-            i = f.find('year')
-            # year = f[i+4:i+8]
-            # years.append(year)
-            Xatmp = np.load(f)
-            # Extract the Ye's from augmented state (beyond stateDim 'til end of
-            #  state vector)
-            Ye_s[:, k, :] = Xatmp[stateDim:, :]
+    # Loop over **analysis** files & extract the Ye's
+    # years = []
+    for k, f in enumerate(files):
+        i = f.find('year')
+        # year = f[i+4:i+8]
+        # years.append(year)
+        Xatmp = np.load(f)
+        # Extract the Ye's from augmented state (beyond stateDim 'til end of
+        #  state vector)
+        Ye_s[:, k, :] = Xatmp[stateDim:, :]
 
-        # Build dictionary
-        YeDict = {}
-        # loop over assimilated proxies
-        for pobj in y_assim:
-            YeDict[pobj.id] = {}
-            YeDict[pobj.id]['lat'] = pobj.lat
-            YeDict[pobj.id]['lon'] = pobj.lon
-            YeDict[pobj.id]['R'] = pobj.psm_obj.R
-            YeDict[pobj.id]['years'] = pobj.time
-            YeDict[pobj.id]['HXa'] = Ye_s[i, :, :]
+    # Build dictionary
+    YeDict = {}
+    # loop over assimilated proxies
+    for pobj in y_assim:
+        YeDict[pobj.id] = {}
+        YeDict[pobj.id]['lat'] = pobj.lat
+        YeDict[pobj.id]['lon'] = pobj.lon
+        YeDict[pobj.id]['R'] = pobj.psm_obj.R
+        YeDict[pobj.id]['years'] = pobj.time
+        YeDict[pobj.id]['HXa'] = Ye_s[i, :, :]
 
     # Dump dictionary to pickle file
     outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
