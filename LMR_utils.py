@@ -255,6 +255,19 @@ def ensemble_stats(workdir,Yall):
         # --------------------------------------------------------
         # Extract the analyzed Ye ensemble for diagnostic purposes        
         # --------------------------------------------------------
+
+        # get information on assimilated proxes
+        apDict = {}
+        apfile = workdir + '/assimilated_proxies.npy'
+        assimilated_proxies = np.load(apfile)
+        nrecords = np.size(assimilated_proxies)
+        for k in range(nrecords):
+            tmp = assimilated_proxies[k]
+            key = tmp.keys()[0]
+            aptuple = (key,tmp[key][0])
+            apDict[aptuple] = {}
+            apDict[aptuple] = tmp[key][3]
+
         # get information on dim of state without the Ye's (before augmentation)
         stateDim  = npzfile['stateDim']
         Xbtmp_aug = npzfile['Xb_one_aug']
@@ -280,11 +293,17 @@ def ensemble_stats(workdir,Yall):
         # loop over assimilated proxies
         for i in range(len(Yall)):
             YeDict[Yall[i].pid] = {}
+
+            years_assimilated = np.array(apDict[Yall[i].pid],dtype=int)
+            years_all  = np.array(years,dtype=int)
+            indices = [idx for (idx, value) in enumerate(years_all) if value in years_assimilated]
+            years_ok = years_all[indices]
+
             YeDict[Yall[i].pid]['lat']   = Yall[i].lat
             YeDict[Yall[i].pid]['lon']   = Yall[i].lon
             YeDict[Yall[i].pid]['R']     = Yall[i].R
-            YeDict[Yall[i].pid]['years'] = np.array(years,dtype=int)
-            YeDict[Yall[i].pid]['HXa']   = Ye_s[i,:,:]
+            YeDict[Yall[i].pid]['years'] = np.array(years_ok,dtype=int)
+            YeDict[Yall[i].pid]['HXa']   = Ye_s[i,indices,:]
 
     # Dump dictionary to pickle file
     outfile = open('%s/analysis_Ye.pckl' % (workdir),'w')
