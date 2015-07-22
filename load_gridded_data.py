@@ -486,11 +486,28 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
             time = data.variables['time']
 
         # Transform into calendar dates using netCDF4 variable attributes (units & calendar)
-        time_yrs = num2date(time[:],units=time.units,calendar=time.calendar)
-        time_yrs_list = time_yrs.tolist()
+        # TODO: may not want to depend on netcdf4.num2date...
+        try:
+            time_yrs = num2date(time[:],units=time.units,calendar=time.calendar)
+            time_yrs_list = time_yrs.tolist()
+        except ValueError:
+            # num2date needs calendar year start >= 0001 C.E. (bug submitted
+            # to unidata about this
+            fmt = '%Y-%d-%m %H:%M:%S'
+            tunits = time.units
+            since_yr_idx = tunits.index('since ') + 6
+            year = int(tunits[since_yr_idx:since_yr_idx+4])
+            year_diff = year - 0001
+            new_start_date = datetime(0001, 01, 01, 0, 0, 0)
+
+            new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
+            time_yrs = num2date(time[:], new_units, calendar=time.calendar)
+            time_yrs_list = [datetime(d.year + year_diff, d.month, d.day,
+                                      d.hour, d.minute, d.second)
+                             for d in time_yrs]
 
         # To convert monthly data to annual: List years available in dataset and sort
-        years_all = [int(time_yrs_list[i].strftime('%Y')) for i in range(0,len(time_yrs_list))]
+        years_all = [d.year for d in time_yrs_list]
         years     = list(set(years_all)) # 'set' is used to retain unique values in list
         years.sort # sort the list
         time_yrs  = np.empty(len(years), dtype=int)

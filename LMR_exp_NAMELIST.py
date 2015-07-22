@@ -14,8 +14,7 @@ from datetime import datetime, timedelta
 #nexp = 'ReconDevTest_100_testing_MXD'
 #nexp = 'ReconDevTest_100_testing_MXD_coral'
 #nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
-nexp = 'testdev2'
-
+nexp = 'proxyfirstloop_150yrecon_1000members_1itr_100pct'
 # set the absolute path the experiment (could make this cwd with some os coding)
 LMRpath = '/home/disk/kalman3/rtardif/LMR'
 #LMRpath = '/home/disk/ekman/rtardif/nobackup/LMR'
@@ -31,7 +30,7 @@ recon_period = [1850,2000]
 #recon_period = [1000,2000]
 
 # Ensemble size
-Nens = 100
+Nens = 1000
 
 # Fraction of available proxy data (sites) to assimilate 
 # (=1.0 for all, 0.5 for half etc.)
