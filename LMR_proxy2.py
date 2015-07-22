@@ -125,8 +125,10 @@ class ProxyManager:
         BaseProxyObject like
             Proxy object from the all_proxies list.
         """
-
-        return self.proxy_obj_generator(self.ind_eval)
+        if self.ind_eval:
+            return self.proxy_obj_generator(self.ind_eval)
+        else:
+            return []
 
 
 class BaseProxyObject:

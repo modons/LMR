@@ -34,12 +34,12 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_150yr_75pct_working_check'
+    nexp = 'test_100pct'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1850, 2000]
+    recon_period = [1950, 2000]
     nens = 100
     iter_range = [0, 0]
     curr_iter = iter_range[0]
@@ -68,7 +68,7 @@ class proxies:
     """
 
     use_from = ['pages']
-    proxy_frac = 0.75
+    proxy_frac = 1.0
 
     class pages:
         """
@@ -229,4 +229,4 @@ class prior:
     #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
     datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
     dataformat_prior = 'NCD'
-    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
