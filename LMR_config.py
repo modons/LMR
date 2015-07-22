@@ -34,7 +34,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'test_100pct'
+    nexp = 'test_ye_output_HXacompressed'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
