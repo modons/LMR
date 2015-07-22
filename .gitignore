@@ -68,6 +68,8 @@ matplotlibrc
 #pyCharm stuff
 .idea/*
 
+#scratch files
+scratch/*
 
 #Video Files
 *.gif

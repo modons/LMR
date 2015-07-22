@@ -27,9 +27,10 @@ import numpy as np
 import datetime
 import LMR_driver_callable as LMR
 import LMR_utils
+from datetime import datetime
 from LMR_exp_NAMELIST import *
 
-print '\n' + str(datetime.datetime.now()) + '\n'
+print '\n' + str(datetime.now()) + '\n'
 
 # object a from empty class state is a convenience to pass information from the "namelist"
 a = state()
@@ -131,7 +132,7 @@ for iter in MCiters:
     print cmd
     os.system(cmd)
     
-    print '\n' + str(datetime.datetime.now()) + '\n'
+    print '\n' + str(datetime.now()) + '\n'
 
     #   end: DO NOT DELETE
     
