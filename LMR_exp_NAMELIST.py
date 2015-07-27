@@ -17,8 +17,8 @@ from datetime import datetime, timedelta
 nexp = 'test'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
-#LMRpath = '/home/chaos2/wperkins/data/LMR'
-LMRpath = '/home/disk/ekman/rtardif/kalman3/LMR'
+LMRpath = '/home/chaos2/wperkins/data/LMR'
+#LMRpath = '/home/disk/ekman/rtardif/nobackup/LMR's
 
 # set clean_start to True to delete existing files in the outpout directory (otherwise they will be used as the prior!)
 clean_start = True
