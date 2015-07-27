@@ -447,7 +447,7 @@ def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
         data_file_read = string.replace(data_file,'[vardef_template]',vardef)
         
         # Check if file exists
-        infile = data_dir+'/ccsm4_last_mil/'+data_file_read
+        infile = data_dir + '/' + data_file_read
         if not os.path.isfile(infile):
             print 'Error in specification of gridded dataset'
             print 'File ', infile, ' does not exist! - Exiting ...'
