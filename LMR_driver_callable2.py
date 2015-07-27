@@ -282,7 +282,7 @@ def LMR_driver_callable(cfg=None):
     if not online:
         Ye_all = np.empty(shape=[total_proxy_count, nens])
         for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-            Ye_all[k, :] = proxy.psm(Xb_one, X.trunc_state_info, Xb_one_coords)
+            Ye_all[k, :] = proxy.psm(Xb_one_full, X.full_state_info, X.coords)
 
         # Append ensemble of Ye's to prior state vector
         Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
