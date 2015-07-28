@@ -260,6 +260,9 @@ class forecaster:
     Parameters for the online DA forecasting method.
     """
 
+    # Which forecaster class to use
+    use_forecaster = 'lim'
+
     class LIM:
         """
         calib_filename: Filename for LIM calibration data.  Should be netcdf
@@ -270,5 +273,8 @@ class forecaster:
         """
         calib_filename = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
         calib_varname = 'air'
+        dataformat = 'NCD'
         fcast_times = [1]
-
+        wsize = 12
+        fcast_num_pcs = 15
+        detrend = True
