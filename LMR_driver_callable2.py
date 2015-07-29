@@ -41,6 +41,7 @@ import LMR_proxy2
 import LMR_prior
 import LMR_utils2
 import LMR_config as BaseCfg
+import LMR_forecaster
 from LMR_DA import enkf_update_array, cov_localization
 
 
@@ -279,20 +280,24 @@ def LMR_driver_callable(cfg=None):
     # ----------------------------------
 
     # Extract all the Ye's from master list of proxy objects into numpy array
-    if not online:
-        Ye_all = np.empty(shape=[total_proxy_count, nens])
-        for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-            Ye_all[k, :] = proxy.psm(Xb_one_full, X.full_state_info, X.coords)
+    Ye_all = np.empty(shape=[total_proxy_count, nens])
+    for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
+        Ye_all[k, :] = proxy.psm(Xb_one_full, X.full_state_info, X.coords)
 
-        # Append ensemble of Ye's to prior state vector
-        Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
-    else:
-        Xb_one_aug = Xb_one
+    # Append ensemble of Ye's to prior state vector
+    Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
 
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
     np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
              Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
+
+    # Initialize forecaster for online reconstructions
+    if online:
+        print '\n Initializing LMR forecasting for online reconstruction'
+        key = cfg.forecaster.use_forecaster
+        fcastr_class = LMR_forecaster.get_forecaster_class(key)
+        forecaster = fcastr_class(cfg)
 
     # ==========================================================================
     # Loop over all proxies and perform assimilation ---------------------------
@@ -330,14 +335,21 @@ def LMR_driver_callable(cfg=None):
 
         ypad = '{:04d}'.format(t)
         filen = join(workdir, 'year' + ypad + '.npy')
-        if prior_check.exists(filen) and not core.clean_start:
+        if prior_check.exists(filen):
             if verbose > 2:
                 print 'prior file exists: ' + filen
             Xb = np.load(filen)
-        else:
+        elif not online or yr_idx == 0:
             if verbose > 2:
                 print 'Prior file ', filen, ' does not exist...'
             Xb = Xb_one_aug.copy()
+
+        # Recalculate Yes for online reconstruction
+        if online and not yr_idx == 0:
+            for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
+                Xb[k - total_proxy_count] = proxy.psm(Xb,
+                                                      X.trunc_state_info,
+                                                      Xb_one_coords)
 
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
             # Crude check if we have proxy ob for current time
@@ -363,10 +375,7 @@ def LMR_driver_callable(cfg=None):
                     loc = cov_localization(loc_rad, X, Y)
 
             # Get Ye values for current proxy
-            if online:
-                Ye = Y.psm(Xb)
-            else:
-                Ye = Xb[proxy_idx - total_proxy_count]
+            Ye = Xb[proxy_idx - total_proxy_count]
 
             # Define the ob error variance
             ob_err = Y.psm_obj.R
@@ -403,6 +412,16 @@ def LMR_driver_callable(cfg=None):
 
         # Dump Xa to file (use Xb in case no proxies assimilated for current)
         np.save(filen, Xb)
+
+        # TODO: fix to be general for multiple resolutions...
+        # Forecast for next year
+        if online and t < recon_period[1]:
+            fcast = forecaster.forecast(Xa[ibeg_tas:iend_tas+1])
+            Xb[ibeg_tas:iend_tas+1] = fcast
+            # ypad = '{:04d}'.format(t+1)
+            # filen = join(workdir, 'year' + ypad + '.npy')
+            # np.save(filen, new_xb)
+
 
     end_time = time() - begin_time
 
