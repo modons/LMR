@@ -193,10 +193,13 @@ class LinearPSM(BasePSM):
         stateDim = tas_endidx - tas_startidx + 1
         ensDim = Xb.shape[1]
         dist = np.empty(stateDim)
-        dist = np.array(
-            [haversine(self.lon, self.lat, X_coords[k, ind_lon],
-                       X_coords[k, ind_lat])
-             for k in xrange(tas_startidx, tas_endidx + 1)])
+        # dist = np.array(
+        #     [haversine(self.lon, self.lat, X_coords[k, ind_lon],
+        #                X_coords[k, ind_lat])
+        #      for k in xrange(tas_startidx, tas_endidx + 1)])
+        dist = haversine(self.lon, self.lat,
+                          X_coords[tas_startidx:(tas_endidx+1), ind_lon],
+                          X_coords[tas_startidx:(tas_endidx+1), ind_lat])
 
         # row index of nearest grid pt. in prior (minimum distance)
         kind = np.unravel_index(dist.argmin(), dist.shape)[0] + tas_startidx
