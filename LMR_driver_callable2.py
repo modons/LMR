@@ -351,6 +351,8 @@ def LMR_driver_callable(cfg=None):
                                                       X.trunc_state_info,
                                                       Xb_one_coords)
 
+        Xb_prev = Xb.copy()
+
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
             # Crude check if we have proxy ob for current time
             try:
@@ -416,6 +418,10 @@ def LMR_driver_callable(cfg=None):
         # TODO: fix to be general for multiple resolutions...
         # Forecast for next year
         if online and t < recon_period[1]:
+            #lets try to relaxation to prior
+            alpha = 0.85
+            Xa = (1-alpha)*Xa + alpha*Xb_one_aug
+
             fcast = forecaster.forecast(Xa[ibeg_tas:iend_tas+1])
             Xb[ibeg_tas:iend_tas+1] = fcast
             # ypad = '{:04d}'.format(t+1)

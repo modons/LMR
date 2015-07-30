@@ -36,12 +36,12 @@ class core:
     """
     nexp = 'testdev_onlineDA_comparison'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
-    online_reconstruction = False
+    online_reconstruction = True
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    iter_range = [0, 0]
+    iter_range = [0, 2]
     curr_iter = iter_range[0]
     loc_rad = None
 
