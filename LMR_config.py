@@ -8,6 +8,15 @@ Adapted from LMR_exp_NAMELIST by AndreP
 from os.path import join
 
 
+class constants:
+
+    class file_types:
+        netcdf = 'NCD'
+        ascii = 'ASC'
+        numpy = 'NPY'
+        numpy_zip = 'NPZ'
+        dataframe = 'DF'
+
 class core:
     """
     High-level parameters of reconstruction experiment
@@ -206,6 +215,7 @@ class psm:
                                   'PSMs_' + datatag_calib + '.pckl')
         psm_r_crit = 0.2
 
+
 class prior:
     """
     Parameters for the ensDA prior
@@ -230,3 +240,4 @@ class prior:
     datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
     dataformat_prior = 'NCD'
     state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+
