@@ -53,6 +53,9 @@ class core:
     iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
+    assimilation_time_res = [0.5, 1]  # in yrs
+    year_start_idx_shift = 3  # What we're defining as year start
+                              # 0-11 where 0 indicates start at Jan.
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
@@ -121,7 +124,7 @@ class proxies:
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
-        proxy_resolution = [1.0]
+        proxy_resolution = core.assimilation_time_res
 
         # DO NOT CHANGE FORMAT BELOW
 
