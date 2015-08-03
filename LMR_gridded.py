@@ -10,6 +10,7 @@ from netCDF4 import Dataset, num2date
 from datetime import datetime, timedelta
 import numpy as np
 import os.path
+import cPickle
 
 from LMR_config import constants
 
@@ -61,23 +62,43 @@ class GriddedVariable(object):
     def load(cls, config):
         pass
 
+    def save(self, filename):
+        cPickle.dump(self, filename)
+
+
     @classmethod
     def get_loader_for_filetype(cls, file_type):
         ftype_map = {_ftypes.netcdf: cls._load_from_netcdf}
         return ftype_map[file_type]
 
     @classmethod
-    def _load_from_netcdf(cls, dir_name, filename, varname, resolution,
+    def _load_pre_avg_obj(cls, dir_name, filename, varname, resolutions,
+                          yr_shift):
+
+        res_dict = {}
+        for res in resolutions
+            # Check if pre-processed averages file exists
+            pre_avg_name = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolutions,
+                                                                   yr_shift)
+            if os.path.exists(dir_name + filename + pre_avg_name):
+                filename += pre_avg_name
+
+                with open(filename, 'r') as f:
+                    prior_obj = cPickle.loads(f)
+
+                res_dict[res] = prior_obj
+
+        return res_dict
+
+
+
+
+    @classmethod
+    def _load_from_netcdf(cls, dir_name, filename, varname, resolutions,
                           yr_shift):
 
         # Check if pre-processed averages file exists
-        pre_avg_name = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolution,
-                                                               yr_shift)
-        if os.path.exists(dir_name + filename + pre_avg_name):
-            filename += pre_avg_name
-            pre_processed = True
-        else:
-            pre_processed = False
+        pre_avg_name = '.pre_avg_res{:02.1f}_shift{:d}'
 
         with Dataset(dir_name+filename, 'r') as f:
             var = f.variables[varname]
@@ -115,18 +136,25 @@ class GriddedVariable(object):
             # Extract data for each dimension
             dim_vales = {k: val[:] for k, val in dim_vals.iteritems()}
 
-            # Average to correct time resolution
-            dim_vals[_TIME], avg_data = \
-                cls._time_avg_gridded_to_resolution(dim_vals[_TIME],
-                                                    var[:],
-                                                    resolution,
-                                                    yr_shift)
+            # Average to correct time resolutions
+            res_dict = {}
+            for res in resolutions:
+                dim_vals[_TIME], avg_data = \
+                    cls._time_avg_gridded_to_resolution(dim_vals[_TIME],
+                                                        var[:],
+                                                        resolutions,
+                                                        yr_shift)
 
-            # TODO: Replace with logger statement
-            print (varname, ': Global: mean=', np.nanmean(avg_data),
-                   ' , std-dev=', np.nanstd(avg_data))
+                # TODO: Replace with logger statement
+                print (varname, ' res ', res, ': Global: mean=',
+                       np.nanmean(avg_data),
+                       ' , std-dev=', np.nanstd(avg_data))
 
-            return cls(varname, dims, avg_data, resolution, **dim_vals)
+                res_dict[res] = cls(varname, dims, avg_data, res, **dim_vals)
+
+                res_dict[res].save(pre_avg_name.format(res, yr_shift))
+
+            return res_dict
 
     @staticmethod
     def _netcdf_datetime_convert(time_var):
@@ -203,12 +231,30 @@ class PriorVariable(GriddedVariable):
     def load(cls, config):
         file_dir = config.prior.datadir_prior
         file_name = config.prior.datafile_prior
-        yr_resolu = config.core.assimilation_time_res
+        file_type = config.prior.dataformat_prior
+        var_names = config.prior.state_variables
+        assim_resols = config.core.assimilation_time_res
+        yr_shift = config.core.year_start_idx_shift
 
-        if file_type == constants.file_types.netcdf:
-            cls._load_from_netcdf(config)
-        else:
+        try:
+            ftype_loader = cls.get_loader_for_filetype(file_type)
+        except KeyError:
             raise TypeError('Specified file type not supported yet.')
+
+        prior_dict = {}
+        for vname in var_names:
+            fname = file_name.replace('[vardef_template]', vname)
+            # Look for already averaged priors
+            res_dict = cls._load_pre_avg_obj(file_dir, fname, vname,
+                                             assim_resols, yr_shift)
+            res_found = res_dict.keys()
+            res_to_load = [res for res in assim_resols if res not in res_found]
+
+            # Load from source for resolutions not found
+            res_dict.update(ftype_loader(file_dir, fname, vname,
+                                         res_to_load, yr_shift))
+            prior_dict[vname] = res_dict
+        return prior_dict
 
     # TODO: This might not work for removing anomaly
     @staticmethod
