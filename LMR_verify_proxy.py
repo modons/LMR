@@ -29,6 +29,8 @@ from LMR_utils import haversine, coefficient_efficiency
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+from matplotlib.colors import from_levels_and_colors
+from mpl_toolkits.basemap import Basemap
 
 # =========================================================================================
 # START:  set user parameters here
@@ -75,18 +77,18 @@ datadir_proxy    = LMRpath+'/data/proxies';
 datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx';
 
 # Define proxies types to be used in verification
-proxy_verif = [\
-    'Tree ring_Width',\
-    'Tree ring_Density',\
-    'Ice core_d18O',\
-    'Ice core_d2H',\
-    'Ice core_Accumulation',\
-    'Coral_d18O',\
-    'Coral_Luminescence',\
-    'Lake sediment_All',\
-    'Marine sediment_All',\
-    'Speleothem_All',\
-    ]
+proxy_verif = {\
+    'Tree ring_Width'       :'o',\
+    'Tree ring_Density'     :'s',\
+    'Ice core_d18O'         :'v',\
+    'Ice core_d2H'          :'^',\
+    'Ice core_Accumulation' :'D',\
+    'Coral_d18O'            :'p',\
+    'Coral_Luminescence'    :'8',\
+    'Lake sediment_All'     :'<',\
+    'Marine sediment_All'   :'>',\
+    'Speleothem_All'        :'h',\
+    }
 
 # Regions where proxy sites are located (only for PAGES2K dataset) 
 regions = ['Antarctica','Arctic','Asia','Australasia','Europe','North America','South America']
@@ -282,10 +284,10 @@ def main():
     keys = psm_data.keys()
     if PSM_r_crit:
         # Master list of proxies, filtered to keep sites that match the r_crit criteria (PSM r >= 0.2)
-        master_proxy_list = [item for item in keys if abs(psm_data[item]['PSMcorrel']) >= PSM_r_crit and item[0] in proxy_verif]
+        master_proxy_list = [item for item in keys if abs(psm_data[item]['PSMcorrel']) >= PSM_r_crit and item[0] in proxy_verif.keys()]
     else:
         # Master list of all available proxies (included in PSM file)
-        master_proxy_list = [item for item in keys if item[0] in proxy_verif]
+        master_proxy_list = [item for item in keys if item[0] in proxy_verif.keys()]
     print 'Nb of proxies to upload:', len(master_proxy_list)
     
     # Build list of proxy types in verification set
@@ -603,7 +605,7 @@ def main():
             n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=False)
             plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
             plt.title(ptitle)
-            plt.xlabel("CE")
+            plt.xlabel("Coefficient of efficiency")
             plt.ylabel("Count")
             xmin,xmax,ymin,ymax = plt.axis()
             plt.axis((-1,1,ymin,ymax))
@@ -648,10 +650,126 @@ def main():
 
 
             # ===============================================================================
-            # 4) Time series: comparison of proxy values and reconstruction-estimated proxies 
+            # 4) Maps with proxy sites plotted on with dots colored according to correlation
+            # ===============================================================================
+
+            verif_metric = 'Correlation'
+
+            mapcolor = plt.cm.bwr
+            cbarfmt = '%4.1f'
+
+            fmin = -1.0; fmax = 1.0
+            fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, fmax, 101);           
+            scaled_colors = mapcolor(fvalc)
+            cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors,extend='both')
+            cbarticks=np.linspace(fmin,fmax,11)
+
+            fig = plt.figure()
+            ax  = fig.add_axes([0.1,0.1,0.8,0.8])
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.            # GLOBAL
+            
+            water = '#9DD4F0'
+            continents = '#888888'
+            m.drawmapboundary(fill_color=water)
+            m.drawcoastlines(); m.drawcountries()
+            m.fillcontinents(color=continents,lake_color=water)
+            m.drawparallels(np.arange(-80.,81.,latres))
+            m.drawmeridians(np.arange(-180.,181.,lonres))
+
+            # loop over proxy sites
+            l = []
+            proxy_types = []
+            for sitetag in workdict.keys():
+                sitetype = sitetag[0]
+                sitename = sitetag[1]
+                sitemarker = proxy_verif[sitetype]
+
+                lat = workdict[sitetag]['lat']
+                lon = workdict[sitetag]['lon']
+                x, y = m(lon,lat)
+                if sitetype not in proxy_types:
+                    proxy_types.append(sitetype)
+                    l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
+                Gplt = m.scatter(x,y,35,c=workdict[sitetag]['MeanCorr'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
+
+            cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
+            cbar.outline.set_linewidth(1.0)
+            cbar.set_label('%s' % verif_metric,size=11,weight='bold')
+            cbar.ax.tick_params(labelsize=10)
+            plt.title(vtype[v],fontweight='bold')
+            plt.legend(l,proxy_types,
+                       scatterpoints=1,
+                       loc='lower center', bbox_to_anchor=(0.5, -0.30),
+                       ncol=3,
+                       fontsize=9)
+
+            plt.savefig('%s/map_recon_proxy_%s_stats_corr.png' % (figdir,v),bbox_inches='tight')
+            plt.close()
+
+
+            # ===============================================================================
+            # 5) Maps with proxy sites plotted on with dots colored according to CE
+            # ===============================================================================
+
+            verif_metric = 'Coefficient of efficiency'
+
+            mapcolor = plt.cm.bwr
+            cbarfmt = '%4.1f'
+
+            fmin = -1.0; fmax = 1.0
+            fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, fmax, 101);           
+            scaled_colors = mapcolor(fvalc)
+            cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors,extend='both')
+            cbarticks=np.linspace(fmin,fmax,11)
+
+            fig = plt.figure()
+            ax  = fig.add_axes([0.1,0.1,0.8,0.8])
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.
+            
+            water = '#9DD4F0'
+            continents = '#888888'
+            m.drawmapboundary(fill_color=water)
+            m.drawcoastlines(); m.drawcountries()
+            m.fillcontinents(color=continents,lake_color=water)
+            m.drawparallels(np.arange(-80.,81.,latres))
+            m.drawmeridians(np.arange(-180.,181.,lonres))
+
+            # loop over proxy sites
+            l = []
+            proxy_types = []
+            for sitetag in workdict.keys():
+                sitetype = sitetag[0]
+                sitename = sitetag[1]
+                sitemarker = proxy_verif[sitetype]
+
+                lat = workdict[sitetag]['lat']
+                lon = workdict[sitetag]['lon']
+                x, y = m(lon,lat)
+                if sitetype not in proxy_types:
+                    proxy_types.append(sitetype)
+                    l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
+                Gplt = m.scatter(x,y,35,c=workdict[sitetag]['MeanCE'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
+
+            cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
+            cbar.outline.set_linewidth(1.0)
+            cbar.set_label('%s' % verif_metric,size=11,weight='bold')
+            cbar.ax.tick_params(labelsize=10)
+            plt.title(vtype[v],fontweight='bold')
+            plt.legend(l,proxy_types,
+                       scatterpoints=1,
+                       loc='lower center', bbox_to_anchor=(0.5, -0.30),
+                       ncol=3,
+                       fontsize=9)
+            
+            plt.savefig('%s/map_recon_proxy_%s_stats_ce.png' % (figdir,v),bbox_inches='tight')
+            plt.close()
+
+
+            # ===============================================================================
+            # 6) Time series: comparison of proxy values and reconstruction-estimated proxies 
             #    for every site used in verification
             #
-            # 5) Scatter plots of proxy vs reconstruction (ensemble-mean)
+            # 7) Scatter plots of proxy vs reconstruction (ensemble-mean)
             # ===============================================================================
 
             # loop over proxy sites
