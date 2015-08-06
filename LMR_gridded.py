@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import os.path
 import cPickle
+import random
 
 from LMR_config import constants
 
@@ -59,7 +60,7 @@ class GriddedVariable(object):
 
     @classmethod
     @abstractmethod
-    def load(cls, config):
+    def load(cls, config, *args):
         pass
 
     def save(self, filename):
@@ -71,12 +72,28 @@ class GriddedVariable(object):
         ftype_map = {_ftypes.netcdf: cls._load_from_netcdf}
         return ftype_map[file_type]
 
+    def sample(self, nens, seed=None):
+        """
+        Random sample ensemble of the
+        :param nens:
+        :param seed:
+        :return:
+        """
+
+        if seed:
+            random.seed(seed)
+
+        ind_ens = random.sample(range(len(self.time)), nens)
+        self.time = np.array(self.time)[ind_ens]
+        self.data = self.data[ind_ens]
+
+
     @classmethod
     def _load_pre_avg_obj(cls, dir_name, filename, varname, resolutions,
                           yr_shift):
 
         res_dict = {}
-        for res in resolutions
+        for res in resolutions:
             # Check if pre-processed averages file exists
             pre_avg_name = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolutions,
                                                                    yr_shift)
@@ -228,11 +245,10 @@ class GriddedVariable(object):
 class PriorVariable(GriddedVariable):
 
     @classmethod
-    def load(cls, config):
+    def load(cls, config, varname):
         file_dir = config.prior.datadir_prior
         file_name = config.prior.datafile_prior
         file_type = config.prior.dataformat_prior
-        var_names = config.prior.state_variables
         assim_resols = config.core.assimilation_time_res
         yr_shift = config.core.year_start_idx_shift
 
@@ -241,19 +257,24 @@ class PriorVariable(GriddedVariable):
         except KeyError:
             raise TypeError('Specified file type not supported yet.')
 
+        fname = file_name.replace('[vardef_template]', varname)
+        var_res_dict = cls._load_pre_avg_obj(file_dir, fname, varname,
+                                            assim_resols, yr_shift)
+        res_found = var_res_dict.keys()
+        res_to_load = [res for res in assim_resols if res not in res_found]
+        var_res_dict.update(ftype_loader(file_dir, fname, varname,
+                                         assim_resols, yr_shift))
+
+        return var_res_dict
+
+    @classmethod
+    def load_allvars(cls, config):
+        var_names = config.prior.state_variables
+
         prior_dict = {}
         for vname in var_names:
-            fname = file_name.replace('[vardef_template]', vname)
-            # Look for already averaged priors
-            res_dict = cls._load_pre_avg_obj(file_dir, fname, vname,
-                                             assim_resols, yr_shift)
-            res_found = res_dict.keys()
-            res_to_load = [res for res in assim_resols if res not in res_found]
+            prior_dict[vname] = cls.load(config, vname)
 
-            # Load from source for resolutions not found
-            res_dict.update(ftype_loader(file_dir, fname, vname,
-                                         res_to_load, yr_shift))
-            prior_dict[vname] = res_dict
         return prior_dict
 
     # TODO: This might not work for removing anomaly
@@ -280,3 +301,17 @@ class PriorVariable(GriddedVariable):
         print ('Removing the temporal mean (for every gridpoint) from the '
                 'prior...')
         return time, anom_data
+
+class Prior(object):
+    """ Class to create state vector and information
+    """
+
+    def __init__(self, config):
+
+        prior_vars = PriorVariable.load_allvars(config)
+
+        res_Xb_dict = {}
+        for var, res_dict in prior_vars.iteritems():
+            continue
+
+
