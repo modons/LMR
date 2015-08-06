@@ -355,6 +355,57 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     return X_new,lat_new,lon_new
 
 
+def regrid_sphere2(grid_obj, trunc_type_key):
+
+    """
+    An adaptation of regrid_shpere for GriddedData objects
+
+    Inputs:
+    grid_obj
+    trunc_type_key
+
+    Outputs :
+    lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
+    lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
+    X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)
+    """
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
+
+    # Truncation type definitions: tuple order - (lat, lon, truncation)
+    trunc_types = {'T42': (64, 128, 42)}
+
+    # create the spectral object on the original grid
+    specob_lmr = Spharmt(len(grid_obj.lon), len(grid_obj.lat),
+                         gridtype='regular', legfunc='computed')
+
+    # truncate to a lower resolution grid (triangular truncation)
+    try:
+        nlat_new, nlon_new, trunc = trunc_types[trunc_type_key]
+    except KeyError:
+        raise KeyError('Truncation type not implemented yet.')
+
+    # create the spectral object on the new grid
+    specob_new = Spharmt(nlon_new, nlat_new, gridtype='regular',
+                         legfunc='computed')
+
+    # create new lat,lon grid arrays
+    dlat = 90./((nlat_new-1)/2.)
+    dlon = 360./nlon_new
+    veclat = np.arange(-90., 90.+dlat, dlat)
+    veclon = np.arange(0., 360., dlon)
+    blank = np.zeros([nlat_new, nlon_new])
+    lat_new = (veclat + blank.T).T
+    lon_new = (veclon + blank)
+
+    # transform each ensemble member, one at a time
+    gridded_new = np.zeros((len(grid_obj.time), nlat_new, nlon_new))
+    for i, time_slice in enumerate(grid_obj.data):
+        gridded_new[i] = regrid(specob_lmr, specob_new, time_slice,
+                                ntrunc=trunc)
+
+    return gridded_new, lat_new, lon_new
 
 def assimilated_proxies(workdir):
 

@@ -14,7 +14,7 @@ import cPickle
 import random
 
 from LMR_config import constants
-
+from LMR_utils2 import regrid_sphere2
 _LAT = 'lat'
 _LON = 'lon'
 _LEV = 'lev'
@@ -44,16 +44,20 @@ class GriddedVariable(object):
         self.lat = lat
         self.lon = lon
 
-        space_dims = [dim for dim in dims_ordered if dim != _TIME]
+        self._space_dims = [dim for dim in dims_ordered if dim != _TIME]
+        self._dim_coord_map = {_TIME: self.time,
+                               _LEV: self.lev,
+                               _LAT: self.lat,
+                               _LON: self.lon}
 
-        if len(space_dims) > 2:
+        if len(self._space_dims) > 2:
             raise ValueError('Class cannot handle 3D data yet!')
 
-        if not space_dims:
+        if not self._space_dims:
             self.type = 'timeseries'
-        elif _LAT in space_dims and _LON in space_dims:
+        elif _LAT in self._space_dims and _LON in self._space_dims:
             self.type = 'horizontal'
-        elif _LAT in space_dims and _LEV in space_dims:
+        elif _LAT in self._space_dims and _LEV in self._space_dims:
             self.type = 'meridional_vertical'
         else:
             raise ValueError('Unrecognized dimension combination.')
@@ -66,6 +70,35 @@ class GriddedVariable(object):
     def save(self, filename):
         cPickle.dump(self, filename)
 
+    def truncate(self, trunc_type='T42'):
+
+        """
+        Return a new truncated version of the gridded object.  Only works
+        on horizontal data for now.
+        """
+        assert self.type == 'horizontal'
+        class_obj = type(self)
+
+        regrid_data, new_lat, new_lon = regrid_sphere2(self, 'T42')
+        return class_obj(self.name, self.dim_order, regrid_data,
+                         self.resolution,
+                         time=self.time,
+                         lev=self.lev,
+                         lat=new_lat,
+                         lon=new_lon)
+
+    def flattened_spatial(self):
+
+        flat_data = self.data.reshape(len(self.time),
+                                      np.product(self._space_dims))
+
+        # Get dimensions of data
+        coords = [self._dim_coord_map[key] for key in self._space_dims]
+        grids = np.meshgrid(*coords, indexing='ij')
+        flat_coords = {dim: grid.flatten()
+                       for dim, grid in zip(self._space_dims, grids)}
+
+        return flat_data, flat_coords
 
     @classmethod
     def get_loader_for_filetype(cls, file_type):
@@ -89,14 +122,23 @@ class GriddedVariable(object):
 
 
     @classmethod
-    def _load_pre_avg_obj(cls, dir_name, filename, varname, resolutions,
-                          yr_shift):
+    def _load_pre_avg_obj(cls, dir_name, filename, resolutions,
+                          yr_shift, truncate=False):
 
         res_dict = {}
         for res in resolutions:
             # Check if pre-processed averages file exists
-            pre_avg_name = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolutions,
+            pre_avg_tag = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolutions,
                                                                    yr_shift)
+            trunc_name = pre_avg_name + '.trnc'
+
+            if truncate:
+                pre_avg_name = pre_avg_tag + trunc_name
+            else:
+                pre_avg_name = pre_avg_tag
+
+
+            # Look for pre_averaged_file
             if os.path.exists(dir_name + filename + pre_avg_name):
                 filename += pre_avg_name
 
@@ -104,15 +146,26 @@ class GriddedVariable(object):
                     prior_obj = cPickle.loads(f)
 
                 res_dict[res] = prior_obj
+            elif truncate and os.path.exists(dir_name + filename +
+                                             pre_avg_tag):
+                # If truncate requested and truncate not found look for
+                # pre-averaged full version
+                filename += pre_avg_tag
+                with open(filename, 'r') as f:
+                    prior_obj = cPickle.load(f)
+
+                prior_obj = prior_obj.truncate()
+                prior_obj.save()
+
+                res_dict[res] = prior_obj
 
         return res_dict
 
 
 
-
     @classmethod
     def _load_from_netcdf(cls, dir_name, filename, varname, resolutions,
-                          yr_shift):
+                          yr_shift, truncate=False):
 
         # Check if pre-processed averages file exists
         pre_avg_name = '.pre_avg_res{:02.1f}_shift{:d}'
@@ -167,9 +220,18 @@ class GriddedVariable(object):
                        np.nanmean(avg_data),
                        ' , std-dev=', np.nanstd(avg_data))
 
-                res_dict[res] = cls(varname, dims, avg_data, res, **dim_vals)
+                res_obj = cls(varname, dims, avg_data, res, **dim_vals)
+                res_obj.save(pre_avg_name.format(res, yr_shift))
 
-                res_dict[res].save(pre_avg_name.format(res, yr_shift))
+                if truncate:
+                    try:
+                        res_obj = res_obj.truncate()
+                        res_obj.save(pre_avg_name.format(res, yr_shift) +
+                                     '.trnc')
+                    except AssertionError:
+                        pass
+
+                res_dict[res] = res_obj
 
             return res_dict
 
@@ -251,6 +313,7 @@ class PriorVariable(GriddedVariable):
         file_type = config.prior.dataformat_prior
         assim_resols = config.core.assimilation_time_res
         yr_shift = config.core.year_start_idx_shift
+        truncate = config.prior.truncate
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
@@ -302,6 +365,30 @@ class PriorVariable(GriddedVariable):
                 'prior...')
         return time, anom_data
 
+    def subannual_resolution_prior(self):
+        """
+        Divides sub-annual resolution priors into a set of PriorVar objects
+        for each season
+        :return:
+        """
+
+        num_priors = np.ciel(1./self.resolution)
+        class_obj = type(self)
+        seasonal_priors = []
+        for i in xrange(num_priors):
+            new_prior = class_obj(self.name,
+                                  self.dim_order,
+                                  self.data[i::num_priors],
+                                  self.resolution,
+                                  time=self.time[i::num_priors],
+                                  lev=self.lev,
+                                  lat=self.lat,
+                                  lon=self.lon)
+            seasonal_priors.append(new_prior)
+
+        return seasonal_priors
+
+
 class Prior(object):
     """ Class to create state vector and information
     """
@@ -312,6 +399,13 @@ class Prior(object):
 
         res_Xb_dict = {}
         for var, res_dict in prior_vars.iteritems():
-            continue
+            for res, prior_obj in res_dict.iteritems():
+
+                # If sub-annual split up into seasons
+                if res < 1:
+                    pobj = prior_obj.subannual_resolution_prior()
+                else:
+                    pobj = [prior_obj]
+
 
 

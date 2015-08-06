@@ -243,4 +243,5 @@ class prior:
     datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
     dataformat_prior = 'NCD'
     state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    truncate = True
 
