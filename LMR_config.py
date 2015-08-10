@@ -50,6 +50,7 @@ class core:
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1950, 2000]
     nens = 100
+    seed = None
     iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None

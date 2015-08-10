@@ -40,6 +40,7 @@ class GriddedVariable(object):
         self.data = data
         self.resolution = resolution
         self.time = time
+        self.nsamples = len(self.time)
         self.lev = lev
         self.lat = lat
         self.lon = lon
@@ -49,12 +50,16 @@ class GriddedVariable(object):
                                _LEV: self.lev,
                                _LAT: self.lat,
                                _LON: self.lon}
+        self._space_shp = [len(self._dim_coord_map[dim])
+                           for dim in self._space_dims]
 
         if len(self._space_dims) > 2:
             raise ValueError('Class cannot handle 3D data yet!')
 
         if not self._space_dims:
             self.type = 'timeseries'
+            self._space_shp = [1]
+            self.data = self.data.reshape(self.nsamples, 1)
         elif _LAT in self._space_dims and _LON in self._space_dims:
             self.type = 'horizontal'
         elif _LAT in self._space_dims and _LEV in self._space_dims:
@@ -90,7 +95,7 @@ class GriddedVariable(object):
     def flattened_spatial(self):
 
         flat_data = self.data.reshape(len(self.time),
-                                      np.product(self._space_dims))
+                                      np.product(self._space_shp))
 
         # Get dimensions of data
         coords = [self._dim_coord_map[key] for key in self._space_dims]
@@ -119,52 +124,46 @@ class GriddedVariable(object):
         ind_ens = random.sample(range(len(self.time)), nens)
         self.time = np.array(self.time)[ind_ens]
         self.data = self.data[ind_ens]
-
+        self.nsamples = len(self.time)
 
     @classmethod
-    def _load_pre_avg_obj(cls, dir_name, filename, resolutions,
+    def _load_pre_avg_obj(cls, dir_name, filename, resolution,
                           yr_shift, truncate=False):
 
-        res_dict = {}
-        for res in resolutions:
-            # Check if pre-processed averages file exists
-            pre_avg_tag = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolutions,
-                                                                   yr_shift)
-            trunc_name = pre_avg_name + '.trnc'
+        # Check if pre-processed averages file exists
+        pre_avg_tag = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolution,
+                                                              yr_shift)
+        trunc_name = pre_avg_tag + '.trnc'
 
-            if truncate:
-                pre_avg_name = pre_avg_tag + trunc_name
-            else:
-                pre_avg_name = pre_avg_tag
+        if truncate:
+            pre_avg_name = pre_avg_tag + trunc_name
+        else:
+            pre_avg_name = pre_avg_tag
 
+        # Look for pre_averaged_file
+        if os.path.exists(dir_name + filename + pre_avg_name):
+            filename += pre_avg_name
 
-            # Look for pre_averaged_file
-            if os.path.exists(dir_name + filename + pre_avg_name):
-                filename += pre_avg_name
+            with open(filename, 'r') as f:
+                prior_obj = cPickle.loads(f)
 
-                with open(filename, 'r') as f:
-                    prior_obj = cPickle.loads(f)
+        elif truncate and os.path.exists(dir_name + filename +
+                                         pre_avg_tag):
+            # If truncate requested and truncate not found look for
+            # pre-averaged full version
+            filename += pre_avg_tag
+            with open(filename, 'r') as f:
+                prior_obj = cPickle.load(f)
 
-                res_dict[res] = prior_obj
-            elif truncate and os.path.exists(dir_name + filename +
-                                             pre_avg_tag):
-                # If truncate requested and truncate not found look for
-                # pre-averaged full version
-                filename += pre_avg_tag
-                with open(filename, 'r') as f:
-                    prior_obj = cPickle.load(f)
+            prior_obj = prior_obj.truncate()
+            prior_obj.save()
+        else:
+            prior_obj = None
 
-                prior_obj = prior_obj.truncate()
-                prior_obj.save()
-
-                res_dict[res] = prior_obj
-
-        return res_dict
-
-
+        return prior_obj
 
     @classmethod
-    def _load_from_netcdf(cls, dir_name, filename, varname, resolutions,
+    def _load_from_netcdf(cls, dir_name, filename, varname, resolution,
                           yr_shift, truncate=False):
 
         # Check if pre-processed averages file exists
@@ -183,7 +182,7 @@ class GriddedVariable(object):
                 elif dim in _DEFAULT_DIM_ORDER:
                     dims.append(dim.lower())
                 else:
-                    dims.append(_ALT_DIMENSION_DEFS(dim.lower()))
+                    dims.append(_ALT_DIMENSION_DEFS[dim.lower()])
 
             # Make sure it has time dimension
             if _TIME not in dims:
@@ -204,36 +203,32 @@ class GriddedVariable(object):
             dim_vals[_TIME] = cls._netcdf_datetime_convert(dim_vals[_TIME])
 
             # Extract data for each dimension
-            dim_vales = {k: val[:] for k, val in dim_vals.iteritems()}
+            dim_vals = {k: val[:] for k, val in dim_vals.iteritems()}
 
-            # Average to correct time resolutions
-            res_dict = {}
-            for res in resolutions:
-                dim_vals[_TIME], avg_data = \
-                    cls._time_avg_gridded_to_resolution(dim_vals[_TIME],
-                                                        var[:],
-                                                        resolutions,
-                                                        yr_shift)
+            # Average to correct time resolution
+            dim_vals[_TIME], avg_data = \
+                cls._time_avg_gridded_to_resolution(dim_vals[_TIME],
+                                                    var[:],
+                                                    resolution,
+                                                    yr_shift)
 
-                # TODO: Replace with logger statement
-                print (varname, ' res ', res, ': Global: mean=',
-                       np.nanmean(avg_data),
-                       ' , std-dev=', np.nanstd(avg_data))
+            # TODO: Replace with logger statement
+            print (varname, ' res ', resolution, ': Global: mean=',
+                   np.nanmean(avg_data),
+                   ' , std-dev=', np.nanstd(avg_data))
 
-                res_obj = cls(varname, dims, avg_data, res, **dim_vals)
-                res_obj.save(pre_avg_name.format(res, yr_shift))
+            prior_obj = cls(varname, dims, avg_data, resolution, **dim_vals)
+            prior_obj.save(pre_avg_name.format(resolution, yr_shift))
 
-                if truncate:
-                    try:
-                        res_obj = res_obj.truncate()
-                        res_obj.save(pre_avg_name.format(res, yr_shift) +
-                                     '.trnc')
-                    except AssertionError:
-                        pass
+            if truncate:
+                try:
+                    prior_obj = prior_obj.truncate()
+                    prior_obj.save(pre_avg_name.format(resolution, yr_shift) +
+                                   '.trnc')
+                except AssertionError:
+                    pass
 
-                res_dict[res] = res_obj
-
-            return res_dict
+            return prior_obj
 
     @staticmethod
     def _netcdf_datetime_convert(time_var):
@@ -251,12 +246,10 @@ class GriddedVariable(object):
         except ValueError:
             # num2date needs calendar year start >= 0001 C.E. (bug submitted
             # to unidata about this
-            fmt = '%Y-%d-%m %H:%M:%S'
             tunits = time_var.units
             since_yr_idx = tunits.index('since ') + 6
             year = int(tunits[since_yr_idx:since_yr_idx+4])
             year_diff = year - 0001
-            new_start_date = datetime(0001, 01, 01, 0, 0, 0)
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
             time = num2date(time_var[:], new_units, calendar=time_var.calendar)
@@ -299,7 +292,7 @@ class GriddedVariable(object):
         avg_data = np.nanmean(avg_data, axis=1)
 
         start_yr = start.year
-        time_yrs = [start_yr + i*resolution for i in range(tot_units)]
+        time_yrs = [start_yr + i*resolution for i in xrange(tot_units)]
 
         return time_yrs, avg_data
 
@@ -311,9 +304,11 @@ class PriorVariable(GriddedVariable):
         file_dir = config.prior.datadir_prior
         file_name = config.prior.datafile_prior
         file_type = config.prior.dataformat_prior
-        assim_resols = config.core.assimilation_time_res
-        yr_shift = config.core.year_start_idx_shift
         truncate = config.prior.truncate
+        base_resolution = config.core.assimilation_time_res[0]
+        yr_shift = config.core.year_start_idx_shift
+        nens = config.core.nens
+        seed = config.core.seed
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
@@ -321,14 +316,17 @@ class PriorVariable(GriddedVariable):
             raise TypeError('Specified file type not supported yet.')
 
         fname = file_name.replace('[vardef_template]', varname)
-        var_res_dict = cls._load_pre_avg_obj(file_dir, fname, varname,
-                                            assim_resols, yr_shift)
-        res_found = var_res_dict.keys()
-        res_to_load = [res for res in assim_resols if res not in res_found]
-        var_res_dict.update(ftype_loader(file_dir, fname, varname,
-                                         assim_resols, yr_shift))
+        var_obj = cls._load_pre_avg_obj(file_dir, fname, varname,
+                                            base_resolution, yr_shift)
+        if not var_obj:
+            var_obj = ftype_loader(file_dir, fname, varname, base_resolution,
+                                   yr_shift)
 
-        return var_res_dict
+        # Sample from loaded data if desired
+        if nens:
+            var_obj.sample(nens, seed=seed)
+
+        return var_obj
 
     @classmethod
     def load_allvars(cls, config):
@@ -362,7 +360,7 @@ class PriorVariable(GriddedVariable):
 
         # TODO: Replace with logger statement
         print ('Removing the temporal mean (for every gridpoint) from the '
-                'prior...')
+               'prior...')
         return time, anom_data
 
     def subannual_resolution_prior(self):
@@ -389,23 +387,51 @@ class PriorVariable(GriddedVariable):
         return seasonal_priors
 
 
-class Prior(object):
-    """ Class to create state vector and information
+class State(object):
+    """
+    Class to create state vector and information
     """
 
     def __init__(self, config):
 
         prior_vars = PriorVariable.load_allvars(config)
+        base_res = config.core.assimilation_time_res[0]
 
-        res_Xb_dict = {}
-        for var, res_dict in prior_vars.iteritems():
-            for res, prior_obj in res_dict.iteritems():
+        self.state_list = []
+        self.var_coords = {}
+        self.var_view_range = {}
 
-                # If sub-annual split up into seasons
-                if res < 1:
-                    pobj = prior_obj.subannual_resolution_prior()
-                else:
-                    pobj = [prior_obj]
+        len_state = 0
+        for var, prior_obj in prior_vars.iteritems():
+            # If sub-annual split up into seasons, multiple state vectors
+            if base_res < 1:
+                pobjs = prior_obj.subannual_resolution_prior()
+            else:
+                pobjs = [prior_obj]
 
+            var_start = len_state
+            for i, pobj in enumerate(pobjs):
 
+                # Store range of data in state dimension
+                flat_data, flat_coords = pobj.flattened_spatial()
+                var_end = flat_data.shape[0] + var_start
+                self.var_view_range[var] = (var_start, var_end)
+                var_start += flat_data.shape[0]
 
+                # Add prior to state vector, transposed to make state the first
+                # dimension, and ensemble members along the 2nd
+                try:
+                    np.concatenate((self.state_list[i], flat_data.T), axis=0)
+                except IndexError:
+                    self.state_list.append(flat_data.T)
+
+            # Save variable view information
+            self.var_coords[var] = flat_coords
+
+    def get_var_data_view(self, idx, var_name):
+        """
+        Returns a view (NOT A COPY) of the variable in the state vector
+        """
+        start, end = self.var_view_range[var_name]
+
+        return self.state_list[idx][start:end]
