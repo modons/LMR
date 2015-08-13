@@ -40,16 +40,39 @@ class GriddedVariable(object):
         self.data = data
         self.resolution = resolution
         self.time = time
-        self.nsamples = len(self.time)
         self.lev = lev
         self.lat = lat
         self.lon = lon
 
-        self._space_dims = [dim for dim in dims_ordered if dim != _TIME]
         self._dim_coord_map = {_TIME: self.time,
                                _LEV: self.lev,
                                _LAT: self.lat,
                                _LON: self.lon}
+
+        # Make sure ndimensions specified match data
+        if self.ndim != len(self.data.shape):
+            raise ValueError('Number of dimensions given do not match data'
+                             ' dimensions.')
+
+        # Make sure each dimension has consistent number of values as data
+        for i, dim in enumerate(self.dim_order):
+            if self._dim_coord_map[dim] is None:
+                raise ValueError('Dimension specified but no values provided '
+                                 'for initialization')
+
+            if data.shape[i] != len(self._dim_coord_map[dim]):
+                raise ValueError('Dimension values provided do not match in '
+                                 'length with dimension axis of data')
+
+        # Right now it shouldn't happen for loaders, may change in future
+        if time is not None:
+            self.nsamples = len(self.time)
+        else:
+            self.nsamples = 1
+            self.dim_order.insert(_TIME, 0)
+            self.data = self.data.reshape(1, *self.data.shape)
+
+        self._space_dims = [dim for dim in dims_ordered if dim != _TIME]
         self._space_shp = [len(self._dim_coord_map[dim])
                            for dim in self._space_dims]
 
@@ -67,15 +90,10 @@ class GriddedVariable(object):
         else:
             raise ValueError('Unrecognized dimension combination.')
 
-    @classmethod
-    @abstractmethod
-    def load(cls, config, *args):
-        pass
-
     def save(self, filename):
         cPickle.dump(self, filename)
 
-    def truncate(self, trunc_type='T42'):
+    def truncate(self, ntrunc):
 
         """
         Return a new truncated version of the gridded object.  Only works
@@ -84,13 +102,13 @@ class GriddedVariable(object):
         assert self.type == 'horizontal'
         class_obj = type(self)
 
-        regrid_data, new_lat, new_lon = regrid_sphere2(self, 'T42')
+        regrid_data, new_lat, new_lon = regrid_sphere2(self, ntrunc)
         return class_obj(self.name, self.dim_order, regrid_data,
                          self.resolution,
                          time=self.time,
                          lev=self.lev,
-                         lat=new_lat,
-                         lon=new_lon)
+                         lat=new_lat[:, 0],
+                         lon=new_lon[0])
 
     def flattened_spatial(self):
 
@@ -105,26 +123,37 @@ class GriddedVariable(object):
 
         return flat_data, flat_coords
 
-    @classmethod
-    def get_loader_for_filetype(cls, file_type):
-        ftype_map = {_ftypes.netcdf: cls._load_from_netcdf}
-        return ftype_map[file_type]
-
     def sample(self, nens, seed=None):
         """
-        Random sample ensemble of the
-        :param nens:
-        :param seed:
-        :return:
+        Random sample ensemble of current gridded variable
         """
+
+        cls = type(self)
 
         if seed:
             random.seed(seed)
 
         ind_ens = random.sample(range(len(self.time)), nens)
-        self.time = np.array(self.time)[ind_ens]
-        self.data = self.data[ind_ens]
-        self.nsamples = len(self.time)
+        time_sample = np.array(self.time)[ind_ens]
+
+        data_sample = np.zeros([nens] + list(self.data.shape[1:]))
+        for k, idx in enumerate(ind_ens):
+            data_sample[k] = self.data[idx]
+
+        return cls(self.name, self.dim_order, data_sample, self.resolution,
+                   time=time_sample,
+                   lev=self.lev,
+                   lat=self.lat,
+                   lon=self.lon)
+
+    @abstractmethod
+    def load(cls, config, *args):
+        pass
+
+    @classmethod
+    def get_loader_for_filetype(cls, file_type):
+        ftype_map = {_ftypes.netcdf: cls._load_from_netcdf}
+        return ftype_map[file_type]
 
     @classmethod
     def _load_pre_avg_obj(cls, dir_name, filename, resolution,
@@ -242,7 +271,7 @@ class GriddedVariable(object):
         try:
             time = num2date(time_var[:], units=time_var.units,
                                 calendar=time_var.calendar)
-            return time.tolist()
+            return time
         except ValueError:
             # num2date needs calendar year start >= 0001 C.E. (bug submitted
             # to unidata about this
@@ -253,9 +282,10 @@ class GriddedVariable(object):
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
             time = num2date(time_var[:], new_units, calendar=time_var.calendar)
-            return [datetime(d.year + year_diff, d.month, d.day,
-                             d.hour, d.minute, d.second)
-                    for d in time]
+            reshifted_time = [datetime(d.year + year_diff, d.month, d.day,
+                                       d.hour, d.minute, d.second)
+                              for d in time]
+            return np.array(reshifted_time)
 
     @staticmethod
     def _time_avg_gridded_to_resolution(time_vals, data, resolution, yr_shift):
