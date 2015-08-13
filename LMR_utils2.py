@@ -355,14 +355,14 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     return X_new,lat_new,lon_new
 
 
-def regrid_sphere2(grid_obj, trunc_type_key):
+def regrid_sphere2(grid_obj, ntrunc):
 
     """
     An adaptation of regrid_shpere for GriddedData objects
 
     Inputs:
     grid_obj
-    trunc_type_key
+    ntrunc
 
     Outputs :
     lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
@@ -373,18 +373,15 @@ def regrid_sphere2(grid_obj, trunc_type_key):
     #             University of Washington
     #             May 2015
 
-    # Truncation type definitions: tuple order - (lat, lon, truncation)
-    trunc_types = {'T42': (64, 128, 42)}
-
     # create the spectral object on the original grid
     specob_lmr = Spharmt(len(grid_obj.lon), len(grid_obj.lat),
                          gridtype='regular', legfunc='computed')
 
     # truncate to a lower resolution grid (triangular truncation)
-    try:
-        nlat_new, nlon_new, trunc = trunc_types[trunc_type_key]
-    except KeyError:
-        raise KeyError('Truncation type not implemented yet.')
+    nlat_new = (ntrunc + 1) + (ntrunc + 1) % 2
+    nlon_new = int(nlat_new*1.5)
+
+    # truncate to a lower resolution grid (triangular truncation)
 
     # create the spectral object on the new grid
     specob_new = Spharmt(nlon_new, nlat_new, gridtype='regular',
@@ -403,7 +400,7 @@ def regrid_sphere2(grid_obj, trunc_type_key):
     gridded_new = np.zeros((len(grid_obj.time), nlat_new, nlon_new))
     for i, time_slice in enumerate(grid_obj.data):
         gridded_new[i] = regrid(specob_lmr, specob_new, time_slice,
-                                ntrunc=trunc)
+                                ntrunc=ntrunc)
 
     return gridded_new, lat_new, lon_new
 
