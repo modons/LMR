@@ -25,6 +25,15 @@ def ncf_data(request):
     request.addfinalizer(fin)
     return f_obj
 
+@pytest.fixture(scope='function')
+def ncf_dates(request, ncf_data):
+    time = ncf_data.variables['time']
+    return ncf.num2date(time[:], time.units)
+
+@pytest.fixture(scope='function')
+def ncf_temps(request, ncf_data):
+    return ncf_data.variables['air'][:]
+
 
 @pytest.mark.xfail
 def test_gridded_data_no_abstract_instance():
@@ -194,3 +203,148 @@ def test_priorvar_sample(ncf_data):
     assert dat_sample.shape == sampled_prior.data.shape
     np.testing.assert_array_equal(dat_sample, sampled_prior.data)
     np.testing.assert_array_equal(time_sample, sampled_prior.time)
+
+
+def test_griddedvar_netcdf_timeconvert(ncf_data):
+
+    time = ncf_data['time']
+    dates = lmrgrid.GriddedVariable._netcdf_datetime_convert(time)
+
+    assert len(time) == len(dates)
+
+
+def test_griddedvar_netcdf_timeconvert_units_outofrange(ncf_data):
+
+    time = ncf_data['time_inv_ref']
+    dates = lmrgrid.GriddedVariable._netcdf_datetime_convert(time)
+
+
+    time_invalid = ncf_data['time_invalid']
+    cmp_dates = lmrgrid.GriddedVariable._netcdf_datetime_convert(time_invalid)
+
+    for orig, compare in zip(dates, cmp_dates):
+        assert orig.year == compare.year
+        assert orig.month == compare.month
+
+
+@pytest.mark.xfail(raises=ValueError)
+def test_griddedvar_timeavg_year_determine_fail(ncf_dates, ncf_temps):
+
+    time_yrs, avg_data = \
+        lmrgrid.GriddedVariable._time_avg_gridded_to_resolution(ncf_dates[:8],
+                                                                ncf_temps,
+                                                                1.0,
+                                                                0)
+
+@pytest.mark.xfail(raises=ValueError)
+def test_griddedvar_timeavg_not_divisible_res(ncf_dates, ncf_temps):
+
+    time_yrs, avg_data = \
+        lmrgrid.GriddedVariable._time_avg_gridded_to_resolution(ncf_dates,
+                                                                ncf_temps,
+                                                                1.2,
+                                                                0)
+
+
+@pytest.mark.parametrize('resolution', [0.25, 0.5, 1.0, 2.0])
+def test_griddedvar_timeavg_variable_resolution(resolution, ncf_dates, ncf_temps):
+
+    time_yrs, avg_data = \
+        lmrgrid.GriddedVariable._time_avg_gridded_to_resolution(ncf_dates,
+                                                                ncf_temps,
+                                                                resolution,
+                                                                0)
+    num_yrs = 4
+    n_units = int(num_yrs/resolution)
+
+    assert len(time_yrs) == n_units
+    assert len(avg_data) == n_units
+
+    start_year = ncf_dates[0].year
+    yrs = np.array([start_year + i*resolution for i in xrange(n_units)])
+    np.testing.assert_array_equal(yrs, time_yrs)
+
+    dat_shp = ncf_temps.shape
+    avg_cmp = ncf_temps.reshape(n_units, dat_shp[0]/n_units, *dat_shp[1:])
+    avg_cmp = avg_cmp.mean(axis=1)
+    np.testing.assert_array_equal(avg_data, avg_cmp)
+
+
+@pytest.mark.parametrize('yr_shift', [0, 3, 6, 9, 12, 15])
+def test_griddedvar_timeavg_variable_yrshift(yr_shift, ncf_dates, ncf_temps):
+
+    resolution = 0.5
+    time_yrs, avg_data = \
+        lmrgrid.GriddedVariable._time_avg_gridded_to_resolution(ncf_dates,
+                                                                ncf_temps,
+                                                                resolution,
+                                                                yr_shift)
+
+    units_per_res = 6
+    res_unit_per_yr = 2
+
+    assert len(avg_data) % res_unit_per_yr == 0
+    mod_yr_shift = yr_shift % 12
+    cmp_dat = ncf_temps[mod_yr_shift:(mod_yr_shift+units_per_res)].mean(axis=0)
+    np.testing.assert_array_equal(avg_data[0], cmp_dat)
+
+    if yr_shift % 12 != 0:
+        assert len(time_yrs) == 3*res_unit_per_yr
+        assert len(avg_data) == 3*res_unit_per_yr
+
+
+@pytest.mark.parametrize('resolution', [0.5, 1.0, 2.0])
+def test_priorvar_timeavg_anomaly(resolution, ncf_dates, ncf_temps):
+
+    _, avg_data = \
+        lmrgrid.GriddedVariable._time_avg_gridded_to_resolution(ncf_dates,
+                                                                ncf_temps,
+                                                                resolution)
+
+    time_yrs, anom_avg_data = \
+        lmrgrid.PriorVariable._time_avg_gridded_to_resolution(ncf_dates,
+                                                              ncf_temps,
+                                                              resolution)
+
+    step = np.ceil(1/resolution)
+    anom0 = avg_data[0] - avg_data[0::step].mean(axis=0)
+
+    np.testing.assert_array_equal(anom_avg_data[0], anom0)
+
+
+def test_priorvar_subannual_res_separation(ncf_data):
+
+    dat = ncf_data.variables
+    lat = dat['lat']
+    lon = dat['lon']
+    time = dat['time']
+    time = ncf.num2date(time[:], time.units)
+    data = dat['air']
+
+    resolution = 0.5
+
+    time_yrs, anom_avg_data = \
+        lmrgrid.PriorVariable._time_avg_gridded_to_resolution(time,
+                                                              data[:],
+                                                              resolution)
+
+    prior_var = lmrgrid.PriorVariable('air', data.dimensions,
+                                      anom_avg_data, resolution, time=time_yrs,
+                                      lat=lat[:], lon=lon[:])
+
+    subannual = prior_var.subannual_resolution_prior()
+
+    for i, sub in enumerate(subannual):
+        np.testing.assert_array_equal(time_yrs[i::2], sub.time)
+        np.testing.assert_array_equal(anom_avg_data[i::2], sub.data)
+
+
+if __name__ == '__main__':
+
+    with ncf.Dataset('/home/disk/p/wperkins/Research/LMR/tests/data/gridded_dat.nc', 'r') as f:
+        time = f.variables['time']
+        time = ncf.num2date(time[:], time.units)
+        data = f.variables['air'][:]
+        test_priorvar_subannual_res_separation(f)
+    #test_griddedvar_timeavg_variable_yrshift(3, time, data)
+

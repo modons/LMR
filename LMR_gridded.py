@@ -268,51 +268,67 @@ class GriddedVariable(object):
         :param time_var:
         :return:
         """
+        if not hasattr(time_var, 'calendar'):
+            cal = 'standard'
+        else:
+            cal = time_var.calendar
+
         try:
             time = num2date(time_var[:], units=time_var.units,
-                                calendar=time_var.calendar)
+                                calendar=cal)
             return time
         except ValueError:
             # num2date needs calendar year start >= 0001 C.E. (bug submitted
             # to unidata about this
+            # TODO: Add a warning about likely inaccuracy day res and smaller
             tunits = time_var.units
             since_yr_idx = tunits.index('since ') + 6
             year = int(tunits[since_yr_idx:since_yr_idx+4])
             year_diff = year - 0001
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
-            time = num2date(time_var[:], new_units, calendar=time_var.calendar)
+            time = num2date(time_var[:], new_units, calendar=cal)
             reshifted_time = [datetime(d.year + year_diff, d.month, d.day,
                                        d.hour, d.minute, d.second)
                               for d in time]
             return np.array(reshifted_time)
 
     @staticmethod
-    def _time_avg_gridded_to_resolution(time_vals, data, resolution, yr_shift):
+    def _time_avg_gridded_to_resolution(time_vals, data, resolution,
+                                        yr_shift=0):
+        """
+        Converts to time units of years at specified resolution and shift
+        :param time_vals:
+        :param data:
+        :param resolution:
+        :param yr_shift:
+        :return:
+        """
 
         # Calculate number of elements in 1 resolution unit
-        start = time_vals[yr_shift].date()
+        start = time_vals[yr_shift]
+        start = datetime(start.year, start.month, start.day)
         end = start.replace(year=start.year+1)
 
-        for i, dt_obj in enumerate(time_vals[yr_shift:]):
-            if dt_obj.date() == end:
+        for elem_in_yr, dt_obj in enumerate(time_vals[yr_shift:]):
+            # NetCDF.datetime to regular datetime for equivalence check
+            if datetime(dt_obj.year, dt_obj.month, dt_obj.day) == end:
                 break
         else:
             raise ValueError('Could not determine number of elements in a '
                              'single year')
-        i += 1  # shift from index values to actual values
-
-        if resolution % i != 0:
-            raise ValueError('Elements in yr not evenly divisible by given '
-                             'resolution')
-        else:
-            nelem_in_unit_res = resolution / i
-
-        # Find cutoff to keep only full years in data
-        end_cutoff = -(len(time_vals[yr_shift:]) % nelem_in_unit_res)
+        yr_shift %= elem_in_yr  # shouldn't have yr_shift larger then elem_in_yr
+        end_cutoff = -((elem_in_yr - yr_shift) % elem_in_yr)
+        if end_cutoff == 0:
+            end_cutoff = None
 
         # Find number of units in new resolution
-        tot_units = len(time_vals[yr_shift:end_cutoff]) / nelem_in_unit_res
+        nelem_in_unit_res = resolution * elem_in_yr
+        if not nelem_in_unit_res.is_integer():
+            raise ValueError('Elements in yr not evenly divisible by given '
+                             'resolution')
+        tot_units = int(len(time_vals[yr_shift:end_cutoff]) /
+                        nelem_in_unit_res)
         spatial_shp = data.shape[1:]
 
         # Average data and create year list
@@ -322,9 +338,10 @@ class GriddedVariable(object):
         avg_data = np.nanmean(avg_data, axis=1)
 
         start_yr = start.year
-        time_yrs = [start_yr + i*resolution for i in xrange(tot_units)]
+        time_yrs = [start_yr + i*resolution
+                    for i in xrange(tot_units)]
 
-        return time_yrs, avg_data
+        return np.array(time_yrs), avg_data
 
 
 class PriorVariable(GriddedVariable):
@@ -370,7 +387,8 @@ class PriorVariable(GriddedVariable):
 
     # TODO: This might not work for removing anomaly
     @staticmethod
-    def _time_avg_gridded_to_resolution(time_vals, data, resolution, yr_shift):
+    def _time_avg_gridded_to_resolution(time_vals, data, resolution,
+                                        yr_shift=0):
 
         # Call Base class to get correct time average
         time, avg_data = \
@@ -380,11 +398,11 @@ class PriorVariable(GriddedVariable):
         # Calculate anomaly
         if resolution < 1:
             units_in_yr = 1/resolution
-            old_shp = avg_data.shape
+            old_shp = list(avg_data.shape)
             new_shape = [old_shp[0]/units_in_yr, units_in_yr] + old_shp[1:]
             avg_data = avg_data.reshape(new_shape)
             anom_data = avg_data - np.nanmean(avg_data, axis=0)
-            anom_data.reshape(old_shp)
+            anom_data = anom_data.reshape(old_shp)
         else:
             anom_data = avg_data - np.nanmean(avg_data, axis=0)
 
@@ -400,7 +418,7 @@ class PriorVariable(GriddedVariable):
         :return:
         """
 
-        num_priors = np.ciel(1./self.resolution)
+        num_priors = int(np.ceil(1./self.resolution))
         class_obj = type(self)
         seasonal_priors = []
         for i in xrange(num_priors):
