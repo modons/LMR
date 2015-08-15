@@ -9,7 +9,8 @@ from abc import abstractmethod, ABCMeta
 from netCDF4 import Dataset, num2date
 from datetime import datetime, timedelta
 import numpy as np
-import os.path
+import os
+from os.path import join
 import cPickle
 import random
 
@@ -91,9 +92,10 @@ class GriddedVariable(object):
             raise ValueError('Unrecognized dimension combination.')
 
     def save(self, filename):
-        cPickle.dump(self, filename)
+        with open(filename, 'w') as f:
+            cPickle.dump(self, f)
 
-    def truncate(self, ntrunc):
+    def truncate(self, ntrunc=42):
 
         """
         Return a new truncated version of the gridded object.  Only works
@@ -156,49 +158,47 @@ class GriddedVariable(object):
         return ftype_map[file_type]
 
     @classmethod
-    def _load_pre_avg_obj(cls, dir_name, filename, resolution,
+    def _load_pre_avg_obj(cls, dir_name, filename, varname, resolution,
                           yr_shift, truncate=False):
 
         # Check if pre-processed averages file exists
-        pre_avg_tag = '.pre_avg_res{:02.1f}_shift{:d}'.format(resolution,
-                                                              yr_shift)
-        trunc_name = pre_avg_tag + '.trnc'
+        pre_avg_tag = '.pre_avg_{}_res{:02.1f}_shift{:d}'.format(varname,
+                                                                 resolution,
+                                                                 yr_shift)
+        trunc_tag = '.trnc'
+
+        path = join(dir_name, filename + pre_avg_tag)
 
         if truncate:
-            pre_avg_name = pre_avg_tag + trunc_name
-        else:
-            pre_avg_name = pre_avg_tag
+            path += trunc_tag
 
         # Look for pre_averaged_file
-        if os.path.exists(dir_name + filename + pre_avg_name):
-            filename += pre_avg_name
+        if os.path.exists(path):
 
-            with open(filename, 'r') as f:
-                prior_obj = cPickle.loads(f)
+            with open(path, 'r') as f:
+                prior_obj = cPickle.load(f)
 
-        elif truncate and os.path.exists(dir_name + filename +
-                                         pre_avg_tag):
+        elif truncate and os.path.exists(path.strip(trunc_tag)):
             # If truncate requested and truncate not found look for
             # pre-averaged full version
-            filename += pre_avg_tag
-            with open(filename, 'r') as f:
+            with open(path.strip(trunc_tag), 'r') as f:
                 prior_obj = cPickle.load(f)
 
             prior_obj = prior_obj.truncate()
-            prior_obj.save()
+            prior_obj.save(path)
         else:
-            prior_obj = None
+            raise IOError('No pre-averaged file found for given specifications')
 
         return prior_obj
 
     @classmethod
     def _load_from_netcdf(cls, dir_name, filename, varname, resolution,
-                          yr_shift, truncate=False):
+                          yr_shift, truncate=False, save=False):
 
         # Check if pre-processed averages file exists
-        pre_avg_name = '.pre_avg_res{:02.1f}_shift{:d}'
+        pre_avg_name = '.pre_avg_{}_res{:02.1f}_shift{:d}'
 
-        with Dataset(dir_name+filename, 'r') as f:
+        with Dataset(join(dir_name, filename), 'r') as f:
             var = f.variables[varname]
             data_shp = var.shape
 
@@ -219,14 +219,14 @@ class GriddedVariable(object):
 
             # Check order of all dimensions
             idx_order = [_DEFAULT_DIM_ORDER.index(dim) for dim in dims]
-            if idx_order != idx_order.sort():
+            if idx_order != sorted(idx_order):
                 raise ValueError('Input file dimensions do not match default'
                                  ' ordering.')
 
             # Load dimension values
             dim_vals = {dim_name: f.variables[dim_key]
                         for dim_name, dim_key in zip(dims, var.dimensions)
-                        if not dim_key in dim_exclude}
+                        if dim_key not in dim_exclude}
 
             # Convert time to datetimes
             dim_vals[_TIME] = cls._netcdf_datetime_convert(dim_vals[_TIME])
@@ -246,14 +246,22 @@ class GriddedVariable(object):
                    np.nanmean(avg_data),
                    ' , std-dev=', np.nanstd(avg_data))
 
+            # Filename for saving pre-averaged pickle
+            new_fname = join(dir_name,
+                             filename + pre_avg_name.format(varname,
+                                                            resolution,
+                                                            yr_shift))
+
+            # Create GriddedVariable object
             prior_obj = cls(varname, dims, avg_data, resolution, **dim_vals)
-            prior_obj.save(pre_avg_name.format(resolution, yr_shift))
+            if save:
+                prior_obj.save(new_fname)
 
             if truncate:
                 try:
                     prior_obj = prior_obj.truncate()
-                    prior_obj.save(pre_avg_name.format(resolution, yr_shift) +
-                                   '.trnc')
+                    if save:
+                        prior_obj.save(new_fname + '.trnc')
                 except AssertionError:
                     pass
 
@@ -363,9 +371,11 @@ class PriorVariable(GriddedVariable):
             raise TypeError('Specified file type not supported yet.')
 
         fname = file_name.replace('[vardef_template]', varname)
-        var_obj = cls._load_pre_avg_obj(file_dir, fname, varname,
+
+        try:
+            var_obj = cls._load_pre_avg_obj(file_dir, fname, varname,
                                             base_resolution, yr_shift)
-        if not var_obj:
+        except IOError:
             var_obj = ftype_loader(file_dir, fname, varname, base_resolution,
                                    yr_shift)
 
@@ -460,16 +470,20 @@ class State(object):
             var_start = len_state
             for i, pobj in enumerate(pobjs):
 
-                # Store range of data in state dimension
                 flat_data, flat_coords = pobj.flattened_spatial()
-                var_end = flat_data.shape[0] + var_start
-                self.var_view_range[var] = (var_start, var_end)
-                var_start += flat_data.shape[0]
+
+                # Store range of data in state dimension
+                if i == 0:
+                    var_end = flat_data.T.shape[0] + var_start
+                    self.var_view_range[var] = (var_start, var_end)
+                    len_state += var_end
 
                 # Add prior to state vector, transposed to make state the first
                 # dimension, and ensemble members along the 2nd
                 try:
-                    np.concatenate((self.state_list[i], flat_data.T), axis=0)
+                    self.state_list[i] = \
+                        np.concatenate((self.state_list[i], flat_data.T),
+                                       axis=0)
                 except IndexError:
                     self.state_list.append(flat_data.T)
 

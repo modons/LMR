@@ -71,6 +71,9 @@ matplotlibrc
 #scratch files
 scratch/*
 
+#Testing data
+tests/data/*
+
 #Video Files
 *.gif
 *.avi
