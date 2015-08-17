@@ -10,6 +10,7 @@ from netCDF4 import Dataset, num2date
 from datetime import datetime, timedelta
 import numpy as np
 import os
+from copy import deepcopy
 from os.path import join
 import cPickle
 import random
@@ -74,7 +75,7 @@ class GriddedVariable(object):
             self.data = self.data.reshape(1, *self.data.shape)
 
         self._space_dims = [dim for dim in dims_ordered if dim != _TIME]
-        self._space_shp = [len(self._dim_coord_map[dim])
+        self.space_shp = [len(self._dim_coord_map[dim])
                            for dim in self._space_dims]
 
         if len(self._space_dims) > 2:
@@ -82,7 +83,7 @@ class GriddedVariable(object):
 
         if not self._space_dims:
             self.type = 'timeseries'
-            self._space_shp = [1]
+            self.space_shp = [1]
             self.data = self.data.reshape(self.nsamples, 1)
         elif _LAT in self._space_dims and _LON in self._space_dims:
             self.type = 'horizontal'
@@ -115,7 +116,7 @@ class GriddedVariable(object):
     def flattened_spatial(self):
 
         flat_data = self.data.reshape(len(self.time),
-                                      np.product(self._space_shp))
+                                      np.product(self.space_shp))
 
         # Get dimensions of data
         coords = [self._dim_coord_map[key] for key in self._space_dims]
@@ -359,7 +360,6 @@ class PriorVariable(GriddedVariable):
         file_dir = config.prior.datadir_prior
         file_name = config.prior.datafile_prior
         file_type = config.prior.dataformat_prior
-        truncate = config.prior.truncate
         base_resolution = config.core.assimilation_time_res[0]
         yr_shift = config.core.year_start_idx_shift
         nens = config.core.nens
@@ -377,7 +377,7 @@ class PriorVariable(GriddedVariable):
                                             base_resolution, yr_shift)
         except IOError:
             var_obj = ftype_loader(file_dir, fname, varname, base_resolution,
-                                   yr_shift)
+                                   yr_shift, save=True)
 
         # Sample from loaded data if desired
         if nens:
@@ -450,16 +450,17 @@ class State(object):
     Class to create state vector and information
     """
 
-    def __init__(self, config):
+    def __init__(self, prior_vars, base_res):
 
-        prior_vars = PriorVariable.load_allvars(config)
-        base_res = config.core.assimilation_time_res[0]
-
+        self._prior_vars = prior_vars
+        self._base_res = base_res
         self.state_list = []
         self.var_coords = {}
         self.var_view_range = {}
+        self.var_space_shp = {}
+        self.augmented = False
 
-        len_state = 0
+        self._len_state = 0
         for var, prior_obj in prior_vars.iteritems():
             # If sub-annual split up into seasons, multiple state vectors
             if base_res < 1:
@@ -467,7 +468,9 @@ class State(object):
             else:
                 pobjs = [prior_obj]
 
-            var_start = len_state
+            self.var_space_shp[var] = prior_obj.space_shp
+
+            var_start = self.len_state
             for i, pobj in enumerate(pobjs):
 
                 flat_data, flat_coords = pobj.flattened_spatial()
@@ -476,7 +479,7 @@ class State(object):
                 if i == 0:
                     var_end = flat_data.T.shape[0] + var_start
                     self.var_view_range[var] = (var_start, var_end)
-                    len_state += var_end
+                    self.len_state += var_end
 
                 # Add prior to state vector, transposed to make state the first
                 # dimension, and ensemble members along the 2nd
@@ -490,10 +493,63 @@ class State(object):
             # Save variable view information
             self.var_coords[var] = flat_coords
 
-    def get_var_data_view(self, idx, var_name):
+        self.shape = self.state_list[0].shape
+
+    @classmethod
+    def from_config(cls, config):
+        pvars = PriorVariable.load_allvars(config)
+        base_res = config.core.assimilation_time_res[0]
+
+        return cls(pvars, base_res)
+
+    def get_var_data(self, idx, var_name, orig_shape=False):
         """
-        Returns a view (NOT A COPY) of the variable in the state vector
+        Returns a view (or a copy) of the variable in the state vector
         """
+        # TODO: change idx to optional, if none does average
+        # probably switch statelist to numpy array for easy averaging.
         start, end = self.var_view_range[var_name]
 
-        return self.state_list[idx][start:end]
+        var_data = self.state_list[idx][start:end]
+
+        if orig_shape:
+            nens = var_data.shape[1]
+            var_data = var_data.T.reshape(nens, *self.var_space_shp[var_name])
+
+        return var_data
+
+    def truncate_state(self):
+        """
+        Create a truncated copy of the current state
+        """
+
+        trunc_pvars = [pvar.truncate() for pvar in self._prior_vars]
+        state_class = type(self)
+        return state_class(trunc_pvars, self._base_res)
+
+    def copy_state(self):
+
+        return deepcopy(self)
+
+    def augment_state(self, ye_vals):
+
+        aug_state_list = []
+        for i, state in enumerate(self.state_list):
+            aug_state_list.append( np.append(state, ye_vals, axis=0))
+
+        self.state_list = aug_state_list
+        self.augmented = True
+
+        self.var_view_range['state'] = (0, self._len_state)
+        self.var_view_range['ye_vals'] = (self._len_state,
+                                          self._len_state + len(ye_vals))
+
+    def annual_avg(self, var_name):
+        denom = float(len(self.state_list))
+        avg_state = self.state_list[0]
+        for i in xrange(1, denom):
+            avg_state += self.state_list[i]
+
+        return avg_state / denom
+
+

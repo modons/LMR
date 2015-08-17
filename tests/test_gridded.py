@@ -70,7 +70,7 @@ def test_priorvar_init(ncf_data):
     np.testing.assert_array_equal(prior_var.lat, lat[:])
     np.testing.assert_array_equal(prior_var.lon, lon[:])
     assert prior_var._space_dims == ['lat', 'lon']
-    assert prior_var._space_shp == [94, 192]
+    assert prior_var.space_shp == [94, 192]
     assert prior_var.type == 'horizontal'
 
 
@@ -122,7 +122,7 @@ def test_priorvar_types(init_args, kw_args, type):
 
     assert prior_var.type == type
     if type == 'timeseries':
-        assert prior_var._space_shp == [1]
+        assert prior_var.space_shp == [1]
         assert prior_var.data.shape[1] == 1
 
 def test_priorvar_trunc(ncf_data):
@@ -511,7 +511,7 @@ def test_state(ncf_data, res):
                                                                 res,
                                                                 yr_shift,
                                                                 truncate=trunc)
-            np.testing.assert_array_equal(state_obj.get_var_data_view(i, var),
+            np.testing.assert_array_equal(state_obj.get_var_data(i, var),
                 prior_var.flattened_spatial()[0][i::num_priors].T)
 
 
