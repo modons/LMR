@@ -197,6 +197,10 @@ class BaseProxyObject:
         self.lon = fix_lon(lon)
         self.time = time
 
+        # Find sub-annual index corresponding to location in state_list
+        base_res = config.core.assimilation_time_res[0]
+        self.subannual_idx = int((self.start_yr % 1.) / base_res)
+
         # Retrieve appropriate PSM function
         psm_obj = self.get_psm_obj(config)
         self.psm_obj = psm_obj(config, self, **psm_kwargs)
