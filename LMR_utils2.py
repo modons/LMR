@@ -129,6 +129,48 @@ def global_mean(field,lat,lon):
  
     return gm
 
+def global_mean2(field, lat):
+
+    """
+     compute global mean value for all times in the input array
+     input: field with dimensions
+            [time, lat, lon]
+            [time, lat*lon]
+            [lat, lon]
+            [lat*lon]
+
+            lat in degrees
+            has to match field dimensions, either singleton nlat, or nlat*nlon
+
+    Altered by AndreP August 2015
+    """
+
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
+    #
+    #             revised 16 June 2015 (GJH)
+
+    # index for start of spatial dimensions
+
+    if not lat.shape == field.shape[-lat.ndim:]:
+        # must have singleton lat
+        lat_idx = field.shape.index(len(lat))
+
+        tmp = np.ones(field.shape[lat_idx:])
+        lat = (tmp.T * lat).T  # broadcast latitude dimension
+
+    # Flatten spatial dimensions if necessary
+    if lat.ndim > 1:
+        field = field.reshape(list(field.shape[:-lat.ndim]) +
+                              [np.product(field.shape[-lat.ndim:])])
+        lat = lat.flatten()
+
+    # latitude weighting for global mean
+    lat_weight = np.cos(np.deg2rad(lat))
+    gm = np.nansum(field*lat_weight, axis=-1) / np.nansum(lat_weight)
+    return gm
+
 
 
 def ensemble_stats(workdir, y_assim):
