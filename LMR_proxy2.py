@@ -12,6 +12,7 @@ from collections import defaultdict
 from random import sample
 from copy import deepcopy
 
+
 class ProxyManager:
     """
     High-level manager to handle loading proxies from multiple sources and
@@ -42,6 +43,9 @@ class ProxyManager:
 
         self.all_proxies = []
         self.all_ids_by_group = defaultdict(list)
+
+        assim_res = config.core.assimilation_time_res
+        self.assim_idxs_by_res = {res: [] for res in assim_res}
 
         for proxy_class_key in config.proxies.use_from:
             pclass = get_proxy_class(proxy_class_key)
@@ -86,6 +90,11 @@ class ProxyManager:
             self.ind_eval = None
             self.assim_ids_by_group = self.all_ids_by_group
 
+        # Add indexes to resolution groups
+        for idx in self.ind_assim:
+            p_res = self.all_proxies[idx].resolution
+            self.assim_idxs_by_res[p_res].append(idx)
+
     def proxy_obj_generator(self, indexes):
         """
         Generator to iterate over proxy objects in list at specified indexes
@@ -115,6 +124,18 @@ class ProxyManager:
         """
 
         return self.proxy_obj_generator(self.ind_assim)
+
+    def sites_assim_res_proxy_objs(self, resolution):
+        """
+        generator over assimilation indices for a given resolution
+
+        Yields
+        ------
+        BaseProxy Object like
+            Proxy object from the all_proxies list with specified resolution
+        """
+
+        return self.proxy_obj_generator(self.assim_idxs_by_res[resolution])
 
     def sites_eval_proxy_objs(self):
         """
@@ -181,7 +202,7 @@ class BaseProxyObject:
     __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
-                 lat, lon, values, time, **psm_kwargs):
+                 lat, lon, values, time, resolution, **psm_kwargs):
 
         if (values is None) or len(values) == 0:
             raise ValueError('No proxy data given for object initialization')
@@ -196,6 +217,7 @@ class BaseProxyObject:
         self.lat = lat
         self.lon = fix_lon(lon)
         self.time = time
+        self.resolution = resolution
 
         # Find sub-annual index corresponding to location in state_list
         base_res = config.core.assimilation_time_res[0]
@@ -321,6 +343,7 @@ class ProxyPages(BaseProxyObject):
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
         lon = site_meta['Lon (E)'].iloc[0]
+        resolution = site_meta['Resolution (yr)'].iloc[0]
         site_data = data_src[site]
         values = site_data[(site_data.index >= start) &
                            (site_data.index <= finish)]
@@ -332,7 +355,7 @@ class ProxyPages(BaseProxyObject):
             raise ValueError('No observations in specified time range.')
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
-                   values, times, **psm_kwargs)
+                   values, times, resolution, **psm_kwargs)
 
     @classmethod
     @augment_docstr

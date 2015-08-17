@@ -35,6 +35,7 @@ def dummy_proxy(request):
     p.lat = 45
     p.lon = 210
     p.time = range(1950, 1961)
+    p.resolution = 1.0
 
     return p
 
@@ -69,7 +70,7 @@ def test_proxies_get_class():
 def test_pages_init(psm_dat, dummy_proxy):
     p = dummy_proxy
     pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                               p.lat, p.lon, p.values, p.time,
+                               p.lat, p.lon, p.values, p.time, p.resolution,
                                **{'psm_data': psm_dat})
 
     assert pclass.id == p.pid
@@ -80,6 +81,7 @@ def test_pages_init(psm_dat, dummy_proxy):
     assert pclass.lat == p.lat
     assert pclass.lon == p.lon
     assert pclass.time == p.time
+    assert pclass.resolution == p.resolution
     assert hasattr(pclass, 'psm')
 
 
@@ -87,7 +89,7 @@ def test_pages_empty_values(psm_dat, dummy_proxy):
     with pytest.raises(ValueError):
         p = dummy_proxy
         pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, [], p.time,
+                                   p.lat, p.lon, [], p.time, p.resolution,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -95,7 +97,7 @@ def test_pages_none_values(psm_dat, dummy_proxy):
     with pytest.raises(ValueError):
         p = dummy_proxy
         pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, None, p.time,
+                                   p.lat, p.lon, None, p.time, p.resolution,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -104,7 +106,7 @@ def test_pages_time_values_len_mismatch(psm_dat, dummy_proxy):
         p = dummy_proxy
         time = p.time[0:-2]
         pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, p.values, time,
+                                   p.lat, p.lon, p.values, time, p.resolution,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -120,6 +122,7 @@ def test_pages_load_site(meta, pdata, psm_dat):
     assert pclass.type == r'Coral_d18O'
     assert pclass.lat == -21
     assert pclass.lon == proxy2.fix_lon(-160)
+    assert pclass.resolution == 1.0
     np.testing.assert_array_equal(pclass.values.values,
         pdata['Aus_16'][(pdata.index >= start) &
                         (pdata.index <= end) &
@@ -136,6 +139,7 @@ def test_pages_load_site_no_preloaded(meta, pdata, psm_dat):
     assert pclass.type == r'Coral_d18O'
     assert pclass.lat == -21
     assert pclass.lon == proxy2.fix_lon(-160)
+    assert pclass.resolution == 1.0
     np.testing.assert_array_equal(pclass.values.values,
         pdata['Aus_16'][(pdata.index >= start) &
                         (pdata.index <= end) &
@@ -258,6 +262,7 @@ def test_pages_proxy_manager_all(psm_dat):
     pmanager = proxy2.ProxyManager(cfg, drange)
     assert pmanager.ind_eval is None
     assert len(pmanager.ind_assim) == 4
+    assert len(pmanager.assim_idxs_by_res[1.0]) == 4
 
     bytype, allp = proxy2.ProxyPages.load_all(cfg, drange, **psm_kwargs)
 
