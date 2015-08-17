@@ -153,7 +153,7 @@ class LinearPSM(BasePSM):
                               ).format(self.corr, r_crit))
 
     # TODO: Ideally prior state info and coordinates should all be in single obj
-    def psm(self, Xb, X_state_info, X_coords):
+    def psm(self, Xb, state_idx):
         """
         Maps a given state to observations for the given proxy
 
@@ -177,34 +177,24 @@ class LinearPSM(BasePSM):
         # ----------------------
         # TODO: state variable is hard coded for now...
         state_var = 'tas_sfc_Amon'
-        if state_var not in X_state_info.keys():
+        if state_var not in Xb.var_view_range.keys():
             raise KeyError('Needed variable not in state vector for Ye'
                            ' calculation.')
-
-        # TODO: end index should already be +1, more pythonic
-        tas_startidx, tas_endidx = X_state_info[state_var]['pos']
-        ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
-        ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
 
         # Find row index of X for which [X_lat,X_lon] corresponds to closest
         # grid point to
         # location of proxy site [self.lat,self.lon]
         # Calclulate distances from proxy site.
-        stateDim = tas_endidx - tas_startidx + 1
-        ensDim = Xb.shape[1]
-        dist = np.empty(stateDim)
-        # dist = np.array(
-        #     [haversine(self.lon, self.lat, X_coords[k, ind_lon],
-        #                X_coords[k, ind_lat])
-        #      for k in xrange(tas_startidx, tas_endidx + 1)])
         dist = haversine(self.lon, self.lat,
-                          X_coords[tas_startidx:(tas_endidx+1), ind_lon],
-                          X_coords[tas_startidx:(tas_endidx+1), ind_lat])
+                          Xb.var_coords[state_var]['lon'],
+                          Xb.var_coords[state_var]['lat'])
 
         # row index of nearest grid pt. in prior (minimum distance)
-        kind = np.unravel_index(dist.argmin(), dist.shape)[0] + tas_startidx
+        kind = np.unravel_index(dist.argmin(), dist.shape)[0]
 
-        Ye = self.slope * np.squeeze(Xb[kind, :]) + self.intercept
+        Ye = (self.slope *
+              np.squeeze(Xb.get_var_data(state_idx, state_var)[kind, :]) +
+              self.intercept)
 
         return Ye
 
