@@ -42,13 +42,13 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = True
+fsave = False
 
 # file specification
 #
 # current datasets
 #
-nexp = 'testdev_150yr_75pct_gmttest_1iter'
+nexp = 'testdev_multires_1y'
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testing_1000_75pct_200members'
 #nexp = 'testdev_check_1000_75pct'
@@ -62,7 +62,7 @@ nexp = 'testdev_150yr_75pct_gmttest_1iter'
 # specify directories for LMR and calibration data
 datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'
 #datadir_output = './data/'
-datadir_calib = '/home/chaos2/wperkins/data/LMR/analyses'
+datadir_calib = '/home/chaos2/wperkins/data/LMR/data/analyses'
 
 # plotting preferences
 nlevs = 30 # number of contours

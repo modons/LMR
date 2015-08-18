@@ -40,7 +40,7 @@ from time import time
 import LMR_proxy2
 import LMR_prior
 import LMR_gridded
-import LMR_utils
+from LMR_utils2 import global_mean2
 import LMR_config as BaseCfg
 from LMR_DA import enkf_update_array, cov_localization
 
@@ -68,6 +68,10 @@ def LMR_driver_callable(cfg=None):
     nens = core.nens
     loc_rad = core.loc_rad
     trunc_state = prior.truncate_state
+    base_res = core.assimilation_time_res[0]
+    assim_res_vals = core.assimilation_time_res
+    res_assim_freq = (np.array(assim_res_vals)/base_res - 1).astype(np.int16)
+    prior_source = prior.prior_source
 
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -110,7 +114,7 @@ def LMR_driver_callable(cfg=None):
         print 'Source for prior: ', prior_source
 
     # Create initial state vector of desired variables at highest time res
-    Xb_one_full = LMR_gridded.State(cfg)
+    Xb_one_full = LMR_gridded.State.from_config(cfg)
 
 
     # Prepare to check for files in the prior (work) directory (this object just
@@ -178,23 +182,31 @@ def LMR_driver_callable(cfg=None):
     # Augment state vector with the Ye's
     # ----------------------------------
 
+    # TODO: Figure out how to handle precalculated YE Vals larger than 1 yr
     # Extract all the Ye's from master list of proxy objects into numpy array
     if not online:
-        Ye_all = np.empty(shape=[total_proxy_count, nens])
-        for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-            Ye_all[k, :] = proxy.psm(Xb_one_full, proxy.subannual_idx)
+        ye_all = np.empty(shape=[total_proxy_count, nens])
+        Xb_full_copy = Xb_one_full.copy_state()
+        for res in assim_res_vals:
+
+            Xb_full_copy.avg_to_res(res)
+            for i, proxy in enumerate(
+                    prox_manager.sites_assim_res_proxy_objs(res)):
+                ye_all[i, :] = proxy.psm(Xb_one_full, proxy.subannual_idx)
+
 
         # Append ensemble of Ye's to prior state vector
-        Xb_one.augment_state(Ye_all)
+        Xb_one.augment_state(ye_all)
 
     # TODO: Switch to cPickled prior object... right now hardcoded for annual
     # case saving
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    np.savez(filen, Xb_one=Xb_one.get_var_data(0, 'state'),
-             Xb_one_aug=Xb_one.state_list[0],
+    np.savez(filen, Xb_one=Xb_one.get_var_data('state'),
+             Xb_one_aug=Xb_one.state_list,
              stateDim=state_dim,
-             Xb_one_coords=Xb_one.var_coords)
+             Xb_one_coords=Xb_one.var_coords,
+             state_info=Xb_one.old_state_info)
 
     # ==========================================================================
     # Loop over all proxies and perform assimilation ---------------------------
@@ -205,95 +217,112 @@ def LMR_driver_callable(cfg=None):
     # ---------------------
 
     # Array containing the global-mean state (for diagnostic purposes)
-    gmt_save = np.zeros([total_proxy_count+1,
-                         recon_period[1] - recon_period[0] + 1])
-    # get state vector indices where to find surface air temperature
-    ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
-    iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
-    xbm = Xb_one.get_var_data()
-    xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
-    xbm_lalo = xbm.reshape(nlat_new, nlon_new)
-    gmt = LMR_utils.global_mean(xbm_lalo, lat_new[:, 0], lon_new[0, :])
-    gmt_save[0, :] = gmt # First row is prior GMT
-    gmt_save[1, :] = gmt # Prior for first proxy assimilated
+    gmt_save = np.zeros([total_proxy_count+1, ntimes])
+    xbm = Xb_one.annual_avg('tas_sfc_Amon')
+    xbm = xbm.mean(axis=1)  # ensemble-mean
+    gmt = global_mean2(xbm, Xb_one.var_coords['tas_sfc_Amon']['lat'])
+    gmt_save[0, :] = gmt  # First row is prior GMT
+    gmt_save[1, :] = gmt  # Prior for first proxy assimilated
 
+    nelem_pr_yr = np.ceil(1.0 / base_res)
+    start_yr, end_yr = recon_period
+    assim_times = np.arange(start_yr, end_yr+base_res, base_res)
     lasttime = time()
-    for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1)):
+    for iyr, t in enumerate(assim_times):
 
         if verbose > 0:
             print 'working on year: ' + str(t)
 
-        ypad = '{:04d}'.format(t)
-        filen = join(workdir, 'year' + ypad + '.npy')
-        if prior_check.exists(filen) and not core.clean_start:
-            if verbose > 2:
-                print 'prior file exists: ' + filen
-            Xb = np.load(filen)
-        else:
-            if verbose > 2:
-                print 'Prior file ', filen, ' does not exist...'
-            Xb = Xb_one_aug.copy()
+        if t % 1.0 == 0:
+            ypad = '{:04d}'.format(int(t))
+            filen = join(workdir, 'year' + ypad + '.npy')
 
-        for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
-            # Crude check if we have proxy ob for current time
-            try:
-                Y.values[t]
-            except KeyError:
-                # Make sure GMT spot filled from previous proxy
-                gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
-                continue
-
-            if verbose > 2:
-                print '--------------- Processing proxy: ' + Y.id
-
-            if verbose > 1:
-                print ''
-                print 'Site:', Y.id, ':', Y.type
-                print ' latitude, longitude: ' + str(Y.lat), str(Y.lon)
-
-            loc = None
-            if loc_rad is not None:
+            Xb = Xb_one.copy_state()
+            if prior_check.exists(filen) and not core.clean_start:
                 if verbose > 2:
-                    print '...computing localization...'
-                    loc = cov_localization(loc_rad, X, Y)
+                    print 'prior file exists: ' + filen
+                Xb.state_list = np.load(filen)
 
-            # Get Ye values for current proxy
-            if online:
-                Ye = Y.psm(Xb)
+        # Which resolutions to assimilate for given year
+        res_to_assim = [res for res, freq in zip(assim_res_vals, res_assim_freq)
+                        if iyr % freq == 0]
+
+        iY = -1
+        for res in res_to_assim:
+
+            if res > base_res:
+                base_Xb = Xb.copy_state()
             else:
-                Ye = Xb[proxy_idx - total_proxy_count]
+                base_Xb = Xb
+            Xb.avg_to_res(res)
+            # TODO: Some kind of averaging depending on resolution
 
-            # Define the ob error variance
-            ob_err = Y.psm_obj.R
+            for iY, Y in enumerate(
+                    prox_manager.sites_assim_res_proxy_objs(res),
+                    iY+1):
 
-            # ------------------------------------------------------------------
-            # Do the update (assimilation) -------------------------------------
-            # ------------------------------------------------------------------
-            if verbose > 2:
-                print ('updating time: ' + str(t) + ' proxy value : ' +
-                       str(Y.values[t]) + ' | mean prior proxy estimate: ' +
-                       str(Ye.mean()))
+                # Crude check if we have proxy ob for current time
+                try:
+                    Y.values[t]
+                except KeyError:
+                    # Make sure GMT spot filled from previous proxy
+                    gmt_save[iY+1, iyr] = gmt_save[iY, iyr]
+                    continue
 
-            # Update the state
-            Xa = enkf_update_array(Xb, Y.values[t], Ye, ob_err, loc)
-            Xb = Xa
-            xam = Xa.mean(axis=1)
-            xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
-            gmt = LMR_utils.global_mean(xam_lalo, lat_new[:, 0], lon_new[0, :])
-            gmt_save[proxy_idx+1, yr_idx] = gmt
+                if verbose > 2:
+                    print '--------------- Processing proxy: ' + Y.id
 
-            # check the variance change for sign
-            thistime = time()
-            if verbose > 2:
-                xbvar = Xb.var(axis=1, ddof=1)
-                xavar = Xa.var(ddof=1, axis=1)
-                vardiff = xavar - xbvar
-                print 'max change in variance:' + str(np.max(vardiff))
-                print 'update took ' + str(thistime-lasttime) + 'seconds'
-            lasttime = thistime
+                if verbose > 1:
+                    print ''
+                    print 'Site:', Y.id, ':', Y.type
+                    print ' latitude, longitude: ' + str(Y.lat), str(Y.lon)
+
+                loc = None
+                if loc_rad is not None:
+                    if verbose > 2:
+                        print '...computing localization...'
+                        loc = cov_localization(loc_rad, X, Y)
+
+                # Get Ye values for current proxy
+                if online:
+                    Ye = Y.psm(Xb)
+                else:
+                    Ye = Xb.get_var_data('ye_vals', idx=Y.subannual_idx)[iY]
+
+                # Define the ob error variance
+                ob_err = Y.psm_obj.R
+
+                # --------------------------------------------------------------
+                # Do the update (assimilation) ---------------------------------
+                # --------------------------------------------------------------
+                if verbose > 2:
+                    print ('updating time: ' + str(t) + ' proxy value : ' +
+                           str(Y.values[t]) + ' | mean prior proxy estimate: ' +
+                           str(Ye.mean()))
+
+                # Update the state
+                Xa = enkf_update_array(Xb.state_list[Y.subannual_idx],
+                                       Y.values[t], Ye, ob_err, loc)
+                Xb.state_list[Y.subannual_idx] = Xa
+                xam = Xb.get_var_data('tas_sfc_Amon',
+                                      idx=Y.subannual_idx).mean(axis=1)
+                gmt = global_mean2(xam,
+                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                gmt_save[iY+1, iyr] = gmt
+
+                # check the variance change for sign
+                thistime = time()
+                if verbose > 2:
+                    xbvar = Xb.var(axis=1, ddof=1)
+                    xavar = Xa.var(ddof=1, axis=1)
+                    vardiff = xavar - xbvar
+                    print 'max change in variance:' + str(np.max(vardiff))
+                    print 'update took ' + str(thistime-lasttime) + 'seconds'
+                lasttime = thistime
 
         # Dump Xa to file
-        np.save(filen, Xa)
+        if iyr % nelem_pr_yr == 0:
+            np.save(filen, base_Xb.state_list)
 
     end_time = time() - begin_time
 
@@ -307,13 +336,12 @@ def LMR_driver_callable(cfg=None):
     # 3 July 2015: compute and save the GMT for the full ensemble
     # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([ntimes, nens])
-    for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1)):
-        filen = join(workdir, 'year{:04d}'.format(yr))
-        Xa = np.load(filen+'.npy')
-        for k in xrange(nens):
-            xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
-            gmt = LMR_utils.global_mean(xam_lalo, lat_new[:, 0], lon_new[0, :])
-            gmt_ensemble[iyr, k] = gmt
+    for iyr, yr in enumerate(assim_times):
+        filen = join(workdir, 'year{:04d}'.format(int(yr)))
+        Xb.state_list = np.load(filen+'.npy')
+        Xa = Xb.annual_avg('tas_sfc_Amon')
+        gmt_ensemble[iyr] = global_mean2(Xa.T,
+                                         Xb.var_coords['tas_sfc_Amon']['lat'])
 
     filen = join(workdir, 'gmt_ensemble')
     np.savez(filen, gmt_ensemble=gmt_ensemble, recon_times=recon_times)

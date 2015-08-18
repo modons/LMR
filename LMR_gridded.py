@@ -8,6 +8,7 @@ Adapted from load_gridded_data, LMR_prior, LMR_calibrate
 from abc import abstractmethod, ABCMeta
 from netCDF4 import Dataset, num2date
 from datetime import datetime, timedelta
+from collections import OrderedDict
 import numpy as np
 import os
 from copy import deepcopy
@@ -200,7 +201,8 @@ class GriddedVariable(object):
         pre_avg_name = '.pre_avg_{}_res{:02.1f}_shift{:d}'
 
         with Dataset(join(dir_name, filename), 'r') as f:
-            var = f.variables[varname]
+            ncf_varname = varname.split('_')[0]
+            var = f.variables[ncf_varname]
             data_shp = var.shape
 
             # Convert to key names defined in _DEFAULT_DIM_ORDER
@@ -381,7 +383,7 @@ class PriorVariable(GriddedVariable):
 
         # Sample from loaded data if desired
         if nens:
-            var_obj.sample(nens, seed=seed)
+            var_obj = var_obj.sample(nens, seed=seed)
 
         return var_obj
 
@@ -389,7 +391,7 @@ class PriorVariable(GriddedVariable):
     def load_allvars(cls, config):
         var_names = config.prior.state_variables
 
-        prior_dict = {}
+        prior_dict = OrderedDict()
         for vname in var_names:
             prior_dict[vname] = cls.load(config, vname)
 
@@ -460,7 +462,7 @@ class State(object):
         self.var_space_shp = {}
         self.augmented = False
 
-        self._len_state = 0
+        self.len_state = 0
         for var, prior_obj in prior_vars.iteritems():
             # If sub-annual split up into seasons, multiple state vectors
             if base_res < 1:
@@ -494,6 +496,7 @@ class State(object):
             self.var_coords[var] = flat_coords
 
         self.shape = self.state_list[0].shape
+        self.old_state_info = self.get_old_state_info()
 
     @classmethod
     def from_config(cls, config):
@@ -502,7 +505,7 @@ class State(object):
 
         return cls(pvars, base_res)
 
-    def get_var_data(self, idx, var_name, orig_shape=False):
+    def get_var_data(self, var_name, idx=None):
         """
         Returns a view (or a copy) of the variable in the state vector
         """
@@ -510,11 +513,10 @@ class State(object):
         # probably switch statelist to numpy array for easy averaging.
         start, end = self.var_view_range[var_name]
 
-        var_data = self.state_list[idx][start:end]
-
-        if orig_shape:
-            nens = var_data.shape[1]
-            var_data = var_data.T.reshape(nens, *self.var_space_shp[var_name])
+        if idx is not None:
+            var_data = self.state_list[idx][start:end]
+        else:
+            var_data = [dat[start:end] for dat in self.state_list]
 
         return var_data
 
@@ -522,8 +524,9 @@ class State(object):
         """
         Create a truncated copy of the current state
         """
-
-        trunc_pvars = [pvar.truncate() for pvar in self._prior_vars]
+        trunc_pvars = OrderedDict()
+        for var_name, pvar in self._prior_vars.iteritems():
+            trunc_pvars[var_name] = pvar.truncate()
         state_class = type(self)
         return state_class(trunc_pvars, self._base_res)
 
@@ -535,21 +538,63 @@ class State(object):
 
         aug_state_list = []
         for i, state in enumerate(self.state_list):
-            aug_state_list.append( np.append(state, ye_vals, axis=0))
+            aug_state_list.append(np.append(state, ye_vals, axis=0))
 
         self.state_list = aug_state_list
         self.augmented = True
 
-        self.var_view_range['state'] = (0, self._len_state)
-        self.var_view_range['ye_vals'] = (self._len_state,
-                                          self._len_state + len(ye_vals))
+        self.var_view_range['state'] = (0, self.len_state)
+        self.var_view_range['ye_vals'] = (self.len_state,
+                                          self.len_state + len(ye_vals))
 
-    def annual_avg(self, var_name):
-        denom = float(len(self.state_list))
-        avg_state = self.state_list[0]
-        for i in xrange(1, denom):
-            avg_state += self.state_list[i]
+    def annual_avg(self, var_name=None):
 
-        return avg_state / denom
+        if var_name is None:
+            subannual_data = np.array(self.state_list)
+        else:
+            # Get variable data for each subannual state vector, creat ndarray
+            subannual_data = np.array(self.get_var_data(var_name))
+
+        avg = subannual_data.mean(axis=0)
+        return avg
+
+    def avg_to_res(self, res):
+
+        if res == self._base_res:
+            return
+
+        if res < 1:
+            chunk = int(res / self._base_res)
+            new_state = [self.state_list[i:i+chunk]
+                         for i in xrange(0, len(self.state_list), chunk)]
+            new_state = [np.array(state_group).mean(axis=0)
+                         for state_group in new_state]
+            self.state_list = new_state
+        elif res == 1:
+            new_state = np.array(self.state_list).mean(axis=0)
+            self.state_list = [new_state]
+        else:
+            raise ValueError('Cannot handle resolutions larger than 1 yet.')
+
+    def replace_subannual_avg(self, avg):
+        data = np.array(self.state_list)
+        data_mean = self.annual_avg()
+        self.state_list = data - data_mean + avg
+
+    def get_old_state_info(self):
+
+        state_info = {}
+        for var in self.var_view_range.keys():
+            var_info = {'pos': self.var_view_range[var]}
+
+            space_dims = [dim for dim in _DEFAULT_DIM_ORDER
+                          if dim in self.var_coords[var].keys()]
+            var_info['spacecoords'] = space_dims
+            var_info['spacedims'] = self.var_space_shp[var]
+            state_info[var] = var_info
+
+        return state_info
+
+
 
 

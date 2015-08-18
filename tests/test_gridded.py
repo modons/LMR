@@ -491,12 +491,11 @@ def test_state(ncf_data, res):
     import test_config
 
     test_config.core.assimilation_time_res = [res]
-    state_obj = lmrgrid.State(test_config)
     dirname = test_config.prior.datadir_prior
     filename = test_config.prior.datafile_prior
     yr_shift = test_config.core.year_start_idx_shift
-    trunc = test_config.prior.truncate
 
+    state_obj = lmrgrid.State.from_config(test_config)
 
     num_priors = int(np.ceil(1/res))
 
@@ -509,9 +508,8 @@ def test_state(ncf_data, res):
                                                                 fname,
                                                                 var,
                                                                 res,
-                                                                yr_shift,
-                                                                truncate=trunc)
-            np.testing.assert_array_equal(state_obj.get_var_data(i, var),
+                                                                yr_shift)
+            np.testing.assert_array_equal(state_obj.get_var_data(var, idx=i),
                 prior_var.flattened_spatial()[0][i::num_priors].T)
 
 

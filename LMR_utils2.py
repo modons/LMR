@@ -198,8 +198,8 @@ def ensemble_stats(workdir, y_assim):
     # get the prior and basic info
     npzfile = np.load(prior_filn)
     npzfile.files
-    Xbtmp = npzfile['Xb_one']
-    Xb_coords = npzfile['Xb_one_coords']
+    Xbtmp = np.array(npzfile['Xb_one']).mean(axis=0)
+    Xb_coords = npzfile['Xb_one_coords'].item()
 
     # get state vector content info (state variables and their position in vector)
     # note: the .item() is necessary to access a dict stored in a npz file 
@@ -228,7 +228,7 @@ def ensemble_stats(workdir, y_assim):
                 ndim1 = state_info[var]['spacedims'][0]
                 ndim2 = state_info[var]['spacedims'][1]
                 
-                Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                Xb = np.reshape(Xbtmp[ibeg:iend,:],(ndim1,ndim2,nens))
                 xbm = np.mean(Xb,axis=2) # ensemble mean
                 xbv = np.var(Xb,axis=2,ddof=1)  # ensemble variance
 
@@ -242,8 +242,8 @@ def ensemble_stats(workdir, y_assim):
                     i = f.find('year')
                     year = f[i+4:i+8]
                     years.append(year)
-                    Xatmp = np.load(f)
-                    Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                    Xatmp = np.load(f).mean(axis=0)
+                    Xa = np.reshape(Xatmp[ibeg:iend,:],(ndim1,ndim2,nens))
                     xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
                     xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
 
@@ -253,8 +253,8 @@ def ensemble_stats(workdir, y_assim):
                 dimcoord1 = 'n'+coordname1
                 dimcoord2 = 'n'+coordname2
 
-                coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
-                coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+                coord1 = np.reshape(Xb_coords[var][coordname1], state_info[var]['spacedims'])
+                coord2 = np.reshape(Xb_coords[var][coordname2], state_info[var]['spacedims'])
 
                 vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
                                          coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
@@ -267,7 +267,7 @@ def ensemble_stats(workdir, y_assim):
 
 
         else: # var has no spatial dims
-            Xb = Xbtmp[ibeg:iend+1,:]
+            Xb = Xbtmp[ibeg:iend,:]
             xbm = np.mean(Xb,axis=1) # ensemble mean
             xbv = np.var(Xb,axis=1)  # ensemble variance
             
@@ -282,7 +282,7 @@ def ensemble_stats(workdir, y_assim):
                 year = f[i+4:i+8]
                 years.append(year)
                 Xatmp = np.load(f)
-                Xa = Xatmp[ibeg:iend+1,:]
+                Xa = Xatmp[ibeg:iend,:]
                 xam[k] = np.mean(Xa,axis=1) # ensemble mean
                 xav[k] = np.var(Xa,axis=1)  # ensemble variance     
                 
@@ -306,7 +306,7 @@ def ensemble_stats(workdir, y_assim):
     # --------------------------------------------------------
     # get information on dim of state without the Ye's (before augmentation)
     stateDim  = npzfile['stateDim']
-    Xbtmp_aug = npzfile['Xb_one_aug']
+    Xbtmp_aug = npzfile['Xb_one_aug'].mean(axis=0)
     # dim of entire state vector (augmented)
     totDim = Xbtmp_aug.shape[0]
     nbye = (totDim - stateDim)
@@ -318,7 +318,7 @@ def ensemble_stats(workdir, y_assim):
         i = f.find('year')
         year = f[i+4:i+8]
         years.append(float(year))
-        Xatmp = np.load(f)
+        Xatmp = np.load(f).mean(axis=0)
         # Extract the Ye's from augmented state (beyond stateDim 'til end of
         #  state vector)
         Ye_s[:, k, :] = Xatmp[stateDim:, :]

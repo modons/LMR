@@ -193,7 +193,7 @@ class LinearPSM(BasePSM):
         kind = np.unravel_index(dist.argmin(), dist.shape)[0]
 
         Ye = (self.slope *
-              np.squeeze(Xb.get_var_data(state_idx, state_var)[kind, :]) +
+              np.squeeze(Xb.get_var_data(state_var, idx=state_idx)[kind, :]) +
               self.intercept)
 
         return Ye
