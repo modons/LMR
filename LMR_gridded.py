@@ -377,15 +377,23 @@ class PriorVariable(GriddedVariable):
         try:
             var_obj = cls._load_pre_avg_obj(file_dir, fname, varname,
                                             base_resolution, yr_shift)
+            print 'Loaded pre-averaged file.'
         except IOError:
+            print 'No pre-averaged file found... Loading directly from file.'
             var_obj = ftype_loader(file_dir, fname, varname, base_resolution,
                                    yr_shift, save=True)
 
+        if base_resolution < 1.0:
+            var_objs = var_obj.subannual_resolution_prior()
+        else:
+            var_objs = [var_obj]
+
         # Sample from loaded data if desired
         if nens:
-            var_obj = var_obj.sample(nens, seed=seed)
+            var_objs = [obj.sample(nens, seed=seed)
+                        for obj in var_objs]
 
-        return var_obj
+        return var_objs
 
     @classmethod
     def load_allvars(cls, config):
@@ -463,14 +471,9 @@ class State(object):
         self.augmented = False
 
         self.len_state = 0
-        for var, prior_obj in prior_vars.iteritems():
-            # If sub-annual split up into seasons, multiple state vectors
-            if base_res < 1:
-                pobjs = prior_obj.subannual_resolution_prior()
-            else:
-                pobjs = [prior_obj]
+        for var, pobjs in prior_vars.iteritems():
 
-            self.var_space_shp[var] = prior_obj.space_shp
+            self.var_space_shp[var] = pobjs[0].space_shp
 
             var_start = self.len_state
             for i, pobj in enumerate(pobjs):
@@ -526,7 +529,7 @@ class State(object):
         """
         trunc_pvars = OrderedDict()
         for var_name, pvar in self._prior_vars.iteritems():
-            trunc_pvars[var_name] = pvar.truncate()
+            trunc_pvars[var_name] = [pobj.truncate() for pobj in pvar]
         state_class = type(self)
         return state_class(trunc_pvars, self._base_res)
 

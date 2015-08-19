@@ -70,7 +70,7 @@ def LMR_driver_callable(cfg=None):
     trunc_state = prior.truncate_state
     base_res = core.assimilation_time_res[0]
     assim_res_vals = core.assimilation_time_res
-    res_assim_freq = (np.array(assim_res_vals)/base_res - 1).astype(np.int16)
+    res_assim_freq = (np.array(assim_res_vals)/base_res).astype(np.int16)
     prior_source = prior.prior_source
 
     # ==========================================================================
@@ -226,7 +226,7 @@ def LMR_driver_callable(cfg=None):
 
     nelem_pr_yr = np.ceil(1.0 / base_res)
     start_yr, end_yr = recon_period
-    assim_times = np.arange(start_yr, end_yr+base_res, base_res)
+    assim_times = np.arange(start_yr, end_yr+1, base_res)
     lasttime = time()
     for iyr, t in enumerate(assim_times):
 
@@ -245,7 +245,7 @@ def LMR_driver_callable(cfg=None):
 
         # Which resolutions to assimilate for given year
         res_to_assim = [res for res, freq in zip(assim_res_vals, res_assim_freq)
-                        if iyr % freq == 0]
+                        if (iyr+1) % freq == 0]
 
         iY = -1
         for res in res_to_assim:
@@ -266,7 +266,9 @@ def LMR_driver_callable(cfg=None):
                     Y.values[t]
                 except KeyError:
                     # Make sure GMT spot filled from previous proxy
-                    gmt_save[iY+1, iyr] = gmt_save[iY, iyr]
+                    if (iyr+1) % nelem_pr_yr == 0:
+                        gmt_save[iY+1, iyr//nelem_pr_yr] = \
+                            gmt_save[iY, iyr//nelem_pr_yr]
                     continue
 
                 if verbose > 2:
@@ -304,11 +306,13 @@ def LMR_driver_callable(cfg=None):
                 Xa = enkf_update_array(Xb.state_list[Y.subannual_idx],
                                        Y.values[t], Ye, ob_err, loc)
                 Xb.state_list[Y.subannual_idx] = Xa
-                xam = Xb.get_var_data('tas_sfc_Amon',
-                                      idx=Y.subannual_idx).mean(axis=1)
-                gmt = global_mean2(xam,
-                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
-                gmt_save[iY+1, iyr] = gmt
+
+                if (iyr+1) % nelem_pr_yr == 0:
+                    xam = Xb.get_var_data('tas_sfc_Amon',
+                                          idx=Y.subannual_idx).mean(axis=1)
+                    gmt = global_mean2(xam,
+                                       Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                    gmt_save[iY+1, iyr//nelem_pr_yr] = gmt
 
                 # check the variance change for sign
                 thistime = time()
@@ -320,8 +324,14 @@ def LMR_driver_callable(cfg=None):
                     print 'update took ' + str(thistime-lasttime) + 'seconds'
                 lasttime = thistime
 
-        # Dump Xa to file
-        if iyr % nelem_pr_yr == 0:
+        if (iyr+1) % nelem_pr_yr == 0:
+            # After finished with longer time resolution propogate mean to lower
+            # resolution
+            if iyr != 0:
+                avg = Xb.annual_avg()
+                base_Xb.replace_subannual_avg(avg)
+
+            # Dump Xa to file
             np.save(filen, base_Xb.state_list)
 
     end_time = time() - begin_time
@@ -336,7 +346,7 @@ def LMR_driver_callable(cfg=None):
     # 3 July 2015: compute and save the GMT for the full ensemble
     # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([ntimes, nens])
-    for iyr, yr in enumerate(assim_times):
+    for iyr, yr in enumerate(assim_times[0::nelem_pr_yr]):
         filen = join(workdir, 'year{:04d}'.format(int(yr)))
         Xb.state_list = np.load(filen+'.npy')
         Xa = Xb.annual_avg('tas_sfc_Amon')

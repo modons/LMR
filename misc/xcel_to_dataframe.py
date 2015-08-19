@@ -53,7 +53,7 @@ def pages_xcel_to_dataframes(filename, metaout, dataout):
     df.to_pickle(dataout)
 
 if __name__ == "__main__":
-    work_dir = '/home/chaos2/wperkins/data/LMR/proxies/'
+    work_dir = '/home/chaos2/wperkins/data/LMR/data/proxies/'
     fname = work_dir + 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
     meta_outfile = work_dir + 'Pages2k_Metadata.df.pckl'
     outfile = work_dir + 'Pages2k_Proxies.df.pckl'

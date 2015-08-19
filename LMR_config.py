@@ -43,7 +43,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_multires_1y'
+    nexp = 'testdev_mpi_newgridded_check_0pt5res'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
@@ -54,7 +54,7 @@ class core:
     iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
-    assimilation_time_res = [1.0]  # in yrs
+    assimilation_time_res = [0.5, 1.0]  # in yrs
     year_start_idx_shift = 3  # What we're defining as year start
                               # 0-11 where 0 indicates start at Jan.
 
@@ -118,9 +118,9 @@ class proxies:
 
         datadir_proxy = join(core.lmr_path, 'data', 'proxies')
         datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies.df.pckl')
+                              'Pages2k_Proxies_0pt5res.df.pckl')
         metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata.df.pckl')
+                              'Pages2k_Metadata_0pt5res.df.pckl')
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
@@ -238,10 +238,11 @@ class prior:
         List of variables to use in the state vector for the prior
     """
     # Prior data directory & model source
-    prior_source = 'ccsm4_last_millenium'
+    #prior_source = 'ccsm4_last_millenium'
+    prior_source = 'mpi-esm-p_last_millenium'
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
-    datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+    datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
     dataformat_prior = 'NCD'
     state_variables = ['tas_sfc_Amon']
     truncate_state = True

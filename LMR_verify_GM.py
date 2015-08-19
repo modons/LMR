@@ -42,13 +42,14 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = False
+fsave = True
 
 # file specification
 #
 # current datasets
 #
-nexp = 'testdev_multires_1y'
+nexp = 'testdev_mpi_newgridded_check_0pt5res'
+nexp = 'testdev_mpi_newgridded_check'
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testing_1000_75pct_200members'
 #nexp = 'testdev_check_1000_75pct'
