@@ -1,8 +1,3 @@
-import glob
-import numpy as np
-from scipy import signal
-from spharm import Spharmt, getspecindx, regrid
-from math import radians, cos, sin, asin, sqrt
 
 #==========================================================================================
 #
@@ -31,7 +26,6 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * asin(sqrt(a)) 
     km = 6367.0 * c
     return km
-
 
 def year_fix(t):
 
@@ -83,53 +77,6 @@ def smooth2D(im, n=15):
     bndy = 'wrap'
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
-
-def global_mean(field,lat,lon):
-
-    """
-     compute global mean value for all times in the input array
-     input: field[ntime,nlat,nlon] or field{nlat,nlon]
-            lat[nlat,nlon] in degrees
-            lon[nlat,nlon] in degrees
-    """
-
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             May 2015
-    #
-    #             revised 16 June 2015 (GJH)
-
-
-    # set number of times, lats, lons; array indices for lat and lon    
-    if len(np.shape(field)) == 3:
-        ntime,nlat,nlon = np.shape(field)
-        lati = 1
-        loni = 2
-    else:
-        ntime = 1
-        nlat,nlon = np.shape(field)
-        lati = 0
-        loni = 1
-
-    # latitude weighting for global mean
-    lat_weight = np.cos(np.deg2rad(lat))
-    #--old
-    #tmp = np.ones([len(lat),len(lon)])
-    #W = np.multiply(lat_weight,tmp.T).T
-    #--new
-    tmp = np.ones([nlon,nlat])
-    W = np.multiply(lat_weight,tmp).T
-
-    gm = np.zeros(ntime)
-    for t in xrange(ntime):
-        if lati == 0:
-            gm[t] = np.nansum(np.multiply(W,field))/(np.sum(np.sum(W)))
-        else:
-            gm[t] = np.nansum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
- 
-    return gm
-
-
 
 def ensemble_stats(workdir,Yall):
 
@@ -360,7 +307,7 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     blank = np.zeros([nlat_new,nlon_new])
     lat_new = (veclat + blank.T).T  
     lon_new = (veclon + blank)
-
+     
     # transform each ensemble member, one at a time
     X_new = np.zeros([nlat_new*nlon_new,Nens])
     for k in range(Nens):
@@ -372,7 +319,6 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     return X_new,lat_new,lon_new
 
 
-
 def assimilated_proxies(workdir):
 
     """
@@ -382,7 +328,6 @@ def assimilated_proxies(workdir):
     # Originator: Greg Hakim
     #             University of Washington
     #             May 2015
-
 
     apfile = workdir + 'assimilated_proxies.npy'
     assimilated_proxies = np.load(apfile)
@@ -455,4 +400,68 @@ def rank_histogram(ensemble, value):
 
     return rank
 
+def global_hemispheric_means(field,lat):
 
+    """
+     compute global and hemispheric mean valuee for all times in the input (i.e. field) array
+     input:  field[ntime,nlat,nlon] or field[nlat,nlon]
+             lat[nlat,nlon] in degrees
+
+     output: gm : global mean of "field"
+            nhm : northern hemispheric mean of "field"
+            shm : southern hemispheric mean of "field"
+    """
+
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             August 2015
+    #
+    #
+
+    # set number of times, lats, lons; array indices for lat and lon    
+    if len(np.shape(field)) == 3: # time is a dimension
+        ntime,nlat,nlon = np.shape(field)
+        lati = 1
+        loni = 2
+    else: # only spatial dims
+        ntime = 1
+        nlat,nlon = np.shape(field)
+        field = field[None,:] # add time dim of size 1 for consistent array dims
+        lati = 1
+        loni = 2
+
+    # latitude weighting 
+    lat_weight = np.cos(np.deg2rad(lat))
+    tmp = np.ones([nlon,nlat])
+    W = np.multiply(lat_weight,tmp).T
+
+    # define hemispheres
+    eqind = nlat/2 
+
+    if lat[0] > 0:
+        # data has NH -> SH format
+        W_NH = W[0:eqind+1]
+        field_NH = field[:,0:eqind+1,:]
+        W_SH = W[eqind+1:]
+        field_SH = field[:,eqind+1:,:]
+    else:
+        # data has SH -> NH format
+        W_NH = W[eqind:]
+        field_NH = field[:,eqind:,:]
+        W_SH = W[0:eqind]
+        field_SH = field[:,0:eqind,:]
+
+    gm  = np.zeros(ntime)
+    nhm = np.zeros(ntime)
+    shm = np.zeros(ntime)
+    for t in xrange(ntime):
+        if lati == 0:
+            gm[t]  = np.nansum(np.multiply(W,field))/(np.sum(np.sum(W)))
+            nhm[t] = np.nansum(np.multiply(W_NH,field_NH))/(np.sum(np.sum(W_NH)))
+            shm[t] = np.nansum(np.multiply(W_SH,field_SH))/(np.sum(np.sum(W_SH)))
+        else:
+            gm[t]  = np.nansum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
+            nhm[t] = np.nansum(np.multiply(W_NH,field_NH[t,:,:]))/(np.sum(np.sum(W_NH)))
+            shm[t] = np.nansum(np.multiply(W_SH,field_SH[t,:,:]))/(np.sum(np.sum(W_SH)))
+
+    return gm,nhm,shm

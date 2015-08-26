@@ -1,7 +1,7 @@
 
 import matplotlib
 # need to do this backend when running remotely or to suppress figures interactively
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 
 # generic imports
 import numpy as np
@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 # LMR specific imports
-from LMR_utils import global_mean, assimilated_proxies
+from LMR_utils import global_hemispheric_means, assimilated_proxies
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
@@ -29,15 +29,15 @@ bm.latlon_default = True
 ##################################
 
 # option to suppress figures
-iplot = False
-#iplot = True
+#iplot = False
+iplot = True
 
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
 
 # option to print figures
-#fsave = True
-fsave = False
+fsave = True
+#fsave = False
 
 # variable
 var = 'tas_sfc_Amon'
@@ -49,13 +49,19 @@ var = 'tas_sfc_Amon'
 # current datasets
 #
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
-nexp = 'testdev_150yr_75pct'
+#nexp = 'testdev_150yr_75pct'
 #nexp = 'testdev_check_1000_75pct'
 #nexp = 'ReconDevTest_1000_testing_coral'
 #nexp = 'ReconDevTest_1000_testing_icecore'
 #nexp = 'testdev_1000_100pct_icecoreonly'
 #nexp = 'testdev_1000_100pct_mxdonly'
 #nexp = 'testdev_1000_100pct_sedimentonly'
+#nexp = 'ReconMultiState_CCSM4_LastMillenium_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'ReconMultiState_CCSM4_PiControl_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'ReconMultiState_MPIESMP_LastMillenium_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'ReconMultiState_20CR_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'ReconMultiState_ERA20C_ens100_allAnnualProxyTypes_pf0.5'
+nexp = 'testdev'
 
 # OLD:
 
@@ -68,7 +74,7 @@ nexp = 'testdev_150yr_75pct'
 #nexp = 'testdev_1000_75pct_icecoreonly'
 #nexp = 'testdev_1000_75pct_coralonly'
 #nexp = 'testdev_1000_100pct_coralonly'
-#nexp = 'testdev_1000_100pct_icecoreonly'
+
 #nexp = 'testdev_1000_100pct_mxdonly'
 #nexp = 'testdev_1000_100pct_sedimentonly'
 # new
@@ -76,7 +82,7 @@ nexp = 'testdev_150yr_75pct'
 #nexp = 'testdev_1000_75pct_BE_noTRW'
 
 # override datadir
-datadir_output = '/home/chaos2/wperkins/data/LMR'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
 
 # number of contours for plots
@@ -87,7 +93,7 @@ alpha = 0.5
 
 # time range for verification (in years CE)
 #trange = [1960,1962]
-trange = [1850,2000] #works for nya = 0
+trange = [1880,2000] #works for nya = 0
 #trange = [1885,1995] #works for nya = 5
 #trange = [1890,1990] #works for nya = 10
 
@@ -112,7 +118,10 @@ print '\n getting file system information...\n'
 
 # get number of mc realizations from directory count
 tmp = os.listdir(workdir)
+# RT: added check to eliminate subdirectories that contain 'verif' ... work around to not include subdirectories that do not contain recons 
+tmp = [item for item in tmp if 'verif' not in item]
 print tmp
+
 # since some files may not be iteration subdirectories; count those that are
 niters = 0
 mcdir = []
@@ -181,7 +190,8 @@ print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
 #################################################################
 print '\nloading verification data...\n'
 
-datadir_calib = '../data/'
+#datadir_calib = '../data/'
+datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
 # load GISTEMP
 datafile_calib   = 'gistemp1200_ERSST.nc'
@@ -206,7 +216,8 @@ lon2_BE, lat2_BE = np.meshgrid(BE_lon, BE_lat)
 
 # load 20th century reanalysis (this is copied from R. Tardif's load_gridded_data.py routine)
 
-infile = '/home/disk/ice4/hakim/data/20th_century_reanalysis_v2/T_0.995/air.sig995.mon.mean.nc'
+#infile = '/home/disk/ice4/hakim/data/20th_century_reanalysis_v2/T_0.995/air.sig995.mon.mean.nc'
+infile = '/home/disk/kalman3/rtardif/LMR/data/model/20cr/air.sig995.mon.mean.nc'
 #infile = './data/500_allproxies_0/air.sig995.mon.mean.nc'
 
 data = Dataset(infile,'r')
@@ -233,6 +244,8 @@ TCR_time.sort # sort the list
 time_yrs  = np.empty(len(TCR_time), dtype=int)
 TCR = np.empty([len(TCR_time), len(lat_20CR), len(lon_20CR)], dtype=float)
 tcr_gm = np.zeros([len(TCR_time)])
+tcr_nhm = np.zeros([len(TCR_time)])
+tcr_shm = np.zeros([len(TCR_time)])
 
 # Loop over years in dataset
 for i in xrange(0,len(TCR_time)):        
@@ -245,7 +258,7 @@ for i in xrange(0,len(TCR_time)):
     # ---------------------------------------
     TCR[i,:,:] = np.nanmean(data.variables['air'][ind],axis=0)
     # compute the global mean temperature
-    tcr_gm[i] = global_mean(TCR[i,:,:],lat_20CR,lon_20CR)
+    [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],lat_20CR)
     
 # Remove the temporal mean 
 TCR = TCR - np.mean(TCR,axis=0)
@@ -505,7 +518,7 @@ plt.subplots_adjust(left=0.05, bottom=0.45, right=0.95, top=0.9, wspace=0.5, hsp
 fig.suptitle('2m air temperature anomaly correlation') 
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1]))
+    plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
 
 # GIS compared to TCR
 fig = plt.figure()
@@ -526,7 +539,7 @@ plt.subplots_adjust(left=0.05, bottom=0.45, right=0.95, top=0.9, wspace=0.5, hsp
 fig.suptitle('2m air temperature anomaly correlation') 
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1]))
+    plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
   
 
 
@@ -667,6 +680,10 @@ plt.xlabel('cofficient of efficiency',fontweight='bold')
 #plt.title('CE (TCR dashed; GIS solid)')
 plt.suptitle('LMR zonal-mean comparison with GIS (solid) and 20CR(dashed)')
 fig.tight_layout(pad = 2.0)
+if fsave:
+    print 'saving to .png'
+    plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
+
 plt.show()
 
 #
@@ -721,7 +738,7 @@ if iplot:
     fig.tight_layout()
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1]))   
+        plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT: added ".png"    
     
 
 if iplot:
@@ -744,13 +761,16 @@ print calib[0:-1,:].mean()
 
 fig = plt.figure()
 cb = LMR_plotter(calib,lat2_new,lon2_new,'Oranges',10,0,10)
-cb.set_ticks(range(11))
+#cb.set_ticks(range(11))
 # overlay stations!
 plt.title('ratio of ensemble-mean error variance to mean ensemble variance')
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1]))   
+    plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT: added ".png"   
 
 
 # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
 
+# NEW look at trends over specified time periods as a function of latitude
+
+# zonal means of the original LMR data
