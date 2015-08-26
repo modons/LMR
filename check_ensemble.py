@@ -48,7 +48,7 @@ for t in range(startim,startim+ntims):
 
     # compute global mean for check later
     xam_lalo = np.reshape(xam[0:stateDim],(nlat_new,nlon_new))
-    gmt[k] = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
+    [gmt[k],_,_] = LMR_utils.global_hemispheric_means(xam_lalo,lat_new[:,0])
 
 # generate the ensemble-mean files as in LMR_wrapper.py
 LMR_utils.ensemble_mean(workdir)
@@ -93,14 +93,14 @@ print '\n shape of xam from ensemble_mean.npz = ' + str(np.shape(xam_check))
 print xam_check
 print '----------------'
 print xam
-gmt_check = LMR_utils.global_mean(xam_check,lat[:,0],lon[0,:])
+[gmt_check,_,_] = LMR_utils.global_hemispheric_means(xam_check,lat[:,0])
 
 print gmt_check
 print '----------------'
 print gmt
 """
 
-gmt_check = LMR_utils.global_mean(xam_check,lat[:,0],lon[0,:])
+[gmt_check,_,_] = LMR_utils.global_hemispheric_means(xam_check,lat[:,0])
 
 #
 # read gmt data (as in LMR_verify_GM.py)

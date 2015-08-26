@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 #
 from LMR_plot_support import *
 from LMR_exp_NAMELIST import *
-from LMR_utils import global_mean, assimilated_proxies, coefficient_efficiency, rank_histogram
+from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
@@ -131,7 +131,7 @@ fsave = True
 #
 # current datasets
 #
-nexp = 'testing_1000_75pct_ens_size_Nens_10'
+#nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testing_1000_75pct_200members'
 #nexp = 'testdev_check_1000_75pct'
 #nexp = 'ReconDevTest_1000_testing_coral'
@@ -140,11 +140,14 @@ nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testdev_1000_100pct_mxdonly'
 #nexp = 'testdev_1000_100pct_sedimentonly'
 #nexp = 'testdev_detrend4_1000_75pct'
+nexp = 'ReconMultiState_MPIESMP_LastMillenium_ens100_allAnnualProxyTypes_pf0.5'
 
 # specify directories for LMR and calibration data
-datadir_output = '/home/disk/kalman3/hakim/LMR/'
+#datadir_output = '/home/disk/kalman3/hakim/LMR/'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-datadir_calib = '../data/'
+#datadir_calib = '../data/'
+datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
 # plotting preferences
 nlevs = 30 # number of contours
@@ -184,12 +187,14 @@ nlon_GIS = len(GIS_lon)
 # compute GIS & CRU global mean 
 #
 
-gis_gm = global_mean(GIS_anomaly,GIS_lat,GIS_lon)
+[gis_gm,gis_nhm,gis_shm] = global_hemispheric_means(GIS_anomaly,GIS_lat)
 
 # adjust so that all time series pertain to 20th century mean
 # fix previously set values
 smatch, ematch = find_date_indices(GIS_time,satime,eatime)
 gis_gm = gis_gm - np.mean(gis_gm[smatch:ematch])
+gis_nhm = gis_nhm - np.mean(gis_nhm[smatch:ematch])
+gis_shm = gis_shm - np.mean(gis_shm[smatch:ematch])
 
 # the ensemble size experiments
 ens_expts = [10,30,50,75,100,200,500]

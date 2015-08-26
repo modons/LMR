@@ -401,10 +401,10 @@ def read_gridded_data_NOAA(data_dir,data_file,data_vars):
 
 #==========================================================================================
 
-def read_gridded_data_ccsm4_last_millenium(data_dir,data_file,data_vars):
+def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
 #==========================================================================================
 #
-# Reads the monthly data of surface air temperature anomalies from the CCSM4 model
+# Reads the monthly data from a CMIP5 model and return yearly averaged values
 #
 # Input: 
 #      - data_dir     : Full name of directory containing gridded 
