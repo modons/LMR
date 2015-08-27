@@ -34,24 +34,26 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_priordir_change'
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    #nexp = 'p1rl_CCSM4_LastMillenium_ens100_allAnnualProxyTypes_pf0.75'
+    nexp = 'testdev'
+    #lmr_path = '/home/chaos2/wperkins/data/LMR'
+    lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1950, 2000]
+    recon_period = [1800, 2000]
     nens = 100
     iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
 
-    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
-    #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
+    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output/test'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
 class proxies:
@@ -225,8 +227,21 @@ class prior:
     """
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
-    datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
-    #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
     datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+
+    #prior_source     = 'ccsm4_preindustrial_control'
+    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc'
+
+    #prior_source     = 'mpi-esm-p_last_millenium'
+    #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
+
+    #prior_source     = '20cr'
+    #datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
+
+    #prior_source     = 'era20c'
+    #datafile_prior   = '[vardef_template]_ERA20C_190001-201212.nc'
+
+    datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     dataformat_prior = 'NCD'
+    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']

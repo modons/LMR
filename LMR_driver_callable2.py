@@ -39,7 +39,7 @@ from time import time
 
 import LMR_proxy2
 import LMR_prior
-import LMR_utils
+import LMR_utils2
 import LMR_config as BaseCfg
 from LMR_DA import enkf_update_array, cov_localization
 
@@ -222,7 +222,7 @@ def LMR_driver_callable(cfg=None):
 
             # calculate the truncated fieldNtimes
             [var_array_new, lat_new, lon_new] = \
-                LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
+                LMR_utils2.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
             nlat_new = np.shape(lat_new)[0]
             nlon_new = np.shape(lat_new)[1]
 
@@ -302,17 +302,25 @@ def LMR_driver_callable(cfg=None):
     # Loop over proxy types
     # ---------------------
 
-    # Array containing the global-mean state (for diagnostic purposes)
-    gmt_save = np.zeros([total_proxy_count+1,
-                         recon_period[1] - recon_period[0] + 1])
+    # Array containing the global and hemispheric-mean state (for diagnostic purposes)
+    # Now doing surface air temperature only (var = tas_sfc_Amon)!
+    gmt_save = np.zeros([total_proxy_count+1,recon_period[1] - recon_period[0] + 1])
+    nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
+    shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
     # get state vector indices where to find surface air temperature
     ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
     iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
     xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
     xbm_lalo = xbm.reshape(nlat_new, nlon_new)
-    gmt = LMR_utils.global_mean(xbm_lalo, lat_new[:, 0], lon_new[0, :])
-    gmt_save[0, :] = gmt # First row is prior GMT
-    gmt_save[1, :] = gmt # Prior for first proxy assimilated
+    [gmt,nhmt,shmt] = LMR_utils2.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
+    # First row is prior GMT
+    gmt_save[0, :] = gmt
+    nhmt_save[0,:] = nhmt
+    shmt_save[0,:] = shmt
+    # Prior for first proxy assimilated
+    gmt_save[1, :] = gmt 
+    nhmt_save[1,:] = nhmt
+    shmt_save[1,:] = shmt
 
     lasttime = time()
     for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1)):
@@ -376,8 +384,10 @@ def LMR_driver_callable(cfg=None):
             Xb = Xa
             xam = Xa.mean(axis=1)
             xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
-            gmt = LMR_utils.global_mean(xam_lalo, lat_new[:, 0], lon_new[0, :])
+            [gmt,nhmt,shmt] = LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
             gmt_save[proxy_idx+1, yr_idx] = gmt
+            nhmt_save[proxy_idx+1, yr_idx] = nhmt
+            shmt_save[proxy_idx+1, yr_idx] = shmt
 
             # check the variance change for sign
             thistime = time()
@@ -401,25 +411,29 @@ def LMR_driver_callable(cfg=None):
         print 'Reconstruction completed in ' + str(end_time/60.0)+' mins'
         print '====================================================='
 
-    # 3 July 2015: compute and save the GMT for the full ensemble
+    # 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
     # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([ntimes, nens])
+    nhmt_ensemble = np.zeros([ntimes,nens])
+    shmt_ensemble = np.zeros([ntimes,nens])
     for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1)):
         filen = join(workdir, 'year{:04d}'.format(yr))
         Xa = np.load(filen+'.npy')
         for k in xrange(nens):
             xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
-            gmt = LMR_utils.global_mean(xam_lalo, lat_new[:, 0], lon_new[0, :])
+            [gmt,nhmt,shmt] = LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
             gmt_ensemble[iyr, k] = gmt
+            nhmt_ensemble[iyr, k] = nhmt
+            shmt_ensemble[iyr, k] = shmt
 
     filen = join(workdir, 'gmt_ensemble')
-    np.savez(filen, gmt_ensemble=gmt_ensemble, recon_times=recon_times)
+    np.savez(filen, gmt_ensemble=gmt_ensemble,nhmt_ensemble=nhmt_ensemble,shmt_ensemble=shmt_ensemble,recon_times=recon_times)
 
     # save global mean temperature history and the proxies assimilated
     print ('saving global mean temperature update history and ',
            'assimilated proxies...')
     filen = join(workdir, 'gmt')
-    np.savez(filen, gmt_save=gmt_save, recon_times=recon_times,
+    np.savez(filen, gmt_save=gmt_save, nhmt_save=nhmt_save, shmt_save=shmt_save, recon_times=recon_times,
              apcount=total_proxy_count, tpcount=total_proxy_count)
 
     # TODO: (AP) The assim/eval lists of lists instead of lists of 1-item dicts

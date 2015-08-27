@@ -96,9 +96,6 @@ for iter_num in MCiters:
     os.system(cmd)    
     cmd = 'mv -f ' + loc_dir+'/nonassim*' + ' ' + mc_dir + '/'
     print cmd
-    os.system(cmd)    
-    cmd = 'mv -f ' + loc_dir+'/gmt_ensemble*' + ' ' + mc_dir + '/'
-    print cmd
     os.system(cmd)
 
     # removing the work output directory once selected files have been moved
