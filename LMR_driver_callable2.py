@@ -381,7 +381,6 @@ def LMR_driver_callable(cfg=None):
 
             # Update the state
             Xa = enkf_update_array(Xb, Y.values[t], Ye, ob_err, loc)
-            Xb = Xa
             xam = Xa.mean(axis=1)
             xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
             [gmt,nhmt,shmt] = LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
@@ -398,9 +397,11 @@ def LMR_driver_callable(cfg=None):
                 print 'max change in variance:' + str(np.max(vardiff))
                 print 'update took ' + str(thistime-lasttime) + 'seconds'
             lasttime = thistime
+            # Put analysis Xa in Xb for next assimilation
+            Xb = Xa
 
-        # Dump Xa to file
-        np.save(filen, Xa)
+        # Dump Xa to file (use Xb in case no proxies assimilated for current year)
+        np.save(filen, Xb)
 
     end_time = time() - begin_time
 
