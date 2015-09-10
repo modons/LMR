@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 # this is a plotting convenience function for quick LMR plots
-def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None):
+def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None,extend=None):
 
     """
     Inputs:
@@ -33,7 +33,7 @@ def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None):
     # set the contour values based on the data range
     cints = np.linspace(vmin, vmax, nlevs, endpoint=True)
     m = bm.Basemap(projection='robin',lon_0=0)
-    cs = m.contourf(lon,lat,data,cints,cmap=plt.get_cmap(cmap),vmin=vmin,vmax=vmax)
+    cs = m.contourf(lon,lat,data,cints,cmap=plt.get_cmap(cmap),vmin=vmin,vmax=vmax,extend=extend)
     m.drawcoastlines()
     m.colorbar(cs)
     #cbar = m.colorbar(ticks=cints)

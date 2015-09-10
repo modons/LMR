@@ -14,6 +14,8 @@ def prior_assignment(iprior):
         prior_object = prior_ccsm4_preindustrial_control()
     elif iprior == 'mpi-esm-p_last_millenium':
         prior_object = prior_mpi_esm_p_last_millenium()
+    elif iprior == 'gfdl-cm3_preindustrial_control':
+        prior_object = prior_gfdl_cm3_preindustrial_control()
     elif iprior == '20cr':
         prior_object = prior_20cr()
     elif iprior == 'era20c':
@@ -191,6 +193,14 @@ class prior_ccsm4_preindustrial_control(prior_master):
 
 # class for the MPI-ESM-P Last Millenniun simulation
 class prior_mpi_esm_p_last_millenium(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        return
+
+# class for the GFDL-CM3 Pre-Industrial Control simulation
+class prior_gfdl_cm3_preindustrial_control(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model

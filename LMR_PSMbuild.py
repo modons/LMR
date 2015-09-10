@@ -60,6 +60,7 @@ proxy_resolution = [1.0]
 datatag_calib = 'GISTEMP'
 #datatag_calib = 'HadCRUT'
 #datatag_calib = 'BerkeleyEarth'
+#datatag_calib = 'MLOST'
 #datatag_calib = 'NOAA'
 datadir_calib = LMRpath+'/data/analyses';
 
