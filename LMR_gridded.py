@@ -9,15 +9,17 @@ from abc import abstractmethod, ABCMeta
 from netCDF4 import Dataset, num2date
 from datetime import datetime, timedelta
 from collections import OrderedDict
+from itertools import izip
 import numpy as np
 import os
 from copy import deepcopy
 from os.path import join
 import cPickle
 import random
+import tables as tb
 
 from LMR_config import constants
-from LMR_utils2 import regrid_sphere2
+from LMR_utils2 import regrid_sphere2, var_to_hdf5_carray
 _LAT = 'lat'
 _LON = 'lon'
 _LEV = 'lev'
@@ -36,7 +38,7 @@ class GriddedVariable(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, name, dims_ordered, data, resolution, time=None,
-                 lev=None, lat=None, lon=None):
+                 lev=None, lat=None, lon=None, fill_val=None):
         self.name = name
         self.dim_order = dims_ordered
         self.ndim = len(dims_ordered)
@@ -46,6 +48,7 @@ class GriddedVariable(object):
         self.lev = lev
         self.lat = lat
         self.lon = lon
+        self._fill_val = fill_val
 
         self._dim_coord_map = {_TIME: self.time,
                                _LEV: self.lev,
@@ -93,9 +96,33 @@ class GriddedVariable(object):
         else:
             raise ValueError('Unrecognized dimension combination.')
 
-    def save(self, filename):
-        with open(filename, 'w') as f:
-            cPickle.dump(self, f)
+    def save(self, filename, position=0):
+
+        filename += '.h5'
+
+        #Remove data from object before pickling
+        tmp_dat = self.data
+        del self.data
+
+        data_grp = '/data/'
+
+        # Open file to write to
+        with tb.open_file(filename, 'a',
+                          filters=tb.Filters(complib='blosc',
+                                             complevel=2)) as h5f:
+            if '/grid_objects' in h5f:
+                pobj_array = h5f.get_node('/grid_objects')
+            else:
+            # Write the prior_object
+                pobj_array = h5f.create_vlarray('/', 'grid_objects',
+                                                atom=tb.ObjectAtom,
+                                                createparents=True)
+            pobj_array.append(self)
+
+            # Write the data
+            self.nan_to_fill_val()
+            var_to_hdf5_carray(h5f, data_grp, str(position), tmp_dat)
+            self.fill_val_to_nan()
 
     def truncate(self, ntrunc=42):
 
@@ -114,6 +141,12 @@ class GriddedVariable(object):
                          lat=new_lat[:, 0],
                          lon=new_lon[0])
 
+    def fill_val_to_nan(self):
+        self.data[self.data == self._fill_val] = np.nan
+
+    def nan_to_fill_val(self):
+        self.data[~np.isfinite(self.data)] = self._fill_val
+
     def flattened_spatial(self):
 
         flat_data = self.data.reshape(len(self.time),
@@ -127,21 +160,17 @@ class GriddedVariable(object):
 
         return flat_data, flat_coords
 
-    def sample(self, nens, seed=None):
+    def sample_from_idx(self, sample_idxs):
         """
         Random sample ensemble of current gridded variable
         """
 
         cls = type(self)
+        nsamples = len(sample_idxs)
+        time_sample = np.array(self.time)[sample_idxs]
 
-        if seed:
-            random.seed(seed)
-
-        ind_ens = random.sample(range(len(self.time)), nens)
-        time_sample = np.array(self.time)[ind_ens]
-
-        data_sample = np.zeros([nens] + list(self.data.shape[1:]))
-        for k, idx in enumerate(ind_ens):
+        data_sample = np.zeros([nsamples] + list(self.data.shape[1:]))
+        for k, idx in enumerate(sample_idxs):
             data_sample[k] = self.data[idx]
 
         return cls(self.name, self.dim_order, data_sample, self.resolution,
@@ -161,44 +190,94 @@ class GriddedVariable(object):
 
     @classmethod
     def _load_pre_avg_obj(cls, dir_name, filename, varname, resolution,
-                          yr_shift, truncate=False):
+                          truncate=False, sample=None):
+
+
+        """
+        General structure for load pre-averaged:
+        1. Load data (done so into sub_annual groups if applicable)
+            a. If truncate is desired it searches for pre_avg truncated data
+               but if not found, then it searches for full pre_avg data
+        5. Sample if desired
+        6. Return list of GriddedVar objects
+        """
 
         # Check if pre-processed averages file exists
-        pre_avg_tag = '.pre_avg_{}_res{:02.1f}_shift{:d}'.format(varname,
-                                                                 resolution,
-                                                                 yr_shift)
+        pre_avg_tag = '.pre_avg_{}_res{:02.1f}'.format(varname,
+                                                       resolution)
         trunc_tag = '.trnc'
+        ftype_tag = '.h5'
 
         path = join(dir_name, filename + pre_avg_tag)
 
         if truncate:
             path += trunc_tag
 
+        path += ftype_tag
+
         # Look for pre_averaged_file
         if os.path.exists(path):
-
-            with open(path, 'r') as f:
-                prior_obj = cPickle.load(f)
-
+            gobjs = cls._load_gridobjs_from_hdf5(path, sample)
         elif truncate and os.path.exists(path.strip(trunc_tag)):
             # If truncate requested and truncate not found look for
             # pre-averaged full version
-            with open(path.strip(trunc_tag), 'r') as f:
-                prior_obj = cPickle.load(f)
+            full_dat_path = path.strip(trunc_tag)
+            gobjs = cls._load_gridobjs_from_hdf5(full_dat_path, sample)
 
-            prior_obj = prior_obj.truncate()
-            prior_obj.save(path)
+            for i, gobj in enumerate(gobjs):
+                gobj = gobj.truncate()
+                gobj.save(path, position=i)
+                gobjs[i] = gobj
         else:
             raise IOError('No pre-averaged file found for given specifications')
 
-        return prior_obj
+        return gobjs
+
+    @staticmethod
+    def _load_gridobjs_from_hdf5(path, sample_idxs):
+        with tb.open_file(path, 'r') as h5f:
+            obj_arr = h5f.prior_objects
+            tmp_dat = h5f.get_node('/data/0')
+            if sample_idxs:
+                sample_dat = np.zeros((len(sample_idxs), tmp_dat.shape[1:]))
+
+            gobjs = []
+            for i, obj in enumerate(obj_arr):
+                data = h5f.get_node('/data/' + str(i))
+
+                if sample_idxs:
+                    # Sample data
+                    for j, idx in enumerate(sample_idxs):
+                        sample_dat[j] = data[idx]
+                    obj_data = sample_dat
+
+                    # Sample time
+                    obj.time = obj.time[sample_idxs]
+                else:
+                    obj_data = data.read()
+
+                # Set data attribute
+                obj.data = obj_data
+
+                gobjs.append(obj)
+
+        return gobjs
 
     @classmethod
     def _load_from_netcdf(cls, dir_name, filename, varname, resolution,
-                          yr_shift, truncate=False, save=False):
+                          truncate=False, sample=None, save=False):
+        """
+        General structure for load origininal:
+        1. Load data
+        2. Avg to base resolution
+        3. Separate into subannual groups
+        4. Create GriddedVar Object for each group and save pre-averaged
+        5. Sample if desired
+        6. Return list of GriddedVar objects
+        """
 
         # Check if pre-processed averages file exists
-        pre_avg_name = '.pre_avg_{}_res{:02.1f}_shift{:d}'
+        pre_avg_name = '.pre_avg_{}_res{:02.1f}'
 
         with Dataset(join(dir_name, filename), 'r') as f:
             ncf_varname = varname.split('_')[0]
@@ -241,8 +320,7 @@ class GriddedVariable(object):
             dim_vals[_TIME], avg_data = \
                 cls._time_avg_gridded_to_resolution(dim_vals[_TIME],
                                                     var[:],
-                                                    resolution,
-                                                    yr_shift)
+                                                    resolution)
 
             # TODO: Replace with logger statement
             print (varname, ' res ', resolution, ': Global: mean=',
@@ -252,23 +330,38 @@ class GriddedVariable(object):
             # Filename for saving pre-averaged pickle
             new_fname = join(dir_name,
                              filename + pre_avg_name.format(varname,
-                                                            resolution,
-                                                            yr_shift))
+                                                            resolution))
 
-            # Create GriddedVariable object
-            prior_obj = cls(varname, dims, avg_data, resolution, **dim_vals)
-            if save:
-                prior_obj.save(new_fname)
+            #Separate into subannual objects if res < 1.0
+            new_avg_data, new_time = cls._subannual_decomp(avg_data,
+                                                           dim_vals[_TIME],
+                                                           resolution)
 
-            if truncate:
-                try:
-                    prior_obj = prior_obj.truncate()
-                    if save:
-                        prior_obj.save(new_fname + '.trnc')
-                except AssertionError:
-                    pass
+            # Create gridded objects
+            grid_objs = []
+            for i, (new_dat, new_t) in enumerate(izip(new_avg_data, new_time)):
+                dim_vals[_TIME] = new_t
+                grid_obj = cls(varname, dims, new_dat, resolution, **dim_vals)
+                #TODO: fix saving to HDF5 annual prior objects
+                if save:
+                    grid_obj.save(new_fname, position=i)
 
-            return prior_obj
+                if truncate:
+                    try:
+                        grid_obj = grid_obj.truncate()
+
+                        if save:
+                            grid_obj.save(new_fname + '.trnc', position=i)
+                    except AssertionError:
+                        # If datatype is not horizontal it won't be truncated
+                        pass
+
+                if sample:
+                    grid_obj = grid_obj.sample_from_idx()
+
+                grid_objs.append(grid_obj)
+
+            return grid_objs
 
     @staticmethod
     def _netcdf_datetime_convert(time_var):
@@ -303,6 +396,22 @@ class GriddedVariable(object):
                                        d.hour, d.minute, d.second)
                               for d in time]
             return np.array(reshifted_time)
+
+    @staticmethod
+    def _subannual_decomp(data, time, resolution):
+
+        num_subann_chunks = np.ceil(1.0/resolution)
+        tlen = len(time) / num_subann_chunks
+
+        new_data = np.zeros((num_subann_chunks, tlen, data.shape[1:]),
+                            dtype=data.dtype)
+        new_time = np.zeros((num_subann_chunks, tlen),
+                            dtype=time.dtype)
+        for i in xrange(num_subann_chunks):
+            new_data[i] = data[i::num_subann_chunks]
+            new_time[i] = time[i::num_subann_chunks]
+
+        return new_data, new_time
 
     @staticmethod
     def _time_avg_gridded_to_resolution(time_vals, data, resolution,
@@ -363,9 +472,7 @@ class PriorVariable(GriddedVariable):
         file_name = config.prior.datafile_prior
         file_type = config.prior.dataformat_prior
         base_resolution = config.core.assimilation_time_res[0]
-        yr_shift = config.core.year_start_idx_shift
-        nens = config.core.nens
-        seed = config.core.seed
+        sample_idxs = config.prior.prior_sample_idx
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
@@ -375,23 +482,14 @@ class PriorVariable(GriddedVariable):
         fname = file_name.replace('[vardef_template]', varname)
 
         try:
-            var_obj = cls._load_pre_avg_obj(file_dir, fname, varname,
-                                            base_resolution, yr_shift)
+            var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
+                                             base_resolution,
+                                             sample=sample_idxs)
             print 'Loaded pre-averaged file.'
         except IOError:
             print 'No pre-averaged file found... Loading directly from file.'
-            var_obj = ftype_loader(file_dir, fname, varname, base_resolution,
-                                   yr_shift, save=True)
-
-        if base_resolution < 1.0:
-            var_objs = var_obj.subannual_resolution_prior()
-        else:
-            var_objs = [var_obj]
-
-        # Sample from loaded data if desired
-        if nens:
-            var_objs = [obj.sample(nens, seed=seed)
-                        for obj in var_objs]
+            var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
+                                    sample=sample_idxs, save=True)
 
         return var_objs
 
@@ -430,29 +528,6 @@ class PriorVariable(GriddedVariable):
         print ('Removing the temporal mean (for every gridpoint) from the '
                'prior...')
         return time, anom_data
-
-    def subannual_resolution_prior(self):
-        """
-        Divides sub-annual resolution priors into a set of PriorVar objects
-        for each season
-        :return:
-        """
-
-        num_priors = int(np.ceil(1./self.resolution))
-        class_obj = type(self)
-        seasonal_priors = []
-        for i in xrange(num_priors):
-            new_prior = class_obj(self.name,
-                                  self.dim_order,
-                                  self.data[i::num_priors],
-                                  self.resolution,
-                                  time=self.time[i::num_priors],
-                                  lev=self.lev,
-                                  lat=self.lat,
-                                  lon=self.lon)
-            seasonal_priors.append(new_prior)
-
-        return seasonal_priors
 
 
 class State(object):
