@@ -12,9 +12,9 @@ from math import radians, cos, sin, asin, sqrt
 import glob
 import numpy as np
 import cPickle
-from math import radians, cos, sin, asin, sqrt
+import tables as tb
 from scipy import signal
-from spharm import Spharmt, getspecindx, regrid
+from spharm import Spharmt, regrid
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -555,3 +555,102 @@ def augment_docstr(func):
     """ Decorator to mark augmented function docstrings. """
     func.func_doc = '%%aug%%' + func.func_doc
     return func
+
+
+def var_to_hdf5_carray(h5file, group, node, data, **kwargs):
+    """
+    Take an input data and insert into a PyTables carray in an HDF5 file.
+
+    Parameters
+    ----------
+    h5file: tables.File
+        Writeable HDF5 file to insert the carray into.
+    group: str, tables.Group
+        PyTables group to insert the data node into
+    node: str, tables.Node
+        PyTables node of the carray.  If it already exists it will remove
+        the existing node and create a new one.
+    data: ndarray
+        Data to be inserted into the node carray
+    kwargs:
+        Extra keyword arguments to be passed to the
+        tables.File.create_carray method.
+
+    Returns
+    -------
+    tables.carray
+        Pointer to the created carray object.
+    """
+    assert(type(h5file) == tb.File)
+
+    # Switch to string
+    if type(group) != str:
+        group = group._v_pathname
+
+    # Join path for node existence check
+    if group[-1] == '/':
+        node_path = group + node
+    else:
+        node_path = '/'.join((group, node))
+
+    # Check existence and remove if necessary
+    if h5file.__contains__(node_path):
+        h5file.remove_node(node_path)
+
+    out_arr = h5file.create_carray(group,
+                                   node,
+                                   atom=tb.Atom.from_dtype(data.dtype),
+                                   shape=data.shape,
+                                   **kwargs)
+    out_arr[:] = data
+    return out_arr
+
+
+def empty_hdf5_carray(h5file, group, node, in_atom, shape, **kwargs):
+    """
+    Create an empty PyTables carray.  Replaces node if it already exists.
+
+    Parameters
+    ----------
+    h5file: tables.File
+        Writeable HDF5 file to insert the carray into.
+    group: str, tables.Group
+        PyTables group to insert the data node into
+    node: str, tables.Node
+        PyTables node of the carray.  If it already exists it will remove
+        the existing node and create a new one.
+    in_atom: tables.Atom
+        Atomic datatype and chunk size for the carray.
+    shape: tuple, list
+        Shape of empty carray to be created.
+    kwargs:
+        Extra keyword arguments to be passed to the
+        tables.File.create_carray method.
+
+    Returns
+    -------
+    tables.carray
+        Pointer to the created carray object.
+    """
+    assert(type(h5file) == tb.File)
+
+    # Switch to string
+    if type(group) == tb.Group:
+        group = group._v_pathname
+
+    # Join path for node existence check
+    if group[-1] == '/':
+        node_path = group + node
+    else:
+        node_path = '/'.join((group, node))
+
+    # Check existence and remove if necessary
+    if h5file.__contains__(node_path):
+        h5file.remove_node(node_path)
+
+    out_arr = h5file.create_carray(group,
+                                   node,
+                                   atom=in_atom,
+                                   shape=shape,
+                                   **kwargs)
+    return out_arr
