@@ -59,7 +59,16 @@ plt.rc('text', usetex=False)
 #nexp = 'ReconMultiState_MPIESMP_LastMillenium_ens100_allAnnualProxyTypes_pf0.5'
 #nexp = 'ReconMultiState_20CR_ens100_allAnnualProxyTypes_pf0.5'
 #nexp = 'ReconMultiState_ERA20C_ens100_allAnnualProxyTypes_pf0.5'
-nexp = 'testdev'
+#nexp = 'p1rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p2rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p2rl_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
+nexp = 'p2rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p2rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 
 # Run diagnostics over this range of Monte-Carlo reconstructions
 iter_range = [0,100]
@@ -103,12 +112,14 @@ proxy_resolution = [1.0]
 
 # Source of calibration data (for PSM)
 datatag_calib = 'GISTEMP'
+#datatag_calib = 'MLOST'
 #datatag_calib = 'HadCRUT'
 #datatag_calib = 'BerkeleyEarth'
 
 datadir_calib = LMRpath+'/data/analyses';
 
 # Threshold correlation of linear PSM 
+#PSM_r_crit = None
 PSM_r_crit = 0.2
 
 # =========================================================================================

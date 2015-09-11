@@ -303,6 +303,101 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars):
 
 #==========================================================================================
 
+def read_gridded_data_MLOST(data_dir,data_file,data_vars):
+#==========================================================================================
+#
+# Reads the monthly data of surface air temperature anomalies from the MLOST NOAA/NCDC 
+# gridded product.
+#
+# Input: 
+#      - data_dir     : Full name of directory containing gridded 
+#                       data. (string)
+#      - data_file    : Name of file containing gridded data. (string)
+#
+#      - data_vars    : List of variable names to read. (string list)
+#                       Here should simply be ['Tsfc'], as only sfc temperature 
+#                       data (anomalies) are contained in the file.
+#
+# Output: (numpy arrays)
+#      - time_yrs     : Array with years over which data is available.
+#                       dims: [nb_years]
+#      - lat          : Array containing the latitudes of gridded  data. 
+#                       dims: [lat]
+#      - lon          : Array containing the longitudes of gridded  data. 
+#                       dims: [lon]
+#      - value        : Array with the annually-averaged data calculated from monthly data 
+#                       dims: [time,lat,lon]
+# 
+#========================================================================================== 
+
+    from netCDF4 import Dataset
+    from datetime import datetime, timedelta
+    import numpy as np
+    import os.path
+
+    # Check if file exists
+    infile = data_dir+'/MLOST/'+data_file
+    if not os.path.isfile(infile):
+        print 'Error in specification of gridded dataset'
+        print 'File ', infile, ' does not exist! - Exiting ...'
+        exit(1)
+
+    # Sanity check on number of variables to read
+    if len(data_vars) > 1:
+        print 'Too many variables to read!'
+        print 'This file only contains surface air temperature (anomalies)'
+        print 'Exiting!'
+        exit(1)
+
+    data = Dataset(infile,'r')
+
+    lat   = data.variables['lat'][:]
+    lon   = data.variables['lon'][:]
+
+    indneg = np.where(lon < 0)[0]
+    if len(indneg) > 0: # if non-empty
+        lon[indneg] = 360.0 + lon[indneg]
+
+    # -----------------------------------------------------------------
+    # Time is in "days since 1800-1-1 0:0:0":convert to calendar years
+    # -----------------------------------------------------------------        
+    time_yrs = []
+    dateref = datetime(1800,1,1,0)
+    for i in xrange(0,len(data.variables['time'][:])):
+        time_yrs.append(dateref + timedelta(days=int(data.variables['time'][i])))
+
+    # ------------------------------
+    # Convert monthly data to annual
+    # ------------------------------
+    # List years available in dataset and sort
+    years_all = []
+    for i in xrange(0,len(time_yrs)):
+        isotime = time_yrs[i].isoformat()
+        years_all.append(int(isotime.split("-")[0]))
+    years = list(set(years_all)) # 'set' is used to get unique values in list
+    years.sort # sort the list
+
+    time_yrs  = np.zeros(len(years), dtype=int)
+    value = np.zeros([len(years), len(lat), len(lon)], dtype=float)
+
+    
+    fillval = data.variables['air'].missing_value
+    tmp = np.copy(data.variables['air'])
+    tmp[tmp == fillval] = np.NAN
+    # Loop over years in dataset
+    for i in xrange(0,len(years)):        
+        # find indices in time array where "years[i]" appear
+        ind = [j for j, k in enumerate(years_all) if k == years[i]]
+        time_yrs[i] = years[i]
+        # ---------------------------------------
+        # Calculate annual mean from monthly data
+        # Note: data has dims [time,lat,lon]
+        # ---------------------------------------
+        value[i,:,:] = np.nanmean(tmp[ind],axis=0)
+
+    return time_yrs, lat, lon, value
+
+#==========================================================================================
 
 def read_gridded_data_NOAA(data_dir,data_file,data_vars):
 #==========================================================================================

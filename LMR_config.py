@@ -34,8 +34,18 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    #nexp = 'p1rl_CCSM4_LastMillenium_ens100_allAnnualProxyTypes_pf0.75'
-    nexp = 'testdev'
+    # *Note: Series with Near Sfc temperature, 500 hPa height and AMOC index as state variables
+    #nexp = 'p1rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    #nexp = 'p1rl_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    #nexp = 'p1rl_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    #nexp = 'p1rl_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    #nexp = 'p1rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    # *Note: As "p1rl", with OHC in various ocean basins added to state variables
+    #nexp = 'p2rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    #nexp = 'p2rl_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
+    nexp = 'p2rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    # *Note: As "p2rl", but with r_crit = 0
+    #nexp = 'p2rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
@@ -199,8 +209,11 @@ class psm:
             Usage threshold for correlation of linear PSM
         """
         datatag_calib = 'GISTEMP'
-        datadir_calib = join(core.lmr_path, 'data', 'analyses')
         datafile_calib = 'gistemp1200_ERSST.nc'
+        #datatag_calib = 'MLOST'
+        #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+
+        datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
 
         pre_calib_datafile = join(core.lmr_path,
@@ -230,7 +243,10 @@ class prior:
     datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 
     #prior_source     = 'ccsm4_preindustrial_control'
-    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc'
+    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
+
+    prior_source     = 'gfdl-cm3_preindustrial_control'
+    datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
 
     #prior_source     = 'mpi-esm-p_last_millenium'
     #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
@@ -244,4 +260,9 @@ class prior:
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     dataformat_prior = 'NCD'
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
-    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
+                       'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
+                       'ohcPacificNH_0-700m_Omon','ohcPacificSH_0-700m_Omon',
+                       'ohcIndian_0-700m_Omon','ohcSouthern_0-700m_Omon']
+

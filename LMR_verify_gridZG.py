@@ -40,7 +40,7 @@ fsave = True
 #fsave = False
 
 # variable
-var = 'tas_sfc_Amon'
+var = 'zg_500hPa_Amon'
 
 # set paths, the filename for plots, and global plotting preferences
 
@@ -96,7 +96,8 @@ alpha = 0.5
 
 # time range for verification (in years CE)
 #trange = [1960,1962]
-trange = [1880,2000] #works for nya = 0
+#trange = [1880,2000] #works for nya = 0
+trange = [1900,2000] #works for nya = 0 
 #trange = [1885,1995] #works for nya = 5
 #trange = [1890,1990] #works for nya = 10
 
@@ -111,8 +112,6 @@ plt.rc('text', usetex=False)
 ##################################
 # END:  set user parameters here
 ##################################
-
-# In[52]:
 
 workdir = datadir_output + '/' + nexp
 print 'working directory = ' + workdir
@@ -144,7 +143,6 @@ first = True
 k = -1
 for dir in mcdir:
     k = k + 1
-    #ensfiln = workdir + '/' + dir + '/ensemble_mean.npz'
     ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
     npzfile = np.load(ensfiln)
     print  npzfile.files
@@ -184,39 +182,12 @@ print '\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
 print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
 
 #################################################################
-# BEGIN: load verification data (GISTEMP, HadCRU, BE, and 20CR) #
+# BEGIN: load verification data (20CR and ERA20C)               #
 #################################################################
 print '\nloading verification data...\n'
 
-#datadir_calib = '../data/'
-datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
-
-# load GISTEMP
-datafile_calib   = 'gistemp1200_ERSST.nc'
-calib_vars = ['Tsfc']
-[GIS_time,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars)
-nlat_GIS = len(GIS_lat)
-nlon_GIS = len(GIS_lon)
-lon2_GIS, lat2_GIS = np.meshgrid(GIS_lon, GIS_lat)
-
-# load HadCRU
-datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
-calib_vars = ['Tsfc']
-[CRU_time,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars)
-
-# load BerkeleyEarth
-datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
-calib_vars = ['Tsfc']
-[BE_time,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars)
-nlat_BE = len(BE_lat)
-nlon_BE = len(BE_lon)
-lon2_BE, lat2_BE = np.meshgrid(BE_lon, BE_lat)
-
-# load 20th century reanalysis (this is copied from R. Tardif's load_gridded_data.py routine)
-
-#infile = '/home/disk/ice4/hakim/data/20th_century_reanalysis_v2/T_0.995/air.sig995.mon.mean.nc'
-infile = '/home/disk/kalman3/rtardif/LMR/data/model/20cr/air.sig995.mon.mean.nc'
-#infile = './data/500_allproxies_0/air.sig995.mon.mean.nc'
+# load NOAA's 20th century reanalysis
+infile = '/home/disk/kalman3/rtardif/LMR/data/model/20cr/zg_500hPa_Amon_20CR_185101-201112.nc'
 
 data = Dataset(infile,'r')
 lat_20CR   = data.variables['lat'][:]
@@ -254,7 +225,7 @@ for i in xrange(0,len(TCR_time)):
     # Calculate annual mean from monthly data
     # Note: data has dims [time,lat,lon]
     # ---------------------------------------
-    TCR[i,:,:] = np.nanmean(data.variables['air'][ind],axis=0)
+    TCR[i,:,:] = np.nanmean(data.variables['zg'][ind],axis=0)
     # compute the global mean temperature
     [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],lat_20CR)
     
@@ -268,8 +239,63 @@ etime = 1999
 smatch, ematch = find_date_indices(TCR_time,stime,etime)
 tcr_gm = tcr_gm - np.mean(tcr_gm[smatch:ematch])
 
+
+# load ERA20C reanalysis
+infile = '/home/disk/kalman3/rtardif/LMR/data/model/era20c/zg_500hPa_Amon_ERA20C_190001-201212.nc'
+
+data = Dataset(infile,'r')
+lat_ERA20C   = data.variables['lat'][:]
+lon_ERA20C   = data.variables['lon'][:]
+nlat_ERA20C = len(lat_ERA20C)
+nlon_ERA20C = len(lon_ERA20C)
+lon2_ERA20C, lat2_ERA20C = np.meshgrid(lon_ERA20C, lat_ERA20C)
+ 
+dateref = datetime(1900,1,1,0)
+time_yrs = []
+# absolute time from the reference
+for i in xrange(0,len(data.variables['time'][:])):
+    time_yrs.append(dateref + timedelta(hours=int(data.variables['time'][i])))
+
+years_all = []
+for i in xrange(0,len(time_yrs)):
+    isotime = time_yrs[i].isoformat()
+    years_all.append(int(isotime.split("-")[0]))
+
+ERA20C_time = np.array(list(set(years_all))) # 'set' is used to get unique values in list
+ERA20C_time.sort # sort the list
+
+time_yrs  = np.empty(len(ERA20C_time), dtype=int)
+ERA20C = np.empty([len(ERA20C_time), len(lat_ERA20C), len(lon_ERA20C)], dtype=float)
+era20c_gm = np.zeros([len(ERA20C_time)])
+era20c_nhm = np.zeros([len(ERA20C_time)])
+era20c_shm = np.zeros([len(ERA20C_time)])
+
+# Loop over years in dataset
+for i in xrange(0,len(ERA20C_time)):        
+    # find indices in time array where "years[i]" appear
+    ind = [j for j, k in enumerate(years_all) if k == ERA20C_time[i]]
+    time_yrs[i] = ERA20C_time[i]
+    # ---------------------------------------
+    # Calculate annual mean from monthly data
+    # Note: data has dims [time,lat,lon]
+    # ---------------------------------------
+    ERA20C[i,:,:] = np.nanmean(data.variables['zg'][ind],axis=0)
+    # compute the global mean Z500
+    [era20c_gm[i],era20c_nhm[i],era20c_shm[i]] = global_hemispheric_means(ERA20C[i,:,:],lat_ERA20C)
+    
+# Remove the temporal mean 
+ERA20C = ERA20C - np.mean(ERA20C,axis=0)
+print 'ERA20C shape = ' + str(np.shape(ERA20C))
+
+# compute and remove the 20th century mean
+stime = 1900
+etime = 1999
+smatch, ematch = find_date_indices(ERA20C_time,stime,etime)
+era20c_gm = era20c_gm - np.mean(era20c_gm[smatch:ematch])
+
+
 ###############################################################
-# END: load verification data (GISTEMP, HadCRU, BE, and 20CR) #
+# END: load verification data (20CR and ERA20C)               #
 ###############################################################
 
 print '\n regridding data to a common T42 grid...\n'
@@ -280,11 +306,10 @@ iplot_loc= False
 # create instance of the spherical harmonics object for each grid
 specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
 specob_tcr = Spharmt(nlon_20CR,nlat_20CR,gridtype='regular',legfunc='computed')
-specob_gis = Spharmt(nlon_GIS,nlat_GIS,gridtype='regular',legfunc='computed')
-specob_be = Spharmt(nlon_BE,nlat_BE,gridtype='regular',legfunc='computed')
+specob_era20c = Spharmt(nlon_ERA20C,nlat_ERA20C,gridtype='regular',legfunc='computed')
 
 # truncate to a lower resolution grid (common:21, 42, 62, 63, 85, 106, 255, 382, 799)
-ntrunc_new = 42 # T21
+ntrunc_new = 42 # T42
 ifix = np.remainder(ntrunc_new,2.0).astype(int)
 nlat_new = ntrunc_new + ifix
 nlon_new = int(nlat_new*1.5)
@@ -311,33 +336,28 @@ if nya > 0:
 
 cyears = range(trange[0],trange[1])
 lt_csave = np.zeros([len(cyears)])
-lg_csave = np.zeros([len(cyears)])
-tg_csave = np.zeros([len(cyears)])
-lb_csave = np.zeros([len(cyears)])
-bg_csave = np.zeros([len(cyears)])
+le_csave = np.zeros([len(cyears)])
+te_csave = np.zeros([len(cyears)])
 
 lmr_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
 tcr_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
-gis_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
-be_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
+era20c_allyears = np.zeros([len(cyears),nlat_new,nlon_new])
+
 lmr_zm = np.zeros([len(cyears),nlat_new])
 tcr_zm = np.zeros([len(cyears),nlat_new])
-gis_zm = np.zeros([len(cyears),nlat_new])
-be_zm = np.zeros([len(cyears),nlat_new])
+era20c_zm = np.zeros([len(cyears),nlat_new])
 
 k = -1
 for yr in cyears:
     k = k + 1
     LMR_smatch, LMR_ematch = find_date_indices(LMR_time,yr-iw,yr+iw+1)
     TCR_smatch, TCR_ematch = find_date_indices(TCR_time,yr-iw,yr+iw+1)
-    GIS_smatch, GIS_ematch = find_date_indices(GIS_time,yr-iw,yr+iw+1)
-    BE_smatch, BE_ematch = find_date_indices(BE_time,yr-iw,yr+iw+1)
+    ERA20C_smatch, ERA20C_ematch = find_date_indices(ERA20C_time,yr-iw,yr+iw+1)
+
     print '------------------------------------------------------------------------'
     print 'working on year...' + str(yr)
     print 'working on year...' + str(yr) + ' LMR index = ' + str(LMR_smatch) + ' = LMR year ' + str(LMR_time[LMR_smatch])
     #print 'working on year...' + str(yr) + ' TCR index = ' + str(TCR_smatch) + ' = TCR year ' + str(TCR_time[TCR_smatch])
-    #print 'working on year...' + str(yr) + ' GIS index = ' + str(GIS_smatch) + ' = GIS year ' + str(GIS_time[GIS_smatch])
-    #print 'working on year...' + str(yr) + ' BE index = ' + str(BE_smatch) + ' = BE year ' + str(BE_time[BE_smatch])
 
     # LMR
     pdata_lmr = np.mean(xam[LMR_smatch:LMR_ematch,:,:],0)    
@@ -345,10 +365,6 @@ for yr in cyears:
     lmr_trunc = regrid(specob_lmr, specob_new, pdata_lmr, ntrunc=nlat_new-1, smooth=None)
     #print 'shape of old LMR data array:' + str(np.shape(pdata_lmr))
     #print 'shape of new LMR data array:' + str(np.shape(lmr_trunc))
-    #LMR_plotter(lmr_trunc,lat2_new,lon2_new,'bwr',nlevs,extend='neither')
-    #LMR_plotter(lmr_trunc,lat2_new,lon2_new,'bwr',nlevs,extend='neither')
-    #LMR_plotter(pdata_lmr,lat2,lon2,'bwr',nlevs,extend='neither')
-    #plt.show()
     
     # TCR
     pdata_tcr = np.mean(TCR[TCR_smatch:TCR_ematch,:,:],0)    
@@ -359,48 +375,68 @@ for yr in cyears:
     #print 'shape of old TCR data array:' + str(np.shape(pdata_tcr))
     #print 'shape of new TCR data array:' + str(np.shape(tcr_trunc))
 
-    # GIS
-    pdata_gis = np.mean(GIS_anomaly[GIS_smatch:GIS_ematch,:,:],0)    
-    #pdata_gis = np.squeeze(np.nan_to_num(GIS_anomaly[GIS_smatch,:,:]))
-    gis_trunc = regrid(specob_gis, specob_new, np.nan_to_num(pdata_gis), ntrunc=nlat_new-1, smooth=None)
-    # GIS logitudes are off by 180 degrees
-    gis_trunc = np.roll(gis_trunc,shift=nlon_new/2,axis=1)
-    #print 'shape of old GIS data array:' + str(np.shape(pdata_gis))
-    #print 'shape of new GIS data array:' + str(np.shape(gis_trunc))
+    # ERA20C
+    pdata_era20c = np.mean(ERA20C[ERA20C_smatch:ERA20C_ematch,:,:],0)    
+    era20c_trunc = regrid(specob_era20c, specob_new, np.nan_to_num(pdata_era20c), ntrunc=nlat_new-1, smooth=None)
+    # ERA20C latitudes upside down
+    era20c_trunc = np.flipud(era20c_trunc)
+    #print 'shape of old ERA20C data array:' + str(np.shape(pdata_era20c))
+    #print 'shape of new ERA20C data array:' + str(np.shape(era20c_trunc))
 
-    # BE
-    pdata_be = np.mean(BE_anomaly[BE_smatch:BE_ematch,:,:],0)    
-    #pdata_be = np.squeeze(np.nan_to_num(BE_anomaly[BE_smatch,:,:]))
-    be_trunc = regrid(specob_be, specob_new, np.nan_to_num(pdata_be), ntrunc=nlat_new-1, smooth=None)
-    # BE logitudes are off by 180 degrees
-    be_trunc = np.roll(be_trunc,shift=nlon_new/2,axis=1)
-    #print 'shape of old BE data array:' + str(np.shape(pdata_be))
-    #print 'shape of new BE data array:' + str(np.shape(be_trunc))
+    # Reanalysis comparison figures (annually-averaged Z500 anomalies)
+    #fmin = -80.0; fmax = +80.0; nflevs=41
+    fmin = -60.0; fmax = +60.0; nflevs=41
+    fig = plt.figure()
+#    ax = fig.add_subplot(3,2,1)    
+#    LMR_plotter(pdata_lmr,lat2,lon2,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+#    plt.title('LMR Z500 anom. '+ 'Orig. grid'+' '+str(yr))
+#    plt.clim(fmin,fmax)
+    ax = fig.add_subplot(3,2,2)    
+    LMR_plotter(lmr_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+    plt.title('LMR Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
+    plt.clim(fmin,fmax)
+    ax = fig.add_subplot(3,2,3)    
+    LMR_plotter(pdata_tcr,lat2_TCR,lon2_TCR,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+    plt.title('TCR Z500 anom. '+ 'Orig. grid'+' '+str(yr))
+    plt.clim(fmin,fmax)
+    ax = fig.add_subplot(3,2,4)    
+    LMR_plotter(tcr_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+    plt.title('TCR Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
+    plt.clim(fmin,fmax)
+    ax = fig.add_subplot(3,2,5)    
+    LMR_plotter(pdata_era20c,lat2_ERA20C,lon2_ERA20C,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+    plt.title('ERA20C Z500 anom. '+ 'Orig. grid'+' '+str(yr))
+    plt.clim(fmin,fmax)
+    ax = fig.add_subplot(3,2,6)    
+    LMR_plotter(era20c_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+    plt.title('ERA20C Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
+    plt.clim(fmin,fmax)
+    fig.tight_layout()
+    plt.savefig(nexp+'_LMR_TCR_ERA20C_Z500anom_'+str(yr)+'.png') # RT added ".png"
+
 
     # save the full grids
     lmr_allyears[k,:,:] = lmr_trunc
     tcr_allyears[k,:,:] = tcr_trunc
-    gis_allyears[k,:,:] = gis_trunc
-    be_allyears[k,:,:] = be_trunc
+    era20c_allyears[k,:,:] = era20c_trunc
 
     # zonal-mean verification
     lmr_zm[k,:] = np.mean(lmr_trunc,1)
     tcr_zm[k,:] = tcr_trunc.mean(1)
-    gis_zm[k,:] = gis_trunc.mean(1)
-    be_zm[k,:] = be_trunc.mean(1)
+    era20c_zm[k,:] = era20c_trunc.mean(1)
     
     if iplot_loc:
         ncints = 30
         cmap = 'bwr'
         nticks = 6 # number of ticks on the colorbar
-        #set contours based on Berkeley Earth
-        maxabs = np.nanmax(np.abs(be_trunc))
+        #set contours based on 20CR
+        maxabs = np.nanmax(np.abs(tcr_trunc))
         # round the contour interval, and then set limits to fit
         dc = np.round(maxabs*2/ncints,2)
         cl = dc*ncints/2.
         cints = np.linspace(-cl,cl,ncints,endpoint=True)
         
-        # compare LMR and TCR and GIS and BE
+        # compare LMR and TCR and ERA20C
         fig = plt.figure()
         
         ax = fig.add_subplot(2,2,1)
@@ -413,7 +449,7 @@ for yr in cyears:
         cb.locator = tick_locator
         cb.ax.yaxis.set_major_locator(matplotlib.ticker.AutoLocator())
         cb.update_ticks()
-        ax.set_title('LMR T'+str(ntrunc_new) + ' ' + str(yr))
+        ax.set_title('LMR Z500'+str(ntrunc_new) + ' ' + str(yr))
         
         ax = fig.add_subplot(2,2,2)
         m2 = bm.Basemap(projection='robin',lon_0=0)
@@ -425,65 +461,44 @@ for yr in cyears:
         cb.locator = tick_locator
         cb.ax.yaxis.set_major_locator(matplotlib.ticker.AutoLocator())
         cb.update_ticks()
-        ax.set_title('TCR T'+str(ntrunc_new)+ ' ' + str(yr))
+        ax.set_title('TCR Z500'+str(ntrunc_new)+ ' ' + str(yr))
         
         ax = fig.add_subplot(2,2,3)
         m3 = bm.Basemap(projection='robin',lon_0=0)
         # maxabs = np.nanmax(np.abs(gis_trunc))
-        cs = m3.contourf(lon2_new,lat2_new,gis_trunc,cints,cmap=plt.get_cmap(cmap),vmin=-maxabs,vmax=maxabs)
+        cs = m3.contourf(lon2_new,lat2_new,era20c_trunc,cints,cmap=plt.get_cmap(cmap),vmin=-maxabs,vmax=maxabs)
         m3.drawcoastlines()
         cb = m1.colorbar(cs)
         tick_locator = ticker.MaxNLocator(nbins=nticks)
         cb.locator = tick_locator
         cb.ax.yaxis.set_major_locator(matplotlib.ticker.AutoLocator())
         cb.update_ticks()
-        ax.set_title('GIS T'+str(ntrunc_new)+ ' ' + str(yr))
+        ax.set_title('ERA20C Z500'+str(ntrunc_new)+ ' ' + str(yr))
         
-        ax = fig.add_subplot(2,2,4)
-        m4 = bm.Basemap(projection='robin',lon_0=0)
-        # maxabs = np.nanmax(np.abs(be_trunc))
-        cs = m2.contourf(lon2_new,lat2_new,be_trunc,cints,cmap=plt.get_cmap(cmap),vmin=-maxabs,vmax=maxabs)
-        m4.drawcoastlines()
-        cb = m1.colorbar(cs)
-        tick_locator = ticker.MaxNLocator(nbins=nticks)
-        cb.locator = tick_locator
-        cb.ax.yaxis.set_major_locator(matplotlib.ticker.AutoLocator())
-        cb.update_ticks()
-        ax.set_title('BE T'+str(ntrunc_new)+ ' ' + str(yr))
         plt.clim(-maxabs,maxabs)
         
         # get these numbers by adjusting the figure interactively!!!
         plt.subplots_adjust(left=0.05, bottom=0.45, right=0.95, top=0.95, wspace=0.1, hspace=0.0)
         # plt.tight_layout(pad=0.3)
-        fig.suptitle('2m air temperature for ' +str(nya) +' year centered average')
+        fig.suptitle('500hPa height for ' +str(nya) +' year centered average')
     
     # anomaly correlation
     lmrvec = np.reshape(lmr_trunc,(1,nlat_new*nlon_new))
     tcrvec = np.reshape(tcr_trunc,(1,nlat_new*nlon_new))
-    gisvec = np.reshape(gis_trunc,(1,nlat_new*nlon_new))
-    bevec = np.reshape(be_trunc,(1,nlat_new*nlon_new))
+    era20cvec = np.reshape(era20c_trunc,(1,nlat_new*nlon_new))
+
     lmr_tcr_corr = np.corrcoef(lmrvec,tcrvec)
     #print 'lmr-tcr correlation: '+str(lmr_tcr_corr[0,1])
-    lmr_gis_corr = np.corrcoef(lmrvec,gisvec)
-    #print 'lmr-gis correlation: '+ str(lmr_gis_corr[0,1])
-    lmr_be_corr = np.corrcoef(lmrvec,bevec)
-    #print 'lmr-be correlation: '+ str(lmr_be_corr[0,1])
-    tcr_gis_corr = np.corrcoef(tcrvec,gisvec)
-    #print 'gis-tcr correlation: '+ str(tcr_gis_corr[0,1])
-    be_gis_corr = np.corrcoef(bevec,gisvec)
-    #print 'gis-be correlation: '+ str(be_gis_corr[0,1])
+    lmr_era20c_corr = np.corrcoef(lmrvec,era20cvec)
+    #print 'lmr-era20c correlation: '+ str(lmr_era20c_corr[0,1])
+    tcr_era20c_corr = np.corrcoef(tcrvec,era20cvec)
+    #print 'tcr-era20c correlation: '+ str(tcr_era20c_corr[0,1])
 
     # save the correlation values
     lt_csave[k] = lmr_tcr_corr[0,1]
-    lg_csave[k] = lmr_gis_corr[0,1]
-    lb_csave[k] = lmr_be_corr[0,1]
-    tg_csave[k] = tcr_gis_corr[0,1]
-    bg_csave[k] = be_gis_corr[0,1]
+    le_csave[k] = lmr_era20c_corr[0,1]
+    te_csave[k] = tcr_era20c_corr[0,1]
 
-    
-
-
-# In[54]:
 
 # plots for anomaly correlation statistics
 
@@ -491,7 +506,7 @@ for yr in cyears:
 nbins = 10
 #nbins = 5
 
-# LMR compared to GIS and TCR
+# LMR compared to TCR and ERA20C
 fig = plt.figure()
 ax = fig.add_subplot(3,2,1)
 ax.plot(cyears,lt_csave)
@@ -500,48 +515,35 @@ ax = fig.add_subplot(3,2,2)
 ax.hist(lt_csave,bins=nbins)
 ax.set_title('LMR-TCR')
 ax = fig.add_subplot(3,2,3)
-ax.plot(cyears,lg_csave)
-ax.set_title('LMR-GIS')
+ax.plot(cyears,le_csave)
+ax.set_title('LMR-ERA20C')
 ax = fig.add_subplot(3,2,4)
-ax.hist(lg_csave,bins=nbins)
-ax.set_title('LMR-GIS')
-ax = fig.add_subplot(3,2,5)
-ax.plot(cyears,lb_csave)
-ax.set_title('LMR-BE')
-ax = fig.add_subplot(3,2,6)
-ax.hist(lb_csave,bins=nbins)
-ax.set_title('LMR-BE')
+ax.hist(le_csave,bins=nbins)
+ax.set_title('LMR-ERA20C')
+
 fig.tight_layout()
 plt.subplots_adjust(left=0.05, bottom=0.45, right=0.95, top=0.9, wspace=0.5, hspace=0.5)
-fig.suptitle('2m air temperature anomaly correlation') 
+fig.suptitle('500hPa height anomaly correlation') 
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
+    plt.savefig(nexp+'_verify_grid_Z500_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
 
-# GIS compared to TCR
+# ERA20C compared to TCR
 fig = plt.figure()
 ax = fig.add_subplot(2,2,1)
-ax.plot(cyears,tg_csave)
-ax.set_title('GIS-TCR')
+ax.plot(cyears,te_csave)
+ax.set_title('ERA20C-TCR')
 ax = fig.add_subplot(2,2,2)
-ax.hist(tg_csave,bins=nbins)
-ax.set_title('GIS-TCR')
-ax = fig.add_subplot(2,2,3)
-ax.plot(cyears,bg_csave)
-ax.set_title('GIS-BE')
-ax = fig.add_subplot(2,2,4)
-ax.hist(bg_csave,bins=nbins)
-ax.set_title('GIS-BE')
+ax.hist(te_csave,bins=nbins)
+ax.set_title('ERA20c-TCR')
+
 #fig.tight_layout()
 plt.subplots_adjust(left=0.05, bottom=0.45, right=0.95, top=0.9, wspace=0.5, hspace=0.5)
-fig.suptitle('2m air temperature anomaly correlation') 
+fig.suptitle('500hPa height anomaly correlation') 
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
+    plt.savefig(nexp+'_verify_grid_Z500_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
   
-
-
-# In[55]:
 
 #
 # BEGIN r and CE calculations
@@ -550,18 +552,17 @@ if fsave:
 # correlation and CE at each (lat,lon) point
 
 lt_err = lmr_allyears - tcr_allyears
-lg_err = lmr_allyears - gis_allyears
-lb_err = lmr_allyears - be_allyears
-tg_err = tcr_allyears - gis_allyears
+le_err = lmr_allyears - era20c_allyears
+te_err = tcr_allyears - era20c_allyears
 
 r_lt = np.zeros([nlat_new,nlon_new])
 ce_lt = np.zeros([nlat_new,nlon_new])
-r_lg = np.zeros([nlat_new,nlon_new])
-ce_lg = np.zeros([nlat_new,nlon_new])
-r_lb = np.zeros([nlat_new,nlon_new])
-ce_lb = np.zeros([nlat_new,nlon_new])
-r_tg = np.zeros([nlat_new,nlon_new])
-ce_tg = np.zeros([nlat_new,nlon_new])
+r_le = np.zeros([nlat_new,nlon_new])
+ce_le = np.zeros([nlat_new,nlon_new])
+r_te = np.zeros([nlat_new,nlon_new])
+ce_te = np.zeros([nlat_new,nlon_new])
+
+
 for la in range(nlat_new):
     for lo in range(nlon_new):
         # LMR-TCR
@@ -570,25 +571,20 @@ for la in range(nlat_new):
         tvar = np.var(tcr_allyears[:,la,lo],ddof=1)
         r_lt[la,lo] = tstmp[0,1]
         ce_lt[la,lo] = 1. - (evar/tvar)
-        # LMR-GIS
-        tstmp = np.corrcoef(lmr_allyears[:,la,lo],gis_allyears[:,la,lo])
-        evar = np.var(lg_err[:,la,lo],ddof=1)
-        tvar = np.var(gis_allyears[:,la,lo],ddof=1)
-        r_lg[la,lo] = tstmp[0,1]
-        ce_lg[la,lo] = 1. - (evar/tvar)
-        # LMR-BE
-        tstmp = np.corrcoef(lmr_allyears[:,la,lo],be_allyears[:,la,lo])
-        evar = np.var(lb_err[:,la,lo],ddof=1)
-        tvar = np.var(be_allyears[:,la,lo],ddof=1)
-        r_lb[la,lo] = tstmp[0,1]
-        ce_lb[la,lo] = 1. - (evar/tvar)
-        # TCR-GIS
-        tstmp = np.corrcoef(tcr_allyears[:,la,lo],gis_allyears[:,la,lo])
-        evar = np.var(tg_err[:,la,lo],ddof=1)
-        tvar = np.var(gis_allyears[:,la,lo],ddof=1)
-        r_tg[la,lo] = tstmp[0,1]
-        ce_tg[la,lo] = 1. - (evar/tvar)
-   
+        # LMR-ERA20C
+        tstmp = np.corrcoef(lmr_allyears[:,la,lo],era20c_allyears[:,la,lo])
+        evar = np.var(le_err[:,la,lo],ddof=1)
+        tvar = np.var(era20c_allyears[:,la,lo],ddof=1)
+        r_le[la,lo] = tstmp[0,1]
+        ce_le[la,lo] = 1. - (evar/tvar)
+        # TCR-ERA20C
+        tstmp = np.corrcoef(tcr_allyears[:,la,lo],era20c_allyears[:,la,lo])
+        evar = np.var(te_err[:,la,lo],ddof=1)
+        tvar = np.var(era20c_allyears[:,la,lo],ddof=1)
+        r_te[la,lo] = tstmp[0,1]
+        ce_te[la,lo] = 1. - (evar/tvar)
+
+
 lt_rmean = str(float('%.2g' % np.median(np.median(r_lt)) ))
 print 'lmr-tcr all-grid median r: ' + str(lt_rmean)
 lt_rmean60 = str(float('%.2g' % np.median(np.median(r_lt[7:34,:])) ))
@@ -597,39 +593,32 @@ lt_cemean = str(float('%.2g' % np.median(np.median(ce_lt)) ))
 print 'lmr-tcr all-grid median ce: ' + str(lt_cemean)
 lt_cemean60 = str(float('%.2g' % np.median(np.median(ce_lt[7:34,:])) ))
 print 'lmr-tcr 60S-60N median ce: ' + str(lt_cemean60)
-lg_rmean = str(float('%.2g' % np.median(np.median(r_lg)) ))
-print 'lmr-gis all-grid median r: ' + str(lg_rmean)
-lg_rmean60 = str(float('%.2g' % np.median(np.median(r_lg[7:34,:])) ))
-print 'lmr-gis 60S-60N median r: ' + str(lg_rmean60)
-lg_cemean = str(float('%.2g' % np.median(np.median(ce_lg)) ))
-print 'lmr-gis all-grid median ce: ' + str(lg_cemean)
-lg_cemean60 = str(float('%.2g' % np.median(np.median(ce_lg[7:34,:])) ))
-print 'lmr-gis 60S-60N median ce: ' + str(lg_cemean60)
-lb_rmean = str(float('%.2g' % np.median(np.median(r_lb)) ))
-print 'lmr-be all-grid median r: ' + str(lb_rmean)
-lb_rmean60 = str(float('%.2g' % np.median(np.median(r_lb[7:34,:])) ))
-print 'lmr-be 60S-60N median r: ' + str(lb_rmean60)
-lb_cemean = str(float('%.2g' % np.median(np.median(ce_lb)) ))
-print 'lmr-be all-grid median ce: ' + str(lb_cemean)
-lb_cemean60 = str(float('%.2g' % np.median(np.median(ce_lb[7:34,:])) ))
-print 'lmr-be 60S-60N median ce: ' + str(lb_cemean60)
-tg_rmean = str(float('%.2g' % np.median(np.median(r_tg)) ))
-print 'tcr-gis all-grid median r: ' + str(tg_rmean)
-tg_rmean60 = str(float('%.2g' % np.median(np.median(r_tg[7:34,:])) ))
-print 'tcr-gis 60S-60N median r: ' + str(tg_rmean60)
-tg_cemean = str(float('%.2g' % np.median(np.median(ce_tg)) ))
-print 'tcr-gis all-grid median ce: ' + str(tg_cemean)
-tg_cemean60 = str(float('%.2g' % np.median(np.median(ce_tg[7:34,:])) ))
-print 'tcr-gis 60S-60N median ce: ' + str(tg_cemean60)
+le_rmean = str(float('%.2g' % np.median(np.median(r_le)) ))
+print 'lmr-era20c all-grid median r: ' + str(le_rmean)
+le_rmean60 = str(float('%.2g' % np.median(np.median(r_le[7:34,:])) ))
+print 'lmr-era20c 60S-60N median r: ' + str(le_rmean60)
+le_cemean = str(float('%.2g' % np.median(np.median(ce_le)) ))
+print 'lmr-era20c all-grid median ce: ' + str(le_cemean)
+le_cemean60 = str(float('%.2g' % np.median(np.median(ce_le[7:34,:])) ))
+print 'lmr-era20c 60S-60N median ce: ' + str(le_cemean60)
+te_rmean = str(float('%.2g' % np.median(np.median(r_te)) ))
+print 'tcr-era20c all-grid median r: ' + str(te_rmean)
+te_rmean60 = str(float('%.2g' % np.median(np.median(r_te[7:34,:])) ))
+print 'tcr-era20c 60S-60N median r: ' + str(te_rmean60)
+te_cemean = str(float('%.2g' % np.median(np.median(ce_te)) ))
+print 'tcr-era20c all-grid median ce: ' + str(te_cemean)
+te_cemean60 = str(float('%.2g' % np.median(np.median(ce_te[7:34,:])) ))
+print 'tcr-era20c 60S-60N median ce: ' + str(te_cemean60)
+
 
 # zonal mean verification
 r_lt_zm = np.zeros([nlat_new])
 ce_lt_zm = np.zeros([nlat_new])
 lt_err_zm = lmr_zm - tcr_zm
-# gis verification
-r_lg_zm = np.zeros([nlat_new])
-ce_lg_zm = np.zeros([nlat_new])
-lg_err_zm = lmr_zm - gis_zm
+# era20c verification
+r_le_zm = np.zeros([nlat_new])
+ce_le_zm = np.zeros([nlat_new])
+le_err_zm = lmr_zm - era20c_zm
 for la in range(nlat_new):
     # LMR-TCR
     tstmp = np.corrcoef(lmr_zm[:,la],tcr_zm[:,la])
@@ -637,21 +626,21 @@ for la in range(nlat_new):
     tvar = np.var(tcr_zm[:,la],ddof=1)
     r_lt_zm[la] = tstmp[0,1]
     ce_lt_zm[la] = 1. - (evar/tvar)
-    # LMR-GIS
-    tstmp = np.corrcoef(lmr_zm[:,la],gis_zm[:,la])
-    evar = np.var(lg_err_zm[:,la],ddof=1)
-    tvar = np.var(gis_zm[:,la],ddof=1)
-    r_lg_zm[la] = tstmp[0,1]
-    ce_lg_zm[la] = 1. - (evar/tvar)
+    # LMR-ERA20C
+    tstmp = np.corrcoef(lmr_zm[:,la],era20c_zm[:,la])
+    evar = np.var(le_err_zm[:,la],ddof=1)
+    tvar = np.var(era20c_zm[:,la],ddof=1)
+    r_le_zm[la] = tstmp[0,1]
+    ce_le_zm[la] = 1. - (evar/tvar)
     
 #print 'LMR-TCR zonal mean r:'    
 #print r_lt_zm
 #print 'LMR-TCR ce zonal mean:'
 #print ce_lt_zm
-#print 'LMR-GIS zonal mean r:'    
-#print r_lg_zm
-#print 'LMR-GIS ce zonal mean:'
-#print ce_lg_zm
+#print 'LMR-ERA20C zonal mean r:'    
+#print r_le_zm
+#print 'LMR-ERA20C ce zonal mean:'
+#print ce_le_zm
 #
 # END r and CE
 #
@@ -659,28 +648,28 @@ major_ticks = np.arange(-90, 91, 30)
 fig = plt.figure()
 ax = fig.add_subplot(1,2,1)    
 ax.plot(r_lt_zm,veclat,'k-',linestyle='--')
-ax.plot(r_lg_zm,veclat,'k-',linestyle='-')
+ax.plot(r_le_zm,veclat,'k-',linestyle='-')
 ax.plot([0,0],[-90,90],'k:')
 ax.set_yticks(major_ticks)                                                       
 plt.ylim([-90,90])
 plt.xlim([-1,1])
 plt.ylabel('latitude',fontweight='bold')
 plt.xlabel('correlation',fontweight='bold')
-#plt.title('correlation (TCR dashed; GIS solid)')
+#plt.title('correlation (TCR dashed; ERA20C solid)')
 ax = fig.add_subplot(1,2,2)    
 ax.plot(ce_lt_zm,veclat,'k-',linestyle='--')
-ax.plot(ce_lg_zm,veclat,'k-',linestyle='-')
+ax.plot(ce_le_zm,veclat,'k-',linestyle='-')
 ax.plot([0,0],[-90,90],'k:')
 ax.set_yticks([])                                                       
 plt.ylim([-90,90])
 plt.xlim([-1.5,1])
 plt.xlabel('cofficient of efficiency',fontweight='bold')
-#plt.title('CE (TCR dashed; GIS solid)')
-plt.suptitle('LMR zonal-mean comparison with GIS (solid) and 20CR(dashed)')
+#plt.title('CE (TCR dashed; ERA20C solid)')
+plt.suptitle('LMR zonal-mean comparison with ERA20C (solid) and 20CR(dashed)')
 fig.tight_layout(pad = 2.0)
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
+    plt.savefig(nexp+'_verify_grid_Z500_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT added ".png"
 
 plt.show()
 
@@ -695,48 +684,38 @@ if iplot:
     fig = plt.figure()
     ax = fig.add_subplot(4,2,1)    
     LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('LMR-TCR T r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_rmean60))
+    plt.title('LMR-TCR Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_rmean60))
     plt.clim(-1,1)
 
     ax = fig.add_subplot(4,2,2)    
     LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('LMR-TCR T CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_cemean60))
+    plt.title('LMR-TCR Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_cemean60))
     plt.clim(-1,1)
 
     ax = fig.add_subplot(4,2,3)    
-    LMR_plotter(r_lg,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('LMR-GIS T r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lg_rmean60))
+    LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
+    plt.title('LMR-ERA20C Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(le_rmean60))
     plt.clim(-1,1)
 
     ax = fig.add_subplot(4,2,4)    
-    LMR_plotter(ce_lg,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('LMR-GIS T CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lg_cemean60))
+    LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
+    plt.title('LMR-ERA20C Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(le_cemean60))
     plt.clim(-1,1)
 
     ax = fig.add_subplot(4,2,5)    
-    LMR_plotter(r_lg,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('LMR-BE T r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lb_rmean60))
+    LMR_plotter(r_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
+    plt.title('TCR-ERA20C Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(te_rmean60))
     plt.clim(-1,1)
 
     ax = fig.add_subplot(4,2,6)    
-    LMR_plotter(ce_lg,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('LMR-BE T CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lb_cemean60))
-    plt.clim(-1,1)
-
-    ax = fig.add_subplot(4,2,7)    
-    LMR_plotter(r_tg,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('TCR-GIS T r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(tg_rmean60))
-    plt.clim(-1,1)
-
-    ax = fig.add_subplot(4,2,8)    
-    LMR_plotter(ce_tg,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
-    plt.title('TCR-GIS T CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(tg_cemean60))
+    LMR_plotter(ce_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither')
+    plt.title('TCR-ERA20C Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(te_cemean60))
     plt.clim(-1,1)
   
     fig.tight_layout()
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT: added ".png"    
+        plt.savefig(nexp+'_verify_grid_Z500_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT: added ".png"    
     
 
 if iplot:
@@ -764,7 +743,7 @@ cb = LMR_plotter(calib,lat2_new,lon2_new,'Oranges',10,0,10,extend='neither')
 plt.title('ratio of ensemble-mean error variance to mean ensemble variance')
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT: added ".png"   
+    plt.savefig(nexp+'_verify_grid_Z500_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png') # RT: added ".png"   
 
 
 # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
