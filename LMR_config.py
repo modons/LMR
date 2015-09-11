@@ -43,27 +43,26 @@ class core:
     # *Note: As "p1rl", with OHC in various ocean basins added to state variables
     #nexp = 'p2rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
     #nexp = 'p2rl_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    nexp = 'p2rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    # *Note: As "p2rl", but with r_crit = 0
     #nexp = 'p2rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+
+    nexp = 'production_mlost_ccsm4_pagesnotrees_1.0'
+    lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1800, 2000]
+    recon_period = [0, 2000]
     nens = 100
     iter_range = [0, 100]
     curr_iter = iter_range[0]
     loc_rad = None
 
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
 class proxies:
@@ -80,7 +79,7 @@ class proxies:
     """
 
     use_from = ['pages']
-    proxy_frac = 0.75
+    proxy_frac = 1.0
 
     class pages:
         """
@@ -128,9 +127,7 @@ class proxies:
 
         # DO NOT CHANGE FORMAT BELOW
 
-        proxy_order = ['Tree ring_Width',
-                       'Tree ring_Density',
-                       'Ice core_d18O',
+        proxy_order = ['Ice core_d18O',
                        'Ice core_d2H',
                        'Ice core_Accumulation',
                        'Coral_d18O',
@@ -140,15 +137,6 @@ class proxies:
                        'Speleothem_All']
 
         proxy_assim2 = {
-            'Tree ring_Width': ['Ring width',
-                                'Tree ring width',
-                                'Total ring width',
-                                'TRW'],
-            'Tree ring_Density': ['Maximum density',
-                                  'Minimum density',
-                                  'Earlywood density',
-                                  'Latewood density',
-                                  'MXD'],
             'Ice core_d18O': ['d18O'],
             'Ice core_d2H': ['d2H'],
             'Ice core_Accumulation': ['Accumulation'],
@@ -208,10 +196,10 @@ class psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
-        datatag_calib = 'GISTEMP'
-        datafile_calib = 'gistemp1200_ERSST.nc'
-        #datatag_calib = 'MLOST'
-        #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+        #datatag_calib = 'GISTEMP'
+        #datafile_calib = 'gistemp1200_ERSST.nc'
+        datatag_calib = 'MLOST'
+        datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
 
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
@@ -219,7 +207,7 @@ class psm:
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
                                   'PSMs_' + datatag_calib + '.pckl')
-        psm_r_crit = 0.2
+        psm_r_crit = 0.0
 
 class prior:
     """
@@ -245,8 +233,8 @@ class prior:
     #prior_source     = 'ccsm4_preindustrial_control'
     #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
 
-    prior_source     = 'gfdl-cm3_preindustrial_control'
-    datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
+    #prior_source     = 'gfdl-cm3_preindustrial_control'
+    #datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
 
     #prior_source     = 'mpi-esm-p_last_millenium'
     #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
@@ -263,6 +251,6 @@ class prior:
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
                        'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
-                       'ohcPacificNH_0-700m_Omon','ohcPacificSH_0-700m_Omon',
-                       'ohcIndian_0-700m_Omon','ohcSouthern_0-700m_Omon']
+                       'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
+                       'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon']
 
