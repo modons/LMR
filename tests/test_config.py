@@ -6,6 +6,7 @@ Adapted from LMR_exp_NAMELIST by AndreP
 """
 
 from os.path import join
+import random
 
 
 class constants:
@@ -48,8 +49,8 @@ class core:
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1950, 2000]
-    nens = None
+    recon_period = [1950, 1953]
+    nens = 2
     seed = None
     iter_range = [0, 0]
     curr_iter = iter_range[0]
@@ -245,6 +246,17 @@ class prior:
     #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
     datafile_prior   = '[vardef_template]_gridded_dat.nc'
     dataformat_prior = 'NCD'
-    state_variables = ['air', 'vertical_use_this']
+    state_variables = ['air', 'tseries']
     truncate = False
+
+    # Information for sampling located here because it needs to be persistent
+    # across different variables.
+    if core.nens:
+        # Get sample indices to use for prior sampling
+        # If core.seed is None then it uses system time.
+        random.seed(core.seed)
+        _srange = core.recon_period[1] - core.recon_period[0] + 1
+        prior_sample_idx = random.sample(range(_srange), core.nens)
+    else:
+        prior_sample_idx = None
 

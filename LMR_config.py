@@ -255,7 +255,7 @@ class prior:
         # If core.seed is None then it uses system time.
         random.seed(core.seed)
         _srange = core.recon_period[1] - core.recon_period[0] + 1
-        prior_sample_idx = random.sample(_srange, core.nens)
+        prior_sample_idx = random.sample(range(_srange), core.nens)
     else:
         prior_sample_idx = None
 

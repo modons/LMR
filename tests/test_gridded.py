@@ -14,6 +14,8 @@ import numpy as np
 import netCDF4 as ncf
 import os
 import random
+from itertools import izip
+
 
 
 @pytest.fixture(scope='module')
@@ -125,6 +127,26 @@ def test_priorvar_types(init_args, kw_args, type):
         assert prior_var.space_shp == [1]
         assert prior_var.data.shape[1] == 1
 
+
+def test_priorvar_save(ncf_data):
+    """
+    Test object saving
+    """
+
+    dat = ncf_data.variables
+    lat = dat['lat']
+    lon = dat['lon']
+    time = dat['time']
+    data = dat['air']
+
+    prior_var = lmrgrid.PriorVariable('air', data.dimensions,
+                                      data[:], 1.0, time=time[:],
+                                      lat=lat[:], lon=lon[:])
+
+    prior_var.save('data/test_save')
+    assert os.path.exists('data/test_save.h5')
+
+
 def test_priorvar_trunc(ncf_data):
     """
     Test regridding of grid_obj data
@@ -198,7 +220,7 @@ def test_priorvar_sample(ncf_data):
 
     time_sample = time[:][smp_idx]
 
-    sampled_prior = prior_var.sample(nens, seed=seed)
+    sampled_prior = prior_var.sample_from_idx(smp_idx)
 
     assert len(sampled_prior.data) == nens
     assert dat_sample.shape == sampled_prior.data.shape
@@ -333,11 +355,14 @@ def test_priorvar_subannual_res_separation(ncf_data):
                                       anom_avg_data, resolution, time=time_yrs,
                                       lat=lat[:], lon=lon[:])
 
-    subannual = prior_var.subannual_resolution_prior()
+    new_dat, new_time = \
+        lmrgrid.GriddedVariable._subannual_decomp(prior_var.data,
+                                                  prior_var.time,
+                                                  resolution)
 
-    for i, sub in enumerate(subannual):
-        np.testing.assert_array_equal(time_yrs[i::2], sub.time)
-        np.testing.assert_array_equal(anom_avg_data[i::2], sub.data)
+    for i, (dat, time) in enumerate(izip(new_dat, new_time)):
+        np.testing.assert_array_equal(time_yrs[i::2], time)
+        np.testing.assert_array_equal(anom_avg_data[i::2], dat)
 
 
 @pytest.mark.parametrize('varname, savefile',
@@ -355,19 +380,17 @@ def test_priorvar_load_from_netcdf(varname, savefile):
     filename = 'gridded_dat.nc'
     resolution = 1.0
     yr_shift = 0
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}_shift{:d}'.format(varname,
-                                                               resolution,
-                                                               yr_shift)
+    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+                                                     resolution)
     prior_obj = lmrgrid.PriorVariable._load_from_netcdf(dirname,
                                                         filename,
                                                         varname,
                                                         resolution,
-                                                        yr_shift,
-                                                        save=savefile)
+                                                        save=savefile)[0]
 
     assert len(prior_obj.data) == 4
     if savefile:
-        assert os.path.exists(dirname+filename+pre_avg_fname)
+        assert os.path.exists(dirname+filename+pre_avg_fname+'.h5')
 
     if varname == 'tseries':
         assert prior_obj.dim_order == ['time']
@@ -383,54 +406,50 @@ def test_priorvar_load_from_netcdf_truncate():
     resolution = 1.0
     yr_shift = 0
     varname = 'air'
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}_shift{:d}'.format(varname,
-                                                               resolution,
-                                                               yr_shift)
+    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+                                                     resolution)
     prior_obj = lmrgrid.PriorVariable._load_from_netcdf(dirname,
                                                         filename,
                                                         varname,
                                                         resolution,
-                                                        yr_shift,
                                                         truncate=True,
-                                                        save=True)
+                                                        save=True)[0]
 
     assert len(prior_obj.time) == 4
     assert prior_obj.data.shape == (4, 44, 66)
-    assert os.path.exists(os.path.join(dirname, filename+pre_avg_fname+'.trnc'))
+    assert os.path.exists(os.path.join(dirname,
+                                       filename+pre_avg_fname+'.trnc.h5'))
 
 
 @pytest.mark.parametrize('varname, trunc',
                          [('air', False),
                           ('air', True)])
-def test_priovar_load_preavg_data(varname, trunc):
+def test_priorvar_load_preavg_data(varname, trunc):
     dirname = '/home/disk/p/wperkins/Research/LMR/tests/data/'
     filename = 'gridded_dat.nc'
     resolution = 1.0
     yr_shift = 0
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}_shift{:d}'.format(varname,
-                                                               resolution,
-                                                               yr_shift)
+    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+                                                     resolution)
 
     if trunc:
         pre_avg_fname += '.trnc'
 
-    if os.path.exists(dirname + filename + pre_avg_fname):
-        os.remove(dirname + filename + pre_avg_fname)
+    if os.path.exists(dirname + filename + pre_avg_fname + '.h5'):
+        os.remove(dirname + filename + pre_avg_fname + '.h5')
 
     ncf_prior = lmrgrid.PriorVariable._load_from_netcdf(dirname,
                                                         filename,
                                                         varname,
                                                         resolution,
-                                                        yr_shift,
                                                         truncate=trunc,
-                                                        save=True)
+                                                        save=True)[0]
 
     pre_avg_prior = lmrgrid.PriorVariable._load_pre_avg_obj(dirname,
                                                             filename,
                                                             varname,
                                                             resolution,
-                                                            yr_shift,
-                                                            truncate=trunc)
+                                                            truncate=trunc)[0]
 
     np.testing.assert_array_equal(ncf_prior.data, pre_avg_prior.data)
     np.testing.assert_array_equal(ncf_prior.lat, pre_avg_prior.lat)
@@ -444,9 +463,8 @@ def test_priorvar_load_preavg_full_exist_no_truncated():
     resolution = 1.0
     yr_shift = 0
     varname = 'air'
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}_shift{:d}'.format(varname,
-                                                               resolution,
-                                                               yr_shift)
+    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+                                                     resolution)
     if os.path.exists(dirname + filename + pre_avg_fname + '.trnc'):
         os.remove(dirname + filename + pre_avg_fname + '.trnc')
 
@@ -454,22 +472,20 @@ def test_priorvar_load_preavg_full_exist_no_truncated():
                                                         filename,
                                                         varname,
                                                         resolution,
-                                                        yr_shift,
                                                         truncate=True,
-                                                        save=False)
+                                                        save=False)[0]
 
     pre_avg_prior = lmrgrid.PriorVariable._load_pre_avg_obj(dirname,
                                                             filename,
                                                             varname,
                                                             resolution,
-                                                            yr_shift,
-                                                            truncate=True)
+                                                            truncate=True)[0]
 
     np.testing.assert_array_equal(ncf_prior.data, pre_avg_prior.data)
     np.testing.assert_array_equal(ncf_prior.lat, pre_avg_prior.lat)
     np.testing.assert_array_equal(ncf_prior.lon, pre_avg_prior.lon)
     np.testing.assert_array_equal(ncf_prior.time, pre_avg_prior.time)
-    assert os.path.exists(dirname + filename + pre_avg_fname + '.trnc')
+    assert os.path.exists(dirname + filename + pre_avg_fname + '.trnc.h5')
 
 
 @pytest.mark.xfail(raises=IOError)
@@ -483,17 +499,17 @@ def test_priorvar_load_preavg_not_exist():
                                                             filename,
                                                             varname,
                                                             resolution,
-                                                            yr_shift,
-                                                            truncate=True)
+                                                            truncate=True)[0]
+
 
 @pytest.mark.parametrize('res', [0.5, 1.])
-def test_state(ncf_data, res):
+def test_state(res):
     import test_config
 
     test_config.core.assimilation_time_res = [res]
     dirname = test_config.prior.datadir_prior
     filename = test_config.prior.datafile_prior
-    yr_shift = test_config.core.year_start_idx_shift
+    sample_idxs = test_config.prior.prior_sample_idx
 
     state_obj = lmrgrid.State.from_config(test_config)
 
@@ -502,27 +518,31 @@ def test_state(ncf_data, res):
     assert len(state_obj.state_list) == num_priors
 
     for var in test_config.prior.state_variables:
+        fname = filename.replace('[vardef_template]', var)
+        pvars = lmrgrid.PriorVariable._load_from_netcdf(dirname,
+                                                        fname,
+                                                        var,
+                                                        res,
+                                                        sample=sample_idxs)
         for i in range(num_priors):
-            fname = filename.replace('[vardef_template]', var)
-            prior_var = lmrgrid.PriorVariable._load_from_netcdf(dirname,
-                                                                fname,
-                                                                var,
-                                                                res,
-                                                                yr_shift)
+            prior_var = pvars[i]
             np.testing.assert_array_equal(state_obj.get_var_data(var, idx=i),
-                prior_var.flattened_spatial()[0][i::num_priors].T)
+                prior_var.flattened_spatial()[0].T)
 
 
 
 if __name__ == '__main__':
 
-    with ncf.Dataset('/home/disk/p/wperkins/Research/LMR/tests/data/gridded_dat.nc', 'r') as f:
-        time = f.variables['time']
-        time = ncf.num2date(time[:], time.units)
-        data = f.variables['air'][:]
+    # with ncf.Dataset('/home/disk/p/wperkins/Research/LMR/tests/data/gridded_dat.nc', 'r') as f:
+    #     time = f.variables['time']
+    #     time = ncf.num2date(time[:], time.units)
+    #     data = f.variables['air'][:]
         #test_priorvar_subannual_res_separation(f)
 
-        import test_config
-        test_state(f, 1.0)
+        # import test_config
+        # test_state(f, 1.0)
     #test_griddedvar_timeavg_variable_yrshift(3, time, data)
+
+    #test_priorvar_load_preavg_data('air', True)
+    test_state(0.5)
 

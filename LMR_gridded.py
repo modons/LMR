@@ -99,12 +99,7 @@ class GriddedVariable(object):
     def save(self, filename, position=0):
 
         filename += '.h5'
-
-        #Remove data from object before pickling
-        tmp_dat = self.data
-        del self.data
-
-        data_grp = '/data/'
+        data_grp = '/data'
 
         # Open file to write to
         with tb.open_file(filename, 'a',
@@ -113,16 +108,25 @@ class GriddedVariable(object):
             if '/grid_objects' in h5f:
                 pobj_array = h5f.get_node('/grid_objects')
             else:
-            # Write the prior_object
+                # Write the grid_object
                 pobj_array = h5f.create_vlarray('/', 'grid_objects',
-                                                atom=tb.ObjectAtom,
+                                                atom=tb.ObjectAtom(),
                                                 createparents=True)
-            pobj_array.append(self)
+
+            if not data_grp in h5f:
+                h5f.create_group('/', 'data')
 
             # Write the data
             self.nan_to_fill_val()
-            var_to_hdf5_carray(h5f, data_grp, str(position), tmp_dat)
+            nd_name = 'obj' + str(position)
+            var_to_hdf5_carray(h5f, data_grp, nd_name, self.data)
             self.fill_val_to_nan()
+
+            # Remove data from object before pickling
+            tmp_dat = self.data
+            del self.data
+            pobj_array.append(self)
+            self.data = tmp_dat
 
     def truncate(self, ntrunc=42):
 
@@ -139,7 +143,8 @@ class GriddedVariable(object):
                          time=self.time,
                          lev=self.lev,
                          lat=new_lat[:, 0],
-                         lon=new_lon[0])
+                         lon=new_lon[0],
+                         fill_val=self._fill_val)
 
     def fill_val_to_nan(self):
         self.data[self.data == self._fill_val] = np.nan
@@ -167,11 +172,14 @@ class GriddedVariable(object):
 
         cls = type(self)
         nsamples = len(sample_idxs)
-        time_sample = np.array(self.time)[sample_idxs]
+        time_sample = self.time[sample_idxs]
 
         data_sample = np.zeros([nsamples] + list(self.data.shape[1:]))
         for k, idx in enumerate(sample_idxs):
             data_sample[k] = self.data[idx]
+
+        # Account for timeseries trailing singleton dimension
+        data_sample = np.squeeze(data_sample)
 
         return cls(self.name, self.dim_order, data_sample, self.resolution,
                    time=time_sample,
@@ -236,16 +244,17 @@ class GriddedVariable(object):
     @staticmethod
     def _load_gridobjs_from_hdf5(path, sample_idxs):
         with tb.open_file(path, 'r') as h5f:
-            obj_arr = h5f.prior_objects
-            tmp_dat = h5f.get_node('/data/0')
-            if sample_idxs:
-                sample_dat = np.zeros((len(sample_idxs), tmp_dat.shape[1:]))
+            obj_arr = h5f.root.grid_objects
 
             gobjs = []
             for i, obj in enumerate(obj_arr):
-                data = h5f.get_node('/data/' + str(i))
+                data = h5f.get_node('/data/' + 'obj'+str(i))
 
                 if sample_idxs:
+                    # create container
+                    sample_shp = [len(sample_idxs)] + list(data.shape[1:])
+                    sample_dat = np.zeros(sample_shp)
+
                     # Sample data
                     for j, idx in enumerate(sample_idxs):
                         sample_dat[j] = data[idx]
@@ -280,9 +289,12 @@ class GriddedVariable(object):
         pre_avg_name = '.pre_avg_{}_res{:02.1f}'
 
         with Dataset(join(dir_name, filename), 'r') as f:
-            ncf_varname = varname.split('_')[0]
-            var = f.variables[ncf_varname]
+            var = f.variables[varname]
             data_shp = var.shape
+            try:
+                fill_val = var._FillValue
+            except AttributeError:
+                fill_val = -999999999999999999
 
             # Convert to key names defined in _DEFAULT_DIM_ORDER
             dims = []
@@ -341,8 +353,8 @@ class GriddedVariable(object):
             grid_objs = []
             for i, (new_dat, new_t) in enumerate(izip(new_avg_data, new_time)):
                 dim_vals[_TIME] = new_t
-                grid_obj = cls(varname, dims, new_dat, resolution, **dim_vals)
-                #TODO: fix saving to HDF5 annual prior objects
+                grid_obj = cls(varname, dims, new_dat, resolution,
+                               fill_val=fill_val, **dim_vals)
                 if save:
                     grid_obj.save(new_fname, position=i)
 
@@ -357,7 +369,7 @@ class GriddedVariable(object):
                         pass
 
                 if sample:
-                    grid_obj = grid_obj.sample_from_idx()
+                    grid_obj = grid_obj.sample_from_idx(sample)
 
                 grid_objs.append(grid_obj)
 
@@ -400,10 +412,10 @@ class GriddedVariable(object):
     @staticmethod
     def _subannual_decomp(data, time, resolution):
 
-        num_subann_chunks = np.ceil(1.0/resolution)
+        num_subann_chunks = int(np.ceil(1.0/resolution))
         tlen = len(time) / num_subann_chunks
 
-        new_data = np.zeros((num_subann_chunks, tlen, data.shape[1:]),
+        new_data = np.zeros([num_subann_chunks, tlen] + list(data.shape[1:]),
                             dtype=data.dtype)
         new_time = np.zeros((num_subann_chunks, tlen),
                             dtype=time.dtype)
@@ -480,6 +492,7 @@ class PriorVariable(GriddedVariable):
             raise TypeError('Specified file type not supported yet.')
 
         fname = file_name.replace('[vardef_template]', varname)
+        varname = varname.split('_')[0]
 
         try:
             var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
@@ -672,7 +685,3 @@ class State(object):
             state_info[var] = var_info
 
         return state_info
-
-
-
-
