@@ -214,17 +214,8 @@ def LMR_driver_callable(cfg=None):
     # ==========================================================================
 
     # Create sub_base_resolution output container
-    fname = 'xa_output_res{1.2f}.h5'.format(sub_base_res)
-    out_h5f = tb.open_file(workdir+fname, 'w',
-                           filters=tb.Filters(complib='blosc',
-                                              complevel=2))
-    atom = tb.Atom.from_dtype(Xb_one.state_list[0].dtype)
-    num_subann = len(Xb_one.state_list)
-    tdim_len = (ntimes+1) * num_subann
-    shape = [tdim_len] + list(Xb_one.state_list[0].shape)
-    xb_out = empty_hdf5_carray(out_h5f, '/', 'output', atom, shape)
-    output_nelem_pr_yr = int(np.ceil(1.0), sub_base_res)
-    xb_out[0:num_subann] = np.array(Xb_one.state_list)
+    fname = 'xa_output_res{:1.2f}.h5'.format(sub_base_res)
+    Xb_one.create_h5_state_container(join(workdir, fname), ntimes)
 
 
     # Array containing the global-mean state (for diagnostic purposes)
@@ -248,33 +239,31 @@ def LMR_driver_callable(cfg=None):
         if verbose > 0:
             print 'working on year: ' + str(t)
 
+        # TODO: Loading prior file
         if t % 1.0 == 0:
-            ypad = '{:04d}'.format(int(t))
-            filen = join(workdir, 'year' + ypad + '.npy')
-
-            Xb = Xb_one.copy_state()
-            if prior_check.exists(filen) and not core.clean_start:
-                if verbose > 2:
-                    print 'prior file exists: ' + filen
-                Xb.state_list = np.load(filen)
+            Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr))
+        #     ypad = '{:04d}'.format(int(t))
+        #     filen = join(workdir, 'year' + ypad + '.npy')
+        #
+        #     Xb = Xb_one.copy_state()
+        #     if prior_check.exists(filen) and not core.clean_start:
+        #         if verbose > 2:
+        #             print 'prior file exists: ' + filen
+        #         Xb.state_list = np.load(filen)
 
         # Which resolutions to assimilate for given year
         res_to_assim = [res for res, freq in zip(assim_res_vals, res_assim_freq)
-                        if (iyr+1) % freq == 0]
+                        if (iyr+1) % freq == 0 and (iyr+1)/freq > 0]
 
-        iY = -1
+        iproxy = -1
         for res in res_to_assim:
 
-            if res > base_res:
-                base_Xb = Xb.copy_state()
-            else:
-                base_Xb = Xb
-            Xb.avg_to_res(res)
-            # TODO: Some kind of averaging depending on resolution
+            # Create prior for resolution
+            Xb_one.xb_from_h5(int(iyr//nelem_pr_yr), res, res_yr_shift[res])
 
-            for iY, Y in enumerate(
+            for iproxy, Y in enumerate(
                     prox_manager.sites_assim_res_proxy_objs(res),
-                    iY+1):
+                    iproxy+1):
 
                 # Crude check if we have proxy ob for current time
                 try:
@@ -282,8 +271,8 @@ def LMR_driver_callable(cfg=None):
                 except KeyError:
                     # Make sure GMT spot filled from previous proxy
                     if (iyr+1) % nelem_pr_yr == 0:
-                        gmt_save[iY+1, iyr//nelem_pr_yr] = \
-                            gmt_save[iY, iyr//nelem_pr_yr]
+                        gmt_save[iproxy+1, iyr//nelem_pr_yr] = \
+                            gmt_save[iproxy, iyr//nelem_pr_yr]
                     continue
 
                 if verbose > 2:
@@ -302,9 +291,10 @@ def LMR_driver_callable(cfg=None):
 
                 # Get Ye values for current proxy
                 if online:
-                    Ye = Y.psm(Xb)
+                    Ye = Y.psm(Xb_one)
                 else:
-                    Ye = Xb.get_var_data('ye_vals', idx=Y.subannual_idx)[iY]
+                    Ye = Xb_one.get_var_data('ye_vals',
+                                             idx=Y.subannual_idx)[iproxy]
 
                 # Define the ob error variance
                 ob_err = Y.psm_obj.R
@@ -318,36 +308,34 @@ def LMR_driver_callable(cfg=None):
                            str(Ye.mean()))
 
                 # Update the state
-                Xa = enkf_update_array(Xb.state_list[Y.subannual_idx],
+                Xa = enkf_update_array(Xb_one.state_list[Y.subannual_idx],
                                        Y.values[t], Ye, ob_err, loc)
-                Xb.state_list[Y.subannual_idx] = Xa
+                Xb_one.state_list[Y.subannual_idx] = Xa
 
                 if (iyr+1) % nelem_pr_yr == 0:
-                    xam = Xb.get_var_data('tas_sfc_Amon',
-                                          idx=Y.subannual_idx).mean(axis=1)
+                    xam = Xb_one.get_var_data('tas_sfc_Amon',
+                                              idx=Y.subannual_idx).mean(axis=1)
                     gmt = global_mean2(xam,
                                        Xb_one.var_coords['tas_sfc_Amon']['lat'])
-                    gmt_save[iY+1, iyr//nelem_pr_yr] = gmt
+                    gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
 
                 # check the variance change for sign
                 thistime = time()
-                if verbose > 2:
-                    xbvar = Xb.var(axis=1, ddof=1)
-                    xavar = Xa.var(ddof=1, axis=1)
-                    vardiff = xavar - xbvar
-                    print 'max change in variance:' + str(np.max(vardiff))
-                    print 'update took ' + str(thistime-lasttime) + 'seconds'
+                # if verbose > 2:
+                #     xbvar = Xb_one.var(axis=1, ddof=1)
+                #     xavar = Xa.var(ddof=1, axis=1)
+                #     vardiff = xavar - xbvar
+                #     print 'max change in variance:' + str(np.max(vardiff))
+                #     print 'update took ' + str(thistime-lasttime) + 'seconds'
                 lasttime = thistime
 
-        if (iyr+1) % nelem_pr_yr == 0:
-            # After finished with longer time resolution propogate mean to lower
-            # resolution
-            if iyr != 0:
-                avg = Xb.annual_avg()
-                base_Xb.replace_subannual_avg(avg)
+            # Assimilated all proxies at given res, propagate mean to base res
+            Xb_one.propagate_avg_to_h5(int(iyr//nelem_pr_yr), res_yr_shift[res])
 
-            # Dump Xa to file
-            np.save(filen, base_Xb.state_list)
+        if (iyr+1) % nelem_pr_yr == 0:
+            ypad = '{:04d}'.format(int(t))
+            filen = join(workdir, 'year' + ypad + '.npy')
+            np.save(filen, Xb_one.annual_avg())
 
     end_time = time() - begin_time
 
@@ -358,15 +346,19 @@ def LMR_driver_callable(cfg=None):
         print 'Reconstruction completed in ' + str(end_time/60.0)+' mins'
         print '====================================================='
 
+    # Close H5 file
+    Xb_one.close_xb_container()
+
     # 3 July 2015: compute and save the GMT for the full ensemble
     # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([ntimes, nens])
     for iyr, yr in enumerate(assim_times[0::nelem_pr_yr]):
         filen = join(workdir, 'year{:04d}'.format(int(yr)))
-        Xb.state_list = np.load(filen+'.npy')
-        Xa = Xb.annual_avg('tas_sfc_Amon')
-        gmt_ensemble[iyr] = global_mean2(Xa.T,
-                                         Xb.var_coords['tas_sfc_Amon']['lat'])
+        Xb_one.state_list = [np.load(filen+'.npy')]
+        Xa = np.squeeze(Xb_one.get_var_data('tas_sfc_Amon'))
+        gmt_ensemble[iyr] = \
+            global_mean2(Xa.T,
+                         Xb_one.var_coords['tas_sfc_Amon']['lat'])
 
     filen = join(workdir, 'gmt_ensemble')
     np.savez(filen, gmt_ensemble=gmt_ensemble, recon_times=recon_times)

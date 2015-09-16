@@ -19,7 +19,7 @@ import random
 import tables as tb
 
 from LMR_config import constants
-from LMR_utils2 import regrid_sphere2, var_to_hdf5_carray
+from LMR_utils2 import regrid_sphere2, var_to_hdf5_carray, empty_hdf5_carray
 _LAT = 'lat'
 _LON = 'lon'
 _LEV = 'lev'
@@ -483,7 +483,7 @@ class PriorVariable(GriddedVariable):
         file_dir = config.prior.datadir_prior
         file_name = config.prior.datafile_prior
         file_type = config.prior.dataformat_prior
-        base_resolution = config.core.assimilation_time_res[0]
+        base_resolution = config.core.sub_base_res
         sample_idxs = config.prior.prior_sample_idx
 
         try:
@@ -557,6 +557,12 @@ class State(object):
         self.var_view_range = {}
         self.var_space_shp = {}
         self.augmented = False
+
+        # Attr for h5 container use
+        self.h5f_out = None
+        self.xb_out = None
+        self._yr_len = None
+        self._orig_state = None
 
         self.len_state = 0
         for var, pobjs in prior_vars.iteritems():
@@ -651,6 +657,8 @@ class State(object):
 
     def avg_to_res(self, res, shift):
 
+        """Average current state list to resolution"""
+
         if res == self._base_res:
             return
 
@@ -669,10 +677,11 @@ class State(object):
         else:
             raise ValueError('Cannot handle resolutions larger than 1 yet.')
 
-    def replace_subannual_avg(self, avg):
-        data = np.array(self.state_list)
-        data_mean = self.annual_avg()
-        self.state_list = data - data_mean + avg
+    # def replace_subannual_avg(self, avg):
+    #     """Replace current subannual state list average"""
+    #     data = np.array(self.state_list)
+    #     data_mean = self.annual_avg()
+    #     self.state_list = data - data_mean + avg
 
     def get_old_state_info(self):
 
@@ -687,3 +696,68 @@ class State(object):
             state_info[var] = var_info
 
         return state_info
+
+    def create_h5_state_container(self, fname, nyrs_in_recon):
+
+        """Initialize pytables output container"""
+
+        self.h5f_out = tb.open_file(fname, 'w',
+                                    filters=tb.Filters(complib='blosc',
+                                                       complevel=2))
+        atom = tb.Atom.from_dtype(self.state_list[0].dtype)
+        num_subann = len(self.state_list)
+        tdim_len = (nyrs_in_recon + 1) * num_subann
+        shape = [tdim_len] + list(self.state_list[0].shape)
+        self.xb_out = empty_hdf5_carray(self.h5f_out, '/', 'output', atom,
+                                        shape)
+
+        self._orig_state = deepcopy(self.state_list)
+        self._yr_len = len(self._orig_state)
+        self.xb_out[0:self._yr_len] = np.array(self._orig_state)
+        self.xb_out[self._yr_len:(self._yr_len*2)] = np.array(self._orig_state)
+
+    def insert_upcoming_prior(self, curr_yr_idx):
+
+        """
+        Insert as we go to prevent huge upfront write cost
+        """
+        istart = curr_yr_idx*self._yr_len + self._yr_len
+        iend = istart + self._yr_len
+
+        self.xb_out[istart:iend] = self._orig_state
+
+    def xb_from_h5(self, yr_idx, res, shift):
+        ishift = int(shift / self._base_res)
+        istart = yr_idx*self._yr_len + ishift
+        iend = istart + self._yr_len
+
+        self.state_list = self.xb_out[istart:iend]
+        self.avg_to_res(res, 0)
+
+    def propagate_avg_to_h5(self, yr_idx, shift):
+        nchunks = len(self.state_list)
+        chk_size = self._yr_len / nchunks
+        ishift = int(shift / self._base_res)
+
+        for i in xrange(nchunks):
+            avg = self.state_list[i]
+
+            istart = yr_idx*self._yr_len + i*chk_size + ishift
+            iend = istart + chk_size
+            tmp_dat = self.xb_out[istart:iend]
+
+            if len(tmp_dat) > 1:
+                tmp_dat = tmp_dat - tmp_dat.mean(axis=0)
+                tmp_dat += avg
+
+                self.xb_out[istart:iend] = tmp_dat
+            else:
+                # same size as _base_res, just replace
+                self.xb_out[istart:iend] = avg
+
+    def close_xb_container(self):
+        self.h5f_out.close()
+
+
+
+

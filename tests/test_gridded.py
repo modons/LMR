@@ -511,6 +511,7 @@ def test_state(res):
     filename = test_config.prior.datafile_prior
     sample_idxs = test_config.prior.prior_sample_idx
 
+    test_config.core.sub_base_res = res
     state_obj = lmrgrid.State.from_config(test_config)
 
     num_priors = int(np.ceil(1/res))

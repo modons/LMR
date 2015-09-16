@@ -55,11 +55,21 @@ class core:
     iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
-    assimilation_time_res = [1.]  # in yrs
+    assimilation_time_res = [0.5, 1.]  # in yrs
 
     # What we're defining as year start
     # 0-11 where 0 indicates start at Jan.
-    year_start_idx_shift = 0
+    res_yr_shift = {0.5: 0.0, 1.0: 0.0}
+
+    # TODO: add rules for shift?
+    # If shifting on smaller time scales than smallest time chunk it becomes
+    # the base resolution
+    sub_base_res = assimilation_time_res[0]
+    for res, shift in res_yr_shift.iteritems():
+        if (res in assimilation_time_res and
+           shift < sub_base_res and
+           shift != 0.0):
+            sub_base_res = shift
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'

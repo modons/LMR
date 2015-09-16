@@ -50,7 +50,7 @@ class core:
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
-    nens = 100
+    nens = 25
     seed = None
     iter_range = [0, 0]
     curr_iter = iter_range[0]
@@ -64,10 +64,12 @@ class core:
     # the base resolution
     sub_base_res = assimilation_time_res[0]
     for res, shift in res_yr_shift.iteritems():
-        if shift < sub_base_res:
+        if (res in assimilation_time_res and
+           shift < sub_base_res and
+           shift != 0.0):
             sub_base_res = shift
 
-    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working/tmp'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
@@ -126,10 +128,17 @@ class proxies:
         """
 
         datadir_proxy = join(core.lmr_path, 'data', 'proxies')
+        # Pages 0.5yr resolution
+        # datafile_proxy = join(datadir_proxy,
+        #                       'Pages2k_Proxies_0pt5res.df.pckl')
+        # metafile_proxy = join(datadir_proxy,
+        #                       'Pages2k_Metadata_0pt5res.df.pckl')
+
+        # Pages 1.0 yr res only
         datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies_0pt5res.df.pckl')
+                              'Pages2k_Proxies.df.pckl')
         metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata_0pt5res.df.pckl')
+                              'Pages2k_Metadata.df.pckl')
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
