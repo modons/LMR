@@ -36,11 +36,11 @@
 import numpy as np
 from os.path import join
 from time import time
+import tables as tb
 
 import LMR_proxy2
-import LMR_prior
 import LMR_gridded
-from LMR_utils2 import global_mean2
+from LMR_utils2 import global_mean2, empty_hdf5_carray
 import LMR_config as BaseCfg
 from LMR_DA import enkf_update_array, cov_localization
 
@@ -58,9 +58,6 @@ def LMR_driver_callable(cfg=None):
     #  2 = many; >=3 = all)
     verbose = 1
 
-    # TODO: AP Fix Configuration
-    # daylight the variables passed in the state object (easier for code
-    # migration than leaving attached)
     nexp = core.nexp
     workdir = core.datadir_output
     recon_period = core.recon_period
@@ -68,10 +65,12 @@ def LMR_driver_callable(cfg=None):
     nens = core.nens
     loc_rad = core.loc_rad
     trunc_state = prior.truncate_state
-    base_res = core.assimilation_time_res[0]
     assim_res_vals = core.assimilation_time_res
-    res_assim_freq = (np.array(assim_res_vals)/base_res).astype(np.int16)
     prior_source = prior.prior_source
+    base_res = core.assimilation_time_res[0]
+    sub_base_res = core.sub_base_res
+    res_assim_freq = (np.array(assim_res_vals)/base_res).astype(np.int16)
+    res_yr_shift = core.res_yr_shift
 
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -113,7 +112,7 @@ def LMR_driver_callable(cfg=None):
         print '-------------------------------------------'
         print 'Source for prior: ', prior_source
 
-    # Create initial state vector of desired variables at highest time res
+    # Create initial state vector of desired variables at smallest time res
     Xb_one_full = LMR_gridded.State.from_config(cfg)
 
 
@@ -186,10 +185,12 @@ def LMR_driver_callable(cfg=None):
     # Extract all the Ye's from master list of proxy objects into numpy array
     if not online:
         ye_all = np.empty(shape=[total_proxy_count, nens])
-        Xb_full_copy = Xb_one_full.copy_state()
         for res in assim_res_vals:
+            Xb_full_copy = Xb_one_full.copy_state()
 
-            Xb_full_copy.avg_to_res(res)
+            shift = res_yr_shift[res]
+
+            Xb_full_copy.avg_to_res(res, shift)
             for i, proxy in enumerate(
                     prox_manager.sites_assim_res_proxy_objs(res)):
                 ye_all[i, :] = proxy.psm(Xb_one_full, proxy.subannual_idx)
@@ -209,12 +210,22 @@ def LMR_driver_callable(cfg=None):
              state_info=Xb_one.old_state_info)
 
     # ==========================================================================
-    # Loop over all proxies and perform assimilation ---------------------------
+    # Loop over all years and proxies, and perform assimilation ----------------
     # ==========================================================================
 
-    # ---------------------
-    # Loop over proxy types
-    # ---------------------
+    # Create sub_base_resolution output container
+    fname = 'xa_output_res{1.2f}.h5'.format(sub_base_res)
+    out_h5f = tb.open_file(workdir+fname, 'w',
+                           filters=tb.Filters(complib='blosc',
+                                              complevel=2))
+    atom = tb.Atom.from_dtype(Xb_one.state_list[0].dtype)
+    num_subann = len(Xb_one.state_list)
+    tdim_len = (ntimes+1) * num_subann
+    shape = [tdim_len] + list(Xb_one.state_list[0].shape)
+    xb_out = empty_hdf5_carray(out_h5f, '/', 'output', atom, shape)
+    output_nelem_pr_yr = int(np.ceil(1.0), sub_base_res)
+    xb_out[0:num_subann] = np.array(Xb_one.state_list)
+
 
     # Array containing the global-mean state (for diagnostic purposes)
     gmt_save = np.zeros([total_proxy_count+1, ntimes])
@@ -227,6 +238,10 @@ def LMR_driver_callable(cfg=None):
     nelem_pr_yr = np.ceil(1.0 / base_res)
     start_yr, end_yr = recon_period
     assim_times = np.arange(start_yr, end_yr+1, base_res)
+
+    # ---------------------
+    # Loop over proxy types
+    # ---------------------
     lasttime = time()
     for iyr, t in enumerate(assim_times):
 
