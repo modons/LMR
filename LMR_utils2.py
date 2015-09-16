@@ -242,7 +242,7 @@ def ensemble_stats(workdir, y_assim):
                     i = f.find('year')
                     year = f[i+4:i+8]
                     years.append(year)
-                    Xatmp = np.load(f).mean(axis=0)
+                    Xatmp = np.load(f)
                     Xa = np.reshape(Xatmp[ibeg:iend,:],(ndim1,ndim2,nens))
                     xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
                     xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
@@ -318,7 +318,7 @@ def ensemble_stats(workdir, y_assim):
         i = f.find('year')
         year = f[i+4:i+8]
         years.append(float(year))
-        Xatmp = np.load(f).mean(axis=0)
+        Xatmp = np.load(f)
         # Extract the Ye's from augmented state (beyond stateDim 'til end of
         #  state vector)
         Ye_s[:, k, :] = Xatmp[stateDim:, :]

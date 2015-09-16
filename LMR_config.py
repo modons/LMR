@@ -44,18 +44,18 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_mpi_newgridded_check_0pt5res'
+    nexp = 'testdev_multires_yrshift'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1850, 2000]
-    nens = 25
+    recon_period = [1950, 2000]
+    nens = 100
     seed = None
-    iter_range = [0, 0]
+    iter_range = [0, 5]
     curr_iter = iter_range[0]
     loc_rad = None
-    assimilation_time_res = [0.5, 1.0]  # in yrs
+    assimilation_time_res = [1.0]  # in yrs
     # maps year shift (in years) to resolution
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
 
@@ -69,7 +69,7 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working/tmp'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working/'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
@@ -267,12 +267,16 @@ class prior:
 
     # Information for sampling located here because it needs to be persistent
     # across different variables.
+    # Number of sample years for each source
+    _sranges = {'mpi-esm-p_last_millenium': 1000,
+                'ccsm4_last_millenium': 1000}
     if core.nens:
         # Get sample indices to use for prior sampling
         # If core.seed is None then it uses system time.
         random.seed(core.seed)
-        _srange = core.recon_period[1] - core.recon_period[0] + 1
-        prior_sample_idx = random.sample(range(_srange), core.nens)
+        _srange = 1000
+        prior_sample_idx = random.sample(range(_sranges[prior_source]),
+                                         core.nens)
     else:
         prior_sample_idx = None
 
