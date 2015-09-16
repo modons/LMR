@@ -592,7 +592,7 @@ class State(object):
     @classmethod
     def from_config(cls, config):
         pvars = PriorVariable.load_allvars(config)
-        base_res = config.core.assimilation_time_res[0]
+        base_res = config.core.sub_base_res
 
         return cls(pvars, base_res)
 
@@ -649,17 +649,19 @@ class State(object):
         avg = subannual_data.mean(axis=0)
         return avg
 
-    def avg_to_res(self, res):
+    def avg_to_res(self, res, shift):
 
         if res == self._base_res:
             return
 
         if res < 1:
             chunk = int(res / self._base_res)
-            new_state = [self.state_list[i:i+chunk]
-                         for i in xrange(0, len(self.state_list), chunk)]
-            new_state = [np.array(state_group).mean(axis=0)
-                         for state_group in new_state]
+            shift_idx = int(shift / self._base_res)
+            tmp_dat = np.roll(self.state_list, shift_idx, axis=1)
+
+            end_idx = len(self.state_list)
+            new_state = [tmp_dat[i:i+chunk].mean(axis=0)
+                         for i in xrange(0, end_idx, chunk)]
             self.state_list = new_state
         elif res == 1:
             new_state = np.array(self.state_list).mean(axis=0)
