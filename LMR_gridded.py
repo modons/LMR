@@ -208,8 +208,6 @@ class GriddedVariable(object):
     @classmethod
     def _load_pre_avg_obj(cls, dir_name, filename, varname, resolution,
                           truncate=False, sample=None, nens=None, seed=None):
-
-
         """
         General structure for load pre-averaged:
         1. Load data (done so into sub_annual groups if applicable)
@@ -499,6 +497,8 @@ class PriorVariable(GriddedVariable):
         file_name = config.prior.datafile_prior
         file_type = config.prior.dataformat_prior
         base_resolution = config.core.sub_base_res
+        nens = config.core.nens
+        seed = config.core.seed
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
@@ -511,12 +511,15 @@ class PriorVariable(GriddedVariable):
         try:
             var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
                                              base_resolution,
-                                             sample=sample)
+                                             sample=sample,
+                                             nens=nens,
+                                             seed=seed)
             print 'Loaded pre-averaged file.'
         except IOError:
             print 'No pre-averaged file found... Loading directly from file.'
             var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
-                                    sample=sample, save=True)
+                                    sample=sample, save=True,
+                                    nens=nens, seed=seed)
 
         return var_objs
 
