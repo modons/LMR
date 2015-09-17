@@ -9,9 +9,8 @@ from LMR_utils2 import augment_docstr, class_docs_fixer
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from random import sample
 from copy import deepcopy
-
+import random
 
 class ProxyManager:
     """
@@ -66,13 +65,16 @@ class ProxyManager:
                 self.all_ids_by_group[k] += v
 
         proxy_frac = config.proxies.proxy_frac
+        seed = config.core.seed
         nsites = len(self.all_proxies)
 
         # Sample from all proxies if specified
         if proxy_frac < 1.0:
             nsites_assim = int(nsites * proxy_frac)
 
-            self.ind_assim = sample(range(nsites), nsites_assim)
+            # Set seed if set in configuration
+            random.seed(seed)
+            self.ind_assim = random.sample(range(nsites), nsites_assim)
             self.ind_assim.sort()
             self.ind_eval = list(set(range(nsites)) - set(self.ind_assim))
             self.ind_eval.sort()

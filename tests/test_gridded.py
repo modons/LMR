@@ -28,6 +28,19 @@ def ncf_data(request):
     request.addfinalizer(fin)
     return f_obj
 
+@pytest.fixture(scope='module')
+def ncf_data_avg_air_0pt5(request, ncf_data):
+
+    data = ncf_data.variables['air'][:]
+    times = ncf_data.variables['time']
+    times = ncf.num2date(times[:], times.units)
+    _, avg_data = lmrgrid.PriorVariable._time_avg_gridded_to_resolution(times,
+                                                                        data,
+                                                                        0.5)
+    avg_data = np.array([avg_data[i::2] for i in range(2)])
+    return avg_data
+
+
 @pytest.fixture(scope='function')
 def ncf_dates(request, ncf_data):
     time = ncf_data.variables['time']
@@ -74,6 +87,7 @@ def test_priorvar_init(ncf_data):
     assert prior_var._space_dims == ['lat', 'lon']
     assert prior_var.space_shp == [94, 192]
     assert prior_var.type == 'horizontal'
+    assert prior_var._idx_used_for_sample is None
 
 
 @pytest.mark.parametrize('init_args, kw_args, type',
@@ -196,6 +210,33 @@ def test_priorvar_flattened(ncf_data):
     np.testing.assert_array_equal(latgrd.flatten(), flat_coords['lat'])
 
 
+def test_gridded_var_sample_gen():
+    sample = random.sample(range(4), 2)
+    samplefunc = lmrgrid.GriddedVariable._sample_gen
+
+    # Test sample exists already, should return same sample
+    new_sample = samplefunc(sample, 1, 1, None)
+    assert sample == new_sample
+
+    # Test it creates correct number of samples
+    new_sample = samplefunc(None, 10, 3, None)
+    assert len(new_sample) == 3
+    for item in new_sample:
+        assert not item >= 10
+
+    # Test seed
+    random.seed(0)
+    sample1 = random.sample(range(10), 3)
+    sample2 = samplefunc(None, 10, 3, 0)
+    assert sample1 == sample2
+
+    # Test that seed goes away
+    random.seed(0)
+    sample3 = samplefunc(None, 10, 3, None)
+
+    assert sample3 != sample2
+
+
 def test_priorvar_sample(ncf_data):
     """
     Test sampling of prior variable
@@ -224,6 +265,7 @@ def test_priorvar_sample(ncf_data):
 
     assert len(sampled_prior.data) == nens
     assert dat_sample.shape == sampled_prior.data.shape
+    assert sampled_prior._idx_used_for_sample == smp_idx
     np.testing.assert_array_equal(dat_sample, sampled_prior.data)
     np.testing.assert_array_equal(time_sample, sampled_prior.time)
 
@@ -380,7 +422,7 @@ def test_priorvar_load_from_netcdf(varname, savefile):
     filename = 'gridded_dat.nc'
     resolution = 1.0
     yr_shift = 0
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+    pre_avg_fname = '.pre_avg_{}_res{:02.2f}'.format(varname,
                                                      resolution)
     prior_obj = lmrgrid.PriorVariable._load_from_netcdf(dirname,
                                                         filename,
@@ -399,6 +441,54 @@ def test_priorvar_load_from_netcdf(varname, savefile):
     else:
         assert prior_obj.dim_order == ['time', 'lat', 'lon']
 
+def test_priorvar_load_from_netcdf_sample(ncf_data_avg_air_0pt5):
+
+    avg_data = ncf_data_avg_air_0pt5
+    samples = [2, 0]
+
+    pobjs = lmrgrid.PriorVariable._load_from_netcdf('data', 'gridded_dat.nc',
+                                                     'air', 0.5,
+                                                    sample=samples)
+
+    for i, obj in enumerate(pobjs):
+        for smp_idx, row in zip(samples, obj.data):
+            np.testing.assert_array_equal(row,
+                                          avg_data[i][smp_idx])
+
+def test_priorvar_load_from_netcdf_sample_nens(ncf_data_avg_air_0pt5):
+
+    avg_data = ncf_data_avg_air_0pt5
+
+    pobjs = lmrgrid.PriorVariable._load_from_netcdf('data', 'gridded_dat.nc',
+                                                     'air', 0.5,
+                                                    nens=2)
+    assert pobjs[0].data.shape[0] == 2
+    assert hasattr(pobjs[0], '_idx_used_for_sample')
+    samples = pobjs[0]._idx_used_for_sample
+
+    for i, obj in enumerate(pobjs):
+        for smp_idx, row in zip(samples, obj.data):
+            np.testing.assert_array_equal(row,
+                                          avg_data[i][smp_idx])
+
+
+def test_priorvar_load_from_netcdf_sample_seed():
+
+    pobjs = lmrgrid.PriorVariable._load_from_netcdf('data', 'gridded_dat.nc',
+                                                     'air', 0.5,
+                                                    nens=2,
+                                                    seed=2)
+
+    pobjs2 = lmrgrid.PriorVariable._load_from_netcdf('data', 'gridded_dat.nc',
+                                                     'air', 0.5,
+                                                    nens=2,
+                                                    seed=2)
+    assert pobjs[0].data.shape[0] == 2
+    samples = pobjs[0]._idx_used_for_sample
+
+    for obj1, obj2 in zip(pobjs, pobjs2):
+        np.testing.assert_array_equal(obj1.data, obj2.data)
+
 
 def test_priorvar_load_from_netcdf_truncate():
     dirname = '/home/disk/p/wperkins/Research/LMR/tests/data/'
@@ -406,7 +496,7 @@ def test_priorvar_load_from_netcdf_truncate():
     resolution = 1.0
     yr_shift = 0
     varname = 'air'
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+    pre_avg_fname = '.pre_avg_{}_res{:02.2f}'.format(varname,
                                                      resolution)
     prior_obj = lmrgrid.PriorVariable._load_from_netcdf(dirname,
                                                         filename,
@@ -429,7 +519,7 @@ def test_priorvar_load_preavg_data(varname, trunc):
     filename = 'gridded_dat.nc'
     resolution = 1.0
     yr_shift = 0
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+    pre_avg_fname = '.pre_avg_{}_res{:02.2f}'.format(varname,
                                                      resolution)
 
     if trunc:
@@ -463,7 +553,7 @@ def test_priorvar_load_preavg_full_exist_no_truncated():
     resolution = 1.0
     yr_shift = 0
     varname = 'air'
-    pre_avg_fname = '.pre_avg_{}_res{:02.1f}'.format(varname,
+    pre_avg_fname = '.pre_avg_{}_res{:02.2f}'.format(varname,
                                                      resolution)
     if os.path.exists(dirname + filename + pre_avg_fname + '.trnc'):
         os.remove(dirname + filename + pre_avg_fname + '.trnc')
@@ -488,6 +578,59 @@ def test_priorvar_load_preavg_full_exist_no_truncated():
     assert os.path.exists(dirname + filename + pre_avg_fname + '.trnc.h5')
 
 
+def test_priorvar_load_preavg_sample(ncf_data_avg_air_0pt5):
+
+    avg_data = ncf_data_avg_air_0pt5
+    samples = [2, 0]
+
+    _ = lmrgrid.PriorVariable._load_from_netcdf('data', 'gridded_dat.nc',
+                                                'air', 0.5,
+                                                save=True)
+
+    pobjs = lmrgrid.PriorVariable._load_pre_avg_obj('data', 'gridded_dat.nc',
+                                                    'air', 0.5,
+                                                    sample=samples)
+
+    for i, obj in enumerate(pobjs):
+        for smp_idx, row in zip(samples, obj.data):
+            np.testing.assert_array_equal(row,
+                                          avg_data[i][smp_idx])
+
+def test_priorvar_load_preavg_sample_nens(ncf_data_avg_air_0pt5):
+
+    avg_data = ncf_data_avg_air_0pt5
+
+    pobjs = lmrgrid.PriorVariable._load_pre_avg_obj('data', 'gridded_dat.nc',
+                                                    'air', 0.5,
+                                                    nens=2)
+    assert pobjs[0].data.shape[0] == 2
+    assert hasattr(pobjs[0], '_idx_used_for_sample')
+    samples = pobjs[0]._idx_used_for_sample
+
+    for i, obj in enumerate(pobjs):
+        for smp_idx, row in zip(samples, obj.data):
+            np.testing.assert_array_equal(row,
+                                          avg_data[i][smp_idx])
+
+
+def test_priorvar_load_preavg_sample_seed():
+
+    pobjs = lmrgrid.PriorVariable._load_pre_avg_obj('data', 'gridded_dat.nc',
+                                                    'air', 0.5,
+                                                    nens=2,
+                                                    seed=2)
+
+    pobjs2 = lmrgrid.PriorVariable._load_pre_avg_obj('data', 'gridded_dat.nc',
+                                                     'air', 0.5,
+                                                     nens=2,
+                                                     seed=2)
+    assert pobjs[0].data.shape[0] == 2
+    samples = pobjs[0]._idx_used_for_sample
+
+    for obj1, obj2 in zip(pobjs, pobjs2):
+        np.testing.assert_array_equal(obj1.data, obj2.data)
+
+
 @pytest.mark.xfail(raises=IOError)
 def test_priorvar_load_preavg_not_exist():
     dirname = '/home/disk/p/wperkins/Research/LMR/tests/data/'
@@ -509,10 +652,9 @@ def test_state(res):
     test_config.core.assimilation_time_res = [res]
     dirname = test_config.prior.datadir_prior
     filename = test_config.prior.datafile_prior
-    sample_idxs = test_config.prior.prior_sample_idx
-
     test_config.core.sub_base_res = res
     state_obj = lmrgrid.State.from_config(test_config)
+    sample_idxs = state_obj._prior_vars['air'][0]._idx_used_for_sample
 
     num_priors = int(np.ceil(1/res))
 
@@ -538,9 +680,12 @@ if __name__ == '__main__':
     #     time = f.variables['time']
     #     time = ncf.num2date(time[:], time.units)
     #     data = f.variables['air'][:]
-        #test_priorvar_subannual_res_separation(f)
+        # test_priorvar_subannual_res_separation(f)
+        # test_priorvar_load_preavg_sample(ncf_data_avg_air_0pt5(None, f))
+        # test_priorvar_load_preavg_sample_nens(ncf_data_avg_air_0pt5(None, f))
+        # test_priorvar_load_preavg_sample_seed()
 
-        # import test_config
+    # import test_config
         # test_state(f, 1.0)
     #test_griddedvar_timeavg_variable_yrshift(3, time, data)
 

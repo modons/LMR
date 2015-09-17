@@ -38,7 +38,8 @@ class GriddedVariable(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, name, dims_ordered, data, resolution, time=None,
-                 lev=None, lat=None, lon=None, fill_val=None):
+                 lev=None, lat=None, lon=None, fill_val=None,
+                 sampled=None):
         self.name = name
         self.dim_order = dims_ordered
         self.ndim = len(dims_ordered)
@@ -49,6 +50,7 @@ class GriddedVariable(object):
         self.lat = lat
         self.lon = lon
         self._fill_val = fill_val
+        self._idx_used_for_sample = sampled
 
         self._dim_coord_map = {_TIME: self.time,
                                _LEV: self.lev,
@@ -101,8 +103,14 @@ class GriddedVariable(object):
         filename += '.h5'
         data_grp = '/data'
 
+        # Overwrites file everytime save position 0 is invoked
+        if position == 0:
+            mode = 'w'
+        else:
+            mode = 'a'
+
         # Open file to write to
-        with tb.open_file(filename, 'a',
+        with tb.open_file(filename, mode,
                           filters=tb.Filters(complib='blosc',
                                              complevel=2)) as h5f:
             if '/grid_objects' in h5f:
@@ -185,7 +193,8 @@ class GriddedVariable(object):
                    time=time_sample,
                    lev=self.lev,
                    lat=self.lat,
-                   lon=self.lon)
+                   lon=self.lon,
+                   sampled=sample_idxs)
 
     @abstractmethod
     def load(cls, config, *args):
@@ -198,7 +207,7 @@ class GriddedVariable(object):
 
     @classmethod
     def _load_pre_avg_obj(cls, dir_name, filename, varname, resolution,
-                          truncate=False, sample=None):
+                          truncate=False, sample=None, nens=None, seed=None):
 
 
         """
@@ -211,7 +220,7 @@ class GriddedVariable(object):
         """
 
         # Check if pre-processed averages file exists
-        pre_avg_tag = '.pre_avg_{}_res{:02.1f}'.format(varname,
+        pre_avg_tag = '.pre_avg_{}_res{:02.2f}'.format(varname,
                                                        resolution)
         trunc_tag = '.trnc'
         ftype_tag = '.h5'
@@ -225,48 +234,38 @@ class GriddedVariable(object):
 
         # Look for pre_averaged_file
         if os.path.exists(path):
-            gobjs = cls._load_gridobjs_from_hdf5(path, sample)
+            do_trunc = False
+            dat_path = path
         elif truncate and os.path.exists(path.strip(trunc_tag)):
             # If truncate requested and truncate not found look for
             # pre-averaged full version
-            full_dat_path = path.strip(trunc_tag)
-            gobjs = cls._load_gridobjs_from_hdf5(full_dat_path, sample)
-
-            for i, gobj in enumerate(gobjs):
-                gobj = gobj.truncate()
-                gobj.save(path, position=i)
-                gobjs[i] = gobj
+            do_trunc = True
+            dat_path = path.strip(trunc_tag)
         else:
             raise IOError('No pre-averaged file found for given specifications')
 
-        return gobjs
-
-    @staticmethod
-    def _load_gridobjs_from_hdf5(path, sample_idxs):
-        with tb.open_file(path, 'r') as h5f:
+        # Load prior objects
+        with tb.open_file(dat_path, 'r') as h5f:
             obj_arr = h5f.root.grid_objects
+            srange = h5f.root.data.obj0.shape[0]
+
+            sample_idxs = cls._sample_gen(sample, srange, nens, seed)
 
             gobjs = []
             for i, obj in enumerate(obj_arr):
                 data = h5f.get_node('/data/' + 'obj'+str(i))
 
                 if sample_idxs:
-                    # create container
-                    sample_shp = [len(sample_idxs)] + list(data.shape[1:])
-                    sample_dat = np.zeros(sample_shp)
 
-                    # Sample data
-                    for j, idx in enumerate(sample_idxs):
-                        sample_dat[j] = data[idx]
-                    obj_data = sample_dat
-
-                    # Sample time
-                    obj.time = obj.time[sample_idxs]
+                    obj.data = data
+                    obj = obj.sample_from_idx(sample_idxs)
                 else:
                     obj_data = data.read()
+                    obj.data = obj_data
 
-                # Set data attribute
-                obj.data = obj_data
+                if do_trunc:
+                    obj.truncate()
+                    obj.save(path, position=i)
 
                 gobjs.append(obj)
 
@@ -274,7 +273,8 @@ class GriddedVariable(object):
 
     @classmethod
     def _load_from_netcdf(cls, dir_name, filename, varname, resolution,
-                          truncate=False, sample=None, save=False):
+                          truncate=False, sample=None, nens=None, seed=None,
+                          save=False):
         """
         General structure for load origininal:
         1. Load data
@@ -286,7 +286,7 @@ class GriddedVariable(object):
         """
 
         # Check if pre-processed averages file exists
-        pre_avg_name = '.pre_avg_{}_res{:02.1f}'
+        pre_avg_name = '.pre_avg_{}_res{:02.2f}'
 
         with Dataset(join(dir_name, filename), 'r') as f:
             var = f.variables[varname]
@@ -349,6 +349,9 @@ class GriddedVariable(object):
                                                            dim_vals[_TIME],
                                                            resolution)
 
+            srange = new_avg_data[0].shape[0]
+            sample_idx = cls._sample_gen(sample, srange, nens, seed)
+
             # Create gridded objects
             grid_objs = []
             for i, (new_dat, new_t) in enumerate(izip(new_avg_data, new_time)):
@@ -368,8 +371,8 @@ class GriddedVariable(object):
                         # If datatype is not horizontal it won't be truncated
                         pass
 
-                if sample:
-                    grid_obj = grid_obj.sample_from_idx(sample)
+                if sample_idx:
+                    grid_obj = grid_obj.sample_from_idx(sample_idx)
 
                 grid_objs.append(grid_obj)
 
@@ -426,6 +429,18 @@ class GriddedVariable(object):
         return new_data, new_time
 
     @staticmethod
+    def _sample_gen(sample, srange, nens, seed):
+
+        if sample is not None:
+            return sample
+        elif nens is not None:
+            # Defaults to sys time if seed=None
+            random.seed(seed)
+            return random.sample(range(srange), nens)
+        else:
+            return None
+
+    @staticmethod
     def _time_avg_gridded_to_resolution(time_vals, data, resolution,
                                         yr_shift=0):
         """
@@ -479,12 +494,11 @@ class GriddedVariable(object):
 class PriorVariable(GriddedVariable):
 
     @classmethod
-    def load(cls, config, varname):
+    def load(cls, config, varname, sample=None):
         file_dir = config.prior.datadir_prior
         file_name = config.prior.datafile_prior
         file_type = config.prior.dataformat_prior
         base_resolution = config.core.sub_base_res
-        sample_idxs = config.prior.prior_sample_idx
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
@@ -497,12 +511,12 @@ class PriorVariable(GriddedVariable):
         try:
             var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
                                              base_resolution,
-                                             sample=sample_idxs)
+                                             sample=sample)
             print 'Loaded pre-averaged file.'
         except IOError:
             print 'No pre-averaged file found... Loading directly from file.'
             var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
-                                    sample=sample_idxs, save=True)
+                                    sample=sample, save=True)
 
         return var_objs
 
@@ -510,9 +524,13 @@ class PriorVariable(GriddedVariable):
     def load_allvars(cls, config):
         var_names = config.prior.state_variables
 
+        sample = None
         prior_dict = OrderedDict()
         for vname in var_names:
-            prior_dict[vname] = cls.load(config, vname)
+            pobjs = cls.load(config, vname, sample)
+            # Assure that same sample is used for all variables of a prior
+            sample = pobjs[0]._idx_used_for_sample
+            prior_dict[vname] = pobjs
 
         return prior_dict
 

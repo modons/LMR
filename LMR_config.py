@@ -49,10 +49,10 @@ class core:
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1950, 2000]
+    recon_period = [1850, 2000]
     nens = 100
     seed = None
-    iter_range = [0, 5]
+    iter_range = [0, 3]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -264,19 +264,4 @@ class prior:
     dataformat_prior = 'NCD'
     state_variables = ['tas_sfc_Amon']
     truncate_state = True
-
-    # Information for sampling located here because it needs to be persistent
-    # across different variables.
-    # Number of sample years for each source
-    _sranges = {'mpi-esm-p_last_millenium': 1000,
-                'ccsm4_last_millenium': 1000}
-    if core.nens:
-        # Get sample indices to use for prior sampling
-        # If core.seed is None then it uses system time.
-        random.seed(core.seed)
-        _srange = 1000
-        prior_sample_idx = random.sample(range(_sranges[prior_source]),
-                                         core.nens)
-    else:
-        prior_sample_idx = None
 
