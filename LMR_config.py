@@ -18,6 +18,22 @@ class constants:
         numpy_zip = 'NPZ'
         dataframe = 'DF'
 
+    calib = {}
+    calib['GISTEMP'] = {'fname': 'gistemp1200_ERSST.nc',
+                       'varname': 'Tsfc',
+                       'type': 'NCD'}
+
+    prior = {}
+    prior['ccsm4_last_millenium'] = \
+        {'fname': 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc',
+         'type': 'NCD',
+         'state_vars': ['tas_sfc_Amon']}
+
+    prior['mpi-esm-p_last_millenium'] = \
+        {'fname': '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc',
+         'type': 'NCD',
+         'state_vars': ['tas_sfc_Amon']}
+
 class core:
     """
     High-level parameters of reconstruction experiment
@@ -228,9 +244,11 @@ class psm:
             Usage threshold for correlation of linear PSM
         """
         datatag_calib = 'GISTEMP'
+        sub_base_res = core.sub_base_res
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
-        datafile_calib = 'gistemp1200_ERSST.nc'
-        dataformat_calib = 'NCD'
+        datafile_calib = constants.calib[datatag_calib]['fname']
+        varname_calib = constants.calib[datatag_calib]['varname']
+        dataformat_calib = constants.calib[datatag_calib]['type']
 
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
@@ -259,9 +277,8 @@ class prior:
     #prior_source = 'ccsm4_last_millenium'
     prior_source = 'mpi-esm-p_last_millenium'
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
-    #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
-    datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
-    dataformat_prior = 'NCD'
-    state_variables = ['tas_sfc_Amon']
+    datafile_prior   = constants.prior[prior_source]['fname']
+    dataformat_prior = constants.prior[prior_source]['type']
+    state_variables = constants.prior[prior_source]['state_vars']
     truncate_state = True
 
