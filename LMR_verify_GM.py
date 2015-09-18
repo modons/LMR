@@ -42,7 +42,7 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = False
+fsave = True
 
 # file specification
 #
@@ -59,7 +59,7 @@ fsave = False
 #nexp = 'testdev_1000_100pct_mxdonly'
 #nexp = 'testdev_1000_100pct_sedimentonly'
 #nexp = 'testdev_detrend4_1000_75pct'
-nexp = 'testdev_multires_yrshift'
+nexp = 'testdev_1pt0res_10itr_check_GM'
 
 # specify directories for LMR and calibration data
 datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'

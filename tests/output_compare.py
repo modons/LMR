@@ -14,8 +14,9 @@ from itertools import izip
 off_v_on = True
 
 #dir1 = '/home/disk/ekman/rtardif/kalman3/LMR/output/validationWithAndre/r0/'
-dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/proxyfirstloop_10yr_100members_1itr_100pct/r0/'
-dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/timefirst_10yr_100members_1itr_100pct/r0/'
+dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison/r0/'
+dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_multires_yrshift/r0/'
+#dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_prior_new_comparison/r1/'
 
 d1_npfiles = glob.glob(dir1 + '*.npz')
 d1_pckl_files = glob.glob(dir1 + '*.pckl')
@@ -75,8 +76,8 @@ for idx, file in enumerate(d1_files):
                 if off_v_on:
                     if key == 'Xb_one_aug':
                         # Need to re arrange proxie order
-                        p1 = values[:-nproxies]
-                        p2 = values2[:-nproxies]
+                        p1 = values[0][:-nproxies]
+                        p2 = values2[0][:-nproxies]
                         np.testing.assert_allclose(p1, p2)
 
                         ye1 = values[-nproxies:]

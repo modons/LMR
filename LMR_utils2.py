@@ -420,6 +420,9 @@ def regrid_sphere2(grid_obj, ntrunc):
                          gridtype='regular', legfunc='computed')
 
     # truncate to a lower resolution grid (triangular truncation)
+    # nlat must be ntrunc+1 per the documentation, want to keep it even
+    # so that poles are not included in the grid and because the original
+    # experiments were with even nlat
     nlat_new = (ntrunc + 1) + (ntrunc + 1) % 2
     nlon_new = int(nlat_new*1.5)
 
