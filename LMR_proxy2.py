@@ -426,11 +426,16 @@ class ProxyPages(BaseProxyObject):
 
         # Create proxy objects list
         all_proxies = []
+        calib_obj = None
         for site in all_proxy_ids:
             try:
                 pobj = cls.load_site(config, site, data_range,
                                      meta_src=meta_src, data_src=data_src,
                                      **psm_kwargs)
+                if pobj.psm_obj._calib_obj is not None:
+                    calib_obj = pobj.psom_obj._calib_obj
+                    pobj.psom_obj._calib_obj = None
+                psm_kwargs.update(calib_objs=calib_obj)
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
@@ -438,6 +443,10 @@ class ProxyPages(BaseProxyObject):
                     if site in group:
                         group.remove(site)
                         break  # Should only be one instance
+
+        if calib_obj is not None:
+            # TODO: resave proxy pre_calib
+            pass
 
         return proxy_id_by_type, all_proxies
 

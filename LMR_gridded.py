@@ -201,6 +201,35 @@ class GriddedVariable(object):
         pass
 
     @classmethod
+    def _main_load_helper(cls, file_dir, file_name, varname, file_type,
+                          base_resolution, nens=None, seed=None, sample=None):
+
+        try:
+            ftype_loader = cls.get_loader_for_filetype(file_type)
+        except KeyError:
+            raise TypeError('Specified file type not supported yet.')
+
+        fname = file_name.replace('[vardef_template]', varname)
+        varname = varname.split('_')[0]
+
+        try:
+            var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
+                                             base_resolution,
+                                             sample=sample,
+                                             nens=nens,
+                                             seed=seed)
+            print 'Loaded pre-averaged file.'
+        except IOError:
+            print 'No pre-averaged file found... Loading directly from file.'
+            var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
+                                    sample=sample, save=True,
+                                    nens=nens, seed=seed)
+
+        return var_objs
+
+
+
+    @classmethod
     def get_loader_for_filetype(cls, file_type):
         ftype_map = {_ftypes.netcdf: cls._load_from_netcdf}
         return ftype_map[file_type]
@@ -500,28 +529,11 @@ class PriorVariable(GriddedVariable):
         nens = config.core.nens
         seed = config.core.seed
 
-        try:
-            ftype_loader = cls.get_loader_for_filetype(file_type)
-        except KeyError:
-            raise TypeError('Specified file type not supported yet.')
-
-        fname = file_name.replace('[vardef_template]', varname)
-        varname = varname.split('_')[0]
-
-        try:
-            var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
-                                             base_resolution,
-                                             sample=sample,
-                                             nens=nens,
-                                             seed=seed)
-            print 'Loaded pre-averaged file.'
-        except IOError:
-            print 'No pre-averaged file found... Loading directly from file.'
-            var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
-                                    sample=sample, save=True,
-                                    nens=nens, seed=seed)
-
-        return var_objs
+        return cls._main_load_helper(file_dir, file_name, varname, file_type,
+                                     base_resolution,
+                                     nens=nens,
+                                     seed=seed,
+                                     sample=sample)
 
     @classmethod
     def load_allvars(cls, config):
@@ -562,6 +574,26 @@ class PriorVariable(GriddedVariable):
         print ('Removing the temporal mean (for every gridpoint) from the '
                'prior...')
         return time, anom_data
+
+
+class AnalysisVariable(GriddedVariable):
+
+    @classmethod
+    def load(cls, psm_config):
+
+        # TODO: change this to switch based on PSM
+        file_dir = psm_config.datadir_calib
+        file_name = psm_config.datafile_calib
+        file_type = psm_config.dataformat_prior
+        base_resolution = psm_config.sub_base_res
+        varname = psm_config.varname_calib
+
+        return cls._main_load_helper(file_dir, file_name, varname, file_type,
+                                     base_resolution)
+
+    @classmethod
+    def load_allvars(cls):
+        pass
 
 
 class State(object):

@@ -7,8 +7,8 @@ Adapted from LMR_proxy and LMR_calibrate by Andre Perkins
 import matplotlib.pyplot as pylab
 import numpy as np
 import logging
-import LMR_calibrate
 from LMR_utils2 import haversine, smooth2D, class_docs_fixer
+from LMR_gridded import AnalysisVariable
 
 from scipy.stats import linregress
 from abc import ABCMeta, abstractmethod
@@ -114,11 +114,14 @@ class LinearPSM(BasePSM):
         If PSM is below critical correlation threshold.
     """
 
-    def __init__(self, config, proxy_obj, psm_data=None):
+    def __init__(self, config, proxy_obj, psm_data=None, calib_objs=None):
 
         proxy = proxy_obj.type
         site = proxy_obj.id
         r_crit = config.psm.linear.psm_r_crit
+
+        # Variable is used temporarily to
+        self._calib_object = None
 
         try:
             # Try using pre-calibrated psm_data
@@ -136,15 +139,20 @@ class LinearPSM(BasePSM):
 
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
-            logger.error(e)
-            logger.info('PSM not calibrated for:' + str((proxy, site)))
+            # logger.error(e)
+            # logger.info('PSM not calibrated for:' + str((proxy, site)))
 
+            # If calibration load required need to pass on to other proxies
+            # so the class attr _calib_obj is set
+            # The Proxy2 loadall function will see that this is set
+            # and hold the object there (reseting _calib_object to None) until
+            # all proxies are loaded
             # TODO: Fix call and Calib Module
-            datag_calib = config.psm.linear.datatag_calib
-            C = LMR_calibrate.calibration_assignment(datag_calib)
-            C.datadir_calib = config.psm.linear.datadir_calib
-            C.read_calibration()
-            self.calibrate(C, proxy_obj)
+            if calib_objs is None:
+                calib_objs = AnalysisVariable.load(config.psm.linear)
+                self._calib_object = calib_objs
+
+            self.calibrate(calib_objs, proxy_obj)
 
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
@@ -218,7 +226,7 @@ class LinearPSM(BasePSM):
         diag_output, diag_output_figs: bool, optional
             Diagnostic output flags for calibration method
         """
-
+        C = C[proxy.subannual_idx]
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
 
@@ -237,7 +245,6 @@ class LinearPSM(BasePSM):
         # indices of nearest grid pt.
         jind, kind = np.unravel_index(dist.argmin(), dist.shape)
 
-        # TODO: need to fix this to use proxy2 style time
         # overlapping years
         sc = set(C.time)
         sp = set(proxy.time)
