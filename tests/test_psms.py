@@ -6,7 +6,7 @@ sys.path.append('../')
 
 import pytest
 import cPickle
-from copy import deepcopy
+import copy
 import LMR_psms as psms
 import LMR_proxy2 as proxy2
 import test_config
@@ -16,7 +16,7 @@ import test_config
 def psm_dat(request):
 
     fname = ('/home/chaos2/wperkins/data/LMR/PSM/'
-             'PSMs_GISTEMP.pckl')
+             'PSMs_HadCRUT.pckl')
     f = open(fname)
     dat = cPickle.load(f)
     f.close()
@@ -78,23 +78,19 @@ def test_linear_calibrate_psm_data_no_key_match():
 
 
 # TODO: Figure out why it's not calibrating exactly the same
-@pytest.mark.xfail
 def test_linear_calibrate_psm_data_config_file_not_found(psm_dat):
-    cfg_cpy = deepcopy(test_config)
+    cfg_cpy = test_config
     cfg_cpy.psm.linear.pre_calib_datafile = 'not_found_lol'
-    site = proxy2.ProxyPages.load_site(cfg_cpy, 'Aus_02', [1850, 2000])
+    site = proxy2.ProxyPages.load_site(cfg_cpy, 'Aus_03', [1850, 2000])
     site_psm = site.psm_obj
 
     site_dat = psm_dat[(site.type, site.id)]
-    try:
-        assert site.lat == site_dat['lat']
-        assert site.lon == site_dat['lon']
-        assert site_psm.corr == site_dat['PSMcorrel']
-        assert site_psm.slope == site_dat['PSMslope']
-        assert site_psm.intercept == site_dat['PSMintercept']
-        assert site_psm.R == site_dat['PSMmse']
-    finally:
-        reload(test_config)
+    assert site.lat == site_dat['lat']
+    assert site.lon == site_dat['lon']
+    assert site_psm.corr == site_dat['PSMcorrel']
+    assert site_psm.slope == site_dat['PSMslope']
+    assert site_psm.intercept == site_dat['PSMintercept']
+    assert site_psm.R == site_dat['PSMmse']
 
 
 

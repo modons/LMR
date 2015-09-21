@@ -286,4 +286,4 @@ def test_pages_proxy_manager_proxy_fracs(psm_dat):
 
 
 if __name__ == '__main__':
-    test_pages_proxy_manager_proxy_fracs(psm_dat(None))
+    test_pages_load_site_no_obs(meta(None), pdata(None), psm_dat(None))

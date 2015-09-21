@@ -290,8 +290,8 @@ class prior:
         List of variables to use in the state vector for the prior
     """
     # Prior data directory & model source
-    #prior_source = 'ccsm4_last_millenium'
-    prior_source = 'mpi-esm-p_last_millenium'
+    prior_source = 'ccsm4_last_millenium'
+    #prior_source = 'mpi-esm-p_last_millenium'
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     datafile_prior   = constants.prior[prior_source]['fname']
     dataformat_prior = constants.prior[prior_source]['type']

@@ -11,6 +11,7 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
 import random
+import numpy as np
 
 class ProxyManager:
     """
@@ -230,6 +231,15 @@ class BaseProxyObject:
         self.psm_obj = psm_obj(config, self, **psm_kwargs)
         self.psm = self.psm_obj.psm
 
+    def _constrain_to_date_range(self, date_range):
+        start, end = date_range
+
+        site_data = self.values
+        site_data = site_data[(site_data.index >= start) &
+                              (site_data.index <= end)]
+        self.values = site_data
+        self.time = site_data.index.values
+
     @staticmethod
     @abstractmethod
     def get_psm_obj():
@@ -346,18 +356,24 @@ class ProxyPages(BaseProxyObject):
         lat = site_meta['Lat (N)'].iloc[0]
         lon = site_meta['Lon (E)'].iloc[0]
         resolution = site_meta['Resolution (yr)'].iloc[0]
-        site_data = data_src[site]
-        values = site_data[(site_data.index >= start) &
-                           (site_data.index <= finish)]
+        values = data_src[site]
+
         # Might need to remove following line
         values = values[values.notnull()]
         times = values.index.values
 
-        if len(values) == 0:
+        # Send full proxy timeseries in case calibration is necessary
+        proxy_obj = cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
+                        values, times, resolution, **psm_kwargs)
+
+        proxy_obj._constrain_to_date_range(data_range)
+
+        if len(proxy_obj.values) == 0:
             raise ValueError('No observations in specified time range.')
 
-        return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
-                   values, times, resolution, **psm_kwargs)
+        return proxy_obj
+
+
 
     @classmethod
     @augment_docstr

@@ -599,7 +599,7 @@ class AnalysisVariable(GriddedVariable):
         varname = psm_config.varname_calib
 
         return cls._main_load_helper(file_dir, file_name, varname, file_type,
-                                     base_resolution)
+                                     base_resolution, split_varname=False)
 
     @classmethod
     def load_allvars(cls):
