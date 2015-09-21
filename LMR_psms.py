@@ -8,7 +8,7 @@ import matplotlib.pyplot as pylab
 import numpy as np
 import logging
 from LMR_utils2 import haversine, smooth2D, class_docs_fixer
-from LMR_gridded import AnalysisVariable
+import LMR_gridded
 
 from scipy.stats import linregress
 from abc import ABCMeta, abstractmethod
@@ -149,7 +149,9 @@ class LinearPSM(BasePSM):
             # all proxies are loaded
             # TODO: Fix call and Calib Module
             if calib_objs is None:
-                calib_objs = AnalysisVariable.load(config.psm.linear)
+                source = config.psm.linear.datatag_calib
+                calib_class = LMR_gridded.get_analysis_var_class(source)
+                calib_objs = calib_class.load(config.psm.linear)
                 self._calib_object = calib_objs
 
             self.calibrate(calib_objs, proxy_obj)
@@ -259,10 +261,10 @@ class LinearPSM(BasePSM):
             C2Dsmooth = np.zeros(
                 [C.time.shape[0], C.lat.shape[0], C.lon.shape[0]])
             for m in ind_c:
-                C2Dsmooth[m, :, :] = smooth2D(C.temp_anomaly[m, :, :], n=Npts)
+                C2Dsmooth[m, :, :] = smooth2D(C.data[m, :, :], n=Npts)
             reg_x = [C2Dsmooth[m, jind, kind] for m in ind_c]
         else:
-            reg_x = [C.temp_anomaly[m, jind, kind] for m in ind_c]
+            reg_x = [C.data[m, jind, kind] for m in ind_c]
 
         reg_y = [proxy.values[m] for m in ind_p]
         # check for valid values

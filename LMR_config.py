@@ -20,8 +20,24 @@ class constants:
 
     calib = {}
     calib['GISTEMP'] = {'fname': 'gistemp1200_ERSST.nc',
-                       'varname': 'Tsfc',
+                       'varname': 'tempanomaly',
                        'type': 'NCD'}
+
+    calib['HadCRUT'] = {'fname': 'HadCRUT.4.3.0.0.median.nc',
+                        'varname': 'Tsfc',
+                        'type': 'NCD'}
+
+    calib['BerkeleyEarth'] = {'fname': 'Land_and_Ocean_LatLong1.nc',
+                              'varname': 'Tsfc',
+                              'type': 'NCD'}
+
+    calib['MLOST'] = {'fname': 'MLOST_air.mon.anom.V3.5.4.nc',
+                      'varname': 'Tsfc',
+                      'type': 'NCD'}
+
+    calib['NOAA'] = {'fname': 'er-ghcn-sst.nc',
+                     'varname': 'Tsfc',
+                     'type': 'NCD'}
 
     prior = {}
     prior['ccsm4_last_millenium'] = \
@@ -245,7 +261,7 @@ class psm:
         """
         datatag_calib = 'GISTEMP'
         sub_base_res = core.sub_base_res
-        datadir_calib = join(core.lmr_path, 'data', 'analyses')
+        datadir_calib = join(core.lmr_path, 'data', 'analyses', datatag_calib)
         datafile_calib = constants.calib[datatag_calib]['fname']
         varname_calib = constants.calib[datatag_calib]['varname']
         dataformat_calib = constants.calib[datatag_calib]['type']

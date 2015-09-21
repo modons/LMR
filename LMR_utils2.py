@@ -58,6 +58,23 @@ def year_fix(t):
     
     return ypad
 
+
+def fix_lon(lon):
+    """
+    Fixes negative longitude values.
+
+    Parameters
+    ----------
+    lon: ndarray like or value
+        Input longitude array or single value
+    """
+    if lon is not None and np.any(lon < 0):
+        if isinstance(lon, np.ndarray):
+            lon[lon < 0] += 360.
+        else:
+            lon += 360
+    return lon
+
 def smooth2D(im, n=15):
 
     """

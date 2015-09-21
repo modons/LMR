@@ -5,7 +5,7 @@ from the original LMR_proxy code using OOP.
 
 import LMR_psms
 from load_data import load_data_frame
-from LMR_utils2 import augment_docstr, class_docs_fixer
+from LMR_utils2 import augment_docstr, class_docs_fixer, fix_lon
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
@@ -432,9 +432,9 @@ class ProxyPages(BaseProxyObject):
                 pobj = cls.load_site(config, site, data_range,
                                      meta_src=meta_src, data_src=data_src,
                                      **psm_kwargs)
-                if pobj.psm_obj._calib_obj is not None:
-                    calib_obj = pobj.psom_obj._calib_obj
-                    pobj.psom_obj._calib_obj = None
+                if pobj.psm_obj._calib_object is not None:
+                    calib_obj = pobj.psom_obj._calib_object
+                    pobj.psom_obj._calib_object = None
                 psm_kwargs.update(calib_objs=calib_obj)
                 all_proxies.append(pobj)
             except ValueError as e:
@@ -453,19 +453,6 @@ class ProxyPages(BaseProxyObject):
     def error(self):
         # Constant error for now
         return 0.1
-
-def fix_lon(lon):
-    """
-    Fixes negative longitude values.
-
-    Parameters
-    ----------
-    lon: ndarray like or value
-        Input longitude array or single value
-    """
-    if lon < 0:
-        lon += 360.
-    return lon
 
 
 _proxy_classes = {'pages': ProxyPages}

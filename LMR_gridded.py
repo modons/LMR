@@ -20,6 +20,7 @@ import tables as tb
 
 from LMR_config import constants
 from LMR_utils2 import regrid_sphere2, var_to_hdf5_carray, empty_hdf5_carray
+from LMR_utils2 import fix_lon
 _LAT = 'lat'
 _LON = 'lon'
 _LEV = 'lev'
@@ -48,7 +49,7 @@ class GriddedVariable(object):
         self.time = time
         self.lev = lev
         self.lat = lat
-        self.lon = lon
+        self.lon = fix_lon(lon)
         self._fill_val = fill_val
         self._idx_used_for_sample = sampled
 
@@ -194,6 +195,7 @@ class GriddedVariable(object):
                    lev=self.lev,
                    lat=self.lat,
                    lon=self.lon,
+                   fill_val=self._fill_val,
                    sampled=sample_idxs)
 
     @abstractmethod
@@ -202,15 +204,19 @@ class GriddedVariable(object):
 
     @classmethod
     def _main_load_helper(cls, file_dir, file_name, varname, file_type,
-                          base_resolution, nens=None, seed=None, sample=None):
+                          base_resolution, nens=None, seed=None, sample=None,
+                          split_varname=True):
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
         except KeyError:
             raise TypeError('Specified file type not supported yet.')
 
-        fname = file_name.replace('[vardef_template]', varname)
-        varname = varname.split('_')[0]
+        if split_varname:
+            fname = file_name.replace('[vardef_template]', varname)
+            varname = varname.split('_')[0]
+        else:
+            fname = file_name
 
         try:
             var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
@@ -290,6 +296,8 @@ class GriddedVariable(object):
                     obj_data = data.read()
                     obj.data = obj_data
 
+                obj.fill_val_to_nan()
+
                 if do_trunc:
                     obj.truncate()
                     obj.save(path, position=i)
@@ -321,7 +329,7 @@ class GriddedVariable(object):
             try:
                 fill_val = var._FillValue
             except AttributeError:
-                fill_val = -999999999999999999
+                fill_val = 2**15 - 1
 
             # Convert to key names defined in _DEFAULT_DIM_ORDER
             dims = []
@@ -491,16 +499,18 @@ class GriddedVariable(object):
         else:
             raise ValueError('Could not determine number of elements in a '
                              'single year')
+
         yr_shift %= elem_in_yr  # shouldn't have yr_shift larger then elem_in_yr
-        end_cutoff = -((elem_in_yr - yr_shift) % elem_in_yr)
-        if end_cutoff == 0:
-            end_cutoff = None
 
         # Find number of units in new resolution
         nelem_in_unit_res = resolution * elem_in_yr
         if not nelem_in_unit_res.is_integer():
             raise ValueError('Elements in yr not evenly divisible by given '
                              'resolution')
+
+        end_cutoff = -(len(time_vals[yr_shift:]) % elem_in_yr)
+        if end_cutoff == 0:
+            end_cutoff = None
         tot_units = int(len(time_vals[yr_shift:end_cutoff]) /
                         nelem_in_unit_res)
         spatial_shp = data.shape[1:]
@@ -584,7 +594,7 @@ class AnalysisVariable(GriddedVariable):
         # TODO: change this to switch based on PSM
         file_dir = psm_config.datadir_calib
         file_name = psm_config.datafile_calib
-        file_type = psm_config.dataformat_prior
+        file_type = psm_config.dataformat_calib
         base_resolution = psm_config.sub_base_res
         varname = psm_config.varname_calib
 
@@ -594,6 +604,36 @@ class AnalysisVariable(GriddedVariable):
     @classmethod
     def load_allvars(cls):
         pass
+
+
+class BerkeleyEarthAnalysisVariable(AnalysisVariable):
+
+    @classmethod
+    def load(cls, psm_config):
+        return super(BerkeleyEarthAnalysisVariable, cls)
+
+    @staticmethod
+    def _netcdf_datetime_convert(time_var):
+        """
+        Converts netcdf time variable into date-times.
+
+        Used as a static method in case necesary to overwrite with subclass
+        :param time_var:
+        :return:
+        """
+
+        time_yrs = []
+        for yrAD in time_var[:]:
+
+            year = int(yrAD)
+            rem = yrAD - year
+            base = datetime(year, 1, 1)
+            diff_yr = base.replace(year=base.year + 1) - base
+            diff_to_yr_secs = diff_yr.total_seconds()
+            tdel = timedelta(seconds=(diff_to_yr_secs * rem))
+            time_yrs.append(base + tdel)
+
+        return np.array(time_yrs)
 
 
 class State(object):
@@ -812,5 +852,8 @@ class State(object):
         self.h5f_out.close()
 
 
+_analysis_var_classes = {'BerkeleyEarth': BerkeleyEarthAnalysisVariable}
 
 
+def get_analysis_var_class(analysis_source):
+    return _analysis_var_classes.get(analysis_source, AnalysisVariable)

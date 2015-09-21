@@ -56,13 +56,6 @@ def pdata(request):
 def test_abstract_class_creation():
     x = proxy2.BaseProxyObject()
 
-
-def test_lon_fix():
-    assert proxy2.fix_lon(0) == 0
-    assert proxy2.fix_lon(-180) == 180
-    assert proxy2.fix_lon(-90) == 270
-
-
 def test_proxies_get_class():
     assert type(proxy2.get_proxy_class('pages')) == type(proxy2.ProxyPages)
 

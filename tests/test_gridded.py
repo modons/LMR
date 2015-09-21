@@ -10,6 +10,7 @@ sys.path.append('../')
 
 import pytest
 import LMR_gridded as lmrgrid
+import LMR_calibrate
 import numpy as np
 import netCDF4 as ncf
 import os
@@ -673,6 +674,37 @@ def test_state(res):
                 prior_var.flattened_spatial()[0].T)
 
 
+@pytest.mark.parametrize('extra, fname, varname',
+                         [('GISTEMP', 'gistemp1200_ERSST.nc', 'tempanomaly'),
+                          ('HadCRUT', 'HadCRUT.4.3.0.0.median.nc', 'temperature_anomaly'),
+                          ('BerkeleyEarth', 'Land_and_Ocean_LatLong1.nc', 'temperature'),
+                          ('MLOST', 'MLOST_air.mon.anom_V3.5.4.nc', 'air'),
+                          ('NOAA', 'er-ghcn-sst.nc', 'data')])
+def test_analysisvar(extra, fname, varname):
+
+    analysis_dir = '/home/chaos2/wperkins/data/LMR/data/analyses'
+
+
+    C = LMR_calibrate.calibration_assignment(extra)
+    C.datadir_calib = analysis_dir
+    C.read_calibration()
+    analysis_dir += ('/'+extra)
+    calib_class = lmrgrid.get_analysis_var_class(extra)
+    aobj = calib_class._main_load_helper(analysis_dir, fname,
+                                         varname, 'NCD', 1.0,
+                                         split_varname=False)[0]
+
+    # Bug in MLOST load_gridded_data for partial years
+    if extra == 'MLOST':
+        # Original includes 2015 which is only 4-5 months of year
+        C.time = C.time[0:-1]
+        C.temp_anomaly = C.temp_anomaly[0:-1]
+
+    np.testing.assert_array_equal(C.time, aobj.time)
+    np.testing.assert_array_equal(C.lat, aobj.lat)
+    np.testing.assert_array_equal(C.lon, aobj.lon)
+    np.testing.assert_array_equal(C.temp_anomaly, aobj.data)
+
 
 if __name__ == '__main__':
 
@@ -690,5 +722,6 @@ if __name__ == '__main__':
     #test_griddedvar_timeavg_variable_yrshift(3, time, data)
 
     #test_priorvar_load_preavg_data('air', True)
-    test_state(0.5)
+    #test_state(0.5)
+    test_analysisvar('MLOST', 'MLOST_air.mon.anom_V3.5.4.nc', 'air')
 
