@@ -152,9 +152,15 @@ class LinearPSM(BasePSM):
                 source = config.psm.linear.datatag_calib
                 calib_class = LMR_gridded.get_analysis_var_class(source)
                 calib_objs = calib_class.load(config.psm.linear)
-                self._calib_object = calib_objs
 
-            self.calibrate(calib_objs, proxy_obj)
+                res_list = config.core.assimilation_time_res
+                yr_shift_dict = config.core.res_yr_shift
+                calib_res_dict = calib_class.avg_calib_to_res(calib_objs,
+                                                              res_list,
+                                                              yr_shift_dict)
+                self._calib_object = calib_res_dict
+
+            self.calibrate(calib_objs[proxy_obj.resolution], proxy_obj)
 
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:

@@ -605,6 +605,53 @@ class AnalysisVariable(GriddedVariable):
     def load_allvars(cls):
         pass
 
+    @staticmethod
+    def avg_calib_to_res(calib_objs, resolutions, shifts):
+        class_type = type(calib_objs[0])
+        calib_res_dict = {}
+        for res in resolutions:
+            shift = shifts[res]
+            shift_idx = int(1/shift)
+            num_obj_out = int(np.ceil(1/res))
+            nobjs_to_avg = len(calib_objs)/num_obj_out
+
+            if num_obj_out == len(calib_objs):
+                # TODO: no shift, but not a current usage case...
+                calib_res_dict[res] = calib_objs
+                continue
+
+            shift_calib_objs = np.roll(calib_objs, shift_idx)
+
+            aobjs = []
+            for i in xrange(num_obj_out):
+                start = i*nobjs_to_avg
+                end = start+nobjs_to_avg
+
+                new_data = np.mean([obj.data
+                                    for obj in shift_calib_objs[start:end]])
+                new_time = calib_objs[start].time
+
+                curr_obj = shift_calib_objs[start]
+                new_obj = class_type(curr_obj.name,
+                                     curr_obj.dim_order,
+                                     new_data,
+                                     res,
+                                     time=new_time,
+                                     lat=curr_obj.lat,
+                                     lon=curr_obj.lon,
+                                     lev=curr_obj.lev,
+                                     fill_val=curr_obj._fill_val)
+
+                aobjs.append(new_obj)
+            calib_res_dict[res] = aobjs
+
+        return calib_res_dict
+
+
+
+
+
+
 
 class BerkeleyEarthAnalysisVariable(AnalysisVariable):
 
