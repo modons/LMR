@@ -47,9 +47,9 @@ class GriddedVariable(object):
         self.data = data
         self.resolution = resolution
         self.time = time
-        self.lev = lev
-        self.lat = lat
-        self.lon = fix_lon(lon)
+        self.lev = self._cnvt_to_float_64(lev)
+        self.lat = self._cnvt_to_float_64(lat)
+        self.lon = self._cnvt_to_float_64(fix_lon(lon))
         self._fill_val = fill_val
         self._idx_used_for_sample = sampled
 
@@ -414,6 +414,12 @@ class GriddedVariable(object):
             return grid_objs
 
     @staticmethod
+    def _cnvt_to_float_64(data):
+        if data is not None:
+            data = data.astype(np.float64)
+        return data
+
+    @staticmethod
     def _netcdf_datetime_convert(time_var):
         """
         Converts netcdf time variable into date-times.
@@ -611,7 +617,10 @@ class AnalysisVariable(GriddedVariable):
         calib_res_dict = {}
         for res in resolutions:
             shift = shifts[res]
-            shift_idx = int(1/shift)
+            if shift > 0:
+                shift_idx = int(calib_objs[0].resolution/shift)
+            else:
+                shift_idx = 0
             num_obj_out = int(np.ceil(1/res))
             nobjs_to_avg = len(calib_objs)/num_obj_out
 
@@ -627,8 +636,9 @@ class AnalysisVariable(GriddedVariable):
                 start = i*nobjs_to_avg
                 end = start+nobjs_to_avg
 
-                new_data = np.mean([obj.data
-                                    for obj in shift_calib_objs[start:end]])
+                new_data = np.nanmean([obj.data
+                                       for obj in shift_calib_objs[start:end]],
+                                      axis=0)
                 new_time = calib_objs[start].time
 
                 curr_obj = shift_calib_objs[start]

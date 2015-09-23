@@ -76,7 +76,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_1.0res_10itr_check_GM'
+    nexp = 'testdev_1.0res_10itr_check_precalib'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
@@ -84,7 +84,7 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     seed = None
-    iter_range = [0, 10]
+    iter_range = [0, 2]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -268,8 +268,8 @@ class psm:
 
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
-                                  'PSMs_' + datatag_calib + '.pckl')
-        psm_r_crit = 0.2
+                                  'PSMs_' + datatag_calib + '_1yr_test.pckl')
+        psm_r_crit = 0.0
 
 
 class prior:

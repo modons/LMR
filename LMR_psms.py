@@ -147,6 +147,8 @@ class LinearPSM(BasePSM):
             # The Proxy2 loadall function will see that this is set
             # and hold the object there (reseting _calib_object to None) until
             # all proxies are loaded
+            print ('No pre-calibration found for'
+                   ' {} ... calibrating ...'.format(proxy_obj.id))
             # TODO: Fix call and Calib Module
             if calib_objs is None:
                 source = config.psm.linear.datatag_calib
@@ -159,8 +161,10 @@ class LinearPSM(BasePSM):
                                                               res_list,
                                                               yr_shift_dict)
                 self._calib_object = calib_res_dict
+            else:
+                calib_res_dict = calib_objs
 
-            self.calibrate(calib_objs[proxy_obj.resolution], proxy_obj)
+            self.calibrate(calib_res_dict[proxy_obj.resolution], proxy_obj)
 
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
@@ -401,6 +405,9 @@ class LinearPSM(BasePSM):
     def _load_psm_data(config):
         """Helper method for loading from dataframe"""
         pre_calib_file = config.psm.linear.pre_calib_datafile
+
+        if pre_calib_file is None:
+            raise IOError('No pre-calibration file specified.')
 
         return load_cpickle(pre_calib_file)
 

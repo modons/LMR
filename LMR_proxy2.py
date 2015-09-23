@@ -449,9 +449,9 @@ class ProxyPages(BaseProxyObject):
                                      meta_src=meta_src, data_src=data_src,
                                      **psm_kwargs)
                 if pobj.psm_obj._calib_object is not None:
-                    calib_obj = pobj.psom_obj._calib_object
-                    pobj.psom_obj._calib_object = None
-                psm_kwargs.update(calib_objs=calib_obj)
+                    calib_obj = pobj.psm_obj._calib_object
+                    pobj.psm_obj._calib_object = None
+                    psm_kwargs.update(calib_objs=calib_obj)
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
