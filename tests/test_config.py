@@ -92,7 +92,7 @@ class core:
 
     # What we're defining as year start
     # 0-11 where 0 indicates start at Jan.
-    res_yr_shift = {0.5: 0.0, 1.0: 0.0}
+    res_yr_shift = {0.5: 0.25, 1.0: 0.0}
 
     # TODO: add rules for shift?
     # If shifting on smaller time scales than smallest time chunk it becomes

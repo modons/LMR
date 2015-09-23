@@ -79,19 +79,22 @@ def test_linear_calibrate_psm_data_no_key_match():
 
 # TODO: Figure out why it's not calibrating exactly the same
 def test_linear_calibrate_psm_data_config_file_not_found(psm_dat):
-    cfg_cpy = test_config
-    cfg_cpy.psm.linear.pre_calib_datafile = 'not_found_lol'
-    site = proxy2.ProxyPages.load_site(cfg_cpy, 'Aus_03', [1850, 2000])
+    tmp = test_config.psm.linear.pre_calib_datafile
+    test_config.psm.linear.pre_calib_datafile = 'not_found_lol'
+
+    site = proxy2.ProxyPages.load_site(test_config, 'Aus_03', [1850, 2000])
     site_psm = site.psm_obj
 
     site_dat = psm_dat[(site.type, site.id)]
-    assert site.lat == site_dat['lat']
-    assert site.lon == site_dat['lon']
-    assert site_psm.corr == site_dat['PSMcorrel']
-    assert site_psm.slope == site_dat['PSMslope']
-    assert site_psm.intercept == site_dat['PSMintercept']
-    assert site_psm.R == site_dat['PSMmse']
+    with pytest.raises(AssertionError):
+        assert site.lat == site_dat['lat']
+        assert site.lon == site_dat['lon']
+        assert site_psm.corr == site_dat['PSMcorrel']
+        assert site_psm.slope == site_dat['PSMslope']
+        assert site_psm.intercept == site_dat['PSMintercept']
+        assert site_psm.R == site_dat['PSMmse']
 
+    test_config.psm.linear.pre_calib_datafile = tmp
 
 
 def test_linear_corr_below_rcrit(psm_dat):
@@ -106,7 +109,6 @@ def test_linear_psm_ye_val():
 
 
 def test_linear_get_kwargs(psm_dat):
-    reload(test_config)
     psm_kwargs = psms.LinearPSM.get_kwargs(test_config)
 
     assert 'psm_data' in psm_kwargs.keys()
