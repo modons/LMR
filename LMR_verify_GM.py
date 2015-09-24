@@ -48,18 +48,7 @@ fsave = True
 #
 # current datasets
 #
-#nexp = 'testdev_mpi_newgridded_check_0pt5res'
-#nexp = 'testdev_mpi_newgridded_check'
-#nexp = 'testing_1000_75pct_ens_size_Nens_10'
-#nexp = 'testing_1000_75pct_200members'
-#nexp = 'testdev_check_1000_75pct'
-#nexp = 'ReconDevTest_1000_testing_coral'True
-#nexp = 'ReconDevTest_1000_testing_icecore'
-#nexp = 'testdev_1000_100pct_icecoreonly'
-#nexp = 'testdev_1000_100pct_mxdonly'
-#nexp = 'testdev_1000_100pct_sedimentonly'
-#nexp = 'testdev_detrend4_1000_75pct'
-nexp = 'testdev_1pt0res_10itr_check_GM'
+nexp = 'testdev_multires_gmt_change_pt15rcrit'
 
 # specify directories for LMR and calibration data
 datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'

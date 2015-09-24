@@ -88,7 +88,7 @@ class core:
     iter_range = [0, 10]
     curr_iter = iter_range[0]
     loc_rad = None
-    assimilation_time_res = [1.0]  # in yrs
+    assimilation_time_res = [0.5, 1.0]  # in yrs
     # maps year shift (in years) to resolution
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
 
@@ -162,17 +162,17 @@ class proxies:
 
         datadir_proxy = join(core.lmr_path, 'data', 'proxies')
         # Pages 0.5yr resolution
-        # datafile_proxy = join(datadir_proxy,
-        #                       'Pages2k_Proxies_0pt5res.df.pckl')
-        # metafile_proxy = join(datadir_proxy,
-        #                       'Pages2k_Metadata_0pt5res.df.pckl')
+        datafile_proxy = join(datadir_proxy,
+                              'Pages2k_Proxies_0pt5res.df.pckl')
+        metafile_proxy = join(datadir_proxy,
+                              'Pages2k_Metadata_0pt5res.df.pckl')
 
         # Pages 1.0 yr res only
-        datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata.df.pckl')
-        dataformat_proxy = 'DF'
+        # datafile_proxy = join(datadir_proxy,
+        #                       'Pages2k_Proxies.df.pckl')
+        # metafile_proxy = join(datadir_proxy,
+        #                       'Pages2k_Metadata.df.pckl')
+        # dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']

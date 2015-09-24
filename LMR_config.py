@@ -76,7 +76,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_1.0res_10itr_check_precalib'
+    nexp = 'testdev_multires_gmt_change_pt15rcrit'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
@@ -84,10 +84,10 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     seed = None
-    iter_range = [0, 2]
+    iter_range = [0, 4]
     curr_iter = iter_range[0]
     loc_rad = None
-    assimilation_time_res = [1.0]  # in yrs
+    assimilation_time_res = [0.5, 1.0]  # in yrs
     # maps year shift (in years) to resolution
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
 
@@ -101,7 +101,7 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working/'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working/tmp'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
@@ -124,7 +124,7 @@ class proxies:
     """
 
     use_from = ['pages']
-    proxy_frac = 1.0
+    proxy_frac = 0.75
 
     class pages:
         """
@@ -161,17 +161,17 @@ class proxies:
 
         datadir_proxy = join(core.lmr_path, 'data', 'proxies')
         # Pages 0.5yr resolution
-        # datafile_proxy = join(datadir_proxy,
-        #                       'Pages2k_Proxies_0pt5res.df.pckl')
-        # metafile_proxy = join(datadir_proxy,
-        #                       'Pages2k_Metadata_0pt5res.df.pckl')
+        datafile_proxy = join(datadir_proxy,
+                              'Pages2k_Proxies_0pt5res.df.pckl')
+        metafile_proxy = join(datadir_proxy,
+                              'Pages2k_Metadata_0pt5res.df.pckl')
 
         # Pages 1.0 yr res only
-        datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata.df.pckl')
-        dataformat_proxy = 'DF'
+        # datafile_proxy = join(datadir_proxy,
+        #                       'Pages2k_Proxies.df.pckl')
+        # metafile_proxy = join(datadir_proxy,
+        #                       'Pages2k_Metadata.df.pckl')
+        # dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
@@ -268,8 +268,9 @@ class psm:
 
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
-                                  'PSMs_' + datatag_calib + '_1yr_test.pckl')
-        psm_r_crit = 0.0
+                                  'PSMs_' + datatag_calib +
+                                  '_0pt5_1pt0_res.pckl')
+        psm_r_crit = 0.15
 
 
 class prior:

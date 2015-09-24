@@ -255,7 +255,8 @@ def test_pages_proxy_manager_all(psm_dat):
     pmanager = proxy2.ProxyManager(cfg, drange)
     assert pmanager.ind_eval is None
     assert len(pmanager.ind_assim) == 4
-    assert len(pmanager.assim_idxs_by_res[1.0]) == 4
+    key = pmanager.assim_idxs_by_res[1.0].keys()[0]
+    assert len(pmanager.assim_idxs_by_res[1.0][key]) == 4
 
     bytype, allp = proxy2.ProxyPages.load_all(cfg, drange, **psm_kwargs)
 

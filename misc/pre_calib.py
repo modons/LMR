@@ -9,7 +9,7 @@ from os.path import join
 
 calib_datatag = cfg.psm.linear.datatag_calib
 output_dir = '/home/chaos2/wperkins/data/LMR/PSM'
-pre_calib_fname = 'PSMs_{}_1yr_test.pckl'.format(calib_datatag)
+pre_calib_fname = 'PSMs_{}_0pt5_1pt0_res.pckl'.format(calib_datatag)
 
 # Load and calibrate
 _, proxies = LMR_proxy2.ProxyPages.load_all(cfg, [1850, 2000])

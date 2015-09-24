@@ -185,15 +185,20 @@ def LMR_driver_callable(cfg=None):
     # Extract all the Ye's from master list of proxy objects into numpy array
     if not online:
         ye_all = np.empty(shape=[total_proxy_count, nens])
+
+        i = -1
         for res in assim_res_vals:
             Xb_full_copy = Xb_one_full.copy_state()
 
             shift = res_yr_shift[res]
 
             Xb_full_copy.avg_to_res(res, shift)
-            for i, proxy in enumerate(
-                    prox_manager.sites_assim_res_proxy_objs(res)):
-                ye_all[i, :] = proxy.psm(Xb_one_full, proxy.subannual_idx)
+
+            for key in prox_manager.assim_idxs_by_res[res].keys():
+                for i, proxy in enumerate(
+                        prox_manager.sites_assim_res_proxy_objs(res, key),
+                        i+1):
+                    ye_all[i, :] = proxy.psm(Xb_one_full, proxy.subannual_idx)
 
 
         # Append ensemble of Ye's to prior state vector
@@ -241,6 +246,8 @@ def LMR_driver_callable(cfg=None):
 
         # TODO: Loading prior file
         if t % 1.0 == 0:
+            # Set iproxy to restart going through proxies for given year
+            iproxy = -1
             Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr))
         #     ypad = '{:04d}'.format(int(t))
         #     filen = join(workdir, 'year' + ypad + '.npy')
@@ -255,14 +262,21 @@ def LMR_driver_callable(cfg=None):
         res_to_assim = [res for res, freq in zip(assim_res_vals, res_assim_freq)
                         if (iyr+1) % freq == 0 and (iyr+1)/freq > 0]
 
-        iproxy = -1
         for res in res_to_assim:
 
             # Create prior for resolution
             Xb_one.xb_from_h5(int(iyr//nelem_pr_yr), res, res_yr_shift[res])
 
+            # overwrite prior GMT from last sub_annual with annual
+            if res == 1.0:
+                xam = Xb_one.get_var_data('tas_sfc_Amon',
+                                          idx=0).mean(axis=1)
+                gmt = global_mean2(xam,
+                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
+
             for iproxy, Y in enumerate(
-                    prox_manager.sites_assim_res_proxy_objs(res),
+                    prox_manager.sites_assim_res_proxy_objs(res, t),
                     iproxy+1):
 
                 # Crude check if we have proxy ob for current time
@@ -270,9 +284,8 @@ def LMR_driver_callable(cfg=None):
                     Y.values[t]
                 except KeyError:
                     # Make sure GMT spot filled from previous proxy
-                    if (iyr+1) % nelem_pr_yr == 0:
-                        gmt_save[iproxy+1, iyr//nelem_pr_yr] = \
-                            gmt_save[iproxy, iyr//nelem_pr_yr]
+                    gmt_save[iproxy+1, iyr//nelem_pr_yr] = \
+                        gmt_save[iproxy, iyr//nelem_pr_yr]
                     continue
 
                 if verbose > 2:
@@ -312,12 +325,11 @@ def LMR_driver_callable(cfg=None):
                                        Y.values[t], Ye, ob_err, loc)
                 Xb_one.state_list[Y.subannual_idx] = Xa
 
-                if (iyr+1) % nelem_pr_yr == 0:
-                    xam = Xb_one.get_var_data('tas_sfc_Amon',
-                                              idx=Y.subannual_idx).mean(axis=1)
-                    gmt = global_mean2(xam,
-                                       Xb_one.var_coords['tas_sfc_Amon']['lat'])
-                    gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
+                xam = Xb_one.get_var_data('tas_sfc_Amon',
+                                          idx=Y.subannual_idx).mean(axis=1)
+                gmt = global_mean2(xam,
+                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
 
                 # check the variance change for sign
                 thistime = time()
@@ -333,6 +345,7 @@ def LMR_driver_callable(cfg=None):
             Xb_one.propagate_avg_to_h5(int(iyr//nelem_pr_yr), res_yr_shift[res])
 
         if (iyr+1) % nelem_pr_yr == 0:
+            # Save annual data to file
             ypad = '{:04d}'.format(int(t))
             filen = join(workdir, 'year' + ypad + '.npy')
             np.save(filen, Xb_one.annual_avg())

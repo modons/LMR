@@ -44,8 +44,17 @@ class ProxyManager:
         self.all_proxies = []
         self.all_ids_by_group = defaultdict(list)
 
+        # Resolutions to be assimilated
         assim_res = config.core.assimilation_time_res
-        self.assim_idxs_by_res = {res: [] for res in assim_res}
+        base_res = assim_res[0]
+        # year mod 1 gives us the tail, identifies which res being assimilated
+        yr_tails = [i*base_res for i in range(int(1/base_res))]
+
+        self.assim_idxs_by_res = {}
+        for res in assim_res:
+            nelem_in_chk = int(res/base_res)
+            yr_ids = yr_tails[(nelem_in_chk-1)::nelem_in_chk]
+            self.assim_idxs_by_res[res] = {yr_id: [] for yr_id in yr_ids}
 
         for proxy_class_key in config.proxies.use_from:
             pclass = get_proxy_class(proxy_class_key)
@@ -96,7 +105,12 @@ class ProxyManager:
         # Add indexes to resolution groups
         for idx in self.ind_assim:
             p_res = self.all_proxies[idx].resolution
-            self.assim_idxs_by_res[p_res].append(idx)
+            p_yr_grp = self.all_proxies[idx].subannual_idx
+
+            # Subannual index will correspond to correct year tail when sorted
+            key = sorted(self.assim_idxs_by_res[p_res].keys())[p_yr_grp]
+
+            self.assim_idxs_by_res[p_res][key].append(idx)
 
     def proxy_obj_generator(self, indexes):
         """
@@ -128,7 +142,7 @@ class ProxyManager:
 
         return self.proxy_obj_generator(self.ind_assim)
 
-    def sites_assim_res_proxy_objs(self, resolution):
+    def sites_assim_res_proxy_objs(self, resolution, t):
         """
         generator over assimilation indices for a given resolution
 
@@ -138,7 +152,8 @@ class ProxyManager:
             Proxy object from the all_proxies list with specified resolution
         """
 
-        return self.proxy_obj_generator(self.assim_idxs_by_res[resolution])
+        return self.proxy_obj_generator(self.assim_idxs_by_res[resolution]
+                                        [t % 1.0])
 
     def sites_eval_proxy_objs(self):
         """
