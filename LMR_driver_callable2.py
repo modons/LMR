@@ -363,7 +363,6 @@ def LMR_driver_callable(cfg=None):
     Xb_one.close_xb_container()
 
     # 3 July 2015: compute and save the GMT for the full ensemble
-    # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([ntimes, nens])
     for iyr, yr in enumerate(assim_times[0::nelem_pr_yr]):
         filen = join(workdir, 'year{:04d}'.format(int(yr)))

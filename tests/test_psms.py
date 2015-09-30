@@ -16,7 +16,7 @@ import test_config
 def psm_dat(request):
 
     fname = ('/home/chaos2/wperkins/data/LMR/PSM/'
-             'PSMs_HadCRUT.pckl')
+             'PSMs_GISTEMP.pckl')
     f = open(fname)
     dat = cPickle.load(f)
     f.close()
@@ -82,7 +82,7 @@ def test_linear_calibrate_psm_data_config_file_not_found(psm_dat):
     tmp = test_config.psm.linear.pre_calib_datafile
     test_config.psm.linear.pre_calib_datafile = 'not_found_lol'
 
-    site = proxy2.ProxyPages.load_site(test_config, 'Aus_03', [1850, 2000])
+    site = proxy2.ProxyPages.load_site(test_config, 'Aus_04', [1850, 2000])
     site_psm = site.psm_obj
 
     site_dat = psm_dat[(site.type, site.id)]

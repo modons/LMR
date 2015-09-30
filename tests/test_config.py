@@ -255,7 +255,7 @@ class psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
-        datatag_calib = 'HadCRUT'
+        datatag_calib = 'GISTEMP'
         sub_base_res = core.sub_base_res
         datadir_calib = join(core.lmr_path, 'data', 'analyses', datatag_calib)
         datafile_calib = constants.calib[datatag_calib]['fname']
@@ -265,7 +265,7 @@ class psm:
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
                                   'PSMs_' + datatag_calib + '.pckl')
-        psm_r_crit = 0.2
+        psm_r_crit = 0.20
 
 
 class prior:

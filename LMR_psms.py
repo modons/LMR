@@ -114,7 +114,8 @@ class LinearPSM(BasePSM):
         If PSM is below critical correlation threshold.
     """
 
-    def __init__(self, config, proxy_obj, psm_data=None, calib_objs=None):
+    def __init__(self, config, proxy_obj, psm_data=None, calib_objs=None,
+                 diag_out=None, diag_fig=None):
 
         proxy = proxy_obj.type
         site = proxy_obj.id
@@ -164,7 +165,8 @@ class LinearPSM(BasePSM):
             else:
                 calib_res_dict = calib_objs
 
-            self.calibrate(calib_res_dict[proxy_obj.resolution], proxy_obj)
+            self.calibrate(calib_res_dict[proxy_obj.resolution], proxy_obj,
+                           diag_output=diag_out, diag_output_figs=diag_fig)
 
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
@@ -391,10 +393,10 @@ class LinearPSM(BasePSM):
                 ypos = ypos - 0.05 * (ymax - ymin)
                 pylab.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(MSE),
                            fontsize=12, fontweight='bold')
-                pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (
-                    proxy.type.replace(" ", "_"), proxy.id),
-                              bbox_inches='tight')
-                pylab.close()
+                # pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (
+                #     proxy.type.replace(" ", "_"), proxy.id),
+                #               bbox_inches='tight')
+                pylab.show()
 
     @staticmethod
     def get_kwargs(config):

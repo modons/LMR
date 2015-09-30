@@ -42,13 +42,13 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = True
+fsave = False
 
 # file specification
 #
 # current datasets
 #
-nexp = 'testdev_multires_gmt_change_pt15rcrit'
+nexp = 'testdev_multires_gmt_change'
 
 # specify directories for LMR and calibration data
 datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'
