@@ -45,14 +45,14 @@ class core:
     #nexp = 'p2rl_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
     #nexp = 'p2rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 
-    nexp = 'production_mlost_ccsm4_pagesnotrees_1.0'
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    nexp = 'testdev_add_scalar_ens_output'
+    lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [0, 2000]
+    recon_period = [1970, 2000]
     nens = 100
-    iter_range = [0, 100]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
 
@@ -79,7 +79,7 @@ class proxies:
     """
 
     use_from = ['pages']
-    proxy_frac = 1.0
+    proxy_frac = 0.75
 
     class pages:
         """
@@ -127,7 +127,9 @@ class proxies:
 
         # DO NOT CHANGE FORMAT BELOW
 
-        proxy_order = ['Ice core_d18O',
+        proxy_order = ['Tree ring_Width',
+                       'Tree ring_Density',
+                       'Ice core_d18O',
                        'Ice core_d2H',
                        'Ice core_Accumulation',
                        'Coral_d18O',
@@ -137,6 +139,15 @@ class proxies:
                        'Speleothem_All']
 
         proxy_assim2 = {
+            'Tree ring_Width': ['Ring width',
+                                'Tree ring width',
+                                'Total ring width',
+                                'TRW'],
+            'Tree ring_Density': ['Maximum density',
+                                  'Minimum density',
+                                  'Earlywood density',
+                                  'Latewood density',
+                                  'MXD'],
             'Ice core_d18O': ['d18O'],
             'Ice core_d2H': ['d2H'],
             'Ice core_Accumulation': ['Accumulation'],

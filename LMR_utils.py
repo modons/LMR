@@ -172,12 +172,13 @@ def ensemble_stats(workdir,Yall):
 
 
         else: # var has no spatial dims
-            Xb = Xbtmp[ibeg:iend+1,:]
+            Xb = Xbtmp[ibeg:iend+1,:] # prior ensemble
             xbm = np.mean(Xb,axis=1) # ensemble mean
             xbv = np.var(Xb,axis=1)  # ensemble variance
             
             # process the **analysis** files
             years = []
+            xa_ens = np.zeros((nyears, Xb.shape[1]))
             xam = np.zeros([nyears])
             xav = np.zeros([nyears],dtype=np.float64)
             k = -1
@@ -188,12 +189,19 @@ def ensemble_stats(workdir,Yall):
                 years.append(year)
                 Xatmp = np.load(f)
                 Xa = Xatmp[ibeg:iend+1,:]
+                xa_ens[k] = Xa  # total ensemble
                 xam[k] = np.mean(Xa,axis=1) # ensemble mean
                 xav[k] = np.var(Xa,axis=1)  # ensemble variance     
-                
+
+            vars_to_save_ens = {'nens':nens, 'years':years, 'xb_ens':Xb, 'xa_ens':xa_ens}
             vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
-            
+
+        # ens to file
+        filen = workdir + '/ensemble_mean_' + var
+        print 'writing the new ensemble file' + filen
+        np.savez(filen, **vars_to_save_ens)
+
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
         print 'writing the new ensemble mean file...' + filen

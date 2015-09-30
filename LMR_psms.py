@@ -119,6 +119,8 @@ class LinearPSM(BasePSM):
         proxy = proxy_obj.type
         site = proxy_obj.id
         r_crit = config.psm.linear.psm_r_crit
+        self.lat = proxy_obj.lat
+        self.lon = proxy_obj.lon
 
         try:
             # Try using pre-calibrated psm_data
@@ -126,9 +128,6 @@ class LinearPSM(BasePSM):
                 psm_data = self._load_psm_data(config)
 
             psm_site_data = psm_data[(proxy, site)]
-
-            self.lat = psm_site_data['lat']
-            self.lon = psm_site_data['lon']
             self.corr = psm_site_data['PSMcorrel']
             self.slope = psm_site_data['PSMslope']
             self.intercept = psm_site_data['PSMintercept']
