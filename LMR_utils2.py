@@ -202,10 +202,10 @@ def ensemble_stats(workdir, y_assim):
             vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
 
-        # ens to file
-        filen = workdir + '/ensemble_' + var
-        print 'writing the new ensemble file' + filen
-        np.savez(filen, **vars_to_save_ens)
+            # ens to file
+            filen = workdir + '/ensemble_' + var
+            print 'writing the new ensemble file' + filen
+            np.savez(filen, **vars_to_save_ens)
             
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
