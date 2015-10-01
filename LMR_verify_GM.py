@@ -42,7 +42,7 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = False
+fsave = True
 
 # file specification
 #

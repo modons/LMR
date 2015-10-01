@@ -271,6 +271,7 @@ class psm:
                                   'PSMs_' + datatag_calib +
                                   '_0pt5_1pt0_res.pckl')
         psm_r_crit = 0.0
+        min_data_req_frac = 1.0  # 0.0 no data required, 1.0 all data required
 
 
 class prior:

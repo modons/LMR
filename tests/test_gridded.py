@@ -358,6 +358,21 @@ def test_griddedvar_timeavg_variable_yrshift(yr_shift, ncf_dates, ncf_temps):
         assert len(time_yrs) == 3*res_unit_per_yr
         assert len(avg_data) == 3*res_unit_per_yr
 
+@pytest.mark.parametrize('nan_elem', [1, 6,
+                                      pytest.mark.xfail(raises=AssertionError)(7),
+                                      pytest.mark.xfail(raises=AssertionError)(12)])
+def test_griddedvar_timeavg_nan_data_frac(nan_elem, ncf_dates, ncf_temps):
+    tmp_temps = ncf_temps.copy()
+    tmp_temps[0:nan_elem, 0, 0] = np.nan
+
+    gvar_class = lmrgrid.GriddedVariable
+    _, avg_data = \
+        gvar_class._time_avg_gridded_to_resolution(ncf_dates, tmp_temps, 1.0,
+                                                   yr_shift=0,
+                                                   data_req_frac=0.5)
+
+    assert np.isfinite(avg_data[0, 0, 0])
+
 
 @pytest.mark.parametrize('resolution', [0.5, 1.0, 2.0])
 def test_priorvar_timeavg_anomaly(resolution, ncf_dates, ncf_temps):
@@ -706,6 +721,29 @@ def test_analysisvar(extra, fname, varname):
     np.testing.assert_array_equal(C.temp_anomaly, aobj.data)
 
 
+def test_analysisvar_nan_subannual():
+
+    calib_class = lmrgrid.get_analysis_var_class('GISTEMP')
+    analysis_dir = '/home/chaos2/wperkins/data/LMR/data/analyses/GISTEMP'
+    fname = 'gistemp1200_ERSST.nc'
+    varname = 'tempanomaly'
+
+    aobj = calib_class._main_load_helper(analysis_dir, fname,
+                                         varname, 'NCD', 0.5,
+                                         split_varname=False)
+
+    i, j, k = np.where(np.isfinite(aobj[0].data) & np.isfinite(aobj[1].data))
+    i = i[0]
+    j = j[0]
+    k = k[0]
+    aobj[0].data[i, j, k] = np.nan
+    res_dict = calib_class.avg_calib_to_res(aobj, [0.5, 1.0], {0.5: 0, 1.0: 0})
+
+    assert ~np.isfinite(res_dict[0.5][0].data[i, j, k])
+    assert np.isfinite(res_dict[0.5][1].data[i, j, k])
+    assert ~np.isfinite(res_dict[1.0][0].data[i, j, k])
+
+
 if __name__ == '__main__':
 
     # with ncf.Dataset('/home/disk/p/wperkins/Research/LMR/tests/data/gridded_dat.nc', 'r') as f:
@@ -723,5 +761,5 @@ if __name__ == '__main__':
 
     #test_priorvar_load_preavg_data('air', True)
     #test_state(0.5)
-    test_analysisvar('MLOST', 'MLOST_air.mon.anom_V3.5.4.nc', 'air')
-
+    # test_analysisvar('MLOST', 'MLOST_air.mon.anom_V3.5.4.nc', 'air')
+    test_analysisvar_nan_subannual()

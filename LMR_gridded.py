@@ -205,7 +205,7 @@ class GriddedVariable(object):
     @classmethod
     def _main_load_helper(cls, file_dir, file_name, varname, file_type,
                           base_resolution, nens=None, seed=None, sample=None,
-                          split_varname=True):
+                          split_varname=True, data_req_frac=None):
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
@@ -229,7 +229,8 @@ class GriddedVariable(object):
             print 'No pre-averaged file found... Loading directly from file.'
             var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
                                     sample=sample, save=True,
-                                    nens=nens, seed=seed)
+                                    nens=nens, seed=seed,
+                                    data_req_frac=data_req_frac)
 
         return var_objs
 
@@ -309,7 +310,7 @@ class GriddedVariable(object):
     @classmethod
     def _load_from_netcdf(cls, dir_name, filename, varname, resolution,
                           truncate=False, sample=None, nens=None, seed=None,
-                          save=False):
+                          save=False, data_req_frac=None):
         """
         General structure for load origininal:
         1. Load data
@@ -367,7 +368,8 @@ class GriddedVariable(object):
             dim_vals[_TIME], avg_data = \
                 cls._time_avg_gridded_to_resolution(dim_vals[_TIME],
                                                     var[:],
-                                                    resolution)
+                                                    resolution,
+                                                    data_req_frac=data_req_frac)
 
             # TODO: Replace with logger statement
             print (varname, ' res ', resolution, ': Global: mean=',
@@ -483,7 +485,7 @@ class GriddedVariable(object):
 
     @staticmethod
     def _time_avg_gridded_to_resolution(time_vals, data, resolution,
-                                        yr_shift=0):
+                                        yr_shift=0, data_req_frac=None):
         """
         Converts to time units of years at specified resolution and shift
         :param time_vals:
@@ -525,6 +527,19 @@ class GriddedVariable(object):
         avg_data = data[yr_shift:end_cutoff].reshape(tot_units,
                                                      nelem_in_unit_res,
                                                      *spatial_shp)
+
+        # If desired check for minimum number of data points
+        if data_req_frac is not None:
+            non_nan_frac = \
+                np.isfinite(avg_data).sum(axis=1) / float(nelem_in_unit_res)
+            req_met = non_nan_frac >= data_req_frac
+            expand_shp = [nelem_in_unit_res] + list(spatial_shp)
+            expand_mat = np.ones(expand_shp, dtype=np.bool)
+            req_met = np.expand_dims(req_met, axis=1)
+            req_met = req_met & expand_mat
+
+            avg_data[~req_met] = np.nan
+
         avg_data = np.nanmean(avg_data, axis=1)
 
         start_yr = start.year
@@ -565,16 +580,16 @@ class PriorVariable(GriddedVariable):
 
         return prior_dict
 
-    # TODO: This might not work for removing anomaly
     @staticmethod
     def _time_avg_gridded_to_resolution(time_vals, data, resolution,
-                                        yr_shift=0):
+                                        yr_shift=0, data_req_frac=None):
 
         # Call Base class to get correct time average
         time, avg_data = \
             super(PriorVariable, PriorVariable).\
             _time_avg_gridded_to_resolution(time_vals, data, resolution,
-                                            yr_shift)
+                                            yr_shift=yr_shift,
+                                            data_req_frac=data_req_frac)
         # Calculate anomaly
         if resolution < 1:
             units_in_yr = 1/resolution
@@ -603,9 +618,11 @@ class AnalysisVariable(GriddedVariable):
         file_type = psm_config.dataformat_calib
         base_resolution = psm_config.sub_base_res
         varname = psm_config.varname_calib
+        dat_frac = psm_config.min_data_req_frac
 
         return cls._main_load_helper(file_dir, file_name, varname, file_type,
-                                     base_resolution, split_varname=False)
+                                     base_resolution, split_varname=False,
+                                     data_req_frac=dat_frac)
 
     @classmethod
     def load_allvars(cls):
@@ -636,12 +653,24 @@ class AnalysisVariable(GriddedVariable):
                 start = i*nobjs_to_avg
                 end = start+nobjs_to_avg
 
-                new_data = np.nanmean([obj.data
-                                       for obj in shift_calib_objs[start:end]],
-                                      axis=0)
+                curr_objs = shift_calib_objs[start:end]
+
+                # Determine mask for missing sub_annual locations
+                mask = ~np.isfinite(curr_objs[0].data)
+                for obj in curr_objs:
+                    mask |= ~np.isfinite(obj.data)
+
+                data = []
+                for obj in curr_objs:
+                    tmp = obj.data.copy()
+                    tmp[mask] = np.nan
+                    data.append(tmp)
+
+                new_data = np.nanmean(data, axis=0)
+
                 new_time = calib_objs[start].time
 
-                curr_obj = shift_calib_objs[start]
+                curr_obj = curr_objs[0]
                 new_obj = class_type(curr_obj.name,
                                      curr_obj.dim_order,
                                      new_data,
@@ -656,11 +685,6 @@ class AnalysisVariable(GriddedVariable):
             calib_res_dict[res] = aobjs
 
         return calib_res_dict
-
-
-
-
-
 
 
 class BerkeleyEarthAnalysisVariable(AnalysisVariable):
