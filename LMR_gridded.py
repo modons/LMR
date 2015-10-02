@@ -205,7 +205,8 @@ class GriddedVariable(object):
     @classmethod
     def _main_load_helper(cls, file_dir, file_name, varname, file_type,
                           base_resolution, nens=None, seed=None, sample=None,
-                          split_varname=True, data_req_frac=None):
+                          split_varname=True, data_req_frac=None, save=True,
+                          ignore_pre_avg=False):
 
         try:
             ftype_loader = cls.get_loader_for_filetype(file_type)
@@ -219,6 +220,8 @@ class GriddedVariable(object):
             fname = file_name
 
         try:
+            if ignore_pre_avg:
+                raise IOError('Ignore pre_averaged files')
             var_objs = cls._load_pre_avg_obj(file_dir, fname, varname,
                                              base_resolution,
                                              sample=sample,
@@ -226,7 +229,8 @@ class GriddedVariable(object):
                                              seed=seed)
             print 'Loaded pre-averaged file.'
         except IOError:
-            print 'No pre-averaged file found... Loading directly from file.'
+            print 'No pre-averaged file found or ignore specified ... ' \
+                  'Loading directly from file.'
             var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
                                     sample=sample, save=True,
                                     nens=nens, seed=seed,
@@ -559,12 +563,16 @@ class PriorVariable(GriddedVariable):
         base_resolution = config.core.sub_base_res
         nens = config.core.nens
         seed = config.core.seed
+        overwrite = config.core.overwrite_pre_avg_file
+        ignore_pre_avg = config.core.ignore_pre_avg_file
 
         return cls._main_load_helper(file_dir, file_name, varname, file_type,
                                      base_resolution,
                                      nens=nens,
                                      seed=seed,
-                                     sample=sample)
+                                     sample=sample,
+                                     save=overwrite,
+                                     ignore_pre_avg=ignore_pre_avg)
 
     @classmethod
     def load_allvars(cls, config):
@@ -619,10 +627,14 @@ class AnalysisVariable(GriddedVariable):
         base_resolution = psm_config.sub_base_res
         varname = psm_config.varname_calib
         dat_frac = psm_config.min_data_req_frac
+        overwrite = psm_config.overwrite_pre_avg_file
+        ignore = psm_config.ignore_pre_avg_file
 
         return cls._main_load_helper(file_dir, file_name, varname, file_type,
                                      base_resolution, split_varname=False,
-                                     data_req_frac=dat_frac)
+                                     data_req_frac=dat_frac,
+                                     save=overwrite,
+                                     ignore_pre_avg=ignore)
 
     @classmethod
     def load_allvars(cls):

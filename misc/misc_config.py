@@ -81,6 +81,8 @@ class core:
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
+    ignore_pre_avg_files = True
+    overwrite_pre_avg_file = False
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
@@ -267,6 +269,9 @@ class psm:
         datafile_calib = constants.calib[datatag_calib]['fname']
         varname_calib = constants.calib[datatag_calib]['varname']
         dataformat_calib = constants.calib[datatag_calib]['type']
+
+        ignore_pre_avg_files = core.ignore_pre_avg_files
+        overwrite_pre_avg_file = core.overwrite_pre_avg_file
 
         # pre_calib_datafile = join(core.lmr_path,
         #                           'PSM',
