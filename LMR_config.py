@@ -76,17 +76,17 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_multires_gmt_change'
+    nexp = 'testdev_multires_alldatareq_calib'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
-    ignore_pre_avg_files = True
+    ignore_pre_avg_file = True
     overwrite_pre_avg_file = False
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
     seed = None
-    iter_range = [5, 30]
+    iter_range = [0, 15]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [0.5, 1.0]  # in yrs
@@ -268,13 +268,17 @@ class psm:
         varname_calib = constants.calib[datatag_calib]['varname']
         dataformat_calib = constants.calib[datatag_calib]['type']
 
-        ignore_pre_avg_files = core.ignore_pre_avg_files
+        ignore_pre_avg_file = core.ignore_pre_avg_file
         overwrite_pre_avg_file = core.overwrite_pre_avg_file
 
+        # pre_calib_datafile = join(core.lmr_path,
+        #                           'PSM',
+        #                           'PSMs_' + datatag_calib +
+        #                           '_0pt5_1pt0_res.pckl')
         pre_calib_datafile = join(core.lmr_path,
-                                  'PSM',
+                                  'PSM', 'test_psms',
                                   'PSMs_' + datatag_calib +
-                                  '_0pt5_1pt0_res.pckl')
+                                  '_mixedres_1.00datfrac')
         psm_r_crit = 0.0
         min_data_req_frac = 1.0  # 0.0 no data required, 1.0 all data required
 

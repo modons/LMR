@@ -232,7 +232,7 @@ class GriddedVariable(object):
             print 'No pre-averaged file found or ignore specified ... ' \
                   'Loading directly from file.'
             var_objs = ftype_loader(file_dir, fname, varname, base_resolution,
-                                    sample=sample, save=True,
+                                    sample=sample, save=save,
                                     nens=nens, seed=seed,
                                     data_req_frac=data_req_frac)
 

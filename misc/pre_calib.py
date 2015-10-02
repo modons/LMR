@@ -8,25 +8,32 @@ import cPickle as cpckl
 from os.path import join
 
 calib_datatag = cfg.psm.linear.datatag_calib
-output_dir = '/home/chaos2/wperkins/data/LMR/PSM'
-pre_calib_fname = 'PSMs_{}_0pt5_1pt0_res.pckl'.format(calib_datatag)
+fracs = [0, 1./3., 2./3., 1.0]
 
-# Load and calibrate
-_, proxies = LMR_proxy2.ProxyPages.load_all(cfg, [1850, 2000])
+output_dir = '/home/chaos2/wperkins/data/LMR/PSM/test_psms'
 
-pre_calib_dict = {}
-for p in proxies:
-    psm_obj = p.psm_obj
-    pre_calib_dict[(p.type, p.id)] = {'PSMcorrel': psm_obj.corr,
-                                      'PSMslope': psm_obj.slope,
-                                      'PSMintercept': psm_obj.intercept,
-                                      'PSMmse': psm_obj.R,
-                                      'calib': calib_datatag,
-                                      'lat': p.lat,
-                                      'lon': p.lon}
+for frac in fracs:
+    print 'Working on fraction {:1.2f}'.format(frac)
+    cfg.psm.linear.min_data_req_frac = frac
+    pre_calib_fname = 'PSMs_{}_multires_{:1.2f}datfrac'.format(calib_datatag, frac)
 
-with open(join(output_dir, pre_calib_fname), 'w') as f:
-    cpckl.dump(pre_calib_dict, f)
+    # Load and calibrate
+    _, proxies = LMR_proxy2.ProxyPages.load_all(cfg, [1850, 2000])
+
+    pre_calib_dict = {}
+    for p in proxies:
+        psm_obj = p.psm_obj
+        pre_calib_dict[(p.type, p.id)] = {'PSMcorrel': psm_obj.corr,
+                                          'PSMslope': psm_obj.slope,
+                                          'PSMintercept': psm_obj.intercept,
+                                          'PSMmse': psm_obj.R,
+                                          'calib': calib_datatag,
+                                          'lat': p.lat,
+                                          'lon': p.lon,
+                                          'nobs': psm_obj.nobs}
+
+    with open(join(output_dir, pre_calib_fname), 'w') as f:
+        cpckl.dump(pre_calib_dict, f)
 
 
 

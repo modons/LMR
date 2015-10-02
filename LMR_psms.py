@@ -121,8 +121,9 @@ class LinearPSM(BasePSM):
         site = proxy_obj.id
         r_crit = config.psm.linear.psm_r_crit
 
-        # Variable is used temporarily to
+        # Variable is used temporarily
         self._calib_object = None
+        self.nobs = None
 
         try:
             # Try using pre-calibrated psm_data
@@ -335,6 +336,7 @@ class LinearPSM(BasePSM):
         MSE = np.mean((residuals) ** 2)
         self.R = MSE
         self.corr = r_value
+        self.nobs = nobs
 
         if diag_output:
             # Some other diagnostics
