@@ -41,7 +41,7 @@ class core:
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    iter_range = [0, 3]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
 
@@ -68,7 +68,7 @@ class proxies:
     """
 
     use_from = ['pages']
-    proxy_frac = 1.0
+    proxy_frac = 0.75
 
     class pages:
         """
@@ -196,9 +196,12 @@ class psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
-        datatag_calib = 'GISTEMP'
+        #datatag_calib = 'GISTEMP'
+        #datafile_calib = 'gistemp1200_ERSST.nc'
+        datatag_calib = 'MLOST'
+        datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
-        datafile_calib = 'gistemp1200_ERSST.nc'
         dataformat_calib = 'NCD'
 
         pre_calib_datafile = join(core.lmr_path,
@@ -225,8 +228,29 @@ class prior:
     """
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
-    datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
-    #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
     datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+
+    #prior_source     = 'ccsm4_preindustrial_control'
+    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
+
+    #prior_source     = 'gfdl-cm3_preindustrial_control'
+    #datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
+
+    #prior_source     = 'mpi-esm-p_last_millenium'
+    #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
+
+    #prior_source     = '20cr'
+    #datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
+
+    #prior_source     = 'era20c'
+    #datafile_prior   = '[vardef_template]_ERA20C_190001-201212.nc'
+
+    datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     dataformat_prior = 'NCD'
-    state_variables = ['tas_sfc_Amon']
+    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
+                       'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
+                       'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
+                       'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon']
+

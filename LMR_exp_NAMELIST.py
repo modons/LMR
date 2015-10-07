@@ -7,18 +7,18 @@ from datetime import datetime, timedelta
 # =============================================================================
 
 # Name of reconstruction experiment
-#nexp = 'ReconDevTest_500_half'
-#nexp = 'ReconDevTest_200_full_r_0.2'
-#nexp = 'ReconDevTest_1000_full_r_0.2' # *** this one was excellent 
-#nexp = 'ReconDevTest_1000_allproxies_r_0.2' # *** this one was excellent 
-#nexp = 'ReconDevTest_100_testing_MXD'
-#nexp = 'ReconDevTest_100_testing_MXD_coral'
-#nexp = 'Recon_ens100_allAnnualProxyTypes_pf0.5'
-nexp = 'proxyfirstloop_150yrecon_1000members_1itr_100pct'
+#nexp = 'p1_CCSM4_LastMillenium_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'p1_CCSM4_PiControl_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'p1_CCSM4_PiControl_ens50_allAnnualProxyTypes_pf0.5'
+#nexp = 'p1_MPIESMP_LastMillenium_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'p1_20CR_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'p1_ERA20C_ens100_allAnnualProxyTypes_pf0.5'
+#nexp = 'ReconMultiState_CCSM4_PiControl_ens500_allAnnualProxyTypes_pf0.5'
+nexp = 'test'
 
 # set the absolute path the experiment (could make this cwd with some os coding)
-LMRpath = '/home/chaos2/wperkins/data/LMR'
-#LMRpath = '/home/disk/ekman/rtardif/nobackup/LMR'
+#LMRpath = '/home/chaos2/wperkins/data/LMR'
+LMRpath = '/home/disk/ekman/rtardif/kalman3/LMR'
 
 # set clean_start to True to delete existing files in the outpout directory (otherwise they will be used as the prior!)
 clean_start = True
@@ -26,24 +26,25 @@ clean_start = True
 
 # Reconstruction period (years)
 #recon_period = [1500,2000]
-recon_period = [1850,2000]
-#recon_period = [1800,2000]
+#recon_period = [1850,2000]
+recon_period = [1800,2000]
 #recon_period = [1000,2000]
 
 # Ensemble size
-Nens = 1000
+#Nens = 50
+Nens = 100
+#Nens = 500
 
 # Fraction of available proxy data (sites) to assimilate 
 # (=1.0 for all, 0.5 for half etc.)
 #proxy_frac = 0.1
 #proxy_frac = 0.25
 #proxy_frac = 0.5
-#proxy_frac = 0.75
-proxy_frac = 1.0
+proxy_frac = 0.75
+#proxy_frac = 1.0
 
 # Number of Monte-Carlo iterations
-#iter_range = [0,20]
-iter_range = [0,0]
+iter_range = [0,100]
 
 # Localization radius for DA (in km)
 locRad = None
@@ -55,7 +56,7 @@ locRad = None
 # =============================================================================
 
 # Proxy data directory & file
-datadir_proxy    = LMRpath+'/proxies'
+datadir_proxy    = LMRpath+'/data/proxies'
 datafile_proxy   = 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
 dataformat_proxy = 'CSV'
 
@@ -88,7 +89,7 @@ proxy_resolution = [1.0]
 datatag_calib = 'GISTEMP'
 #datatag_calib = 'HadCRUT'
 #datatag_calib = 'BerkeleyEarth'
-datadir_calib = LMRpath+'/analyses'
+datadir_calib = LMRpath+'/data/analyses'
 
 # Threshold correlation of linear PSM 
 PSM_r_crit = 0.2
@@ -99,8 +100,22 @@ PSM_r_crit = 0.2
 
 # Prior data directory & model source
 prior_source     = 'ccsm4_last_millenium'
-datadir_prior    = '/home/chaos2/wperkins/data/'
 datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+
+#prior_source     = 'ccsm4_preindustrial_control'
+#datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc'
+
+#prior_source     = 'mpi-esm-p_last_millenium'
+#datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
+
+#prior_source     = '20cr'
+#datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
+
+#prior_source     = 'era20c'
+#datafile_prior   = '[vardef_template]_ERA20C_190001-201212.nc'
+
+
+datadir_prior    = LMRpath+'/data/model/'+prior_source
 dataformat_prior = 'NCD'
 
 # Define variables in state vector (will be updated by assimilation)
@@ -115,10 +130,10 @@ state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
 # Run time output
 #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
 #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
-#datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
-datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
+#datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
 
 # Archive directory
 #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
-#archive_dir = '/home/disk/kalman3/hakim/LMR/'
-archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+archive_dir = '/home/disk/kalman3/hakim/LMR/'
+#archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'

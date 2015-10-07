@@ -356,17 +356,25 @@ def LMR_driver_callable(state):
     # ---------------------
     apcount = 0 # running counter of accepted proxies
 
-    # Array containing the global-mean state (for diagnostic purposes)
+    # Arrays containing the global and hemispheric-mean state (for diagnostic purposes)
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
     gmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
+    nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
+    shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
     # get state vector indices where to find surface air temperature 
     ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
     iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
     xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1,:],axis=1) # ensemble-mean
     xbm_lalo = np.reshape(xbm,(nlat_new,nlon_new))
-    gmt = LMR_utils.global_mean(xbm_lalo,lat_new[:,0],lon_new[0,:])
-    gmt_save[0,:] = gmt # First prior
-    gmt_save[1,:] = gmt # Prior for first proxy assimilated
+    [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo,lat_new[:,0])
+    # First prior
+    gmt_save[0,:] = gmt
+    nhmt_save[0,:] = nhmt
+    shmt_save[0,:] = shmt
+    # Prior for first proxy assimilated
+    gmt_save[1,:] = gmt 
+    nhmt_save[1,:] = nhmt
+    shmt_save[1,:] = shmt
 
     assimilated_proxies= []
     for proxy_key in sorted(proxy_types_assim):
@@ -473,9 +481,11 @@ def LMR_driver_callable(state):
 
                 # compute and store the global mean (temperature only)
                 xam_lalo = np.reshape(xam[ibeg_tas:iend_tas+1],(nlat_new,nlon_new))
-                gmt = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
+                [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xam_lalo,lat_new[:,0])
                 gmt_save[apcount,int(t-recon_period[0])] = gmt
-                
+                nhmt_save[apcount,int(t-recon_period[0])] = nhmt
+                shmt_save[apcount,int(t-recon_period[0])] = shmt
+
                 thistime = time()
                 if verbose > 2: print 'update took ' + str(thistime-lasttime) + ' seconds'
                 lasttime = thistime
@@ -486,6 +496,8 @@ def LMR_driver_callable(state):
             # Propagate the updated gmt_save as prior for next assimilated proxy
             if apcount < total_proxy_count:
                 gmt_save[apcount+1,:] = gmt_save[apcount,:]
+                nhmt_save[apcount+1,:] = nhmt_save[apcount,:]
+                shmt_save[apcount+1,:] = shmt_save[apcount,:]
 
     # End of loop on proxy types
     if verbose > 0:
@@ -498,9 +510,12 @@ def LMR_driver_callable(state):
     # save global mean temperature history and the proxies assimilated
     #
 
-    # 3 July 2015: compute and save the GMT for the full ensemble
+    # 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
     # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([Ntimes,Nens])
+    nhmt_ensemble = np.zeros([Ntimes,Nens])
+    shmt_ensemble = np.zeros([Ntimes,Nens])
+
     iyr = -1
     for yr in range(recon_period[0],recon_period[1]+1):
         iyr = iyr + 1
@@ -509,15 +524,17 @@ def LMR_driver_callable(state):
         Xa = np.load(filen+'.npy')
         for k in range(Nens):
             xam_lalo = np.reshape(Xa[ibeg_tas:iend_tas+1,k],(nlat_new,nlon_new))
-            gmt = LMR_utils.global_mean(xam_lalo,lat_new[:,0],lon_new[0,:])
+            [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xam_lalo,lat_new[:,0])
             gmt_ensemble[iyr,k] = gmt
+            nhmt_ensemble[iyr,k] = nhmt
+            shmt_ensemble[iyr,k] = shmt
 
     filen = workdir + '/' + 'gmt_ensemble'
-    np.savez(filen,gmt_ensemble=gmt_ensemble,recon_times=recon_times)
+    np.savez(filen,gmt_ensemble=gmt_ensemble,nhmt_ensemble=nhmt_ensemble,shmt_ensemble=shmt_ensemble,recon_times=recon_times)
     
     print 'saving global mean temperature update history and assimilated proxies...'
     filen = workdir + '/' + 'gmt'
-    np.savez(filen,gmt_save=gmt_save,recon_times=recon_times,apcount=apcount,tpcount=total_proxy_count)    
+    np.savez(filen,gmt_save=gmt_save,nhmt_save=nhmt_save,shmt_save=shmt_save,recon_times=recon_times,apcount=apcount,tpcount=total_proxy_count)    
     filen = workdir + '/' + 'assimilated_proxies'
     np.save(filen,assimilated_proxies)
     

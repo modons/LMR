@@ -12,6 +12,14 @@ def prior_assignment(iprior):
         prior_object = prior_ccsm4_last_millenium()
     elif iprior == 'ccsm4_preindustrial_control':
         prior_object = prior_ccsm4_preindustrial_control()
+    elif iprior == 'mpi-esm-p_last_millenium':
+        prior_object = prior_mpi_esm_p_last_millenium()
+    elif iprior == 'gfdl-cm3_preindustrial_control':
+        prior_object = prior_gfdl_cm3_preindustrial_control()
+    elif iprior == '20cr':
+        prior_object = prior_20cr()
+    elif iprior == 'era20c':
+        prior_object = prior_era20c()
 
     return prior_object
 
@@ -167,22 +175,51 @@ class prior_gistemp(prior_master):
 class prior_BerkeleyEarth(prior_master):
     pass
 
-# class for the CCSM4 Last Millenium simulation
+# class for the CCSM4 Last Millennium simulation
 class prior_ccsm4_last_millenium(prior_master):
 
     def read_prior(self):
-        from load_gridded_data import read_gridded_data_ccsm4_last_millenium
-
-        self.prior_dict = read_gridded_data_ccsm4_last_millenium(self.prior_datadir,self.prior_datafile,self.statevars)
-
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
         return
 
 # class for the CCSM4 Pre-Industrial Control simulation
 class prior_ccsm4_preindustrial_control(prior_master):
 
     def read_prior(self):
-        from load_gridded_data import read_gridded_data_ccsm4_preindustrial_control
-        [self.time,self.lat,self.lon,self.value] = read_gridded_data_ccsm4_preindustrial_control(self.prior_datadir,self.prior_datafile,self.statevars)
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        return
 
+# class for the MPI-ESM-P Last Millenniun simulation
+class prior_mpi_esm_p_last_millenium(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        return
+
+# class for the GFDL-CM3 Pre-Industrial Control simulation
+class prior_gfdl_cm3_preindustrial_control(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        return
+
+# class for NOAA's 20th century reanalysis (20CR)
+class prior_20cr(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        return
+
+# class for ECMWF's 20th century reanalysis (ERA20C)
+class prior_era20c(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
         return
 

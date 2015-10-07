@@ -13,6 +13,8 @@ def calibration_assignment(icalib):
         calib_object = calibration_HadCRUT()
     elif icalib == 'BerkeleyEarth':
         calib_object = calibration_BerkeleyEarth()
+    elif icalib == 'MLOST':
+        calib_object = calibration_MLOST()
     elif icalib == 'NOAA':
         calib_object = calibration_NOAA()
     else:
@@ -78,6 +80,23 @@ class calibration_BerkeleyEarth(calibration_master):
         from load_gridded_data import read_gridded_data_BerkeleyEarth
 
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,self.datafile_calib,self.calib_vars)
+
+# -------------------------------------------------------------------------------
+# *** MLOST class --------------------------------------------------
+# -------------------------------------------------------------------------------
+class calibration_MLOST(calibration_master):
+
+    source = 'MLOST'
+    datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
+    dataformat_calib = 'NCD'
+    calib_vars = ['Tsfc']
+
+    # read the data
+    def read_calibration(self):
+        from load_gridded_data import read_gridded_data_MLOST
+
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_MLOST(self.datadir_calib,self.datafile_calib,self.calib_vars)
+
 
 # -------------------------------------------------------------------------------
 # *** NOAA class --------------------------------------------------

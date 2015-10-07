@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 #
 from LMR_plot_support import *
 from LMR_exp_NAMELIST import *
-from LMR_utils import global_mean, assimilated_proxies, coefficient_efficiency, rank_histogram
+from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
@@ -62,7 +62,7 @@ nexp = 'testdev_onlineDA_comparison'
 # specify directories for LMR and calibration data
 datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'
 #datadir_output = './data/'
-datadir_calib = '/home/chaos2/wperkins/data/LMR/data/analyses'
+datadir_calib = '/home/chaos2/wperkins/data/LMR/analyses'
 
 # plotting preferences
 nlevs = 30 # number of contours
@@ -137,7 +137,8 @@ calib_vars = ['Tsfc']
 
 # load NOAA MLOST
 path = datadir_calib + '/NOAA/'
-fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v3.5.4.201504.asc'
+#fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v3.5.4.201504.asc'
+fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v4.0.0.201506.asc'
 f = open(path+fname,'r')
 dat = csv.reader(f)
 mlost_time = []
@@ -180,6 +181,8 @@ TCR_time.sort()  # sort the list
 time_yrs  = np.empty(len(TCR_time), dtype=int)
 TCR = np.empty([len(TCR_time), len(lat_20CR), len(lon_20CR)], dtype=float)
 tcr_gm = np.zeros([len(TCR_time)])
+tcr_nhm = np.zeros([len(TCR_time)])
+tcr_shm = np.zeros([len(TCR_time)])
 
 # Loop over years in dataset
 for i in xrange(0,len(TCR_time)):        
@@ -192,7 +195,7 @@ for i in xrange(0,len(TCR_time)):
     # ---------------------------------------
     TCR[i,:,:] = np.nanmean(data.variables['air'][ind],axis=0)
     # compute the global mean temperature
-    tcr_gm[i] = global_mean(TCR[i,:,:],lat_20CR,lon_20CR)
+    [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],lat_20CR)
     
 # Remove the temporal mean 
 TCR = TCR - np.mean(TCR,axis=0)
@@ -202,6 +205,8 @@ satime = 1900
 eatime = 1999
 smatch, ematch = find_date_indices(TCR_time,satime,eatime)
 tcr_gm = tcr_gm - np.mean(tcr_gm[smatch:ematch])
+tcr_nhm = tcr_nhm - np.mean(tcr_nhm[smatch:ematch])
+tcr_shm = tcr_shm - np.mean(tcr_shm[smatch:ematch])
 
 #
 # read LMR GMT data computed during DA
@@ -267,7 +272,8 @@ if iplot:
     plt.text(txl,tyl-.05,str(kk+1) + ' samples',fontsize=7)
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_verify_GMT_'+str(xl[0])+'-'+str(xl[1]))
+        #plt.savefig(nexp+'_verify_GMT_'+str(xl[0])+'-'+str(xl[1]))
+        plt.savefig(nexp+'_verify_GMT_'+str(xl[0])+'-'+str(xl[1])+'.png') # RT added "+'.png'"
     
 # define for later use
 lmr_gm = sagmt
@@ -277,9 +283,9 @@ LMR_time = recon_times
 # compute GIS & CRU global mean 
 #
 
-gis_gm = global_mean(GIS_anomaly,GIS_lat,GIS_lon)
-cru_gm = global_mean(CRU_anomaly,CRU_lat,CRU_lon)
-be_gm = global_mean(BE_anomaly,BE_lat,BE_lon)
+[gis_gm,_,_] = global_hemispheric_means(GIS_anomaly,GIS_lat)
+[cru_gm,_,_] = global_hemispheric_means(CRU_anomaly,CRU_lat)
+[be_gm,_,_] = global_hemispheric_means(BE_anomaly,BE_lat)
 
 # adjust so that all time series pertain to 20th century mean
 smatch, ematch = find_date_indices(LMR_time,satime,eatime)
@@ -431,7 +437,7 @@ if iplot:
 
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_GMT_LMR_GIS_CRU_TCR_BE_MLOST_comparison')
+        plt.savefig(nexp+'_GMT_LMR_GIS_CRU_TCR_BE_MLOST_comparison.png') # RT added .png
 
 #
 # time averages
@@ -516,7 +522,7 @@ if iplot:
 
     plt.plot(xl,[0,0])
     if fsave:
-        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed'
+        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.png' # RT added .png
         print fname
         plt.savefig(fname)
     
@@ -627,7 +633,7 @@ if iplot:
     plt.text(txl,tyl+2*off,'ce full: '+str(lgcf),fontsize=12)
     plt.text(txl,tyl+off,'ce detrend: '+str(lgcd),fontsize=12)
     
-    fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended'
+    fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.png' # RT added .png
     if fsave:
         plt.savefig(fname)
 
@@ -646,7 +652,7 @@ if iplot:
     nbins = 10
     plt.hist(rank,nbins)
     if fsave:
-        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_rank_histogram'
+        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_rank_histogram.png' # RT added .png
         print fname
         plt.savefig(fname)
 
