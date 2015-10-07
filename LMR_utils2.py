@@ -315,7 +315,6 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     return X_new,lat_new,lon_new
 
 
-
 def assimilated_proxies(workdir):
 
     """
@@ -325,7 +324,6 @@ def assimilated_proxies(workdir):
     # Originator: Greg Hakim
     #             University of Washington
     #             May 2015
-
 
     apfile = workdir + 'assimilated_proxies.npy'
     assimilated_proxies = np.load(apfile)

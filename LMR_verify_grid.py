@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 # LMR specific imports
-from LMR_utils import global_hemispheric_means, assimilated_proxies
+from LMR_utils2 import global_hemispheric_means, assimilated_proxies
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth

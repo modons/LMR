@@ -27,8 +27,6 @@ def proxy_assignment(iproxy):
         proxy_object = proxy_marine_sediment_all()
     elif iproxy == 'Speleothem_All':
         proxy_object = proxy_speleothem_all()
-    elif iproxy == 'JaneDoeTreeRing_Width':
-        proxy_object = proxy_jane_doe_tree_ring_width()
     elif iproxy == 'pseudo_proxy_temperature':
         proxy_object = pseudo_proxy_temperature()
 
@@ -51,7 +49,7 @@ class proxy_master(object):
         import os.path
         import numpy as np
         from scipy import stats
-        import LMR_utils
+        import LMR_utils2
         from random import sample
 
         try:
@@ -89,7 +87,7 @@ class proxy_master(object):
 
             # Look for indices of calibration grid point closest in space (in 2D) to proxy site
             dist = np.empty([C.lat.shape[0], C.lon.shape[0]])
-            tmp  = np.array([ LMR_utils.haversine(self.lon,self.lat,C.lon[k],C.lat[j]) for j in xrange(len(C.lat)) for k in xrange(len(C.lon))])
+            tmp  = np.array([ LMR_utils2.haversine(self.lon,self.lat,C.lon[k],C.lat[j]) for j in xrange(len(C.lat)) for k in xrange(len(C.lon))])
             dist = np.reshape(tmp,[len(C.lat),len(C.lon)])
             # indices of nearest grid pt.
             jind,kind = np.unravel_index(dist.argmin(), dist.shape) 
@@ -104,7 +102,7 @@ class proxy_master(object):
             if calib_spatial_avg:                 
                 C2Dsmooth = np.zeros([C.time.shape[0],C.lat.shape[0],C.lon.shape[0]])
                 for m in ind_c:
-                    C2Dsmooth[m,:,:] = LMR_utils.smooth2D(C.temp_anomaly[m,:,:],n=Npts)
+                    C2Dsmooth[m,:,:] = LMR_utils2.smooth2D(C.temp_anomaly[m,:,:],n=Npts)
                 reg_x = [ C2Dsmooth[m,jind,kind] for m in ind_c ]
             else:
                 reg_x = [ C.temp_anomaly[m,jind,kind] for m in ind_c ]
@@ -238,7 +236,7 @@ class proxy_master(object):
             ensDim = X.shape[1]
             dist = np.empty(varDim)
             #rt dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_lon[k],X_lat[k]) for k in range(tas_indbegin,tas_indend+1) ])
-            dist = np.array([ LMR_utils.haversine(self.lon,self.lat,X_coords[k,ind_lon],X_coords[k,ind_lat]) for k in range(tas_indbegin,tas_indend+1) ])
+            dist = np.array([ LMR_utils2.haversine(self.lon,self.lat,X_coords[k,ind_lon],X_coords[k,ind_lat]) for k in range(tas_indbegin,tas_indend+1) ])
 
             # row index in dist array corresponding to nearest grid pt. in prior (minimum distance)
             kind = np.unravel_index(dist.argmin(), dist.shape) 

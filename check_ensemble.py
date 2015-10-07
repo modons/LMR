@@ -3,7 +3,7 @@
 #
 
 import numpy as np
-import LMR_utils
+import LMR_utils2
 import matplotlib 
 import matplotlib.pyplot as plt
 
@@ -42,13 +42,13 @@ for t in range(startim,startim+ntims):
     print 'Xa shape: ' + str(np.shape(Xa))
 
     # Dump Xa to file (to be used as prior for next assimilation)
-    ypad = LMR_utils.year_fix(t)          
+    ypad = LMR_utils2.year_fix(t)
     filen = workdir + '/' + 'year' + ypad
     np.save(filen,Xa)
 
     # compute global mean for check later
     xam_lalo = np.reshape(xam[0:stateDim],(nlat_new,nlon_new))
-    [gmt[k],_,_] = LMR_utils.global_hemispheric_means(xam_lalo,lat_new[:,0])
+    [gmt[k],_,_] = LMR_utils2.global_hemispheric_means(xam_lalo,lat_new[:,0])
 
 # generate the ensemble-mean files as in LMR_wrapper.py
 LMR_utils.ensemble_mean(workdir)
@@ -100,7 +100,7 @@ print '----------------'
 print gmt
 """
 
-[gmt_check,_,_] = LMR_utils.global_hemispheric_means(xam_check,lat[:,0])
+[gmt_check,_,_] = LMR_utils2.global_hemispheric_means(xam_check,lat[:,0])
 
 #
 # read gmt data (as in LMR_verify_GM.py)

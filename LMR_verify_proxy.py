@@ -24,7 +24,7 @@ import LMR_proxy
 import LMR_calibrate
 import LMR_prior
 from load_proxy_data import read_proxy_metadata_S1csv as read_proxy_metadata
-from LMR_utils import haversine, coefficient_efficiency
+from LMR_utils2 import haversine, coefficient_efficiency
 
 import matplotlib
 import matplotlib.pyplot as plt
