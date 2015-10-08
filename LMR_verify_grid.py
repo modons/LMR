@@ -18,7 +18,6 @@ from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
 from LMR_plot_support import *
-from LMR_exp_NAMELIST import *
 from LMR_plot_support import *
 
 # change default value of latlon kwarg to True.

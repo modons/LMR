@@ -16,7 +16,6 @@ from netCDF4 import Dataset
 from datetime import datetime, timedelta
 #
 from LMR_plot_support import *
-from LMR_exp_NAMELIST import *
 from LMR_utils2 import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
