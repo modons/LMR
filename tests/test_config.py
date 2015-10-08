@@ -24,19 +24,19 @@ class constants:
                        'type': 'NCD'}
 
     calib['HadCRUT'] = {'fname': 'HadCRUT.4.3.0.0.median.nc',
-                        'varname': 'Tsfc',
+                        'varname': 'temperature_anomaly',
                         'type': 'NCD'}
 
     calib['BerkeleyEarth'] = {'fname': 'Land_and_Ocean_LatLong1.nc',
-                              'varname': 'Tsfc',
+                              'varname': 'temperature',
                               'type': 'NCD'}
 
     calib['MLOST'] = {'fname': 'MLOST_air.mon.anom.V3.5.4.nc',
-                      'varname': 'Tsfc',
+                      'varname': 'air',
                       'type': 'NCD'}
 
     calib['NOAA'] = {'fname': 'er-ghcn-sst.nc',
-                     'varname': 'Tsfc',
+                     'varname': 'data',
                      'type': 'NCD'}
 
     prior = {}
@@ -49,6 +49,7 @@ class constants:
         {'fname': '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc',
          'type': 'NCD',
          'state_vars': ['tas_sfc_Amon']}
+
 
 class core:
     """
@@ -76,21 +77,23 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_onlineDA_comparison'
+    nexp = 'testdev_priordir_change'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
-    online_reconstruction = True
+    online_reconstruction = False
     clean_start = True
     ignore_pre_avg_file = True
     overwrite_pre_avg_file = False
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1850, 2000]
-    nens = 100
+    recon_period = [1950, 1953]
+    nens = 2
     seed = None
-    iter_range = [0, 15]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
-    assimilation_time_res = [0.5, 1.0]  # in yrs
-    # maps year shift (in years) to resolution
+    assimilation_time_res = [0.5, 1.]  # in yrs
+
+    # What we're defining as year start
+    # 0-11 where 0 indicates start at Jan.
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
 
     # TODO: add rules for shift?
@@ -162,18 +165,11 @@ class proxies:
         """
 
         datadir_proxy = join(core.lmr_path, 'data', 'proxies')
-        # Pages 0.5yr resolution
         datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies_0pt5res.df.pckl')
+                              'Pages2k_Proxies.df.pckl')
         metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata_0pt5res.df.pckl')
-
-        # Pages 1.0 yr res only
-        # datafile_proxy = join(datadir_proxy,
-        #                       'Pages2k_Proxies.df.pckl')
-        # metafile_proxy = join(datadir_proxy,
-        #                       'Pages2k_Metadata.df.pckl')
-        # dataformat_proxy = 'DF'
+                              'Pages2k_Metadata.df.pckl')
+        dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
@@ -271,16 +267,11 @@ class psm:
         ignore_pre_avg_file = core.ignore_pre_avg_file
         overwrite_pre_avg_file = core.overwrite_pre_avg_file
 
-        # pre_calib_datafile = join(core.lmr_path,
-        #                           'PSM',
-        #                           'PSMs_' + datatag_calib +
-        #                           '_0pt5_1pt0_res.pckl')
         pre_calib_datafile = join(core.lmr_path,
-                                  'PSM', 'test_psms',
-                                  'PSMs_' + datatag_calib +
-                                  '_mixedres_1.00datfrac')
-        psm_r_crit = 0.0
-        min_data_req_frac = 1.0  # 0.0 no data required, 1.0 all data required
+                                  'PSM',
+                                  'PSMs_' + datatag_calib + '.pckl')
+        psm_r_crit = 0.20
+        min_data_req_frac = 1.0
 
 
 class prior:
@@ -302,35 +293,10 @@ class prior:
     """
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
-    #prior_source = 'mpi-esm-p_last_millenium'
+    datadir_prior = '/home/disk/p/wperkins/Research/LMR/tests/data'
+    #datafile_prior = 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc'
+    datafile_prior   = '[vardef_template]_gridded_dat.nc'
+    dataformat_prior = 'NCD'
+    state_variables = ['air', 'tseries']
+    truncate = False
 
-    datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
-    datafile_prior   = constants.prior[prior_source]['fname']
-    dataformat_prior = constants.prior[prior_source]['type']
-    state_variables = constants.prior[prior_source]['state_vars']
-    truncate_state = True
-
-
-class forecaster:
-    """
-    Parameters for the online DA forecasting method.
-    """
-
-    # Which forecaster class to use
-    use_forecaster = 'lim'
-
-    class LIM:
-        """
-        calib_filename: Filename for LIM calibration data.  Should be netcdf
-                        file or an HDF5 file from the DataTools.netcdf_to_hdf5_
-                        container.
-        calib_varname: Variable name to grab from calib_filename
-        fcast_times: A list of lead times (in years) to forecast
-        """
-        calib_filename = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
-        calib_varname = 'air'
-        dataformat = 'NCD'
-        fcast_times = [1]
-        wsize = 12
-        fcast_num_pcs = 15
-        detrend = True

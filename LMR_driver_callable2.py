@@ -36,10 +36,11 @@
 import numpy as np
 from os.path import join
 from time import time
+import tables as tb
 
 import LMR_proxy2
-import LMR_prior
-import LMR_utils2
+import LMR_gridded
+from LMR_utils2 import global_mean2, empty_hdf5_carray
 import LMR_config as BaseCfg
 import LMR_forecaster
 from LMR_DA import enkf_update_array, cov_localization
@@ -58,19 +59,19 @@ def LMR_driver_callable(cfg=None):
     #  2 = many; >=3 = all)
     verbose = 1
 
-    # TODO: AP Fix Configuration
-    # daylight the variables passed in the state object (easier for code
-    # migration than leaving attached)
     nexp = core.nexp
     workdir = core.datadir_output
     recon_period = core.recon_period
     online = core.online_reconstruction
     nens = core.nens
     loc_rad = core.loc_rad
+    trunc_state = prior.truncate_state
+    assim_res_vals = core.assimilation_time_res
     prior_source = prior.prior_source
-    datadir_prior = prior.datadir_prior
-    datafile_prior = prior.datafile_prior
-    state_variables = prior.state_variables
+    base_res = core.assimilation_time_res[0]
+    sub_base_res = core.sub_base_res
+    res_assim_freq = (np.array(assim_res_vals)/base_res).astype(np.int16)
+    res_yr_shift = core.res_yr_shift
 
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -103,19 +104,6 @@ def LMR_driver_callable(cfg=None):
     #     print 'Source for calibration: ' + datatag_calib
     #     print ''
 
-    # TODO: Doesn't appear to use C at all...
-    # Assign calibration object according to "datatag_calib" (from namelist)
-    # C = LMR_calibrate.calibration_assignment(datatag_calib)
-    #
-    # TODO: AP Required attributes need explicit declaration in method/class
-    # # the path to the calibration directory is specified in the namelist file;
-    #  bind it here
-    # C.datadir_calib = datadir_calib;
-    #
-    # # read the data !!!!!!!!!!!!!!!!!! don't need this with all pre-calculated
-    #  PSMs !!!!!!!!!!!!!!!!!!
-    # C.read_calibration()
-
     # ==========================================================================
     # Load prior data ----------------------------------------------------------
     # ==========================================================================
@@ -125,23 +113,13 @@ def LMR_driver_callable(cfg=None):
         print '-------------------------------------------'
         print 'Source for prior: ', prior_source
 
-    # Assign prior object according to "prior_source" (from namelist)
-    X = LMR_prior.prior_assignment(prior_source)
-
-    # TODO: AP explicit requirements
-    # add namelist attributes to the prior object
-    X.prior_datadir = datadir_prior
-    X.prior_datafile = datafile_prior
-    X.statevars = state_variables
-    X.Nens = nens
-
-    # Read data file & populate initial prior ensemble
-    X.populate_ensemble(prior_source)
-    Xb_one_full = X.ens
+    # Create initial state vector of desired variables at smallest time res
+    Xb_one_full = LMR_gridded.State.from_config(cfg)
 
 
     # Prepare to check for files in the prior (work) directory (this object just
     #  points to a directory)
+    #TODO: might not be necessary
     prior_check = np.DataSource(workdir)
 
     load_time = time() - begin_time
@@ -192,105 +170,50 @@ def LMR_driver_callable(cfg=None):
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
 
-        # Handle state vector with multiple state variables
-
-    # Declare dictionary w/ info on content of truncated state vector
-    new_state_info = {}
-
-    # Transform every 2D state variable, one at a time
-    Nx = 0
-    for var in X.full_state_info.keys():
-        dct = {}
-        # variable indices in full state vector
-        ibeg_full = X.full_state_info[var]['pos'][0]
-        iend_full = X.full_state_info[var]['pos'][1]
-        # extract array corresponding to state variable "var"
-        var_array_full = Xb_one_full[ibeg_full:iend_full+1, :]
-        # corresponding spatial coordinates
-        coords_array_full = X.coords[ibeg_full:iend_full+1, :]
-
-        # Are we truncating this variable? (i.e. is it a 2D lat/lon variable?)
-        if (X.full_state_info[var]['spacecoords'] and
-            'lat' in X.full_state_info[var]['spacecoords'] and
-            'lon' in X.full_state_info[var]['spacecoords']):
-
-            print var, ' : 2D lat/lon variable, truncating this variable'
-            # lat/lon column indices in X.coords
-            ind_lon = X.full_state_info[var]['spacecoords'].index('lon')
-            ind_lat = X.full_state_info[var]['spacecoords'].index('lat')
-            nlat = X.full_state_info[var]['spacedims'][ind_lat]
-            nlon = X.full_state_info[var]['spacedims'][ind_lon]
-
-            # calculate the truncated fieldNtimes
-            [var_array_new, lat_new, lon_new] = \
-                LMR_utils2.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
-            nlat_new = np.shape(lat_new)[0]
-            nlon_new = np.shape(lat_new)[1]
-
-            # corresponding indices in truncated state vector
-            ibeg_new = Nx
-            iend_new = Nx+(nlat_new*nlon_new)-1
-            # for new state info dictionary
-            dct['pos'] = (ibeg_new, iend_new)
-            dct['spacecoords'] = X.full_state_info[var]['spacecoords']
-            dct['spacedims'] = (nlat_new, nlon_new)
-            # updated dimension
-            new_dims = (nlat_new*nlon_new)
-
-            # array with new spatial coords
-            coords_array_new = np.zeros(shape=[new_dims, 2])
-            coords_array_new[:, 0] = lat_new.flatten()
-            coords_array_new[:, 1] = lon_new.flatten()
-
-        else:
-            print var,\
-                ' : not truncating this variable: no changes from full state'
-            var_array_new = var_array_full
-            coords_array_new = coords_array_full
-            # updated dimension
-            new_dims = var_array_new.shape[0]
-            ibeg_new = Nx
-            iend_new = Nx + new_dims - 1
-            dct['pos'] = (ibeg_new, iend_new)
-            dct['spacecoords'] = X.full_state_info[var]['spacecoords']
-            dct['spacedims'] = X.full_state_info[var]['spacedims']
-
-        # fill in new state info dictionary
-        new_state_info[var] = dct
-
-        # if 1st time in loop over state variables, create Xb_one array as copy
-        # of var_array_new
-        if Nx == 0:
-            Xb_one = np.copy(var_array_new)
-            Xb_one_coords = np.copy(coords_array_new)
-        else:  # if not 1st time, append to existing array
-            Xb_one = np.append(Xb_one, var_array_new, axis=0)
-            Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
-
-        # updating dimension of new state vector
-        Nx = Nx + new_dims
-
-    X.trunc_state_info = new_state_info
+    if trunc_state:
+        Xb_one = Xb_one_full.truncate_state()
+    else:
+        Xb_one = Xb_one_full.copy()
 
     # Keep dimension of pre-augmented version of state vector
-    [state_dim, _] = Xb_one.shape
+    state_dim = Xb_one.shape[0]
 
     # ----------------------------------
     # Augment state vector with the Ye's
     # ----------------------------------
 
+    # TODO: Figure out how to handle precalculated YE Vals larger than 1 yr
     # Extract all the Ye's from master list of proxy objects into numpy array
-    Ye_all = np.empty(shape=[total_proxy_count, nens])
-    for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-        Ye_all[k, :] = proxy.psm(Xb_one_full, X.full_state_info, X.coords)
+    if not online:
+        ye_all = np.empty(shape=[total_proxy_count, nens])
 
-    # Append ensemble of Ye's to prior state vector
-    Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
+        i = -1
+        for res in assim_res_vals:
+            Xb_full_copy = Xb_one_full.copy_state()
 
+            shift = res_yr_shift[res]
+
+            Xb_full_copy.avg_to_res(res, shift)
+
+            for key in prox_manager.assim_idxs_by_res[res].keys():
+                for i, proxy in enumerate(
+                        prox_manager.sites_assim_res_proxy_objs(res, key),
+                        i+1):
+                    ye_all[i, :] = proxy.psm(Xb_one_full, proxy.subannual_idx)
+
+
+        # Append ensemble of Ye's to prior state vector
+        Xb_one.augment_state(ye_all)
+
+    # TODO: Switch to cPickled prior object... right now hardcoded for annual
+    # case saving
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
-             Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
+    np.savez(filen, Xb_one=Xb_one.get_var_data('state'),
+             Xb_one_aug=Xb_one.state_list,
+             stateDim=state_dim,
+             Xb_one_coords=Xb_one.var_coords,
+             state_info=Xb_one.old_state_info)
 
     # Initialize forecaster for online reconstructions
     if online:
@@ -300,12 +223,12 @@ def LMR_driver_callable(cfg=None):
         forecaster = fcastr_class(cfg)
 
     # ==========================================================================
-    # Loop over all proxies and perform assimilation ---------------------------
+    # Loop over all years and proxies, and perform assimilation ----------------
     # ==========================================================================
 
-    # ---------------------
-    # Loop over proxy types
-    # ---------------------
+    # Create sub_base_resolution output container
+    fname = 'xa_output_res{:1.2f}.h5'.format(sub_base_res)
+    Xb_one.create_h5_state_container(join(workdir, fname), ntimes)
 
     # Array containing the global and hemispheric-mean state (for diagnostic purposes)
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
@@ -327,78 +250,126 @@ def LMR_driver_callable(cfg=None):
     nhmt_save[1,:] = nhmt
     shmt_save[1,:] = shmt
 
+    # Array containing the global-mean state (for diagnostic purposes)
+    gmt_save = np.zeros([total_proxy_count+1, ntimes])
+    xbm = Xb_one.annual_avg('tas_sfc_Amon')
+    xbm = xbm.mean(axis=1)  # ensemble-mean
+    gmt = global_mean2(xbm, Xb_one.var_coords['tas_sfc_Amon']['lat'])
+    gmt_save[0, :] = gmt  # First row is prior GMT
+    gmt_save[1, :] = gmt  # Prior for first proxy assimilated
+
+    nelem_pr_yr = np.ceil(1.0 / base_res)
+    start_yr, end_yr = recon_period
+    assim_times = np.arange(start_yr, end_yr+1, base_res)
+
+    # ---------------------
+    # Loop over proxy types
+    # ---------------------
     lasttime = time()
-    for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1)):
+    for iyr, t in enumerate(assim_times):
 
         if verbose > 0:
             print 'working on year: ' + str(t)
 
-        ypad = '{:04d}'.format(t)
-        filen = join(workdir, 'year' + ypad + '.npy')
-        if prior_check.exists(filen):
-            if verbose > 2:
-                print 'prior file exists: ' + filen
-            Xb = np.load(filen)
-        elif not online or yr_idx == 0:
-            if verbose > 2:
-                print 'Prior file ', filen, ' does not exist...'
-            Xb = Xb_one_aug.copy()
+        # TODO: Loading prior file
+        if t % 1.0 == 0:
+            # Set iproxy to restart going through proxies for given year
+            iproxy = -1
+            Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr))
+        #     ypad = '{:04d}'.format(int(t))
+        #     filen = join(workdir, 'year' + ypad + '.npy')
+        #
+        #     Xb = Xb_one.copy_state()
+        #     if prior_check.exists(filen) and not core.clean_start:
+        #         if verbose > 2:
+        #             print 'prior file exists: ' + filen
+        #         Xb.state_list = np.load(filen)
 
-        # Recalculate Yes for online reconstruction
         if online and not yr_idx == 0:
             for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
                 Xb[k - total_proxy_count] = proxy.psm(Xb,
-                                                      X.trunc_state_info,
-                                                      Xb_one_coords)
 
-        Xb_prev = Xb.copy()
+        # Which resolutions to assimilate for given year
+        res_to_assim = [res for res, freq in zip(assim_res_vals, res_assim_freq)
+                        if (iyr+1) % freq == 0 and (iyr+1)/freq > 0]
 
-        for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
-            # Crude check if we have proxy ob for current time
-            try:
-                Y.values[t]
-            except KeyError:
-                # Make sure GMT spot filled from previous proxy
-                gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
-                continue
+        for res in res_to_assim:
 
-            if verbose > 2:
-                print '--------------- Processing proxy: ' + Y.id
+            # Create prior for resolution
+            Xb_one.xb_from_h5(int(iyr//nelem_pr_yr), res, res_yr_shift[res])
 
-            if verbose > 1:
-                print ''
-                print 'Site:', Y.id, ':', Y.type
-                print ' latitude, longitude: ' + str(Y.lat), str(Y.lon)
+            # overwrite prior GMT from last sub_annual with annual
+            if res == 1.0:
+                xam = Xb_one.get_var_data('tas_sfc_Amon',
+                                          idx=0).mean(axis=1)
+                gmt = global_mean2(xam,
+                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
 
-            loc = None
-            if loc_rad is not None:
+            for iproxy, Y in enumerate(
+                    prox_manager.sites_assim_res_proxy_objs(res, t),
+                    iproxy+1):
+
+                # Crude check if we have proxy ob for current time
+                try:
+                    Y.values[t]
+                except KeyError:
+                    # Make sure GMT spot filled from previous proxy
+                    gmt_save[iproxy+1, iyr//nelem_pr_yr] = \
+                        gmt_save[iproxy, iyr//nelem_pr_yr]
+                    continue
+
                 if verbose > 2:
-                    print '...computing localization...'
-                    loc = cov_localization(loc_rad, X, Y)
+                    print '--------------- Processing proxy: ' + Y.id
 
             # Get Ye values for current proxy
-            Ye = Xb[proxy_idx - total_proxy_count]
+            if online:
+                Ye = Y.psm(Xb)
+            else:
+                Ye = Xb[proxy_idx - total_proxy_count]
 
-            # Define the ob error variance
-            ob_err = Y.psm_obj.R
+                loc = None
+                if loc_rad is not None:
+                    if verbose > 2:
+                        print '...computing localization...'
+                        loc = cov_localization(loc_rad, X, Y)
 
-            # ------------------------------------------------------------------
-            # Do the update (assimilation) -------------------------------------
-            # ------------------------------------------------------------------
-            if verbose > 2:
-                print ('updating time: ' + str(t) + ' proxy value : ' +
-                       str(Y.values[t]) + ' | mean prior proxy estimate: ' +
-                       str(Ye.mean()))
+                # Get Ye values for current proxy
+                if online:
+                    Ye = Y.psm(Xb_one)
+                else:
+                    Ye = Xb_one.get_var_data('ye_vals',
+                                             idx=Y.subannual_idx)[iproxy]
 
+                # Define the ob error variance
+                ob_err = Y.psm_obj.R
+                
+                # --------------------------------------------------------------
+                # Do the update (assimilation) ---------------------------------
+                # --------------------------------------------------------------
+                if verbose > 2:
+                    print ('updating time: ' + str(t) + ' proxy value : ' +
+                           str(Y.values[t]) + ' | mean prior proxy estimate: ' +
+                           str(Ye.mean()))
+                    
+                
             # Update the state
-            Xa = enkf_update_array(Xb, Y.values[t], Ye, ob_err, loc)
-            xam = Xa.mean(axis=1)
-            xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
-            [gmt, nhmt, shmt] = \
-                LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
-            gmt_save[proxy_idx+1, yr_idx] = gmt
-            nhmt_save[proxy_idx+1, yr_idx] = nhmt
-            shmt_save[proxy_idx+1, yr_idx] = shmt
+                Xa = enkf_update_array(Xb_one.state_list[Y.subannual_idx],
+                                       Y.values[t], Ye, ob_err, loc)
+                Xb_one.state_list[Y.subannual_idx] = Xa
+
+                xam = Xb_one.get_var_data('tas_sfc_Amon',
+                                          idx=Y.subannual_idx).mean(axis=1)
+                
+                xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
+                [gmt, nhmt, shmt] = \
+                    LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
+                gmt = global_mean2(xam,
+                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
+
+                nhmt_save[proxy_idx+1, yr_idx] = nhmt
+                shmt_save[proxy_idx+1, yr_idx] = shmt
 
             # check the variance change for sign
             thistime = time()
@@ -409,25 +380,18 @@ def LMR_driver_callable(cfg=None):
                 print 'max change in variance:' + str(np.max(vardiff))
                 print 'update took ' + str(thistime-lasttime) + 'seconds'
             lasttime = thistime
-            # Put analysis Xa in Xb for next assimilation
-            Xb = Xa
+            
+         # Assimilated all proxies at given res, propagate mean to base res
+            Xb_one.propagate_avg_to_h5(int(iyr//nelem_pr_yr), res_yr_shift[res])
 
-        # Dump Xa to file (use Xb in case no proxies assimilated for current)
-        np.save(filen, Xb)
+        if (iyr+1) % nelem_pr_yr == 0:
+            # Save annual data to file
+            ypad = '{:04d}'.format(int(t))
+            filen = join(workdir, 'year' + ypad + '.npy')
+            np.save(filen, Xb_one.annual_avg())
 
-        # TODO: fix to be general for multiple resolutions...
-        # Forecast for next year
-        if online and t < recon_period[1]:
-            #lets try to relaxation to prior
-            alpha = 0.85
-            Xa = (1-alpha)*Xa + alpha*Xb_one_aug
-
-            fcast = forecaster.forecast(Xa[ibeg_tas:iend_tas+1])
-            Xb[ibeg_tas:iend_tas+1] = fcast
-            # ypad = '{:04d}'.format(t+1)
-            # filen = join(workdir, 'year' + ypad + '.npy')
-            # np.save(filen, new_xb)
-
+        # Dump Xa to file
+        np.save(filen, Xa)
 
     end_time = time() - begin_time
 
@@ -438,8 +402,10 @@ def LMR_driver_callable(cfg=None):
         print 'Reconstruction completed in ' + str(end_time/60.0)+' mins'
         print '====================================================='
 
-    # 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
-    # need to fix this so that every year is counted
+    # Close H5 file
+    Xb_one.close_xb_container()
+
+    # 3 July 2015: compute and save the GMT for the full ensemble
     gmt_ensemble = np.zeros([ntimes, nens])
     nhmt_ensemble = np.zeros([ntimes,nens])
     shmt_ensemble = np.zeros([ntimes,nens])
@@ -453,6 +419,13 @@ def LMR_driver_callable(cfg=None):
             gmt_ensemble[iyr, k] = gmt
             nhmt_ensemble[iyr, k] = nhmt
             shmt_ensemble[iyr, k] = shmt
+    for iyr, yr in enumerate(assim_times[0::nelem_pr_yr]):
+        filen = join(workdir, 'year{:04d}'.format(int(yr)))
+        Xb_one.state_list = [np.load(filen+'.npy')]
+        Xa = np.squeeze(Xb_one.get_var_data('tas_sfc_Amon'))
+        gmt_ensemble[iyr] = \
+            global_mean2(Xa.T,
+                         Xb_one.var_coords['tas_sfc_Amon']['lat'])
 
     filen = join(workdir, 'gmt_ensemble')
     np.savez(filen, gmt_ensemble=gmt_ensemble, nhmt_ensemble=nhmt_ensemble,

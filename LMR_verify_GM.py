@@ -47,16 +47,7 @@ fsave = False
 #
 # current datasets
 #
-nexp = 'testdev_onlineDA_comparison'
-#nexp = 'testing_1000_75pct_ens_size_Nens_10'
-#nexp = 'testing_1000_75pct_200members'
-#nexp = 'testdev_check_1000_75pct'
-#nexp = 'ReconDevTest_1000_testing_coral'
-#nexp = 'ReconDevTest_1000_testing_icecore'
-#nexp = 'testdev_1000_100pct_icecoreonly'
-#nexp = 'testdev_1000_100pct_mxdonly'
-#nexp = 'testdev_1000_100pct_sedimentonly'
-#nexp = 'testdev_detrend4_1000_75pct'
+nexp = 'testdev_multires_alldatareq_calib'
 
 # specify directories for LMR and calibration data
 datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'

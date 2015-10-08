@@ -5,12 +5,13 @@ from the original LMR_proxy code using OOP.
 
 import LMR_psms
 from load_data import load_data_frame
-from LMR_utils2 import augment_docstr, class_docs_fixer
+from LMR_utils2 import augment_docstr, class_docs_fixer, fix_lon
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from random import sample
 from copy import deepcopy
+import random
+import numpy as np
 
 class ProxyManager:
     """
@@ -43,6 +44,18 @@ class ProxyManager:
         self.all_proxies = []
         self.all_ids_by_group = defaultdict(list)
 
+        # Resolutions to be assimilated
+        assim_res = config.core.assimilation_time_res
+        base_res = assim_res[0]
+        # year mod 1 gives us the tail, identifies which res being assimilated
+        yr_tails = [i*base_res for i in range(int(1/base_res))]
+
+        self.assim_idxs_by_res = {}
+        for res in assim_res:
+            nelem_in_chk = int(res/base_res)
+            yr_ids = yr_tails[(nelem_in_chk-1)::nelem_in_chk]
+            self.assim_idxs_by_res[res] = {yr_id: [] for yr_id in yr_ids}
+
         for proxy_class_key in config.proxies.use_from:
             pclass = get_proxy_class(proxy_class_key)
 
@@ -62,13 +75,16 @@ class ProxyManager:
                 self.all_ids_by_group[k] += v
 
         proxy_frac = config.proxies.proxy_frac
+        seed = config.core.seed
         nsites = len(self.all_proxies)
 
         # Sample from all proxies if specified
         if proxy_frac < 1.0:
             nsites_assim = int(nsites * proxy_frac)
 
-            self.ind_assim = sample(range(nsites), nsites_assim)
+            # Set seed if set in configuration
+            random.seed(seed)
+            self.ind_assim = random.sample(range(nsites), nsites_assim)
             self.ind_assim.sort()
             self.ind_eval = list(set(range(nsites)) - set(self.ind_assim))
             self.ind_eval.sort()
@@ -85,6 +101,16 @@ class ProxyManager:
             self.ind_assim = range(nsites)
             self.ind_eval = None
             self.assim_ids_by_group = self.all_ids_by_group
+
+        # Add indexes to resolution groups
+        for idx in self.ind_assim:
+            p_res = self.all_proxies[idx].resolution
+            p_yr_grp = self.all_proxies[idx].subannual_idx
+
+            # Subannual index will correspond to correct year tail when sorted
+            key = sorted(self.assim_idxs_by_res[p_res].keys())[p_yr_grp]
+
+            self.assim_idxs_by_res[p_res][key].append(idx)
 
     def proxy_obj_generator(self, indexes):
         """
@@ -115,6 +141,19 @@ class ProxyManager:
         """
 
         return self.proxy_obj_generator(self.ind_assim)
+
+    def sites_assim_res_proxy_objs(self, resolution, t):
+        """
+        generator over assimilation indices for a given resolution
+
+        Yields
+        ------
+        BaseProxy Object like
+            Proxy object from the all_proxies list with specified resolution
+        """
+
+        return self.proxy_obj_generator(self.assim_idxs_by_res[resolution]
+                                        [t % 1.0])
 
     def sites_eval_proxy_objs(self):
         """
@@ -181,7 +220,7 @@ class BaseProxyObject:
     __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
-                 lat, lon, values, time, **psm_kwargs):
+                 lat, lon, values, time, resolution, **psm_kwargs):
 
         if (values is None) or len(values) == 0:
             raise ValueError('No proxy data given for object initialization')
@@ -196,11 +235,25 @@ class BaseProxyObject:
         self.lat = lat
         self.lon = fix_lon(lon)
         self.time = time
+        self.resolution = resolution
+
+        # Find sub-annual index corresponding to location in state_list
+        base_res = config.core.assimilation_time_res[0]
+        self.subannual_idx = int((self.start_yr % 1.) / base_res)
 
         # Retrieve appropriate PSM function
         psm_obj = self.get_psm_obj(config)
         self.psm_obj = psm_obj(config, self, **psm_kwargs)
         self.psm = self.psm_obj.psm
+
+    def _constrain_to_date_range(self, date_range):
+        start, end = date_range
+
+        site_data = self.values
+        site_data = site_data[(site_data.index >= start) &
+                              (site_data.index <= end)]
+        self.values = site_data
+        self.time = site_data.index.values
 
     @staticmethod
     @abstractmethod
@@ -317,18 +370,25 @@ class ProxyPages(BaseProxyObject):
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
         lon = site_meta['Lon (E)'].iloc[0]
-        site_data = data_src[site]
-        values = site_data[(site_data.index >= start) &
-                           (site_data.index <= finish)]
+        resolution = site_meta['Resolution (yr)'].iloc[0]
+        values = data_src[site]
+
         # Might need to remove following line
         values = values[values.notnull()]
         times = values.index.values
 
-        if len(values) == 0:
+        # Send full proxy timeseries in case calibration is necessary
+        proxy_obj = cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
+                        values, times, resolution, **psm_kwargs)
+
+        proxy_obj._constrain_to_date_range(data_range)
+
+        if len(proxy_obj.values) == 0:
             raise ValueError('No observations in specified time range.')
 
-        return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
-                   values, times, **psm_kwargs)
+        return proxy_obj
+
+
 
     @classmethod
     @augment_docstr
@@ -397,37 +457,34 @@ class ProxyPages(BaseProxyObject):
 
         # Create proxy objects list
         all_proxies = []
+        calib_obj = None
         for site in all_proxy_ids:
             try:
                 pobj = cls.load_site(config, site, data_range,
                                      meta_src=meta_src, data_src=data_src,
                                      **psm_kwargs)
+                if pobj.psm_obj._calib_object is not None:
+                    calib_obj = pobj.psm_obj._calib_object
+                    pobj.psm_obj._calib_object = None
+                    psm_kwargs.update(calib_objs=calib_obj)
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
+                print e
                 for group in proxy_id_by_type.values():
                     if site in group:
                         group.remove(site)
                         break  # Should only be one instance
+
+        if calib_obj is not None:
+            # TODO: resave proxy pre_calib
+            pass
 
         return proxy_id_by_type, all_proxies
 
     def error(self):
         # Constant error for now
         return 0.1
-
-def fix_lon(lon):
-    """
-    Fixes negative longitude values.
-
-    Parameters
-    ----------
-    lon: ndarray like or value
-        Input longitude array or single value
-    """
-    if lon < 0:
-        lon += 360.
-    return lon
 
 
 _proxy_classes = {'pages': ProxyPages}

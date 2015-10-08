@@ -12,9 +12,9 @@ from math import radians, cos, sin, asin, sqrt
 import glob
 import numpy as np
 import cPickle
-from math import radians, cos, sin, asin, sqrt
+import tables as tb
 from scipy import signal
-from spharm import Spharmt, getspecindx, regrid
+from spharm import Spharmt, regrid
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -58,6 +58,23 @@ def year_fix(t):
     
     return ypad
 
+
+def fix_lon(lon):
+    """
+    Fixes negative longitude values.
+
+    Parameters
+    ----------
+    lon: ndarray like or value
+        Input longitude array or single value
+    """
+    if lon is not None and np.any(lon < 0):
+        if isinstance(lon, np.ndarray):
+            lon[lon < 0] += 360.
+        else:
+            lon += 360
+    return lon
+
 def smooth2D(im, n=15):
 
     """
@@ -84,6 +101,95 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
+def global_mean(field,lat,lon):
+
+    """
+     compute global mean value for all times in the input array
+     input: field[ntime,nlat,nlon] or field{nlat,nlon]
+            lat[nlat,nlon] in degrees
+            lon[nlat,nlon] in degrees
+    """
+
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
+    #
+    #             revised 16 June 2015 (GJH)
+
+
+    # set number of times, lats, lons; array indices for lat and lon    
+    if len(np.shape(field)) == 3:
+        ntime,nlat,nlon = np.shape(field)
+        lati = 1
+        loni = 2
+    else:
+        ntime = 1
+        nlat,nlon = np.shape(field)
+        lati = 0
+        loni = 1
+
+    # latitude weighting for global mean
+    lat_weight = np.cos(np.deg2rad(lat))
+    #--old
+    #tmp = np.ones([len(lat),len(lon)])
+    #W = np.multiply(lat_weight,tmp.T).T
+    #--new
+    tmp = np.ones([nlon,nlat])
+    W = np.multiply(lat_weight,tmp).T
+
+    gm = np.zeros(ntime)
+    for t in xrange(ntime):
+        if lati == 0:
+            gm[t] = np.nansum(np.multiply(W,field))/(np.sum(np.sum(W)))
+        else:
+            gm[t] = np.nansum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
+ 
+    return gm
+
+def global_mean2(field, lat):
+
+    """
+     compute global mean value for all times in the input array
+     input: field with dimensions
+            [time, lat, lon]
+            [time, lat*lon]
+            [lat, lon]
+            [lat*lon]
+
+            lat in degrees
+            has to match field dimensions, either singleton nlat, or nlat*nlon
+
+    Altered by AndreP August 2015
+    """
+
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
+    #
+    #             revised 16 June 2015 (GJH)
+
+    # index for start of spatial dimensions
+
+    if not lat.shape == field.shape[-lat.ndim:]:
+        # must have singleton lat
+        lat_idx = field.shape.index(len(lat))
+
+        tmp = np.ones(field.shape[lat_idx:])
+        lat = (tmp.T * lat).T  # broadcast latitude dimension
+
+    # Flatten spatial dimensions if necessary
+    if lat.ndim > 1:
+        field = field.reshape(list(field.shape[:-lat.ndim]) +
+                              [np.product(field.shape[-lat.ndim:])])
+        lat = lat.flatten()
+
+    # latitude weighting for global mean
+    lat_weight = np.cos(np.deg2rad(lat))
+    gm = np.nansum(field*lat_weight, axis=-1) / np.nansum(lat_weight)
+    return gm
+
+
+
 def ensemble_stats(workdir, y_assim):
 
     """
@@ -109,8 +215,8 @@ def ensemble_stats(workdir, y_assim):
     # get the prior and basic info
     npzfile = np.load(prior_filn)
     npzfile.files
-    Xbtmp = npzfile['Xb_one']
-    Xb_coords = npzfile['Xb_one_coords']
+    Xbtmp = np.array(npzfile['Xb_one']).mean(axis=0)
+    Xb_coords = npzfile['Xb_one_coords'].item()
 
     # get state vector content info (state variables and their position in vector)
     # note: the .item() is necessary to access a dict stored in a npz file 
@@ -139,7 +245,7 @@ def ensemble_stats(workdir, y_assim):
                 ndim1 = state_info[var]['spacedims'][0]
                 ndim2 = state_info[var]['spacedims'][1]
                 
-                Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                Xb = np.reshape(Xbtmp[ibeg:iend,:],(ndim1,ndim2,nens))
                 xbm = np.mean(Xb,axis=2) # ensemble mean
                 xbv = np.var(Xb,axis=2,ddof=1)  # ensemble variance
 
@@ -154,7 +260,7 @@ def ensemble_stats(workdir, y_assim):
                     year = f[i+4:i+8]
                     years.append(year)
                     Xatmp = np.load(f)
-                    Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                    Xa = np.reshape(Xatmp[ibeg:iend,:],(ndim1,ndim2,nens))
                     xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
                     xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
 
@@ -164,8 +270,8 @@ def ensemble_stats(workdir, y_assim):
                 dimcoord1 = 'n'+coordname1
                 dimcoord2 = 'n'+coordname2
 
-                coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
-                coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+                coord1 = np.reshape(Xb_coords[var][coordname1], state_info[var]['spacedims'])
+                coord2 = np.reshape(Xb_coords[var][coordname2], state_info[var]['spacedims'])
 
                 vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
                                          coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
@@ -224,7 +330,7 @@ def ensemble_stats(workdir, y_assim):
     # --------------------------------------------------------
     # get information on dim of state without the Ye's (before augmentation)
     stateDim  = npzfile['stateDim']
-    Xbtmp_aug = npzfile['Xb_one_aug']
+    Xbtmp_aug = npzfile['Xb_one_aug'].mean(axis=0)
     # dim of entire state vector (augmented)
     totDim = Xbtmp_aug.shape[0]
     nbye = (totDim - stateDim)
@@ -314,6 +420,58 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
 
     return X_new,lat_new,lon_new
 
+
+def regrid_sphere2(grid_obj, ntrunc):
+
+    """
+    An adaptation of regrid_shpere for GriddedData objects
+
+    Inputs:
+    grid_obj
+    ntrunc
+
+    Outputs :
+    lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
+    lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
+    X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)
+    """
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             May 2015
+
+    # create the spectral object on the original grid
+    specob_lmr = Spharmt(len(grid_obj.lon), len(grid_obj.lat),
+                         gridtype='regular', legfunc='computed')
+
+    # truncate to a lower resolution grid (triangular truncation)
+    # nlat must be ntrunc+1 per the documentation, want to keep it even
+    # so that poles are not included in the grid and because the original
+    # experiments were with even nlat
+    nlat_new = (ntrunc + 1) + (ntrunc + 1) % 2
+    nlon_new = int(nlat_new*1.5)
+
+    # truncate to a lower resolution grid (triangular truncation)
+
+    # create the spectral object on the new grid
+    specob_new = Spharmt(nlon_new, nlat_new, gridtype='regular',
+                         legfunc='computed')
+
+    # create new lat,lon grid arrays
+    dlat = 90./((nlat_new-1)/2.)
+    dlon = 360./nlon_new
+    veclat = np.arange(-90., 90.+dlat, dlat)
+    veclon = np.arange(0., 360., dlon)
+    blank = np.zeros([nlat_new, nlon_new])
+    lat_new = (veclat + blank.T).T
+    lon_new = (veclon + blank)
+
+    # transform each ensemble member, one at a time
+    gridded_new = np.zeros((len(grid_obj.time), nlat_new, nlon_new))
+    for i, time_slice in enumerate(grid_obj.data):
+        gridded_new[i] = regrid(specob_lmr, specob_new, time_slice,
+                                ntrunc=ntrunc)
+
+    return gridded_new, lat_new, lon_new
 
 def assimilated_proxies(workdir):
 
@@ -488,3 +646,102 @@ def augment_docstr(func):
     """ Decorator to mark augmented function docstrings. """
     func.func_doc = '%%aug%%' + func.func_doc
     return func
+
+
+def var_to_hdf5_carray(h5file, group, node, data, **kwargs):
+    """
+    Take an input data and insert into a PyTables carray in an HDF5 file.
+
+    Parameters
+    ----------
+    h5file: tables.File
+        Writeable HDF5 file to insert the carray into.
+    group: str, tables.Group
+        PyTables group to insert the data node into
+    node: str, tables.Node
+        PyTables node of the carray.  If it already exists it will remove
+        the existing node and create a new one.
+    data: ndarray
+        Data to be inserted into the node carray
+    kwargs:
+        Extra keyword arguments to be passed to the
+        tables.File.create_carray method.
+
+    Returns
+    -------
+    tables.carray
+        Pointer to the created carray object.
+    """
+    assert(type(h5file) == tb.File)
+
+    # Switch to string
+    if type(group) != str:
+        group = group._v_pathname
+
+    # Join path for node existence check
+    if group[-1] == '/':
+        node_path = group + node
+    else:
+        node_path = '/'.join((group, node))
+
+    # Check existence and remove if necessary
+    if h5file.__contains__(node_path):
+        h5file.remove_node(node_path)
+
+    out_arr = h5file.create_carray(group,
+                                   node,
+                                   atom=tb.Atom.from_dtype(data.dtype),
+                                   shape=data.shape,
+                                   **kwargs)
+    out_arr[:] = data
+    return out_arr
+
+
+def empty_hdf5_carray(h5file, group, node, in_atom, shape, **kwargs):
+    """
+    Create an empty PyTables carray.  Replaces node if it already exists.
+
+    Parameters
+    ----------
+    h5file: tables.File
+        Writeable HDF5 file to insert the carray into.
+    group: str, tables.Group
+        PyTables group to insert the data node into
+    node: str, tables.Node
+        PyTables node of the carray.  If it already exists it will remove
+        the existing node and create a new one.
+    in_atom: tables.Atom
+        Atomic datatype and chunk size for the carray.
+    shape: tuple, list
+        Shape of empty carray to be created.
+    kwargs:
+        Extra keyword arguments to be passed to the
+        tables.File.create_carray method.
+
+    Returns
+    -------
+    tables.carray
+        Pointer to the created carray object.
+    """
+    assert(type(h5file) == tb.File)
+
+    # Switch to string
+    if type(group) == tb.Group:
+        group = group._v_pathname
+
+    # Join path for node existence check
+    if group[-1] == '/':
+        node_path = group + node
+    else:
+        node_path = '/'.join((group, node))
+
+    # Check existence and remove if necessary
+    if h5file.__contains__(node_path):
+        h5file.remove_node(node_path)
+
+    out_arr = h5file.create_carray(group,
+                                   node,
+                                   atom=in_atom,
+                                   shape=shape,
+                                   **kwargs)
+    return out_arr

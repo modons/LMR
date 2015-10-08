@@ -7,8 +7,8 @@ Adapted from LMR_proxy and LMR_calibrate by Andre Perkins
 import matplotlib.pyplot as pylab
 import numpy as np
 import logging
-import LMR_calibrate
 from LMR_utils2 import haversine, smooth2D, class_docs_fixer
+import LMR_gridded
 
 from scipy.stats import linregress
 from abc import ABCMeta, abstractmethod
@@ -114,13 +114,18 @@ class LinearPSM(BasePSM):
         If PSM is below critical correlation threshold.
     """
 
-    def __init__(self, config, proxy_obj, psm_data=None):
+    def __init__(self, config, proxy_obj, psm_data=None, calib_objs=None,
+                 diag_out=None, diag_fig=None):
 
         proxy = proxy_obj.type
         site = proxy_obj.id
         r_crit = config.psm.linear.psm_r_crit
         self.lat = proxy_obj.lat
         self.lon = proxy_obj.lon
+
+        # Variable is used temporarily
+        self._calib_object = None
+        self.nobs = None
 
         try:
             # Try using pre-calibrated psm_data
@@ -135,15 +140,33 @@ class LinearPSM(BasePSM):
 
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
-            logger.error(e)
-            logger.info('PSM not calibrated for:' + str((proxy, site)))
+            # logger.error(e)
+            # logger.info('PSM not calibrated for:' + str((proxy, site)))
 
+            # If calibration load required need to pass on to other proxies
+            # so the class attr _calib_obj is set
+            # The Proxy2 loadall function will see that this is set
+            # and hold the object there (reseting _calib_object to None) until
+            # all proxies are loaded
+            print ('No pre-calibration found for'
+                   ' {} ... calibrating ...'.format(proxy_obj.id))
             # TODO: Fix call and Calib Module
-            datag_calib = config.psm.linear.datatag_calib
-            C = LMR_calibrate.calibration_assignment(datag_calib)
-            C.datadir_calib = config.psm.linear.datadir_calib
-            C.read_calibration()
-            self.calibrate(C, proxy_obj)
+            if calib_objs is None:
+                source = config.psm.linear.datatag_calib
+                calib_class = LMR_gridded.get_analysis_var_class(source)
+                calib_objs = calib_class.load(config.psm.linear)
+
+                res_list = config.core.assimilation_time_res
+                yr_shift_dict = config.core.res_yr_shift
+                calib_res_dict = calib_class.avg_calib_to_res(calib_objs,
+                                                              res_list,
+                                                              yr_shift_dict)
+                self._calib_object = calib_res_dict
+            else:
+                calib_res_dict = calib_objs
+
+            self.calibrate(calib_res_dict[proxy_obj.resolution], proxy_obj,
+                           diag_output=diag_out, diag_output_figs=diag_fig)
 
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
@@ -152,7 +175,7 @@ class LinearPSM(BasePSM):
                               ).format(self.corr, r_crit))
 
     # TODO: Ideally prior state info and coordinates should all be in single obj
-    def psm(self, Xb, X_state_info, X_coords):
+    def psm(self, Xb, state_idx):
         """
         Maps a given state to observations for the given proxy
 
@@ -176,34 +199,24 @@ class LinearPSM(BasePSM):
         # ----------------------
         # TODO: state variable is hard coded for now...
         state_var = 'tas_sfc_Amon'
-        if state_var not in X_state_info.keys():
+        if state_var not in Xb.var_view_range.keys():
             raise KeyError('Needed variable not in state vector for Ye'
                            ' calculation.')
-
-        # TODO: end index should already be +1, more pythonic
-        tas_startidx, tas_endidx = X_state_info[state_var]['pos']
-        ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
-        ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
 
         # Find row index of X for which [X_lat,X_lon] corresponds to closest
         # grid point to
         # location of proxy site [self.lat,self.lon]
         # Calclulate distances from proxy site.
-        stateDim = tas_endidx - tas_startidx + 1
-        ensDim = Xb.shape[1]
-        dist = np.empty(stateDim)
-        # dist = np.array(
-        #     [haversine(self.lon, self.lat, X_coords[k, ind_lon],
-        #                X_coords[k, ind_lat])
-        #      for k in xrange(tas_startidx, tas_endidx + 1)])
         dist = haversine(self.lon, self.lat,
-                          X_coords[tas_startidx:(tas_endidx+1), ind_lon],
-                          X_coords[tas_startidx:(tas_endidx+1), ind_lat])
+                          Xb.var_coords[state_var]['lon'],
+                          Xb.var_coords[state_var]['lat'])
 
         # row index of nearest grid pt. in prior (minimum distance)
-        kind = np.unravel_index(dist.argmin(), dist.shape)[0] + tas_startidx
+        kind = np.unravel_index(dist.argmin(), dist.shape)[0]
 
-        Ye = self.slope * np.squeeze(Xb[kind, :]) + self.intercept
+        Ye = (self.slope *
+              np.squeeze(Xb.get_var_data(state_var, idx=state_idx)[kind, :]) +
+              self.intercept)
 
         return Ye
 
@@ -227,7 +240,7 @@ class LinearPSM(BasePSM):
         diag_output, diag_output_figs: bool, optional
             Diagnostic output flags for calibration method
         """
-
+        C = C[proxy.subannual_idx]
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
 
@@ -246,7 +259,6 @@ class LinearPSM(BasePSM):
         # indices of nearest grid pt.
         jind, kind = np.unravel_index(dist.argmin(), dist.shape)
 
-        # TODO: need to fix this to use proxy2 style time
         # overlapping years
         sc = set(C.time)
         sp = set(proxy.time)
@@ -261,10 +273,10 @@ class LinearPSM(BasePSM):
             C2Dsmooth = np.zeros(
                 [C.time.shape[0], C.lat.shape[0], C.lon.shape[0]])
             for m in ind_c:
-                C2Dsmooth[m, :, :] = smooth2D(C.temp_anomaly[m, :, :], n=Npts)
+                C2Dsmooth[m, :, :] = smooth2D(C.data[m, :, :], n=Npts)
             reg_x = [C2Dsmooth[m, jind, kind] for m in ind_c]
         else:
-            reg_x = [C.temp_anomaly[m, jind, kind] for m in ind_c]
+            reg_x = [C.data[m, jind, kind] for m in ind_c]
 
         reg_y = [proxy.values[m] for m in ind_p]
         # check for valid values
@@ -323,6 +335,7 @@ class LinearPSM(BasePSM):
         MSE = np.mean((residuals) ** 2)
         self.R = MSE
         self.corr = r_value
+        self.nobs = nobs
 
         if diag_output:
             # Some other diagnostics
@@ -381,10 +394,10 @@ class LinearPSM(BasePSM):
                 ypos = ypos - 0.05 * (ymax - ymin)
                 pylab.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(MSE),
                            fontsize=12, fontweight='bold')
-                pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (
-                    proxy.type.replace(" ", "_"), proxy.id),
-                              bbox_inches='tight')
-                pylab.close()
+                # pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (
+                #     proxy.type.replace(" ", "_"), proxy.id),
+                #               bbox_inches='tight')
+                pylab.show()
 
     @staticmethod
     def get_kwargs(config):
@@ -395,6 +408,9 @@ class LinearPSM(BasePSM):
     def _load_psm_data(config):
         """Helper method for loading from dataframe"""
         pre_calib_file = config.psm.linear.pre_calib_datafile
+
+        if pre_calib_file is None:
+            raise IOError('No pre-calibration file specified.')
 
         return load_cpickle(pre_calib_file)
 
