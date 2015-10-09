@@ -136,7 +136,7 @@ def global_mean(field, lat, lon):
     return gm
 
 
-def global_mean2(field, lat):
+def global_mean2(field, lat, output_hemispheric=False):
 
     """
      compute global mean value for all times in the input array
@@ -176,6 +176,18 @@ def global_mean2(field, lat):
     # latitude weighting for global mean
     lat_weight = np.cos(np.deg2rad(lat))
     gm = np.nansum(field*lat_weight, axis=-1) / np.nansum(lat_weight)
+
+    if output_hemispheric:
+        nh_idx = lat > 0
+        nhm = np.nansum(field[:, nh_idx] * lat_weight[nh_idx], axis=-1)
+        nhm /= np.nansum(lat_weight[nh_idx])
+
+        sh_idx = lat < 0
+        shm = np.nansum(field[:, sh_idx] * lat_weight[sh_idx], axis=-1)
+        shm /= np.nansum(lat_weight[sh_idx])
+
+        return gm, nhm, shm
+
     return gm
 
 
@@ -233,19 +245,19 @@ def ensemble_stats(workdir, y_assim):
 
         # variable type (2D lat/lon, 2D lat/depth, time series etc ...)
 
-        if state_info[var]['spacedims']: # var has spatial dimensions (not None)
-            if len(state_info[var]['spacecoords']) == 2: # 2D variable
+        if state_info[var]['spacedims']:  # var has spatial dimensions(not None)
+            if len(state_info[var]['spacecoords']) == 2:  # 2D variable
                 ndim1 = state_info[var]['spacedims'][0]
                 ndim2 = state_info[var]['spacedims'][1]
                 
-                Xb = np.reshape(Xbtmp[ibeg:iend,:],(ndim1,ndim2,nens))
-                xbm = np.mean(Xb,axis=2) # ensemble mean
-                xbv = np.var(Xb,axis=2,ddof=1)  # ensemble variance
+                Xb = np.reshape(Xbtmp[ibeg:iend, :], (ndim1, ndim2, nens))
+                xbm = np.mean(Xb, axis=2)  # ensemble mean
+                xbv = np.var(Xb, axis=2, ddof=1)  # ensemble variance
 
                 # process the **analysis** files
                 years = []
-                xam = np.zeros([nyears,ndim1,ndim2])
-                xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
+                xam = np.zeros([nyears, ndim1, ndim2])
+                xav = np.zeros([nyears, ndim1, ndim2], dtype=np.float64)
                 k = -1
                 for f in files:
                     k += 1
@@ -254,7 +266,7 @@ def ensemble_stats(workdir, y_assim):
                     years.append(year)
                     Xatmp = np.load(f)
                     Xa = np.reshape(Xatmp[ibeg:iend, :], (ndim1, ndim2, nens))
-                    xam[k, :, :] = np.mean(Xa,axis=2)  # ensemble mean
+                    xam[k, :, :] = np.mean(Xa, axis=2)  # ensemble mean
                     # ensemble variance
                     xav[k, :, :] = np.var(Xa, axis=2, ddof=1)
 
@@ -437,7 +449,7 @@ def regrid_sphere(nlat, nlon, Nens, X, ntrunc):
 def regrid_sphere2(grid_obj, ntrunc):
 
     """
-    An adaptation of regrid_shpere for GriddedData objects
+    An adaptation of regrid_shpere for new GriddedData objects
 
     Inputs:
     grid_obj
@@ -617,10 +629,10 @@ def global_hemispheric_means(field, lat):
 
     if lat[0] > 0:
         # data has NH -> SH format
-        W_NH = W[0:eqind+1]
-        field_NH = field[:, 0:eqind+1, :]
-        W_SH = W[eqind+1:]
-        field_SH = field[:, eqind+1:, :]
+        W_NH = W[0:eqind]
+        field_NH = field[:, 0:eqind, :]
+        W_SH = W[eqind:]
+        field_SH = field[:, eqind:, :]
     else:
         # data has SH -> NH format
         W_NH = W[eqind:]

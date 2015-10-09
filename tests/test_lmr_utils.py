@@ -103,4 +103,19 @@ def test_global_mean2(ncf_data):
     gm_test = Utils.global_mean2(dat[0].flatten(), latgrid.flatten())
     np.testing.assert_allclose(gm_test, gm0)
 
+    # Test hemispheric
+    gm_time, nhm_time, shm_time = Utils.global_hemispheric_means(dat, lat)
+    gm_test, nhm_test, shm_test = Utils.global_mean2(dat, lat,
+                                                     output_hemispheric=True)
+    np.testing.assert_allclose(gm_test, gm_time)
+    np.testing.assert_allclose(nhm_test, nhm_time)
+    np.testing.assert_allclose(shm_test, shm_time)
+
+
+if __name__ == '__main__':
+
+    tst_dat = ncf.Dataset('data/gridded_dat.nc', 'r')
+    test_global_mean2(tst_dat)
+
+
 
