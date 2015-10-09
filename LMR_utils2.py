@@ -417,8 +417,15 @@ def regrid_sphere(nlat, nlon, Nens, X, ntrunc):
     specob_lmr = Spharmt(nlon, nlat, gridtype='regular', legfunc='computed')
 
     # truncate to a lower resolution grid (triangular truncation)
-    ifix = np.remainder(ntrunc,2.0).astype(int)
-    nlat_new = ntrunc + ifix
+    # ifix = np.remainder(ntrunc,2.0).astype(int)
+    # nlat_new = ntrunc + ifix
+    # nlon_new = int(nlat_new*1.5)
+
+    # truncate to a lower resolution grid (triangular truncation)
+    # nlat must be ntrunc+1 per the documentation, want to keep it even
+    # so that poles are not included in the grid and because the original
+    # experiments were with even nlat
+    nlat_new = (ntrunc + 1) + (ntrunc + 1) % 2
     nlon_new = int(nlat_new*1.5)
 
     # create the spectral object on the new grid
