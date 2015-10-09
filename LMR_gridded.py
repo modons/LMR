@@ -738,6 +738,7 @@ class State(object):
 
         self._prior_vars = prior_vars
         self._base_res = base_res
+        self.resolution = base_res
         self.state_list = []
         self.var_coords = {}
         self.var_view_range = {}
@@ -863,6 +864,8 @@ class State(object):
         else:
             raise ValueError('Cannot handle resolutions larger than 1 yet.')
 
+        self.resolution = res
+
     # def replace_subannual_avg(self, avg):
     #     """Replace current subannual state list average"""
     #     data = np.array(self.state_list)
@@ -902,7 +905,7 @@ class State(object):
         self.xb_out[0:self._yr_len] = np.array(self._orig_state)
         self.xb_out[self._yr_len:(self._yr_len*2)] = np.array(self._orig_state)
 
-    def insert_upcoming_prior(self, curr_yr_idx):
+    def insert_upcoming_prior(self, curr_yr_idx, use_curr=False):
 
         """
         Insert as we go to prevent huge upfront write cost
@@ -910,7 +913,10 @@ class State(object):
         istart = curr_yr_idx*self._yr_len + self._yr_len
         iend = istart + self._yr_len
 
-        self.xb_out[istart:iend] = self._orig_state
+        if not use_curr:
+            self.xb_out[istart:iend] = self._orig_state
+        else:
+            self.xb_out[istart:iend] = self.xb_out[curr_yr_idx:istart]
 
     def xb_from_h5(self, yr_idx, res, shift):
         ishift = int(shift / self._base_res)

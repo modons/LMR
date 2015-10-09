@@ -80,7 +80,7 @@ class core:
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
-    ignore_pre_avg_file = True
+    ignore_pre_avg_file = False
     overwrite_pre_avg_file = False
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]

@@ -4,9 +4,7 @@
 # 
 # Purpose: 
 #
-# Options: None. 
-#          Experiment parameters through namelist, passed through object called
-#          "state"
+# Options: Options set in LMR_config.py
 # 
 # Originators: Greg Hakim   | Dept. of Atmospheric Sciences, Univ. of Washington
 #              Robert Tardif | January 2015
@@ -31,21 +29,51 @@
 #              proxy and PSM specifics are contained within their classes,
 #              formatted to mostly adhere to PEP8 guidlines
 #              (A. Perkins)
+#  August 2015:
+#            - Heavily modified gridded datasets (prior/calibration) to use
+#              LMR_gridded.  This adds functionality for saving/loading pre-
+#              averaged files, as well as specification of shifting certain
+#              averages in time.  Took a lot of the dictionary logic from
+#              Robert's multi_state stuff and moved it to class attrs and funcs.
+#              (A. Perkins)
+#  Sept 2015:
+#             - Added forecast LIM for online Reconstructions (A. Perkins)
 # ==============================================================================
 
 import numpy as np
 from os.path import join
 from time import time
-import tables as tb
 
 import LMR_proxy2
 import LMR_gridded
-from LMR_utils2 import global_mean2, empty_hdf5_carray
+from LMR_utils2 import global_mean2
 import LMR_config as BaseCfg
 import LMR_forecaster
 from LMR_DA import enkf_update_array, cov_localization
 
 
+# *** Helper Methods
+def _calc_yevals_from_prior(assim_res_vals, res_yr_shift, ye_shp, xb_state,
+                            prox_manager):
+    ye_all = np.empty(shape=ye_shp)
+
+    i = -1
+    for res in assim_res_vals:
+        xb_tmp = xb_state.copy_state()
+
+        shift = res_yr_shift[res]
+
+        xb_tmp.avg_to_res(res, shift)
+
+        for key in prox_manager.assim_idxs_by_res[res].keys():
+            for i, proxy in enumerate(
+                    prox_manager.sites_assim_res_proxy_objs(res, key),
+                    i+1):
+                ye_all[i, :] = proxy.psm(xb_state, proxy.subannual_idx)
+
+    return ye_all
+
+# *** main driver
 def LMR_driver_callable(cfg=None):
 
     if cfg is None:
@@ -95,16 +123,6 @@ def LMR_driver_callable(cfg=None):
     recon_times = np.arange(recon_period[0], recon_period[1]+1)
 
     # ==========================================================================
-    # Load calibration data ----------------------------------------------------
-    # # ========================================================================
-    # if verbose > 0:
-    #     print '------------------------------'
-    #     print 'Creating calibration object...'
-    #     print '------------------------------'
-    #     print 'Source for calibration: ' + datatag_calib
-    #     print ''
-
-    # ==========================================================================
     # Load prior data ----------------------------------------------------------
     # ==========================================================================
     if verbose > 0:
@@ -115,12 +133,6 @@ def LMR_driver_callable(cfg=None):
 
     # Create initial state vector of desired variables at smallest time res
     Xb_one_full = LMR_gridded.State.from_config(cfg)
-
-
-    # Prepare to check for files in the prior (work) directory (this object just
-    #  points to a directory)
-    #TODO: might not be necessary
-    prior_check = np.DataSource(workdir)
 
     load_time = time() - begin_time
     if verbose > 2:
@@ -184,26 +196,10 @@ def LMR_driver_callable(cfg=None):
 
     # TODO: Figure out how to handle precalculated YE Vals larger than 1 yr
     # Extract all the Ye's from master list of proxy objects into numpy array
-    if not online:
-        ye_all = np.empty(shape=[total_proxy_count, nens])
-
-        i = -1
-        for res in assim_res_vals:
-            Xb_full_copy = Xb_one_full.copy_state()
-
-            shift = res_yr_shift[res]
-
-            Xb_full_copy.avg_to_res(res, shift)
-
-            for key in prox_manager.assim_idxs_by_res[res].keys():
-                for i, proxy in enumerate(
-                        prox_manager.sites_assim_res_proxy_objs(res, key),
-                        i+1):
-                    ye_all[i, :] = proxy.psm(Xb_one_full, proxy.subannual_idx)
-
-
-        # Append ensemble of Ye's to prior state vector
-        Xb_one.augment_state(ye_all)
+    ye_shp = (total_proxy_count, nens)
+    ye_all = _calc_yevals_from_prior(assim_res_vals, res_yr_shift, ye_shp,
+                                     Xb_one_full, prox_manager)
+    Xb_one.augment_state(ye_all)
 
     # TODO: Switch to cPickled prior object... right now hardcoded for annual
     # case saving
@@ -226,37 +222,28 @@ def LMR_driver_callable(cfg=None):
     # Loop over all years and proxies, and perform assimilation ----------------
     # ==========================================================================
 
-    # Create sub_base_resolution output container
+    # Create sub_base_resolution output container (file is temporary for now)
     fname = 'xa_output_res{:1.2f}.h5'.format(sub_base_res)
     Xb_one.create_h5_state_container(join(workdir, fname), ntimes)
 
-    # Array containing the global and hemispheric-mean state (for diagnostic purposes)
+    # Array containing the global and hemispheric-mean state
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
-    gmt_save = np.zeros([total_proxy_count+1,recon_period[1] - recon_period[0] + 1])
-    nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    # get state vector indices where to find surface air temperature
-    ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
-    iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
-    xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
-    xbm_lalo = xbm.reshape(nlat_new, nlon_new)
-    [gmt,nhmt,shmt] = LMR_utils2.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
+    gmt_save = np.zeros([total_proxy_count+1, ntimes])
+    nhmt_save = np.zeros([total_proxy_count+1, ntimes])
+    shmt_save = np.zeros([total_proxy_count+1, ntimes])
+
+    xbm = Xb_one.annual_avg('tas_sfc_Amon').mean(axis=1)  # ensemble mean
+    gmt, nhmt, shmt = global_mean2(xbm,
+                                   Xb_one.var_coords['tas_sfc_Amon']['lat'],
+                                   output_hemispheric=True)
     # First row is prior GMT
     gmt_save[0, :] = gmt
-    nhmt_save[0,:] = nhmt
-    shmt_save[0,:] = shmt
+    nhmt_save[0, :] = nhmt
+    shmt_save[0, :] = shmt
     # Prior for first proxy assimilated
     gmt_save[1, :] = gmt 
-    nhmt_save[1,:] = nhmt
-    shmt_save[1,:] = shmt
-
-    # Array containing the global-mean state (for diagnostic purposes)
-    gmt_save = np.zeros([total_proxy_count+1, ntimes])
-    xbm = Xb_one.annual_avg('tas_sfc_Amon')
-    xbm = xbm.mean(axis=1)  # ensemble-mean
-    gmt = global_mean2(xbm, Xb_one.var_coords['tas_sfc_Amon']['lat'])
-    gmt_save[0, :] = gmt  # First row is prior GMT
-    gmt_save[1, :] = gmt  # Prior for first proxy assimilated
+    nhmt_save[1, :] = nhmt
+    shmt_save[1, :] = shmt
 
     nelem_pr_yr = np.ceil(1.0 / base_res)
     start_yr, end_yr = recon_period
@@ -275,19 +262,13 @@ def LMR_driver_callable(cfg=None):
         if t % 1.0 == 0:
             # Set iproxy to restart going through proxies for given year
             iproxy = -1
-            Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr))
-        #     ypad = '{:04d}'.format(int(t))
-        #     filen = join(workdir, 'year' + ypad + '.npy')
-        #
-        #     Xb = Xb_one.copy_state()
-        #     if prior_check.exists(filen) and not core.clean_start:
-        #         if verbose > 2:
-        #             print 'prior file exists: ' + filen
-        #         Xb.state_list = np.load(filen)
+            if not online:
+                # Set the following years prior if offline
+                Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr))
 
-        if online and not yr_idx == 0:
-            for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-                Xb[k - total_proxy_count] = proxy.psm(Xb,
+        # if online and iyr == 0:
+        #     for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
+        #         Xb[k - total_proxy_count] = proxy.psm(Xb,)
 
         # Which resolutions to assimilate for given year
         res_to_assim = [res for res, freq in zip(assim_res_vals, res_assim_freq)
@@ -302,9 +283,13 @@ def LMR_driver_callable(cfg=None):
             if res == 1.0:
                 xam = Xb_one.get_var_data('tas_sfc_Amon',
                                           idx=0).mean(axis=1)
-                gmt = global_mean2(xam,
-                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                gmt, nhmt, shmt = \
+                    global_mean2(xam,
+                                 Xb_one.var_coords['tas_sfc_Amon']['lat'],
+                                 output_hemispheric=True)
                 gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
+                nhmt_save[iproxy+1, iyr//nelem_pr_yr] = nhmt
+                shmt_save[iproxy+1, iyr//nelem_pr_yr] = shmt
 
             for iproxy, Y in enumerate(
                     prox_manager.sites_assim_res_proxy_objs(res, t),
@@ -317,16 +302,19 @@ def LMR_driver_callable(cfg=None):
                     # Make sure GMT spot filled from previous proxy
                     gmt_save[iproxy+1, iyr//nelem_pr_yr] = \
                         gmt_save[iproxy, iyr//nelem_pr_yr]
+                    nhmt_save[iproxy+1, iyr//nelem_pr_yr] = \
+                        nhmt_save[iproxy, iyr//nelem_pr_yr]
+                    shmt_save[iproxy+1, iyr//nelem_pr_yr] = \
+                        shmt_save[iproxy, iyr//nelem_pr_yr]
                     continue
 
                 if verbose > 2:
                     print '--------------- Processing proxy: ' + Y.id
 
-            # Get Ye values for current proxy
-            if online:
-                Ye = Y.psm(Xb)
-            else:
-                Ye = Xb[proxy_idx - total_proxy_count]
+                if verbose > 1:
+                    print ''
+                    print 'Site:', Y.id, ':', Y.type
+                    print ' latitude, longitude: ' + str(Y.lat), str(Y.lon)
 
                 loc = None
                 if loc_rad is not None:
@@ -335,11 +323,7 @@ def LMR_driver_callable(cfg=None):
                         loc = cov_localization(loc_rad, X, Y)
 
                 # Get Ye values for current proxy
-                if online:
-                    Ye = Y.psm(Xb_one)
-                else:
-                    Ye = Xb_one.get_var_data('ye_vals',
-                                             idx=Y.subannual_idx)[iproxy]
+                Ye = Xb_one.get_var_data('ye_vals', idx=Y.subannual_idx)[iproxy]
 
                 # Define the ob error variance
                 ob_err = Y.psm_obj.R
@@ -353,35 +337,32 @@ def LMR_driver_callable(cfg=None):
                            str(Ye.mean()))
                     
                 
-            # Update the state
+                # Update the state
                 Xa = enkf_update_array(Xb_one.state_list[Y.subannual_idx],
                                        Y.values[t], Ye, ob_err, loc)
                 Xb_one.state_list[Y.subannual_idx] = Xa
 
                 xam = Xb_one.get_var_data('tas_sfc_Amon',
                                           idx=Y.subannual_idx).mean(axis=1)
-                
-                xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
-                [gmt, nhmt, shmt] = \
-                    LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
-                gmt = global_mean2(xam,
-                                   Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                gmt, nhmt, shmt = \
+                    global_mean2(xam,
+                                 Xb_one.var_coords['tas_sfc_Amon']['lat'],
+                                 output_hemispheric=True)
                 gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
+                nhmt_save[iproxy+1, iyr//nelem_pr_yr] = nhmt
+                shmt_save[iproxy+1, iyr//nelem_pr_yr] = shmt
 
-                nhmt_save[proxy_idx+1, yr_idx] = nhmt
-                shmt_save[proxy_idx+1, yr_idx] = shmt
-
-            # check the variance change for sign
-            thistime = time()
-            if verbose > 2:
-                xbvar = Xb.var(axis=1, ddof=1)
-                xavar = Xa.var(ddof=1, axis=1)
-                vardiff = xavar - xbvar
-                print 'max change in variance:' + str(np.max(vardiff))
-                print 'update took ' + str(thistime-lasttime) + 'seconds'
-            lasttime = thistime
+                # check the variance change for sign
+                thistime = time()
+                # if verbose > 2:
+                #     xbvar = Xb.var(axis=1, ddof=1)
+                #     xavar = Xa.var(ddof=1, axis=1)
+                #     vardiff = xavar - xbvar
+                #     print 'max change in variance:' + str(np.max(vardiff))
+                #     print 'update took ' + str(thistime-lasttime) + 'seconds'
+                lasttime = thistime
             
-         # Assimilated all proxies at given res, propagate mean to base res
+            # Assimilated all proxies at given res, propagate mean to base res
             Xb_one.propagate_avg_to_h5(int(iyr//nelem_pr_yr), res_yr_shift[res])
 
         if (iyr+1) % nelem_pr_yr == 0:
@@ -390,8 +371,22 @@ def LMR_driver_callable(cfg=None):
             filen = join(workdir, 'year' + ypad + '.npy')
             np.save(filen, Xb_one.annual_avg())
 
-        # Dump Xa to file
-        np.save(filen, Xa)
+            if online:
+                # Get forecast year in sub_base_res (copy of current)
+                Xb_one.insert_upcoming_prior(iyr//nelem_pr_yr, use_curr=True)
+                Xb_one.xb_from_h5((iyr//nelem_pr_yr)+1, sub_base_res, 0)
+
+                #Recalculate Ye values
+
+                # Forecast and propagate
+                Xb_one.avg_to_res(1.0, 0.0)
+                forecaster.forecast(Xb_one)
+                Xb_one.propagate_avg_to_h5((iyr//nelem_pr_yr)+1, 0.0)
+
+
+            # Recalc Ye Values
+            _calc_yevals_from_prior()
+
 
     end_time = time() - begin_time
 

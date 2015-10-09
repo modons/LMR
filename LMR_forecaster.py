@@ -76,7 +76,19 @@ class LIMForecaster:
         self.lim = LIM.LIM(calib_obj, cfg.wsize, cfg.fcast_times,
                            cfg.fcast_num_pcs, detrend_data=cfg.detrend)
 
-    def forecast(self, t0_data):
+    def forecast(self, state_obj):
+
+        assert state_obj.resolution == 1.0, 'Annual data required to forecast.'
+
+        state_var = 'tas_sfc_Amon'
+        var_data = state_obj.get_var_data(state_var, idx=0)
+
+        fcast_data = self._forecast_helper(var_data)
+
+        # var_data is returned as a view for annual
+        var_data[:] = fcast_data.T
+
+    def _forecast_helper(self, t0_data):
 
         # TODO: Check anomaly stuff
         # dummy time coordinate
