@@ -1,20 +1,10 @@
 import glob
 import numpy as np
-from scipy import signal
-from spharm import Spharmt, getspecindx, regrid
-from math import radians, cos, sin, asin, sqrt
-
-#==========================================================================================
-#
-# 
-#========================================================================================== 
-
-import glob
-import numpy as np
 import cPickle
 import tables as tb
 from scipy import signal
 from spharm import Spharmt, regrid
+
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -75,6 +65,7 @@ def fix_lon(lon):
             lon += 360
     return lon
 
+
 def smooth2D(im, n=15):
 
     """
@@ -89,19 +80,18 @@ def smooth2D(im, n=15):
     #             University of Washington
     #             May 2015
 
-
     # Calculate a normalised Gaussian kernel to apply as the smoothing function.
-    size = int(n)
-    x,y = np.mgrid[-n:n+1,-n:n+1]
+    x, y = np.mgrid[-n:n+1,-n:n+1]
     gk = np.exp(-(x**2/float(n)+y**2/float(n)))
     g = gk / gk.sum()
 
-    #bndy = 'symm'
+    # bndy = 'symm'
     bndy = 'wrap'
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
-    return(improc)
+    return improc
 
-def global_mean(field,lat,lon):
+
+def global_mean(field, lat, lon):
 
     """
      compute global mean value for all times in the input array
@@ -116,35 +106,35 @@ def global_mean(field,lat,lon):
     #
     #             revised 16 June 2015 (GJH)
 
-
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3:
-        ntime,nlat,nlon = np.shape(field)
+        ntime, nlat, nlon = np.shape(field)
         lati = 1
         loni = 2
     else:
         ntime = 1
-        nlat,nlon = np.shape(field)
+        nlat, nlon = np.shape(field)
         lati = 0
         loni = 1
 
     # latitude weighting for global mean
     lat_weight = np.cos(np.deg2rad(lat))
-    #--old
-    #tmp = np.ones([len(lat),len(lon)])
-    #W = np.multiply(lat_weight,tmp.T).T
-    #--new
-    tmp = np.ones([nlon,nlat])
-    W = np.multiply(lat_weight,tmp).T
+    # --old
+    # tmp = np.ones([len(lat),len(lon)])
+    # W = np.multiply(lat_weight,tmp.T).T
+    # --new
+    tmp = np.ones([nlon, nlat])
+    W = np.multiply(lat_weight, tmp).T
 
     gm = np.zeros(ntime)
     for t in xrange(ntime):
         if lati == 0:
-            gm[t] = np.nansum(np.multiply(W,field))/(np.sum(np.sum(W)))
+            gm[t] = np.nansum(np.multiply(W, field))/(np.sum(np.sum(W)))
         else:
-            gm[t] = np.nansum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
+            gm[t] = np.nansum(np.multiply(W, field[t, :, :]))/(np.sum(np.sum(W)))
  
     return gm
+
 
 def global_mean2(field, lat):
 
@@ -189,7 +179,6 @@ def global_mean2(field, lat):
     return gm
 
 
-
 def ensemble_stats(workdir, y_assim):
 
     """
@@ -205,10 +194,13 @@ def ensemble_stats(workdir, y_assim):
     #             revised 24 June 2015 (R Tardif, UW)
     #               : func. renamed from ensemble_mean to ensemble_stats
     #               : computes and output the ensemble variance as well
-    #               : now handles state vector possibly containing multiple variables
+    #               : now handles state vector possibly containing multiple
+    #               : variables
     #             revised 15 July 2015 (R Tardif, UW)
-    #               : extracts Ye's from augmented state vector (Ye=HXa), match with corresponding
-    #                 proxy sites from master list of proxies and output to analysis_Ye.pckl file
+    #               : extracts Ye's from augmented state vector (Ye=HXa), match
+    #               : with corresponding
+    #               : proxy sites from master list of proxies and output to
+    #               : analysis_Ye.pckl file
 
     prior_filn = workdir + '/Xb_one.npz'
     
@@ -218,10 +210,11 @@ def ensemble_stats(workdir, y_assim):
     Xbtmp = np.array(npzfile['Xb_one']).mean(axis=0)
     Xb_coords = npzfile['Xb_one_coords'].item()
 
-    # get state vector content info (state variables and their position in vector)
+    # get state vector content info
+    # (state variables and their position in vector)
     # note: the .item() is necessary to access a dict stored in a npz file 
     state_info = npzfile['state_info'].item()
-    nens = np.size(Xbtmp,1)
+    nens = np.size(Xbtmp, 1)
 
     # get a listing of the analysis files
     files = glob.glob(workdir+"/year*")
@@ -255,58 +248,77 @@ def ensemble_stats(workdir, y_assim):
                 xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
                 k = -1
                 for f in files:
-                    k = k + 1
+                    k += 1
                     i = f.find('year')
                     year = f[i+4:i+8]
                     years.append(year)
                     Xatmp = np.load(f)
-                    Xa = np.reshape(Xatmp[ibeg:iend,:],(ndim1,ndim2,nens))
-                    xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
-                    xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
+                    Xa = np.reshape(Xatmp[ibeg:iend, :], (ndim1, ndim2, nens))
+                    xam[k, :, :] = np.mean(Xa,axis=2)  # ensemble mean
+                    # ensemble variance
+                    xav[k, :, :] = np.var(Xa, axis=2, ddof=1)
 
-                # form dictionary containing variables to save, including info on array dimensions
+                # form dictionary containing variables to save, including info
+                # on array dimensions
                 coordname1 = state_info[var]['spacecoords'][0]
                 coordname2 = state_info[var]['spacecoords'][1]
                 dimcoord1 = 'n'+coordname1
                 dimcoord2 = 'n'+coordname2
 
-                coord1 = np.reshape(Xb_coords[var][coordname1], state_info[var]['spacedims'])
-                coord2 = np.reshape(Xb_coords[var][coordname2], state_info[var]['spacedims'])
+                coord1 = np.reshape(Xb_coords[var][coordname1],
+                                    state_info[var]['spacedims'])
+                coord2 = np.reshape(Xb_coords[var][coordname2],
+                                    state_info[var]['spacedims'])
 
-                vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                         coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
-                vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                         coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
+                vars_to_save_mean = {'nens': nens, 'years': years,
+                                     dimcoord1: state_info[var]['spacedims'][0],
+                                     dimcoord2: state_info[var]['spacedims'][1],
+                                     coordname1: coord1,
+                                     coordname2: coord2,
+                                     'xbm': xbm,
+                                     'xam': xam}
+
+                vars_to_save_var  = {'nens': nens, 'years': years,
+                                     dimcoord1: state_info[var]['spacedims'][0],
+                                     dimcoord2: state_info[var]['spacedims'][1],
+                                     coordname1: coord1,
+                                     coordname2: coord2,
+                                     'xbv': xbv,
+                                     'xav': xav}
     
             else:
-                print 'ERROR in ensemble_stats: Variable of unrecognized dimensions! Exiting'
+                print ('ERROR in ensemble_stats: Variable of unrecognized'
+                       ' dimensions! Exiting')
                 exit(1)
 
-        else: # var has no spatial dims
-            Xb = Xbtmp[ibeg:iend+1,:] # prior ensemble
-            xbm = np.mean(Xb,axis=1) # ensemble mean
-            xbv = np.var(Xb,axis=1)  # ensemble variance
+        else:  # var has no spatial dims
+            Xb = Xbtmp[ibeg:iend+1, :]  # prior ensemble
+            xbm = np.mean(Xb, axis=1)  # ensemble mean
+            xbv = np.var(Xb, axis=1)  # ensemble variance
 
             # process the **analysis** files
             years = []
             xa_ens = np.zeros((nyears, Xb.shape[1]))
             xam = np.zeros([nyears])
-            xav = np.zeros([nyears],dtype=np.float64)
+            xav = np.zeros([nyears], dtype=np.float64)
             k = -1
             for f in files:
-                k = k + 1
+                k += 1
                 i = f.find('year')
                 year = f[i+4:i+8]
                 years.append(year)
                 Xatmp = np.load(f)
-                Xa = Xatmp[ibeg:iend+1,:]
+                Xa = Xatmp[ibeg:iend+1, :]
                 xa_ens[k] = Xa  # total ensemble
-                xam[k] = np.mean(Xa,axis=1) # ensemble mean
-                xav[k] = np.var(Xa,axis=1)  # ensemble variance
+                xam[k] = np.mean(Xa, axis=1)  # ensemble mean
+                xav[k] = np.var(Xa, axis=1)  # ensemble variance
 
-            vars_to_save_ens = {'nens':nens, 'years':years, 'xb_ens':Xb, 'xa_ens':xa_ens}
-            vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
-            vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
+            vars_to_save_ens = {'nens': nens, 'years': years, 'xb_ens': Xb,
+                                'xa_ens': xa_ens}
+            vars_to_save_mean = {'nens': nens, 'years': years, 'xbm': xbm,
+                                 'xam': xam}
+            vars_to_save_var = {'nens': nens, 'years': years, 'xbv': xbv,
+                                'xav': xav}
 
             # ens to file
             filen = workdir + '/ensemble_' + var
@@ -316,25 +328,23 @@ def ensemble_stats(workdir, y_assim):
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
         print 'writing the new ensemble mean file...' + filen
-        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbm=xbm, xam=xam)
         np.savez(filen, **vars_to_save_mean)
 
         # ens. variance to file
         filen = workdir + '/ensemble_variance_' + var
         print 'writing the new ensemble variance file...' + filen
-        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
         np.savez(filen, **vars_to_save_var)
 
     # --------------------------------------------------------
     # Extract the analyzed Ye ensemble for diagnostic purposes
     # --------------------------------------------------------
     # get information on dim of state without the Ye's (before augmentation)
-    stateDim  = npzfile['stateDim']
+    stateDim = npzfile['stateDim']
     Xbtmp_aug = npzfile['Xb_one_aug'].mean(axis=0)
     # dim of entire state vector (augmented)
     totDim = Xbtmp_aug.shape[0]
     nbye = (totDim - stateDim)
-    Ye_s = np.zeros([nbye,nyears,nens])
+    Ye_s = np.zeros([nbye, nyears, nens])
 
     # Loop over **analysis** files & extract the Ye's
     years = []
@@ -369,10 +379,11 @@ def ensemble_stats(workdir, y_assim):
     return
 
 
-def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
+def regrid_sphere(nlat, nlon, Nens, X, ntrunc):
 
     """
-    Truncate lat,lon grid to another resolution in spherical harmonic space. Triangular truncation
+    Truncate lat,lon grid to another resolution in spherical harmonic space.
+    Triangular truncation
 
     Inputs:
     nlat            : number of latitudes
@@ -391,7 +402,7 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     #             May 2015
 
     # create the spectral object on the original grid
-    specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
+    specob_lmr = Spharmt(nlon, nlat, gridtype='regular', legfunc='computed')
 
     # truncate to a lower resolution grid (triangular truncation)
     ifix = np.remainder(ntrunc,2.0).astype(int)
@@ -399,26 +410,28 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     nlon_new = int(nlat_new*1.5)
 
     # create the spectral object on the new grid
-    specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
+    specob_new = Spharmt(nlon_new, nlat_new, gridtype='regular',
+                         legfunc='computed')
 
     # create new lat,lon grid arrays
     dlat = 90./((nlat_new-1)/2.)
     dlon = 360./nlon_new
-    veclat = np.arange(-90.,90.+dlat,dlat)
-    veclon = np.arange(0.,360.,dlon)
-    blank = np.zeros([nlat_new,nlon_new])
+    veclat = np.arange(-90., 90.+dlat, dlat)
+    veclon = np.arange(0., 360., dlon)
+    blank = np.zeros([nlat_new, nlon_new])
     lat_new = (veclat + blank.T).T  
     lon_new = (veclon + blank)
 
     # transform each ensemble member, one at a time
-    X_new = np.zeros([nlat_new*nlon_new,Nens])
+    X_new = np.zeros([nlat_new*nlon_new, Nens])
     for k in range(Nens):
-        X_lalo = np.reshape(X[:,k],(nlat,nlon))
-        Xbtrunc = regrid(specob_lmr, specob_new, X_lalo, ntrunc=nlat_new-1, smooth=None)
+        X_lalo = np.reshape(X[:, k], (nlat, nlon))
+        Xbtrunc = regrid(specob_lmr, specob_new, X_lalo, ntrunc=nlat_new-1,
+                         smooth=None)
         vectmp = Xbtrunc.flatten()
-        X_new[:,k] = vectmp
+        X_new[:, k] = vectmp
 
-    return X_new,lat_new,lon_new
+    return X_new, lat_new, lon_new
 
 
 def regrid_sphere2(grid_obj, ntrunc):
@@ -473,10 +486,12 @@ def regrid_sphere2(grid_obj, ntrunc):
 
     return gridded_new, lat_new, lon_new
 
+
 def assimilated_proxies(workdir):
 
     """
-    Read the files written by LMR_driver_callable as written to directory workdir. Returns a dictionary with a count by proxy type.
+    Read the files written by LMR_driver_callable as written to directory
+    workdir. Returns a dictionary with a count by proxy type.
     
     """
     # Originator: Greg Hakim
@@ -484,23 +499,25 @@ def assimilated_proxies(workdir):
     #             May 2015
 
     apfile = workdir + 'assimilated_proxies.npy'
-    assimilated_proxies = np.load(apfile)
-    nrecords = np.size(assimilated_proxies)
+    assim_proxies = np.load(apfile)
+    nrecords = np.size(assim_proxies)
 
     ptypes = {}
     for rec in range(nrecords):
-        key = assimilated_proxies[rec].keys()[0]
+        key = assim_proxies[rec].keys()[0]
         if key in ptypes:
             pc = ptypes[key]
             ptypes[key] = pc + 1
         else:
             ptypes[key] = 1
             
-    return ptypes,nrecords
+    return ptypes, nrecords
 
-def coefficient_efficiency(ref,test):
+
+def coefficient_efficiency(ref, test):
     """
-    Compute the coefficient of efficiency for a test time series, with respect to a reference time series.
+    Compute the coefficient of efficiency for a test time series, with respect
+    to a reference time series.
 
     Inputs:
     test: one-dimensional test array
@@ -514,15 +531,16 @@ def coefficient_efficiency(ref,test):
     error = test - ref
 
     # error variance
-    evar = np.var(error,ddof=1)
+    evar = np.var(error, ddof=1)
 
     # variance in the reference 
-    rvar = np.var(ref,ddof=1)
+    rvar = np.var(ref, ddof=1)
 
     # CE
     CE = 1. - (evar/rvar)
 
     return CE
+
 
 def rank_histogram(ensemble, value):
 
@@ -544,20 +562,25 @@ def rank_histogram(ensemble, value):
     Lensemble = ensemble.tolist()
     Lensemble.append(value)
 
-    # convert the list back to a numpy array so we have access to a sorting function
+    # convert the list back to a numpy array so we have access to a sorting
+    # function
     Nensemble = np.array(Lensemble)
     sort_index = np.argsort(Nensemble)
 
-    # convert the numpy array containing the ranked list indices back to an ordinary list for indexing
+    # convert the numpy array containing the ranked list indices back to an
+    # ordinary list for indexing
     Lsort_index = sort_index.tolist()
     rank = Lsort_index.index(len(Lensemble)-1)
 
     return rank
 
-def global_hemispheric_means(field,lat):
+
+def global_hemispheric_means(field, lat):
 
     """
-     compute global and hemispheric mean valuee for all times in the input (i.e. field) array
+     compute global and hemispheric mean valuee for all times in the input
+     (i.e. field) array
+
      input:  field[ntime,nlat,nlon] or field[nlat,nlon]
              lat[nlat,nlon] in degrees
 
@@ -573,21 +596,21 @@ def global_hemispheric_means(field,lat):
     #
 
     # set number of times, lats, lons; array indices for lat and lon    
-    if len(np.shape(field)) == 3: # time is a dimension
-        ntime,nlat,nlon = np.shape(field)
+    if len(np.shape(field)) == 3:  # time is a dimension
+        ntime, nlat, nlon = np.shape(field)
         lati = 1
         loni = 2
-    else: # only spatial dims
+    else:  # only spatial dims
         ntime = 1
-        nlat,nlon = np.shape(field)
-        field = field[None,:] # add time dim of size 1 for consistent array dims
+        nlat, nlon = np.shape(field)
+        field = field[None, :]  # add time dim of size 1 for consistent dims
         lati = 1
         loni = 2
 
     # latitude weighting 
     lat_weight = np.cos(np.deg2rad(lat))
-    tmp = np.ones([nlon,nlat])
-    W = np.multiply(lat_weight,tmp).T
+    tmp = np.ones([nlon, nlat])
+    W = np.multiply(lat_weight, tmp).T
 
     # define hemispheres
     eqind = nlat/2 
@@ -595,30 +618,31 @@ def global_hemispheric_means(field,lat):
     if lat[0] > 0:
         # data has NH -> SH format
         W_NH = W[0:eqind+1]
-        field_NH = field[:,0:eqind+1,:]
+        field_NH = field[:, 0:eqind+1, :]
         W_SH = W[eqind+1:]
-        field_SH = field[:,eqind+1:,:]
+        field_SH = field[:, eqind+1:, :]
     else:
         # data has SH -> NH format
         W_NH = W[eqind:]
-        field_NH = field[:,eqind:,:]
+        field_NH = field[:, eqind:, :]
         W_SH = W[0:eqind]
-        field_SH = field[:,0:eqind,:]
+        field_SH = field[:, 0:eqind, :]
 
-    gm  = np.zeros(ntime)
+    gm = np.zeros(ntime)
     nhm = np.zeros(ntime)
     shm = np.zeros(ntime)
     for t in xrange(ntime):
         if lati == 0:
-            gm[t]  = np.nansum(np.multiply(W,field))/(np.sum(np.sum(W)))
-            nhm[t] = np.nansum(np.multiply(W_NH,field_NH))/(np.sum(np.sum(W_NH)))
-            shm[t] = np.nansum(np.multiply(W_SH,field_SH))/(np.sum(np.sum(W_SH)))
+            gm[t] = np.nansum(np.multiply(W, field))/(np.sum(np.sum(W)))
+            nhm[t] = np.nansum(np.multiply(W_NH, field_NH))/(np.sum(np.sum(W_NH)))
+            shm[t] = np.nansum(np.multiply(W_SH, field_SH))/(np.sum(np.sum(W_SH)))
         else:
-            gm[t]  = np.nansum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
-            nhm[t] = np.nansum(np.multiply(W_NH,field_NH[t,:,:]))/(np.sum(np.sum(W_NH)))
-            shm[t] = np.nansum(np.multiply(W_SH,field_SH[t,:,:]))/(np.sum(np.sum(W_SH)))
+            gm[t] = np.nansum(np.multiply(W, field[t, :, :]))/(np.sum(np.sum(W)))
+            nhm[t] = np.nansum(np.multiply(W_NH, field_NH[t, :, :]))/(np.sum(np.sum(W_NH)))
+            shm[t] = np.nansum(np.multiply(W_SH, field_SH[t, :, :]))/(np.sum(np.sum(W_SH)))
 
-    return gm,nhm,shm
+    return gm, nhm, shm
+
 
 def class_docs_fixer(cls):
     """Decorator to fix docstrings for subclasses"""
@@ -641,6 +665,7 @@ def class_docs_fixer(cls):
                         break
 
     return cls
+
 
 def augment_docstr(func):
     """ Decorator to mark augmented function docstrings. """
