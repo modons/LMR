@@ -262,9 +262,9 @@ def LMR_driver_callable(cfg=None):
         if t % 1.0 == 0:
             # Set iproxy to restart going through proxies for given year
             iproxy = -1
-            if not online:
-                # Set the following years prior if offline
-                Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr))
+            # Insert prior into following year for shifted priors
+            Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr),
+                                         use_curr=online)
 
         # if online and iyr == 0:
         #     for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
@@ -320,7 +320,10 @@ def LMR_driver_callable(cfg=None):
                 if loc_rad is not None:
                     if verbose > 2:
                         print '...computing localization...'
-                        loc = cov_localization(loc_rad, X, Y)
+                        raise NotImplementedError('Covariance localization'
+                                                  ' not properly implemented'
+                                                  ' yet.')
+                        # loc = cov_localization(loc_rad, X, Y)
 
                 # Get Ye values for current proxy
                 Ye = Xb_one.get_var_data('ye_vals', idx=Y.subannual_idx)[iproxy]
@@ -372,20 +375,27 @@ def LMR_driver_callable(cfg=None):
             np.save(filen, Xb_one.annual_avg())
 
             if online:
-                # Get forecast year in sub_base_res (copy of current)
-                Xb_one.insert_upcoming_prior(iyr//nelem_pr_yr, use_curr=True)
-                Xb_one.xb_from_h5((iyr//nelem_pr_yr)+1, sub_base_res, 0)
+                # Push sub_base prior to next year
+                icurr_yr = iyr//nelem_pr_yr
+                inext_yr = (iyr//nelem_pr_yr) + 1
+                Xb_one.insert_upcoming_prior(icurr_yr, use_curr=True)
+
+                # Forecast
+                forecaster.forecast(Xb_one)
+
+                # Propagate forecast average to next year
+                Xb_one.propagate_avg_to_h5(inext_yr, 0)
+
+                # Get next year to calc Ye values
+                Xb_one.xb_from_h5(inext_yr, sub_base_res, 0)
 
                 #Recalculate Ye values
+                ye_all = _calc_yevals_from_prior(assim_res_vals, res_yr_shift,
+                                                 ye_shp, Xb_one, prox_manager)
+                Xb_one.reset_augmented_ye(ye_all)
 
-                # Forecast and propagate
-                Xb_one.avg_to_res(1.0, 0.0)
-                forecaster.forecast(Xb_one)
-                Xb_one.propagate_avg_to_h5((iyr//nelem_pr_yr)+1, 0.0)
-
-
-            # Recalc Ye Values
-            _calc_yevals_from_prior()
+                # Propagate forecasted state and Ye values back down to h5
+                Xb_one.propagate_avg_to_h5(inext_yr, 0.0)
 
 
     end_time = time() - begin_time
@@ -404,23 +414,17 @@ def LMR_driver_callable(cfg=None):
     gmt_ensemble = np.zeros([ntimes, nens])
     nhmt_ensemble = np.zeros([ntimes,nens])
     shmt_ensemble = np.zeros([ntimes,nens])
-    for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1)):
-        filen = join(workdir, 'year{:04d}'.format(yr))
-        Xa = np.load(filen+'.npy')
-        for k in xrange(nens):
-            xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
-            [gmt, nhmt, shmt] = \
-                LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
-            gmt_ensemble[iyr, k] = gmt
-            nhmt_ensemble[iyr, k] = nhmt
-            shmt_ensemble[iyr, k] = shmt
     for iyr, yr in enumerate(assim_times[0::nelem_pr_yr]):
         filen = join(workdir, 'year{:04d}'.format(int(yr)))
         Xb_one.state_list = [np.load(filen+'.npy')]
         Xa = np.squeeze(Xb_one.get_var_data('tas_sfc_Amon'))
-        gmt_ensemble[iyr] = \
+        gmt, nhmt, shmt = \
             global_mean2(Xa.T,
-                         Xb_one.var_coords['tas_sfc_Amon']['lat'])
+                         Xb_one.var_coords['tas_sfc_Amon']['lat'],
+                         output_hemispheric=True)
+        gmt_ensemble[iyr] = gmt
+        nhmt_ensemble[iyr] = nhmt
+        shmt_ensemble[iyr] = shmt
 
     filen = join(workdir, 'gmt_ensemble')
     np.savez(filen, gmt_ensemble=gmt_ensemble, nhmt_ensemble=nhmt_ensemble,

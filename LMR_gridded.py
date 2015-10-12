@@ -831,6 +831,12 @@ class State(object):
         self.var_view_range['ye_vals'] = (self.len_state,
                                           self.len_state + len(ye_vals))
 
+    def reset_augmented_ye(self, ye_vals):
+
+        ye_state = self.get_var_data('ye_vals')
+        for i, subann_ye in enumerate(ye_state):
+            subann_ye[:] = ye_vals
+
     def annual_avg(self, var_name=None):
 
         if var_name is None:
