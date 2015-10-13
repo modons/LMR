@@ -57,13 +57,14 @@ def _calc_yevals_from_prior(assim_res_vals, res_yr_shift, ye_shp, xb_state,
                             prox_manager):
     ye_all = np.empty(shape=ye_shp)
 
+    xb_state.stash_state_list()
     i = -1
     for res in assim_res_vals:
-        xb_tmp = xb_state.copy_state()
+        xb_state.stash_recall_state_list()
 
         shift = res_yr_shift[res]
 
-        xb_tmp.avg_to_res(res, shift)
+        xb_state.avg_to_res(res, shift)
 
         for key in prox_manager.assim_idxs_by_res[res].keys():
             for i, proxy in enumerate(
@@ -71,6 +72,7 @@ def _calc_yevals_from_prior(assim_res_vals, res_yr_shift, ye_shp, xb_state,
                     i+1):
                 ye_all[i, :] = proxy.psm(xb_state, proxy.subannual_idx)
 
+    xb_state.stash_pop_state_list()
     return ye_all
 
 # *** main driver

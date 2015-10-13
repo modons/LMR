@@ -815,10 +815,6 @@ class State(object):
         state_class = type(self)
         return state_class(trunc_pvars, self._base_res)
 
-    def copy_state(self):
-
-        return deepcopy(self)
-
     def augment_state(self, ye_vals):
 
         aug_state_list = []

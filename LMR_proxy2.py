@@ -470,7 +470,7 @@ class ProxyPages(BaseProxyObject):
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
-                print e
+                # print e
                 for group in proxy_id_by_type.values():
                     if site in group:
                         group.remove(site)

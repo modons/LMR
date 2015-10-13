@@ -47,7 +47,7 @@ fsave = False
 #
 # current datasets
 #
-nexp = 'testdev_multires_alldatareq_calib'
+nexp = 'testdev_addlim_annualres_online'
 
 # specify directories for LMR and calibration data
 datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'

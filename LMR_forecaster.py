@@ -86,7 +86,7 @@ class LIMForecaster:
         fcast_data = self._forecast_helper(var_data)
 
         # var_data is returned as a view for annual, so this re-assigns
-        var_data[:] = fcast_data.T
+        var_data[:] = fcast_data
 
     def _forecast_helper(self, t0_data):
 

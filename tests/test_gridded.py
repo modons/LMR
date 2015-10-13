@@ -707,7 +707,9 @@ def test_analysisvar(extra, fname, varname):
     calib_class = lmrgrid.get_analysis_var_class(extra)
     aobj = calib_class._main_load_helper(analysis_dir, fname,
                                          varname, 'NCD', 1.0,
-                                         split_varname=False)[0]
+                                         split_varname=False,
+                                         ignore_pre_avg=False,
+                                         save=True)[0]
 
     # Bug in MLOST load_gridded_data for partial years
     if extra == 'MLOST':
