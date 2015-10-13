@@ -750,6 +750,7 @@ class State(object):
         self.xb_out = None
         self._yr_len = None
         self._orig_state = None
+        self._tmp_state = None
 
         self.len_state = 0
         for var, pobjs in prior_vars.iteritems():
@@ -848,11 +849,28 @@ class State(object):
         avg = subannual_data.mean(axis=0)
         return avg
 
+    def stash_state_list(self):
+
+        self._tmp_state = (deepcopy(self.state_list), self.resolution)
+
+    def stash_recall_state_list(self):
+
+        if self._tmp_state is not None:
+            state, res = self._tmp_state
+            self.state_list = state
+            self.resolution = res
+        else:
+            print 'No currently stashed state....'
+
+    def stash_pop_state_list(self):
+        self.stash_recall_state_list()
+        self._tmp_state = None
+
     def avg_to_res(self, res, shift):
 
         """Average current state list to resolution"""
 
-        if res == self._base_res:
+        if res == self.resolution:
             return
 
         if res < 1:
@@ -871,12 +889,6 @@ class State(object):
             raise ValueError('Cannot handle resolutions larger than 1 yet.')
 
         self.resolution = res
-
-    # def replace_subannual_avg(self, avg):
-    #     """Replace current subannual state list average"""
-    #     data = np.array(self.state_list)
-    #     data_mean = self.annual_avg()
-    #     self.state_list = data - data_mean + avg
 
     def get_old_state_info(self):
 
