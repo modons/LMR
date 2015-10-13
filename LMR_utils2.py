@@ -175,15 +175,18 @@ def global_mean2(field, lat, output_hemispheric=False):
 
     # latitude weighting for global mean
     lat_weight = np.cos(np.deg2rad(lat))
-    gm = np.nansum(field*lat_weight, axis=-1) / np.nansum(lat_weight)
+    field_weighted = field * lat_weight
+    gm = np.nansum(field_weighted, axis=-1) / np.nansum(lat_weight)
 
     if output_hemispheric:
-        nh_idx = lat > 0
-        nhm = np.nansum(field[:, nh_idx] * lat_weight[nh_idx], axis=-1)
+        nh_idx, = np.where(lat > 0)
+        nh_wgt_field = np.take(field_weighted, nh_idx, axis=-1)
+        nhm = np.nansum(nh_wgt_field, axis=-1)
         nhm /= np.nansum(lat_weight[nh_idx])
 
-        sh_idx = lat < 0
-        shm = np.nansum(field[:, sh_idx] * lat_weight[sh_idx], axis=-1)
+        sh_idx, = np.where(lat < 0)
+        sh_wgt_field = np.take(field_weighted, sh_idx, axis=-1)
+        shm = np.nansum(sh_wgt_field, axis=-1)
         shm /= np.nansum(lat_weight[sh_idx])
 
         return gm, nhm, shm
