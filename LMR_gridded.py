@@ -750,7 +750,7 @@ class State(object):
         self.xb_out = None
         self._yr_len = None
         self._orig_state = None
-        self._tmp_state = None
+        self._tmp_state = {}
 
         self.len_state = 0
         for var, pobjs in prior_vars.iteritems():
@@ -845,22 +845,25 @@ class State(object):
         avg = subannual_data.mean(axis=0)
         return avg
 
-    def stash_state_list(self):
+    def stash_state_list(self, name):
 
-        self._tmp_state = (deepcopy(self.state_list), self.resolution)
+        self._tmp_state[name] = (deepcopy(self.state_list), self.resolution)
 
-    def stash_recall_state_list(self):
+    def stash_recall_state_list(self, name, pop=False):
 
-        if self._tmp_state is not None:
-            state, res = self._tmp_state
+        if name in self._tmp_state:
+            if pop:
+                state, res = self._tmp_state.pop(name)
+            else:
+                state, res = self._tmp_state[name]
+
             self.state_list = state
             self.resolution = res
         else:
-            print 'No currently stashed state....'
+            print 'No currently stashed state with name {}....'.format(name)
 
-    def stash_pop_state_list(self):
-        self.stash_recall_state_list()
-        self._tmp_state = None
+    def stash_pop_state_list(self, name):
+        self.stash_recall_state_list(name, pop=True)
 
     def avg_to_res(self, res, shift):
 
