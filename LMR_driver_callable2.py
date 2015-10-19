@@ -49,7 +49,7 @@ import LMR_gridded
 from LMR_utils2 import global_mean2
 import LMR_config as BaseCfg
 import LMR_forecaster
-from LMR_DA import enkf_update_array, cov_localization
+from LMR_DA import enkf_update_array2, cov_localization
 
 
 # *** Helper Methods
@@ -57,10 +57,10 @@ def _calc_yevals_from_prior(assim_res_vals, res_yr_shift, ye_shp, xb_state,
                             prox_manager):
     ye_all = np.empty(shape=ye_shp)
 
-    xb_state.stash_state_list()
+    xb_state.stash_state_list('ye_stash')
     i = -1
     for res in assim_res_vals:
-        xb_state.stash_recall_state_list()
+        xb_state.stash_recall_state_list('ye_stash')
 
         shift = res_yr_shift[res]
 
@@ -72,7 +72,7 @@ def _calc_yevals_from_prior(assim_res_vals, res_yr_shift, ye_shp, xb_state,
                     i+1):
                 ye_all[i, :] = proxy.psm(xb_state, proxy.subannual_idx)
 
-    xb_state.stash_pop_state_list()
+    xb_state.stash_pop_state_list('ye_stash')
     return ye_all
 
 # *** main driver
@@ -93,6 +93,8 @@ def LMR_driver_callable(cfg=None):
     workdir = core.datadir_output
     recon_period = core.recon_period
     online = core.online_reconstruction
+    hybrid_update = core.hybrid_update
+    hybrid_a_val = core.hybrid_a
     nens = core.nens
     loc_rad = core.loc_rad
     trunc_state = prior.truncate_state
@@ -281,8 +283,18 @@ def LMR_driver_callable(cfg=None):
             # Create prior for resolution
             Xb_one.xb_from_h5(int(iyr//nelem_pr_yr), res, res_yr_shift[res])
 
-            # overwrite prior GMT from last sub_annual with annual
             if res == 1.0:
+
+                # Store original annual for hybrid update
+                if iyr//nelem_pr_yr == 0 and hybrid_update:
+                    # Creates a copy for use as our static prior
+                    Xb_one.stash_state_list('orig_augmented')
+                    Xb_static = Xb_one.state_list[0]
+                    Yevals_static = Xb_one.get_var_data('ye_vals')[0]
+                    Xb_one.stash_pop_state_list('orig_augmented')
+
+
+                # overwrite prior GMT from last sub_annual with annual
                 xam = Xb_one.get_var_data('tas_sfc_Amon',
                                           idx=0).mean(axis=1)
                 gmt, nhmt, shmt = \
@@ -341,10 +353,19 @@ def LMR_driver_callable(cfg=None):
                            str(Y.values[t]) + ' | mean prior proxy estimate: ' +
                            str(Ye.mean()))
                     
-                
+                # Get static Ye for hybrid update
+                if hybrid_update:
+                    Ye_static = Yevals_static[iproxy]
+                    hybrid_tup = (Xb_static, Ye_static)
+                else:
+                    hybrid_tup = None
+
                 # Update the state
-                Xa = enkf_update_array(Xb_one.state_list[Y.subannual_idx],
-                                       Y.values[t], Ye, ob_err, loc)
+                Xa = enkf_update_array2(Xb_one.state_list[Y.subannual_idx],
+                                        Y.values[t], Ye, ob_err, loc,
+                                        static_prior=hybrid_tup,
+                                        a=hybrid_a_val)
+
                 Xb_one.state_list[Y.subannual_idx] = Xa
 
                 xam = Xb_one.get_var_data('tas_sfc_Amon',

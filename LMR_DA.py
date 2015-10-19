@@ -10,7 +10,8 @@
 import numpy as np
 import LMR_utils2
 
-def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
+def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None,
+                      static_prior=None, a=1):
     """
     Function to do the ensemble square-root filter (EnSRF) update
     (ref: Whitaker and Hamill, Mon. Wea. Rev., 2002)
@@ -83,10 +84,100 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
     return Xa
 
 
-#========================================================================================== 
+def enkf_update_array2(Xb, obvalue, Ye, ob_err, loc=None, inflate=None,
+                       static_prior=None, a=1):
+    """
+    Temporary second function to ensure that nothing changes when updating
+    the syntax... AndreP
+
+    Function to do the ensemble square-root filter (EnSRF) update
+    (ref: Whitaker and Hamill, Mon. Wea. Rev., 2002)
+
+    Originator: G. J. Hakim, with code borrowed from L. Madaus
+                Dept. Atmos. Sciences, Univ. of Washington
+    -----------------------------------------------------------------
+     Inputs:
+          Xb: background ensemble estimates of state (Nx x Nens)
+     obvalue: proxy value
+          Ye: background ensemble estimate of the proxy (Nens x 1)
+      ob_err: proxy error variance
+         loc: localization vector (Nx x 1) [optional]
+     inflate: scalar inflation factor [optional]
+    """
+
+    # Get ensemble size from passed array
+    #  Xb has dims [state vect.,ens. members]
+    Nens = Xb.shape[1]
+
+    # ensemble mean background and perturbations
+    xbm = Xb.mean(axis=1)
+    Xbp = Xb - xbm[:, None]  # "None" means replicate in this dimension
+
+    # ensemble mean and variance of the background estimate of the proxy
+    mye = Ye.mean()
+    varye = Ye.var()  # TODO: this should probably switch to unbiased
+
+    # lowercase ye has ensemble-mean removed
+    ye = Ye - mye
+
+    # innovation  (Why is this in a try except?)
+    try:
+        innov = obvalue - mye
+    except:
+        print ('innovation error. obvalue = ' + str(obvalue) + ' mye = ' +
+               str(mye))
+        print 'returning Xb unchanged...'
+        return Xb
+
+    # innovation variance (denominator of serial Kalman gain)
+    kdenom = (varye + ob_err)
+
+    # numerator of serial Kalman gain (cov(x,Hx))
+    if static_prior is not None:
+        # Hybrid prior update method
+        Xb_static, Ye_static = static_prior
+        Xbp_static = Xb_static - Xb_static.mean(axis=1)[:, None]
+        ye_static = Ye_static - Ye_static.mean()
+
+        kcov_e = np.dot(Xbp, ye) / (Nens-1)
+        kcov_s = np.dot(Xbp_static, ye_static) / (Nens - 1)
+        kcov = a * kcov_e + (1-a) * kcov_s
+    else:
+        # Standard update method
+        kcov = np.dot(Xbp, ye) / (Nens-1)
+
+    # Option to inflate the covariances by a certain factor
+    if inflate is not None:
+        kcov = inflate * kcov
+
+    # Option to localize the gain
+    if loc is not None:
+        kcov = kcov * loc
+
+    # Kalman gain
+    kmat = kcov / kdenom
+
+    # update ensemble mean
+    xam = xbm + kmat * innov
+
+    # update the ensemble members using the square-root approach
+    beta = 1. / (1. + np.sqrt(ob_err / (varye + ob_err)))
+    kmat *= beta
+    ye = ye[np.newaxis]
+    kmat = kmat[:, np.newaxis]
+    Xap = Xbp - np.dot(kmat, ye)
+
+    # full state
+    Xa = xam[:, None] + Xap
+
+    # Return the full state
+    return Xa
+
+
+# ==============================================================================
 #
 #
-#========================================================================================== 
+# ==============================================================================
 
 def cov_localization(locRad,X,Y):
     """
@@ -97,10 +188,12 @@ def cov_localization(locRad,X,Y):
      Inputs:
       locRad : Localization radius (distance for which cov are forced to zero
            X : Prior object, needed to get grid info. 
-           Y : Proxy object, needed to get ob site lat/lon (to calculate distances w.r.t. grid pts
+           Y : Proxy object, needed to get ob site lat/lon
+               (to calculate distances w.r.t. grid pts
      Output:
-      covLoc : Localization vector (weights) applied to ensemble covariance estimates (Nx x 1),
-               with Nx the dimension of the state vector
+      covLoc : Localization vector (weights) applied to ensemble
+               covariance estimates (Nx x 1), with Nx the dimension of the state
+               vector
 
      Note: Uses the Gaspari-Cohn localization function.
 
@@ -112,7 +205,8 @@ def cov_localization(locRad,X,Y):
     site_lat = Y.lat
     site_lon = Y.lon
 
-    # declare the localization array (Nx = nlat x nlon for now ... assume single state variable) 
+    # declare the localization array (Nx = nlat x nlon for now ...
+    # assume single state variable)
     covLoc = np.zeros(shape=[nlat*nlon])
 
     dists = np.array(LMR_utils2.haversine(site_lon,site_lat,X.lon,X.lat))

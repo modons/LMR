@@ -76,7 +76,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_addlim_annualres_online'
+    nexp = 'testdev_addlim_parameter_search'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
@@ -85,13 +85,19 @@ class core:
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    seed = None
+    seed = 25
     iter_range = [0, 2]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
     # maps year shift (in years) to resolution
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
+
+    # Forecasting Hybrid Update
+    hybrid_update = True
+    hybrid_update &= online_reconstruction
+    hybrid_a = 0.5
+
 
     # TODO: add rules for shift?
     # If shifting on smaller time scales than smallest time chunk it becomes
@@ -334,3 +340,5 @@ class forecaster:
         wsize = 12
         fcast_num_pcs = 15
         detrend = True
+
+        eig_adjust = 1

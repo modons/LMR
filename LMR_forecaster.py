@@ -45,6 +45,7 @@ class LIMForecaster:
         infile = cfg.calib_filename
         varname = cfg.calib_varname
         fmt = cfg.dataformat
+        eig_adjust = cfg.eig_adjust
 
         if fmt == 'NCD':
             data_obj = DT.netcdf_to_data_obj(infile, varname, force_flat=True)
@@ -74,7 +75,8 @@ class LIMForecaster:
                                       force_flat=True)
 
         self.lim = LIM.LIM(calib_obj, cfg.wsize, cfg.fcast_times,
-                           cfg.fcast_num_pcs, detrend_data=cfg.detrend)
+                           cfg.fcast_num_pcs, detrend_data=cfg.detrend,
+                           L_eig_bump=eig_adjust)
 
     def forecast(self, state_obj):
 
