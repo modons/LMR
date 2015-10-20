@@ -76,17 +76,17 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_addlim_parameter_search'
+    nexp = 'testdev_addlim_backend_test'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
-    online_reconstruction = True
+    online_reconstruction = False
     clean_start = True
     ignore_pre_avg_file = False
     overwrite_pre_avg_file = False
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    seed = 25
-    iter_range = [0, 2]
+    seed = None
+    iter_range = [0, 15]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -94,9 +94,9 @@ class core:
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
 
     # Forecasting Hybrid Update
-    hybrid_update = True
+    hybrid_update = False
     hybrid_update &= online_reconstruction
-    hybrid_a = 0.5
+    hybrid_a = 0.75
 
 
     # TODO: add rules for shift?
@@ -315,6 +315,7 @@ class prior:
     dataformat_prior = constants.prior[prior_source]['type']
     state_variables = constants.prior[prior_source]['state_vars']
     truncate_state = True
+    backend_type = 'NPY'
 
 
 class forecaster:
@@ -341,4 +342,4 @@ class forecaster:
         fcast_num_pcs = 15
         detrend = True
 
-        eig_adjust = 1
+        eig_adjust = 0.2

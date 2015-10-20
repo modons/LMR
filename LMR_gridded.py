@@ -745,10 +745,8 @@ class State(object):
         self.var_space_shp = {}
         self.augmented = False
 
-        # Attr for h5 container use
-        self.h5f_out = None
-        self.xb_out = None
-        self._yr_len = None
+        # Attr for backend storage
+        self.output_backend = None
         self._orig_state = None
         self._tmp_state = {}
 
@@ -903,53 +901,81 @@ class State(object):
 
         return state_info
 
-    def create_h5_state_container(self, fname, nyrs_in_recon):
+    def initialize_storage_backend(self, btype, nyears, fdir):
 
-        """Initialize pytables output container"""
+        _types = {'NPY': _NPYStateStorage,
+                  'H5': _HDF5StateStorage}
 
-        self.h5f_out = tb.open_file(fname, 'w',
-                                    filters=tb.Filters(complib='blosc',
-                                                       complevel=2))
-        atom = tb.Atom.from_dtype(self.state_list[0].dtype)
-        num_subann = len(self.state_list)
-        tdim_len = (nyrs_in_recon + 1) * num_subann
-        shape = [tdim_len] + list(self.state_list[0].shape)
-        self.xb_out = empty_hdf5_carray(self.h5f_out, '/', 'output', atom,
-                                        shape)
+        backend_class = _types[btype]
+
+        self.output_backend = backend_class(nyears, self, fdir=fdir)
 
         self._orig_state = deepcopy(self.state_list)
-        self._yr_len = len(self._orig_state)
-        self.xb_out[0:self._yr_len] = np.array(self._orig_state)
-        self.xb_out[self._yr_len:(self._yr_len*2)] = np.array(self._orig_state)
+
+        # Fill Prior
+        self.output_backend.insert(self._orig_state, 0)
 
     def insert_upcoming_prior(self, curr_yr_idx, use_curr=False):
 
+        if not use_curr:
+            dat = self._orig_state
+        else:
+            dat = self.output_backend.get_xb(0, curr_yr_idx)
+
+        self.output_backend.insert(dat, curr_yr_idx+1)
+
+    def xb_from_backend(self, yr_idx, res, shift):
+
+        self.state_list = self.output_backend.get_xb(shift, yr_idx)
+        self.avg_to_res(res, 0)
+
+    def propagate_avg_to_backend(self, yr_idx, shift):
+
+        self.output_backend.propagate_avg_to_storage(shift, self, yr_idx)
+
+    def close_xb_container(self):
+        self.output_backend.close()
+
+
+class _BaseStateStorage(object):
+    """
+    Class for storing state vector data
+    """
+
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def __init__(self, nyears, state, fdir=None):
+        pass
+
+    @abstractmethod
+    def close(self):
+        pass
+
+    def insert(self, data, yr_idx):
         """
         Insert as we go to prevent huge upfront write cost
         """
-        istart = curr_yr_idx*self._yr_len + self._yr_len
+        istart = yr_idx*self._yr_len
         iend = istart + self._yr_len
 
-        if not use_curr:
-            self.xb_out[istart:iend] = self._orig_state
-        else:
-            self.xb_out[istart:iend] = self.xb_out[curr_yr_idx:istart]
+        self.xb_out[istart:iend] = data
 
-    def xb_from_h5(self, yr_idx, res, shift):
+    def get_xb(self, shift, yr_idx):
+
         ishift = int(shift / self._base_res)
         istart = yr_idx*self._yr_len + ishift
         iend = istart + self._yr_len
 
-        self.state_list = self.xb_out[istart:iend]
-        self.avg_to_res(res, 0)
+        return self.xb_out[istart:iend]
 
-    def propagate_avg_to_h5(self, yr_idx, shift):
-        nchunks = len(self.state_list)
+    def propagate_avg_to_storage(self, shift, state, yr_idx):
+        nchunks = len(state.state_list)
         chk_size = self._yr_len / nchunks
         ishift = int(shift / self._base_res)
 
         for i in xrange(nchunks):
-            avg = self.state_list[i]
+            avg = state.state_list[i]
 
             istart = yr_idx*self._yr_len + i*chk_size + ishift
             iend = istart + chk_size
@@ -964,8 +990,99 @@ class State(object):
                 # same size as _base_res, just replace
                 self.xb_out[istart:iend] = avg
 
-    def close_xb_container(self):
+
+class _HDF5StateStorage(_BaseStateStorage):
+
+    """
+    Uses Pytables to store *ALL* years in the sub_base resolution in HDF5
+    format.  Slower, but saves the entire ensemble for all variables in a
+    semi-compressed format.
+    """
+
+    def __init__(self, nyears, state, fdir='./'):
+        res = state.resolution
+        fname = 'state_output_res{:1d}pt{:2d}'.format(int(res),
+                                                      int((res % 1.0) * 100))
+
+        self.h5f_out = tb.open_file(join(fdir, fname), 'w',
+                                    filters=tb.Filters(complib='blosc',
+                                                       complevel=2))
+        atom = tb.Atom.from_dtype(self.state_list[0].dtype)
+        num_subann = len(self.state_list)
+        tdim_len = (nyears + 1) * num_subann
+        shape = [tdim_len] + list(self.state_list[0].shape)
+
+        self.xb_out = empty_hdf5_carray(self.h5f_out, '/', 'output', atom,
+                                        shape)
+        self._yr_len = num_subann
+        self._base_res = 1.0 / self._yr_len
+
+    def close(self):
         self.h5f_out.close()
+
+
+class _NPYStateStorage(_BaseStateStorage):
+
+    """
+    Numpy based storage for the state. Only stores 2-years to allow for
+    multi-resolution functionality. Faster because there's no IO.
+    """
+
+    def __init__(self, nyears, state, fdir=None):
+
+        """
+        Note: nyears and dir are dummy variables
+        """
+
+        num_subann = len(state.state_list)
+        shape = [2*num_subann] + list(state.state_list[0].shape)
+        self.xb_out = np.zeros(shape)
+
+        self._yr_len = num_subann
+        self._base_res = 1.0 / self._yr_len
+        self._nyears = 2
+        self._rolled = False
+
+    def insert(self, data, yr_idx):
+
+        yr_idx %= self._nyears
+
+        super(_NPYStateStorage, self).insert(data, yr_idx)
+
+    def get_xb(self, shift, yr_idx):
+
+        yr_idx %= self._nyears
+
+        if yr_idx == 1:
+            self._roll()
+
+        val = super(_NPYStateStorage, self).get_xb(shift, 0).copy()
+
+        if yr_idx == 1:
+            self._unroll()
+
+        return val
+
+    def propagate_avg_to_storage(self, shift, state, yr_idx):
+
+        yr_idx %= self._nyears
+
+        if yr_idx == 1:
+            self._roll()
+
+        super(_NPYStateStorage, self).propagate_avg_to_storage(shift, state, 0)
+
+        if yr_idx == 1:
+            self._unroll()
+
+    def close(self):
+        pass
+
+    def _roll(self):
+        self.xb_out = np.roll(self.xb_out, self._yr_len)
+
+    def _unroll(self):
+        self.xb_out = np.roll(self.xb_out, -self._yr_len)
 
 
 _analysis_var_classes = {'BerkeleyEarth': BerkeleyEarthAnalysisVariable}
