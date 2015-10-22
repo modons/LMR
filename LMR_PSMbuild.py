@@ -76,9 +76,10 @@ psm_output  = '/home/disk/kalman3/rtardif/LMR/PSM/PAGES2kS1'
 # =============================================================================
 def main():
 
-    from time import time
+    import os
     import numpy as np
     import cPickle    
+    from time import time
 
     import LMR_calibrate
     import LMR_proxy
@@ -176,9 +177,11 @@ def main():
             else:
                 print 'PSM could not be built for this proxy chronology...too little overlap for calibration'
                 continue
-            
+
 
     # Dump dictionary to pickle file
+    if not os.path.isdir(psm_output):
+        os.system('mkdir %s' % psm_output)
     outfile = open('%s/PSMs_%s.pckl' % (psm_output, datatag_calib),'w')
     cPickle.dump(psm_dict,outfile)
     cPickle.dump(psm_info,outfile)

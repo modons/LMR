@@ -2,18 +2,32 @@
 
 import numpy as np
 import mpl_toolkits.basemap as bm
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 
+# =============================================================================
+def truncate_colormap(cmap, minval=0.0,maxval=1.0,n=100):
+    new_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name,a=minval,b=maxval),
+        cmap(np.linspace(minval,maxval,n)))
+    return new_cmap
+# =============================================================================
 
 # this is a plotting convenience function for quick LMR plots
-def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None,extend=None):
+def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None,extend=None,backg=None,cbarfmt=None,nticks=None):
 
     """
     Inputs:
-    data : (nlat,nlon) array
+    data     : (nlat,nlon) array
     lat, lon : (nlon,nlat) arrays containing latitude and longitude values
-    cmap : string defining the colormap (e.g. 'jet' or 'bwr'; see http://matplotlib.org/examples/color/colormaps_reference.html)
-    nlevs: number of contour levels
+    cmap     : string defining the colormap (e.g. 'jet' or 'bwr'; see http://matplotlib.org/examples/color/colormaps_reference.html)
+    nlevs    : number of contour levels
+    vmin     :
+    vmax     :
+    backg    : background color of map (will highlight region of missing data)
+    cbarfmt  : ...
+    nticks   : ...
     """
 
     # change default value of latlon kwarg to True.
@@ -34,9 +48,17 @@ def LMR_plotter(data,lat,lon,cmap,nlevs,vmin=None,vmax=None,extend=None):
     cints = np.linspace(vmin, vmax, nlevs, endpoint=True)
     m = bm.Basemap(projection='robin',lon_0=0)
     cs = m.contourf(lon,lat,data,cints,cmap=plt.get_cmap(cmap),vmin=vmin,vmax=vmax,extend=extend)
+    m.drawmapboundary(fill_color = backg)
     m.drawcoastlines()
-    m.colorbar(cs)
+    cb = m.colorbar(cs,format=cbarfmt)
     #cbar = m.colorbar(ticks=cints)
+    #cs.cmap.set_bad('lightgrey')
+    if nticks:
+        cb.ax.tick_params(labelsize=11)
+        tick_locator = ticker.MaxNLocator(nbins=nticks)
+        cb.locator = tick_locator
+        cb.ax.yaxis.set_major_locator(ticker.AutoLocator())
+        cb.update_ticks()
 
 
 #
