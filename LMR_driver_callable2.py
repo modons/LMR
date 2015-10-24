@@ -401,7 +401,7 @@ def LMR_driver_callable(cfg=None):
             # Put analysis Xa in Xb for next assimilation
             Xb = Xa
 
-        # Dump Xa to file (use Xb in case no proxies assimilated for current)
+        # Dump Xa to file (use Xb in case no proxies assimilated for current year)
         np.save(filen, Xb)
 
     end_time = time() - begin_time

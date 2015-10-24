@@ -41,17 +41,17 @@ class core:
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    iter_range = [0, 0]
+    iter_range = [75, 100]
     curr_iter = iter_range[0]
     loc_rad = None
 
-    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
 class proxies:
@@ -196,10 +196,10 @@ class psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
-        #datatag_calib = 'GISTEMP'
-        #datafile_calib = 'gistemp1200_ERSST.nc'
-        datatag_calib = 'MLOST'
-        datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+        datatag_calib = 'GISTEMP'
+        datafile_calib = 'gistemp1200_ERSST.nc'
+        #datatag_calib = 'MLOST'
+        #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
 
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
