@@ -10,12 +10,14 @@ sys.path.append('../')
 
 import pytest
 import LMR_gridded as lmrgrid
+import test_config
 import LMR_calibrate
 import numpy as np
 import netCDF4 as ncf
 import os
 import random
 from itertools import izip
+from copy import deepcopy
 
 
 
@@ -668,6 +670,7 @@ def test_state(res):
     test_config.core.assimilation_time_res = [res]
     dirname = test_config.prior.datadir_prior
     filename = test_config.prior.datafile_prior
+    tmp_res = test_config.core.sub_base_res
     test_config.core.sub_base_res = res
     state_obj = lmrgrid.State.from_config(test_config)
     sample_idxs = state_obj._prior_vars['air'][0]._idx_used_for_sample
@@ -687,6 +690,186 @@ def test_state(res):
             prior_var = pvars[i]
             np.testing.assert_array_equal(state_obj.get_var_data(var, idx=i),
                 prior_var.flattened_spatial()[0].T)
+
+    test_config.core.sub_base_res = tmp_res
+
+
+@pytest.mark.parametrize('btype, tdim', [('NPY', 3),
+                                         ('H5', 4)])
+def test_state_backend_init(btype, tdim):
+    state = lmrgrid.State.from_config(test_config)
+    dat_dir = '/home/disk/p/wperkins/Research/LMR/tests/data'
+
+    state.initialize_storage_backend(btype, tdim, fdir=dat_dir)
+    state_shp = state.state_list[0].shape
+
+    dim0 = tdim * len(state.state_list)
+    if btype == 'H5':
+        dim0 += len(state.state_list)
+
+    assert hasattr(state, 'output_backend')
+    np.testing.assert_array_equal(state._orig_state, state.state_list)
+    assert list(state.output_backend.xb_out.shape) == [dim0] + list(state_shp)
+    assert state.output_backend._yr_len == len(state.state_list)
+    assert state.output_backend._base_res == state.base_res
+
+    state.close_xb_container()
+
+
+@pytest.mark.parametrize('btype, tdim', [('NPY', 3),
+                                         ('H5', 4)])
+def test_state_backend_insert(btype, tdim):
+    state = lmrgrid.State.from_config(test_config)
+    dat_dir = '/home/disk/p/wperkins/Research/LMR/tests/data'
+
+    state.initialize_storage_backend(btype, tdim, fdir=dat_dir)
+    state.state_list = np.array(state.state_list)
+    back = state.output_backend
+    yrlen = len(state.state_list)
+
+    for i in range(tdim):
+        tmp_state = state.state_list + i + 1
+        back.insert(tmp_state, i)
+        start = i*yrlen
+        end = start + yrlen
+        np.testing.assert_array_equal(tmp_state,
+                                      back.xb_out[start:end])
+        back.xb_out[start, 0, :] = 0
+        with pytest.raises(AssertionError):
+            np.testing.assert_array_equal(tmp_state,
+                                          back.xb_out[start:end])
+
+    state.close_xb_container()
+
+
+def test_state_backend_insert_npy_past_bounds():
+    state = lmrgrid.State.from_config(test_config)
+
+    state.initialize_storage_backend('NPY', 2, None)
+    state.state_list = np.array(state.state_list)
+    back = state.output_backend
+    yrlen = len(state.state_list)
+
+    for i, k in enumerate(xrange(3, 6)):
+        tmp_state = state.state_list + k
+        back.insert(tmp_state, k)
+        start = i*yrlen
+        end = start + yrlen
+
+        np.testing.assert_array_equal(tmp_state,
+                                      back.xb_out[start:end])
+
+
+@pytest.mark.parametrize('btype', ['H5', 'NPY'])
+def test_state_backend_getxb(btype):
+    state = lmrgrid.State.from_config(test_config)
+    dat_dir = '/home/disk/p/wperkins/Research/LMR/tests/data'
+
+    nyears = 3
+    state.initialize_storage_backend(btype, nyears, dat_dir)
+    state.state_list = np.array(state.state_list)
+    back = state.output_backend
+    yrlen = len(state.state_list)
+
+    # Generate different years
+    slist = []
+    for i in range(nyears):
+        tmp_state = state.state_list + i + 1
+        back.insert(tmp_state, i)
+        slist.append(tmp_state)
+
+    # test get
+    for i in range(nyears):
+        state.xb_from_backend(i, 1.0, 0)
+        orig_xb = slist[i]
+        np.testing.assert_array_equal(state.state_list[0], orig_xb.mean(axis=0))
+
+    slist = np.array(slist).reshape(nyears*yrlen, *slist[0].shape[1:])
+
+    for i in range(2):
+        state.xb_from_backend(i, 0.5, 0.25)
+        shift = 1
+        start = i * yrlen + shift
+        end = start + yrlen
+        orig_xb = slist[start:end].reshape(2, 2, *slist.shape[1:]).mean(axis=1)
+        np.testing.assert_array_equal(state.state_list, orig_xb)
+
+    state.close_xb_container()
+
+
+def test_state_backend_getxb_npy_past_bounds():
+    state = lmrgrid.State.from_config(test_config)
+    dat_dir = '/home/disk/p/wperkins/Research/LMR/tests/data'
+
+    nyears = 3
+    state.initialize_storage_backend('NPY', nyears, dat_dir)
+    state.state_list = np.array(state.state_list)
+    back = state.output_backend
+    yrlen = len(state.state_list)
+
+    # Generate different years
+    slist = []
+    for i in range(nyears):
+        tmp_state = state.state_list + i + 1
+        back.insert(tmp_state, i)
+        slist.append(tmp_state)
+
+    state.xb_from_backend(3, 1.0, 0)
+    orig_xb = slist[0].mean(axis=0)
+    np.testing.assert_array_equal(state.state_list[0], orig_xb)
+
+    tmp = [slist[2], slist[0], slist[1]]
+    tmp = np.array(tmp).reshape(len(tmp)*yrlen, *tmp[0].shape[1:])
+    for i, j in enumerate(xrange(2, 4)):
+        shift = 1
+        start = i * yrlen + shift
+        end = start + yrlen
+        state.xb_from_backend(j, 0.5, 0.25)
+        orig_xb = tmp[start:end].reshape(2, 2, *tmp.shape[1:]).mean(axis=1)
+        np.testing.assert_array_equal(state.state_list, orig_xb)
+
+
+@pytest.mark.parametrize('btype', ['H5', 'NPY'])
+def test_state_backend_propagate_avg(btype):
+    state = lmrgrid.State.from_config(test_config)
+    dat_dir = '/home/disk/p/wperkins/Research/LMR/tests/data'
+
+    nyears = 3
+    state.initialize_storage_backend(btype, nyears, dat_dir)
+    state.avg_to_res(0.5, 0.25)
+    halfyr_state = state.state_list.copy()
+    state.restore_orig_state()
+    state.avg_to_res(1.0, 0)
+    fullyr_state = state.state_list.copy()
+    state.restore_orig_state()
+    state.state_list = np.array(state.state_list)
+    back = state.output_backend
+
+    # Generate different years
+    slist = []
+    for i in range(nyears):
+        tmp_state = state.state_list + i + 1
+        back.insert(tmp_state, i)
+        slist.append(tmp_state)
+
+    halfyr_state += 10
+    fullyr_state -= 10
+
+    if btype == 'NPY':
+        nyears *= 2
+
+    for i in xrange(nyears):
+        state.state_list = fullyr_state
+        state.propagate_avg_to_backend(i, 0)
+        state.xb_from_backend(i, 1.0, 0)
+        np.testing.assert_array_equal(state.state_list, fullyr_state)
+
+        state.state_list = halfyr_state
+        state.propagate_avg_to_backend(i, 0.25)
+        state.xb_from_backend(i, 0.5, 0.25)
+        np.testing.assert_array_equal(state.state_list, halfyr_state)
+
+    state.close_xb_container()
 
 
 @pytest.mark.parametrize('extra, fname, varname',
@@ -764,4 +947,6 @@ if __name__ == '__main__':
     #test_priorvar_load_preavg_data('air', True)
     #test_state(0.5)
     # test_analysisvar('MLOST', 'MLOST_air.mon.anom_V3.5.4.nc', 'air')
-    test_analysisvar_nan_subannual()
+    # test_analysisvar_nan_subannual()
+    test_state_backend_getxb('H5')
+    test_state_backend_getxb('NPY')

@@ -81,8 +81,8 @@ class core:
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
-    ignore_pre_avg_file = True
-    overwrite_pre_avg_file = False
+    ignore_pre_avg_file = False
+    overwrite_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1950, 1953]
     nens = 2
@@ -95,6 +95,12 @@ class core:
     # What we're defining as year start
     # 0-11 where 0 indicates start at Jan.
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
+
+    # Forecasting Hybrid Update
+    hybrid_update = False
+    hybrid_update &= online_reconstruction
+    hybrid_a = 0.75
+
 
     # TODO: add rules for shift?
     # If shifting on smaller time scales than smallest time chunk it becomes
@@ -298,5 +304,33 @@ class prior:
     datafile_prior   = '[vardef_template]_gridded_dat.nc'
     dataformat_prior = 'NCD'
     state_variables = ['air', 'tseries']
-    truncate = False
 
+    truncate_state = True
+    backend_type = 'NPY'
+
+
+class forecaster:
+    """
+    Parameters for the online DA forecasting method.
+    """
+
+    # Which forecaster class to use
+    use_forecaster = 'lim'
+
+    class LIM:
+        """
+        calib_filename: Filename for LIM calibration data.  Should be netcdf
+                        file or an HDF5 file from the DataTools.netcdf_to_hdf5_
+                        container.
+        calib_varname: Variable name to grab from calib_filename
+        fcast_times: A list of lead times (in years) to forecast
+        """
+        calib_filename = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
+        calib_varname = 'air'
+        dataformat = 'NCD'
+        fcast_times = [1]
+        wsize = 12
+        fcast_num_pcs = 15
+        detrend = True
+
+        eig_adjust = 0.2

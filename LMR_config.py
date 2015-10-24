@@ -24,19 +24,19 @@ class constants:
                        'type': 'NCD'}
 
     calib['HadCRUT'] = {'fname': 'HadCRUT.4.3.0.0.median.nc',
-                        'varname': 'Tsfc',
+                        'varname': 'temperature_anomaly',
                         'type': 'NCD'}
 
     calib['BerkeleyEarth'] = {'fname': 'Land_and_Ocean_LatLong1.nc',
-                              'varname': 'Tsfc',
+                              'varname': 'temperature',
                               'type': 'NCD'}
 
     calib['MLOST'] = {'fname': 'MLOST_air.mon.anom.V3.5.4.nc',
-                      'varname': 'Tsfc',
+                      'varname': 'air',
                       'type': 'NCD'}
 
     calib['NOAA'] = {'fname': 'er-ghcn-sst.nc',
-                     'varname': 'Tsfc',
+                     'varname': 'data',
                      'type': 'NCD'}
 
     prior = {}
@@ -76,7 +76,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_addlim_backend_test'
+    nexp = 'testdev_addlim_backend_test_NPY'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
@@ -85,8 +85,8 @@ class core:
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    seed = None
-    iter_range = [0, 15]
+    seed = 2
+    iter_range = [0, 2]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs

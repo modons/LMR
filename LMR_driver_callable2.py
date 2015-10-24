@@ -439,7 +439,7 @@ def LMR_driver_callable(cfg=None):
     shmt_ensemble = np.zeros([ntimes,nens])
     for iyr, yr in enumerate(assim_times[0::nelem_pr_yr]):
         filen = join(workdir, 'year{:04d}'.format(int(yr)))
-        Xb_one.state_list = [np.load(filen+'.npy')]
+        Xb_one.state_list = np.array([np.load(filen+'.npy')])
         Xa = np.squeeze(Xb_one.get_var_data('tas_sfc_Amon'))
         gmt, nhmt, shmt = \
             global_mean2(Xa.T,
