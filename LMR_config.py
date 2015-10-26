@@ -6,7 +6,6 @@ Adapted from LMR_exp_NAMELIST by AndreP
 """
 
 from os.path import join
-import random
 
 
 class constants:
@@ -76,17 +75,17 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_addlim_backend_test_NPY'
+    nexp = 'testdev_paramsearch_new_wrapper'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
-    online_reconstruction = False
+    online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
     overwrite_pre_avg_file = False
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1850, 2000]
+    recon_period = [1950, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 2]
+    iter_range = [0, 1]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -94,7 +93,7 @@ class core:
     res_yr_shift = {0.5: 0.25, 1.0: 0.0}
 
     # Forecasting Hybrid Update
-    hybrid_update = False
+    hybrid_update = True
     hybrid_update &= online_reconstruction
     hybrid_a = 0.75
 
