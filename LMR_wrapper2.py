@@ -37,8 +37,8 @@ if not os.path.isdir(expdir):
     os.system('mkdir {}'.format(expdir))
 
 # Temporary for parameter sweep
-a = np.arange(0.9, 0.91, 0.1)
-d = np.arange(0.5, 0.55, 0.05)
+a = np.arange(0.3, 0.91, 0.1)
+d = np.arange(0.0, 0.55, 0.05)
 
 
 # Monte-Carlo approach: loop over iterations (range of iterations defined in
