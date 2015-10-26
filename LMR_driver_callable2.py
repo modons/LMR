@@ -98,6 +98,7 @@ def LMR_driver_callable(cfg=None):
     nens = core.nens
     loc_rad = core.loc_rad
     trunc_state = prior.truncate_state
+    state_backend = prior.backend_type
     assim_res_vals = core.assimilation_time_res
     prior_source = prior.prior_source
     base_res = core.assimilation_time_res[0]
@@ -227,8 +228,7 @@ def LMR_driver_callable(cfg=None):
     # ==========================================================================
 
     # Create sub_base_resolution output container (file is temporary for now)
-    fname = 'xa_output_res{:1.2f}.h5'.format(sub_base_res)
-    Xb_one.create_h5_state_container(join(workdir, fname), ntimes)
+    Xb_one.initialize_storage_backend(state_backend, ntimes, workdir)
 
     # Array containing the global and hemispheric-mean state
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
@@ -259,6 +259,8 @@ def LMR_driver_callable(cfg=None):
     lasttime = time()
     for iyr, t in enumerate(assim_times):
 
+        curr_yr_idx = int(iyr//nelem_pr_yr)
+
         if verbose > 0:
             print 'working on year: ' + str(t)
 
@@ -267,7 +269,7 @@ def LMR_driver_callable(cfg=None):
             # Set iproxy to restart going through proxies for given year
             iproxy = -1
             # Insert prior into following year for shifted priors
-            Xb_one.insert_upcoming_prior(int(iyr//nelem_pr_yr),
+            Xb_one.insert_upcoming_prior(curr_yr_idx,
                                          use_curr=online)
 
         # if online and iyr == 0:
@@ -281,7 +283,7 @@ def LMR_driver_callable(cfg=None):
         for res in res_to_assim:
 
             # Create prior for resolution
-            Xb_one.xb_from_h5(int(iyr//nelem_pr_yr), res, res_yr_shift[res])
+            Xb_one.xb_from_backend(curr_yr_idx, res, res_yr_shift[res])
 
             if res == 1.0:
 
@@ -301,9 +303,9 @@ def LMR_driver_callable(cfg=None):
                     global_mean2(xam,
                                  Xb_one.var_coords['tas_sfc_Amon']['lat'],
                                  output_hemispheric=True)
-                gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
-                nhmt_save[iproxy+1, iyr//nelem_pr_yr] = nhmt
-                shmt_save[iproxy+1, iyr//nelem_pr_yr] = shmt
+                gmt_save[iproxy+1, curr_yr_idx] = gmt
+                nhmt_save[iproxy+1, curr_yr_idx] = nhmt
+                shmt_save[iproxy+1, curr_yr_idx] = shmt
 
             for iproxy, Y in enumerate(
                     prox_manager.sites_assim_res_proxy_objs(res, t),
@@ -314,12 +316,12 @@ def LMR_driver_callable(cfg=None):
                     Y.values[t]
                 except KeyError:
                     # Make sure GMT spot filled from previous proxy
-                    gmt_save[iproxy+1, iyr//nelem_pr_yr] = \
-                        gmt_save[iproxy, iyr//nelem_pr_yr]
-                    nhmt_save[iproxy+1, iyr//nelem_pr_yr] = \
-                        nhmt_save[iproxy, iyr//nelem_pr_yr]
-                    shmt_save[iproxy+1, iyr//nelem_pr_yr] = \
-                        shmt_save[iproxy, iyr//nelem_pr_yr]
+                    gmt_save[iproxy+1, curr_yr_idx] = \
+                        gmt_save[iproxy, curr_yr_idx]
+                    nhmt_save[iproxy+1, curr_yr_idx] = \
+                        nhmt_save[iproxy, curr_yr_idx]
+                    shmt_save[iproxy+1, curr_yr_idx] = \
+                        shmt_save[iproxy, curr_yr_idx]
                     continue
 
                 if verbose > 2:
@@ -374,9 +376,9 @@ def LMR_driver_callable(cfg=None):
                     global_mean2(xam,
                                  Xb_one.var_coords['tas_sfc_Amon']['lat'],
                                  output_hemispheric=True)
-                gmt_save[iproxy+1, iyr//nelem_pr_yr] = gmt
-                nhmt_save[iproxy+1, iyr//nelem_pr_yr] = nhmt
-                shmt_save[iproxy+1, iyr//nelem_pr_yr] = shmt
+                gmt_save[iproxy+1, curr_yr_idx] = gmt
+                nhmt_save[iproxy+1, curr_yr_idx] = nhmt
+                shmt_save[iproxy+1, curr_yr_idx] = shmt
 
                 # check the variance change for sign
                 thistime = time()
@@ -389,7 +391,7 @@ def LMR_driver_callable(cfg=None):
                 lasttime = thistime
             
             # Assimilated all proxies at given res, propagate mean to base res
-            Xb_one.propagate_avg_to_h5(int(iyr//nelem_pr_yr), res_yr_shift[res])
+            Xb_one.propagate_avg_to_backend(curr_yr_idx, res_yr_shift[res])
 
         if (iyr+1) % nelem_pr_yr == 0:
             # Save annual data to file
@@ -399,18 +401,17 @@ def LMR_driver_callable(cfg=None):
 
             if online:
                 # Push sub_base prior to next year
-                icurr_yr = iyr//nelem_pr_yr
-                inext_yr = (iyr//nelem_pr_yr) + 1
-                Xb_one.insert_upcoming_prior(icurr_yr, use_curr=True)
+                inext_yr = curr_yr_idx + 1
+                Xb_one.insert_upcoming_prior(curr_yr_idx, use_curr=True)
 
                 # Forecast
                 forecaster.forecast(Xb_one)
 
                 # Propagate forecast average to next year
-                Xb_one.propagate_avg_to_h5(inext_yr, 0)
+                Xb_one.propagate_avg_to_backend(inext_yr, 0)
 
                 # Get next year to calc Ye values
-                Xb_one.xb_from_h5(inext_yr, sub_base_res, 0)
+                Xb_one.xb_from_backend(inext_yr, sub_base_res, 0)
 
                 #Recalculate Ye values
                 ye_all = _calc_yevals_from_prior(assim_res_vals, res_yr_shift,
@@ -418,8 +419,7 @@ def LMR_driver_callable(cfg=None):
                 Xb_one.reset_augmented_ye(ye_all)
 
                 # Propagate forecasted state and Ye values back down to h5
-                Xb_one.propagate_avg_to_h5(inext_yr, 0.0)
-
+                Xb_one.propagate_avg_to_backend(inext_yr, 0.0)
 
     end_time = time() - begin_time
 
@@ -439,7 +439,7 @@ def LMR_driver_callable(cfg=None):
     shmt_ensemble = np.zeros([ntimes,nens])
     for iyr, yr in enumerate(assim_times[0::nelem_pr_yr]):
         filen = join(workdir, 'year{:04d}'.format(int(yr)))
-        Xb_one.state_list = [np.load(filen+'.npy')]
+        Xb_one.state_list = np.array([np.load(filen+'.npy')])
         Xa = np.squeeze(Xb_one.get_var_data('tas_sfc_Amon'))
         gmt, nhmt, shmt = \
             global_mean2(Xa.T,

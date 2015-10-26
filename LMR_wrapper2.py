@@ -43,13 +43,13 @@ d = np.arange(0, 0.51, 0.1)
 
 # Monte-Carlo approach: loop over iterations (range of iterations defined in
 # namelist)
-#MCiters = np.arange(iter_range[0], iter_range[1]+1)
-#for iter_num in MCiters:
+MCiters = np.arange(iter_range[0], iter_range[1]+1)
+for iter_num in MCiters:
 
-for iter_num, (a_val, d_val) in enumerate(itertools.product(a, d)):
+# for iter_num, (a_val, d_val) in enumerate(itertools.product(a, d)):
     cfg.core.curr_iter = iter_num
-    cfg.core.hybrid_a = a_val
-    cfg.forecaster.LIM.eig_adjust = d_val
+    # cfg.core.hybrid_a = a_val
+    # cfg.forecaster.LIM.eig_adjust = d_val
     # Define work directory
     core.datadir_output = os.path.join(expdir, 'r' + str(iter_num))
     # Check if it exists, if not create it
