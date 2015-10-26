@@ -78,16 +78,15 @@ for iter_num in MCiters:
         loc_dir = core.datadir_output
         arc_dir = os.path.join(core.archive_dir, core.nexp)
         mc_dir = os.path.join(arc_dir, 'r' + str(iter_num), ad_folder_name)
-    
-        # Check if the experiment archive directory exists; if not create it
-        if not os.path.isdir(mc_dir):
-            os.makedirs(mc_dir)
 
         # scrub the monte carlo subdirectory if this is a clean start
-        if os.path.isdir(mc_dir) and core.clean_start:
-            print (' **** clean start --- removing existing files in'
-                   ' iteration output directory')
-            os.system('rm -f -r {}'.format(mc_dir))
+        if os.path.isdir(mc_dir):
+            if core.clean_start:
+                print (' **** clean start --- removing existing files in'
+                       ' iteration output directory')
+                os.system('rm -f -r {}'.format(mc_dir + '/*'))
+        else:
+            os.makedirs(mc_dir)
 
         # or just move select files and delete the rest
 
