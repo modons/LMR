@@ -22,6 +22,7 @@ import datetime
 import itertools
 import LMR_driver_callable2 as LMR
 import LMR_config as cfg
+import random
 
 from LMR_utils2 import ensemble_stats
 
@@ -39,6 +40,7 @@ if not os.path.isdir(expdir):
 # Temporary for parameter sweep
 a = np.arange(0.3, 0.91, 0.1)
 d = np.arange(0.0, 0.55, 0.05)
+seeds = random.sample(range(3, 1000), 20)
 
 
 # Monte-Carlo approach: loop over iterations (range of iterations defined in
@@ -48,6 +50,7 @@ for iter_num in MCiters:
 
     cfg.core.curr_iter = iter_num
     itr_dir = os.path.join(expdir, 'r' + str(iter_num))
+    cfg.core.seed = seeds[iter_num]
 
     for a_val, d_val in itertools.product(a, d):
         cfg.core.hybrid_a = a_val
