@@ -115,7 +115,6 @@ def enkf_update_array2(Xb, obvalue, Ye, ob_err, loc=None, inflate=None,
 
     # ensemble mean and variance of the background estimate of the proxy
     mye = Ye.mean()
-    varye = Ye.var()  # TODO: this should probably switch to unbiased
 
     # lowercase ye has ensemble-mean removed
     ye = Ye - mye
@@ -129,9 +128,6 @@ def enkf_update_array2(Xb, obvalue, Ye, ob_err, loc=None, inflate=None,
         print 'returning Xb unchanged...'
         return Xb
 
-    # innovation variance (denominator of serial Kalman gain)
-    kdenom = (varye + ob_err)
-
     # numerator of serial Kalman gain (cov(x,Hx))
     if static_prior is not None:
         # Hybrid prior update method
@@ -142,9 +138,15 @@ def enkf_update_array2(Xb, obvalue, Ye, ob_err, loc=None, inflate=None,
         kcov_e = np.dot(Xbp, ye) / (Nens-1)
         kcov_s = np.dot(Xbp_static, ye_static) / (Nens - 1)
         kcov = a * kcov_e + (1-a) * kcov_s
+
+        varye = a * Ye.var(ddof=1) + (1-a) * Ye_static.var(ddof=1)
     else:
         # Standard update method
         kcov = np.dot(Xbp, ye) / (Nens-1)
+        varye = Ye.var(ddof=1)  # TODO: this should probably switch to unbiased
+
+    # innovation variance (denominator of serial Kalman gain)
+    kdenom = (varye + ob_err)
 
     # Option to inflate the covariances by a certain factor
     if inflate is not None:
