@@ -132,13 +132,14 @@ def enkf_update_array2(Xb, obvalue, Ye, ob_err, loc=None, inflate=None,
     if static_prior is not None:
         # Hybrid prior update method
         Xb_static, Ye_static = static_prior
-        Xbp_static = Xb_static - Xb_static.mean(axis=1)[:, None]
+        xbm_static = Xb_static.mean(axis=1)
+        Xbp_static = Xb_static - xbm_static[:, None]
         ye_static = Ye_static - Ye_static.mean()
 
-        kcov_e = np.dot(Xbp, ye) / (Nens-1)
+        kcov_f = np.dot(Xbp, ye) / (Nens - 1)
         kcov_s = np.dot(Xbp_static, ye_static) / (Nens - 1)
-        kcov = a * kcov_e + (1-a) * kcov_s
 
+        kcov = a * kcov_f + (1-a) * kcov_s
         varye = a * Ye.var(ddof=1) + (1-a) * Ye_static.var(ddof=1)
     else:
         # Standard update method
@@ -160,13 +161,23 @@ def enkf_update_array2(Xb, obvalue, Ye, ob_err, loc=None, inflate=None,
     kmat = kcov / kdenom
 
     # update ensemble mean
-    xam = xbm + kmat * innov
+    mean_update = kmat * innov
+    xam = xbm + mean_update
+
+    if static_prior is not None:
+        xam_static = xbm_static + mean_update
 
     # update the ensemble members using the square-root approach
     beta = 1. / (1. + np.sqrt(ob_err / (varye + ob_err)))
     kmat *= beta
-    ye = ye[np.newaxis]
     kmat = kmat[:, np.newaxis]
+
+    if static_prior is not None:
+        ye_static = ye_static[None]
+        Xap_static = Xbp_static - np.dot(kmat, ye_static)
+        Xb_static[:] = Xap_static + xam_static[:, None]
+
+    ye = ye[np.newaxis]
     Xap = Xbp - np.dot(kmat, ye)
 
     # full state

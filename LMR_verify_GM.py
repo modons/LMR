@@ -41,18 +41,18 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = True
+fsave = False
 
 # file specification
 #
 # current datasets
 #
-nexp = 'testdev_addlim_backend_test_NPY'
+nexp = 'testdev_paramsearch_xbblend_a0_d0_50itr'
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 
 # specify directories for LMR and calibration data
-datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+#datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'
+datadir_output = '/home/disk/kalman2/wperkins/LMR_output/testing'
 datadir_calib = '/home/chaos2/wperkins/data/LMR/data/analyses'
 
 # plotting preferences

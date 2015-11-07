@@ -849,13 +849,16 @@ class State(object):
 
         self._tmp_state[name] = (self.state_list.copy(), self.resolution)
 
-    def stash_recall_state_list(self, name, pop=False):
+    def stash_recall_state_list(self, name, pop=False, copy=False):
 
         if name in self._tmp_state:
             if pop:
                 state, res = self._tmp_state.pop(name)
             else:
                 state, res = self._tmp_state[name]
+
+                if copy:
+                    state = state.copy()
 
             self.state_list = state
             self.resolution = res
