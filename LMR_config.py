@@ -75,7 +75,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_paramsearch_xbblend_a0a8pt2_d0_50itr'
+    nexp = 'testdev_paramsearch_noxbblend_a0a9pt2_d0_25itr'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
@@ -85,7 +85,7 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 50]
+    iter_range = [0, 24]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs

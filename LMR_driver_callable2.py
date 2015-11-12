@@ -305,10 +305,10 @@ def LMR_driver_callable(cfg=None):
                         Yevals_static = Xb_one.get_var_data('ye_vals')[0]
                         Xb_one.stash_pop_state_list('tmp')
 
-                    xbf = Xb_one.state_list[0]
-                    blend_forecast = (hybrid_a_val * xbf +
-                                      (1-hybrid_a_val) * Xb_static)
-                    Xb_one.state_list[0] = blend_forecast
+                    # xbf = Xb_one.state_list[0]
+                    # blend_forecast = (hybrid_a_val * xbf +
+                    #                   (1-hybrid_a_val) * Xb_static)
+                    # Xb_one.state_list[0] = blend_forecast
 
 
                 # overwrite prior GMT from last sub_annual with annual
