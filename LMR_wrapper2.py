@@ -38,8 +38,8 @@ if not os.path.isdir(expdir):
     os.system('mkdir {}'.format(expdir))
 
 # Temporary for parameter sweep
-a = np.arange(0.3, 0.91, 0.1)
-d = np.arange(0.0, 0.55, 0.05)
+a = np.arange(0.1, 0.4, 0.1)
+d = np.arange(0.4, 0.55, 0.05)
 seeds = random.sample(range(3, 1000), 20)
 
 
@@ -69,7 +69,16 @@ for iter_num in MCiters:
             os.system('rm -f {}'.format(core.datadir_output + '/*'))
 
         # Call the driver
-        all_proxy_objs = LMR.LMR_driver_callable(cfg)
+        try:
+            all_proxy_objs = LMR.LMR_driver_callable(cfg)
+        except LMR.FilterDivergenceError as e:
+            print e
+
+            # removing the work output directory
+            cmd = 'rm -f -r ' + loc_dir
+            print cmd
+            os.system(cmd)
+            continue
 
         # write the analysis ensemble mean and variance to separate files (per
         # state variable)

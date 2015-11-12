@@ -82,10 +82,10 @@ class core:
     ignore_pre_avg_file = False
     overwrite_pre_avg_file = False
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1950, 2000]
+    recon_period = [1850, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 1]
+    iter_range = [0, 10]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
