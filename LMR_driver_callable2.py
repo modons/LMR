@@ -366,6 +366,10 @@ def LMR_driver_callable(cfg=None):
                 mse = np.mean((Y.values[t] - Ye)**2)
                 y_ye_var = Ye.var(ddof=1) + ob_err
                 ens_calib_check[iproxy, curr_yr_idx % 5] = mse / y_ye_var
+                if not np.all(np.isfinite(ens_calib_check)):
+                    raise FilterDivergenceError('Filter divergence detected'
+                                                ' during year {}. Skipping '
+                                                'iteration.'.format(t))
                 
                 # --------------------------------------------------------------
                 # Do the update (assimilation) ---------------------------------

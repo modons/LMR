@@ -85,7 +85,7 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 24]
+    iter_range = [9, 24]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
