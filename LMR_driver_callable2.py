@@ -249,6 +249,8 @@ def LMR_driver_callable(cfg=None):
     nhmt_save[1, :] = nhmt
     shmt_save[1, :] = shmt
 
+    ens_calib_check = np.zeros((total_proxy_count, 5))
+
     nelem_pr_yr = np.ceil(1.0 / base_res)
     start_yr, end_yr = recon_period
     assim_times = np.arange(start_yr, end_yr+1, base_res)
@@ -346,6 +348,15 @@ def LMR_driver_callable(cfg=None):
 
                 # Define the ob error variance
                 ob_err = Y.psm_obj.R
+
+                # TODO: If I ever do subannual forecasts need to adjust this
+                mse = np.mean((Y.values[t] - Ye)**2)
+                y_ye_var = Ye.var(ddof=1) + ob_err
+                ens_calib_check[iproxy, curr_yr_idx % 5] = mse / y_ye_var
+                if not np.all(np.isfinite(ens_calib_check)):
+                    raise FilterDivergenceError('Filter divergence detected'
+                                                ' during year {}. Skipping '
+                                                'iteration.'.format(t))
                 
                 # --------------------------------------------------------------
                 # Do the update (assimilation) ---------------------------------
@@ -380,6 +391,7 @@ def LMR_driver_callable(cfg=None):
                 nhmt_save[iproxy+1, curr_yr_idx] = nhmt
                 shmt_save[iproxy+1, curr_yr_idx] = shmt
 
+
                 # check the variance change for sign
                 thistime = time()
                 # if verbose > 2:
@@ -394,6 +406,11 @@ def LMR_driver_callable(cfg=None):
             Xb_one.propagate_avg_to_backend(curr_yr_idx, res_yr_shift[res])
 
         if (iyr+1) % nelem_pr_yr == 0:
+            # Check for filter divergence
+            if ens_calib_check.mean() > 50:
+                raise FilterDivergenceError('Filter divergence detected'
+                                            ' during year {}. Skipping '
+                                            'iteration.'.format(t))
             # Save annual data to file
             ypad = '{:04d}'.format(int(t))
             filen = join(workdir, 'year' + ypad + '.npy')
@@ -487,6 +504,11 @@ def LMR_driver_callable(cfg=None):
 # ------------------------------------------------------------------------------
 # --------------------------- end of main code ---------------------------------
 # ------------------------------------------------------------------------------
+
+
+class FilterDivergenceError(ValueError):
+    pass
+
 
 if __name__ == '__main__':
     LMR_driver_callable()

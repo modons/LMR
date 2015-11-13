@@ -6,7 +6,6 @@ Adapted from LMR_exp_NAMELIST by AndreP
 """
 
 from os.path import join
-import random
 
 
 class constants:
@@ -78,7 +77,7 @@ class core:
     """
     nexp = 'testdev_addlim_backend_test_NPY'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
-    online_reconstruction = False
+    online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
     overwrite_pre_avg_file = False
@@ -114,7 +113,8 @@ class core:
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    archive_dir = '/home/disk/kalman2/wperkins/LMR_output/testing'
     #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
@@ -341,5 +341,5 @@ class forecaster:
         wsize = 12
         fcast_num_pcs = 15
         detrend = True
-        
+
         eig_adjust = 0.2
