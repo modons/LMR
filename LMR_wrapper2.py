@@ -36,17 +36,11 @@ expdir = os.path.join(core.datadir_output, core.nexp)
 if not os.path.isdir(expdir):
     os.system('mkdir {}'.format(expdir))
 
-# Temporary for parameter sweep
-a = np.arange(0, 1.1, 0.25)
-d = np.arange(0, 0.51, 0.1)
-
-
 # Monte-Carlo approach: loop over iterations (range of iterations defined in
 # namelist)
 MCiters = np.arange(iter_range[0], iter_range[1]+1)
 for iter_num in MCiters:
 
-# for iter_num, (a_val, d_val) in enumerate(itertools.product(a, d)):
     cfg.core.curr_iter = iter_num
     # cfg.core.hybrid_a = a_val
     # cfg.forecaster.LIM.eig_adjust = d_val
@@ -61,7 +55,16 @@ for iter_num in MCiters:
         os.system('rm -f {}'.format(core.datadir_output + '/*'))
 
     # Call the driver
-    all_proxy_objs = LMR.LMR_driver_callable(cfg)
+    try:
+        all_proxy_objs = LMR.LMR_driver_callable(cfg)
+    except LMR.FilterDivergenceError as e:
+        print e
+
+        # removing the work output directory
+        cmd = 'rm -f -r ' + loc_dir
+        print cmd
+        os.system(cmd)
+        continue
 
     # write the analysis ensemble mean and variance to separate files (per
     # state variable)
@@ -73,7 +76,7 @@ for iter_num in MCiters:
     loc_dir = core.datadir_output
     arc_dir = os.path.join(core.archive_dir, core.nexp)
     mc_dir = os.path.join(arc_dir, 'r' + str(iter_num))
-    
+
     # Check if the experiment archive directory exists; if not create it
     if not os.path.isdir(arc_dir):
         os.system('mkdir {}'.format(arc_dir))
