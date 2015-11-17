@@ -19,7 +19,7 @@ import numpy as np
 import cPickle    
 from time import time
 from os.path import join
-
+# LMR specific imports
 import LMR_proxy2
 import LMR_calibrate
 import LMR_prior
@@ -53,7 +53,7 @@ def roundup(x):
 # ------------------------------
 
 make_plots = True
-make_plots_individual_sites = False
+make_plots_individual_sites = True
 
 # set the default size of the figure in inches. ['figure.figsize'] = width, height;  
 plt.rcParams['figure.figsize'] = 9, 7  # that's default image size for this interactive session
@@ -115,18 +115,22 @@ class v_core:
     #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
     #nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
     #nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
+    #nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+    #nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
     #
     # -- production recons for paper 1
     #nexp = 'production_gis_ccsm4_pagesall_0.75/'
-    #nexp = 'production_mlost_ccsm4_pagesall_0.75/'
-    nexp = 'production_cru_ccsm4_pagesall_0.75/'
+    nexp = 'production_mlost_ccsm4_pagesall_0.75/'
+    #nexp = 'production_cru_ccsm4_pagesall_0.75/'
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HAdCRUT...) and proxies.
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
-    #verif_period = [1800, 2000]
-    verif_period = [0, 2000]
-    #verif_period = [0, 1850]
+    #verif_period = [0, 2000]
+    #verif_period = [0, 1849]
+    #verif_period = [1850, 2000]
+    verif_period = [1700,1849]
+
     iter_range = [0, 100]
 
     # Input directory, where to find the reconstruction data
@@ -135,7 +139,7 @@ class v_core:
     datadir_input  = '/home/disk/kalman2/wperkins/LMR_output/archive' # production recons
 
     # Output directory, where the verification results & figs will be dumped.
-    #datadir_outut = datadir_input # if want to keep things tidy
+    #datadir_output = datadir_input # if want to keep things tidy
     datadir_output = '/home/disk/ekman/rtardif/kalman3/LMR/output/verification_production_runs'
 
     # Whether to write the full eval python dictionary to output directory ("summary" dict. has most of what we want)
@@ -284,10 +288,10 @@ class v_psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
-        datatag_calib = 'GISTEMP'
-        datafile_calib = 'gistemp1200_ERSST.nc'
-        #datatag_calib = 'MLOST'
-        #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+        #datatag_calib = 'GISTEMP'
+        #datafile_calib = 'gistemp1200_ERSST.nc'
+        datatag_calib = 'MLOST'
+        datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
 
         datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
@@ -407,7 +411,7 @@ def recon_proxy_eval_stats(sites_eval,mode,proxy_dict,Xrecon,recondir,verif_peri
         dist = haversine(Yeval.lon,Yeval.lat,recon_lon[i,j],recon_lat[i,j])
         #print Yeval.lat, Yeval.lon, i, j, recon_lat[i,j], recon_lon[i,j], dist
 
-        # Loop over time in proxy record
+        # Loop over time in proxy record ----
         obcount = 0
         for t in Yeval.time:
             truth[obcount] = Yeval.values[t]
@@ -423,10 +427,9 @@ def recon_proxy_eval_stats(sites_eval,mode,proxy_dict,Xrecon,recondir,verif_peri
             Xrecon_error[obcount] = (Ye_recon_EnsMean[obcount] - truth[obcount])
 
             obcount = obcount + 1
-
+        # -----------------------------------
 
         if obcount > 0:
-
             print '================================================'
             print 'Site:', Yeval.type, ':', psite
             print 'Number of verification points:', obcount            
@@ -453,6 +456,7 @@ def recon_proxy_eval_stats(sites_eval,mode,proxy_dict,Xrecon,recondir,verif_peri
             evald[sitetag]['ts_years']          = list(Yeval.time)
             evald[sitetag]['ts_ProxyValues']    = truth
             evald[sitetag]['ts_EnsMean']        = Ye_recon_EnsMean
+
             if mode == 'assim':
                 R = assimYe[sitetag]['R']
                 [_,Nens] = assimYe[sitetag]['HXa'].shape
@@ -634,6 +638,9 @@ def main():
         summary_stats_verif[list_sites[k]]['lat']            = verif_dict[inds[0]][list_sites[k]]['lat']
         summary_stats_verif[list_sites[k]]['lon']            = verif_dict[inds[0]][list_sites[k]]['lon']
         summary_stats_verif[list_sites[k]]['alt']            = verif_dict[inds[0]][list_sites[k]]['alt']
+        summary_stats_verif[list_sites[k]]['PSMslope']       = verif_dict[inds[0]][list_sites[k]]['PSMslope']
+        summary_stats_verif[list_sites[k]]['PSMintercept']   = verif_dict[inds[0]][list_sites[k]]['PSMintercept']
+        summary_stats_verif[list_sites[k]]['PSMcorrel']      = verif_dict[inds[0]][list_sites[k]]['PSMcorrel']
         summary_stats_verif[list_sites[k]]['NbPts']          = len(inds)
         
         # These contain data for the "grand ensemble" (i.e. ensemble of realizations) for "kth" site
@@ -705,6 +712,9 @@ def main():
         summary_stats_assim[list_sites[k]]['lat']            = assim_dict[inds[0]][list_sites[k]]['lat']
         summary_stats_assim[list_sites[k]]['lon']            = assim_dict[inds[0]][list_sites[k]]['lon']
         summary_stats_assim[list_sites[k]]['alt']            = assim_dict[inds[0]][list_sites[k]]['alt']
+        summary_stats_assim[list_sites[k]]['PSMslope']       = assim_dict[inds[0]][list_sites[k]]['PSMslope']
+        summary_stats_assim[list_sites[k]]['PSMintercept']   = assim_dict[inds[0]][list_sites[k]]['PSMintercept']
+        summary_stats_assim[list_sites[k]]['PSMcorrel']      = assim_dict[inds[0]][list_sites[k]]['PSMcorrel']
         summary_stats_assim[list_sites[k]]['NbPts']          = len(inds)
 
         # These contain data for the "grand ensemble" (i.e. ensemble of realizations) for "kth" site

@@ -1,8 +1,3 @@
-import glob
-import numpy as np
-from scipy import signal
-from spharm import Spharmt, getspecindx, regrid
-from math import radians, cos, sin, asin, sqrt
 
 #==========================================================================================
 #
@@ -23,15 +18,14 @@ def haversine(lon1, lat1, lon2, lat2):
     """
 
     # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
     # haversine formula 
     dlon = lon2 - lon1 
     dlat = lat2 - lat1 
-    a = np.sin(dlat/2.)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2.)**2
-    c = 2 * np.arcsin(np.sqrt(a))
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
     km = 6367.0 * c
     return km
-
 
 def year_fix(t):
 
@@ -84,7 +78,7 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
-def ensemble_stats(workdir, y_assim):
+def ensemble_stats(workdir,Yall):
 
     """
     Compute the ensemble mean and variance for files in the input directory
@@ -176,11 +170,12 @@ def ensemble_stats(workdir, y_assim):
                 print 'ERROR in ensemble_stats: Variable of unrecognized dimensions! Exiting'
                 exit(1)
 
+
         else: # var has no spatial dims
             Xb = Xbtmp[ibeg:iend+1,:] # prior ensemble
             xbm = np.mean(Xb,axis=1) # ensemble mean
             xbv = np.var(Xb,axis=1)  # ensemble variance
-
+            
             # process the **analysis** files
             years = []
             xa_ens = np.zeros((nyears, Xb.shape[1]))
@@ -196,14 +191,14 @@ def ensemble_stats(workdir, y_assim):
                 Xa = Xatmp[ibeg:iend+1,:]
                 xa_ens[k] = Xa  # total ensemble
                 xam[k] = np.mean(Xa,axis=1) # ensemble mean
-                xav[k] = np.var(Xa,axis=1)  # ensemble variance
+                xav[k] = np.var(Xa,axis=1)  # ensemble variance     
 
             vars_to_save_ens = {'nens':nens, 'years':years, 'xb_ens':Xb, 'xa_ens':xa_ens}
             vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
 
             # ens to file
-            filen = workdir + '/ensemble_' + var
+            filen = workdir + '/ensemble_mean_' + var
             print 'writing the new ensemble file' + filen
             np.savez(filen, **vars_to_save_ens)
 
@@ -219,45 +214,62 @@ def ensemble_stats(workdir, y_assim):
         #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
         np.savez(filen, **vars_to_save_var)
 
-    # --------------------------------------------------------
-    # Extract the analyzed Ye ensemble for diagnostic purposes
-    # --------------------------------------------------------
-    # get information on dim of state without the Ye's (before augmentation)
-    stateDim  = npzfile['stateDim']
-    Xbtmp_aug = npzfile['Xb_one_aug']
-    # dim of entire state vector (augmented)
-    totDim = Xbtmp_aug.shape[0]
-    nbye = (totDim - stateDim)
-    Ye_s = np.zeros([nbye,nyears,nens])
+        # --------------------------------------------------------
+        # Extract the analyzed Ye ensemble for diagnostic purposes        
+        # --------------------------------------------------------
 
-    # Loop over **analysis** files & extract the Ye's
-    years = []
-    for k, f in enumerate(files):
-        i = f.find('year')
-        year = f[i+4:i+8]
-        years.append(float(year))
-        Xatmp = np.load(f)
-        # Extract the Ye's from augmented state (beyond stateDim 'til end of
-        #  state vector)
-        Ye_s[:, k, :] = Xatmp[stateDim:, :]
-    years = np.array(years)
+        # get information on assimilated proxes
+        apDict = {}
+        apfile = workdir + '/assimilated_proxies.npy'
+        assimilated_proxies = np.load(apfile)
+        nrecords = np.size(assimilated_proxies)
+        for k in range(nrecords):
+            tmp = assimilated_proxies[k]
+            key = tmp.keys()[0]
+            aptuple = (key,tmp[key][0])
+            apDict[aptuple] = {}
+            apDict[aptuple] = tmp[key][3]
 
-    # Build dictionary
-    YeDict = {}
-    # loop over assimilated proxies
-    for i, pobj in enumerate(y_assim):
-        # build boolean of indices to pull from HXa
-        yr_idxs = [year in years for year in pobj.time]
-        YeDict[(pobj.type, pobj.id)] = {}
-        YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
-        YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
-        YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
-        YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
-        YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
+        # get information on dim of state without the Ye's (before augmentation)
+        stateDim  = npzfile['stateDim']
+        Xbtmp_aug = npzfile['Xb_one_aug']
+        # dim of entire state vector (augmented)
+        totDim = Xbtmp_aug.shape[0]
+        nbye = (totDim - stateDim)
+        Ye_s = np.zeros([nbye,nyears,nens])
+
+        # Loop over **analysis** files & extract the Ye's
+        years = []
+        k = -1
+        for f in files:
+            k = k + 1
+            i = f.find('year')
+            year = f[i+4:i+8]
+            years.append(year)
+            Xatmp = np.load(f)
+            # Extract the Ye's from augmented state (beyond stateDim 'til end of state vector)
+            Ye_s[:,k,:] = Xatmp[stateDim:totDim,:]
+
+        # Build dictionary
+        YeDict = {}
+        # loop over assimilated proxies
+        for i in range(len(Yall)):
+            YeDict[Yall[i].pid] = {}
+
+            years_assimilated = np.array(apDict[Yall[i].pid],dtype=int)
+            years_all  = np.array(years,dtype=int)
+            indices = [idx for (idx, value) in enumerate(years_all) if value in years_assimilated]
+            years_ok = years_all[indices]
+
+            YeDict[Yall[i].pid]['lat']   = Yall[i].lat
+            YeDict[Yall[i].pid]['lon']   = Yall[i].lon
+            YeDict[Yall[i].pid]['R']     = Yall[i].R
+            YeDict[Yall[i].pid]['years'] = np.array(years_ok,dtype=int)
+            YeDict[Yall[i].pid]['HXa']   = Ye_s[i,indices,:]
 
     # Dump dictionary to pickle file
-    outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
-    cPickle.dump(YeDict, outfile)
+    outfile = open('%s/analysis_Ye.pckl' % (workdir),'w')
+    cPickle.dump(YeDict,outfile)
     outfile.close()
 
     return
@@ -303,7 +315,7 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     blank = np.zeros([nlat_new,nlon_new])
     lat_new = (veclat + blank.T).T  
     lon_new = (veclon + blank)
-
+     
     # transform each ensemble member, one at a time
     X_new = np.zeros([nlat_new*nlon_new,Nens])
     for k in range(Nens):
@@ -426,7 +438,7 @@ def coefficient_efficiency(ref,test,valid=None):
 def rank_histogram(ensemble, value):
 
     """
-    Compute the rank of a measurement in the contex of an ensemble. 
+    Compute the rank of a measurement in the context of an ensemble. 
     
     Input:
     * the observation (value)
@@ -551,31 +563,3 @@ def global_hemispheric_means(field,lat):
 
 
     return gm,nhm,shm
-
-
-def class_docs_fixer(cls):
-    """Decorator to fix docstrings for subclasses"""
-    if not cls.__doc__:
-        for parent in cls.__bases__:
-            if parent.__doc__:
-                cls.__doc__ = parent.__doc__
-
-    for name, func in vars(cls).items():
-        if not func.__doc__ or '%%aug%%' in func.__doc__:
-            for parent in cls.__bases__:
-                parfunc = getattr(parent, name)
-                if parfunc and getattr(parfunc, '__doc__', None):
-                    if not func.__doc__:
-                        func.__doc__ = parfunc.__doc__
-                        break
-                    elif '%%aug%%' in func.__doc__:
-                        func.__doc__ = func.__doc__.replace('%%aug%%', '')
-                        func.__doc__ = parfunc.__doc__ + func.__doc__
-                        break
-
-    return cls
-
-def augment_docstr(func):
-    """ Decorator to mark augmented function docstrings. """
-    func.func_doc = '%%aug%%' + func.func_doc
-    return func

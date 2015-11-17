@@ -720,7 +720,8 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
         #value = (value - np.nanmean(value))/np.nanstd(value)
 
         print 'Removing the temporal mean (for every gridpoint) from the prior...'
-        value = (value - np.nanmean(value,axis=0))
+        climo = np.nanmean(value,axis=0)
+        value = (value - climo)
         print var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
 
         # Dictionary of dictionaries
@@ -730,6 +731,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
         d['vartype'] = vartype
         d['years']   = time_yrs
         d['value']   = value
+        d['climo']   = climo
         d['spacecoords'] = spacecoords
         if '2D' in vartype:
             d[spacecoords[0]] = spacevar1
