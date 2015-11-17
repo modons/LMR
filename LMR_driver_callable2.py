@@ -357,7 +357,7 @@ def LMR_driver_callable(cfg=None):
                     raise FilterDivergenceError('Filter divergence detected'
                                                 ' during year {}. Skipping '
                                                 'iteration.'.format(t))
-                
+
                 # --------------------------------------------------------------
                 # Do the update (assimilation) ---------------------------------
                 # --------------------------------------------------------------
@@ -365,7 +365,7 @@ def LMR_driver_callable(cfg=None):
                     print ('updating time: ' + str(t) + ' proxy value : ' +
                            str(Y.values[t]) + ' | mean prior proxy estimate: ' +
                            str(Ye.mean()))
-                    
+
                 # Get static Ye for hybrid update
                 if hybrid_update:
                     Ye_static = Yevals_static[iproxy]
@@ -401,7 +401,7 @@ def LMR_driver_callable(cfg=None):
                 #     print 'max change in variance:' + str(np.max(vardiff))
                 #     print 'update took ' + str(thistime-lasttime) + 'seconds'
                 lasttime = thistime
-            
+
             # Assimilated all proxies at given res, propagate mean to base res
             Xb_one.propagate_avg_to_backend(curr_yr_idx, res_yr_shift[res])
 

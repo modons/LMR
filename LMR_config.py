@@ -108,8 +108,8 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 

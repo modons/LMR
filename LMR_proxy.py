@@ -93,11 +93,20 @@ class proxy_master(object):
             jind,kind = np.unravel_index(dist.argmin(), dist.shape) 
             
             # overlapping years
+            # first, flip proxy time series if in reverse order (some chronologies may be...)
+            if self.time[0] > self.time[-1]:
+                self.time.reverse()
+                self.value.reverse()
             sc = set(C.time); sp = set(self.time)
             common_time = list(sc.intersection(sp))
             # respective indices in calib and proxy times
             ind_c = [j for j, k in enumerate(C.time) if k in common_time]
             ind_p = [j for j, k in enumerate(self.time) if k in common_time]
+            # make sure proxy time sequence matches calibration time series
+            if [ C.time[m] for m in ind_c ] != [ self.time[n] for n in ind_p ]:
+                ind_p = []
+                for n in ind_c:
+                    ind_p.append([j for j, k in enumerate(self.time) if k in common_time and k == C.time[n]][0])
 
             if calib_spatial_avg:                 
                 C2Dsmooth = np.zeros([C.time.shape[0],C.lat.shape[0],C.lon.shape[0]])

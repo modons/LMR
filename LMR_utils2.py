@@ -106,7 +106,7 @@ def global_mean(field, lat, lon):
     #
     #             revised 16 June 2015 (GJH)
 
-    # set number of times, lats, lons; array indices for lat and lon    
+    # set number of times, lats, lons; array indices for lat and lon
     if len(np.shape(field)) == 3:
         ntime, nlat, nlon = np.shape(field)
         lati = 1
@@ -132,7 +132,7 @@ def global_mean(field, lat, lon):
             gm[t] = np.nansum(np.multiply(W, field))/(np.sum(np.sum(W)))
         else:
             gm[t] = np.nansum(np.multiply(W, field[t, :, :]))/(np.sum(np.sum(W)))
- 
+
     return gm
 
 
@@ -339,7 +339,7 @@ def ensemble_stats(workdir, y_assim):
             filen = workdir + '/ensemble_' + var
             print 'writing the new ensemble file' + filen
             np.savez(filen, **vars_to_save_ens)
-            
+
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
         print 'writing the new ensemble mean file...' + filen
@@ -535,8 +535,7 @@ def assimilated_proxies(workdir):
             
     return ptypes, nrecords
 
-
-def coefficient_efficiency(ref, test):
+def coefficient_efficiency_old(ref,test):
     """
     Compute the coefficient of efficiency for a test time series, with respect
     to a reference time series.
@@ -560,6 +559,63 @@ def coefficient_efficiency(ref, test):
 
     # CE
     CE = 1. - (evar/rvar)
+
+    return CE
+
+
+def coefficient_efficiency(ref,test,valid=None):
+    """
+    Compute the coefficient of efficiency for a test time series, with respect to a reference time series.
+
+    Inputs:
+    test:  test array
+    ref:   reference array, of same size as test
+    valid: fraction of valid data required to calculate the statistic
+
+    Note: Assumes that the first dimension in test and ref arrays is time!!!
+
+    Outputs:
+    CE: CE statistic calculated following Nash & Sutcliffe (1970)
+    """
+
+    # check array dimensions
+    dims_test = test.shape
+    dims_ref  = ref.shape
+    #print 'dims_test: ', dims_test, ' dims_ref: ', dims_ref
+
+    if len(dims_ref) == 3:   # 3D: time + 2D spatial
+        dims = dims_ref[1:3]
+    elif len(dims_ref) == 2: # 2D: time + 1D spatial
+        dims = dims_ref[1:2]
+    elif len(dims_ref) == 1: # 1D: time series
+        dims = 1
+    else:
+        print 'Problem with input array dimension! Exiting...'
+        exit(1)
+    #print 'dims CE: ', dims
+    CE = np.zeros(dims)
+
+    # error
+    error = test - ref
+
+    # CE
+    numer = np.nansum(np.power(error,2),axis=0)
+    denom = np.nansum(np.power(ref-np.nanmean(ref,axis=0),2),axis=0)
+    CE    = 1. - np.divide(numer,denom)
+
+    if valid:
+        nbok  = np.sum(np.isfinite(ref),axis=0)
+        nball = float(dims_ref[0])
+        ratio = np.divide(nbok,nball)
+        indok  = np.where(ratio >= valid)
+        indbad = np.where(ratio < valid)
+        dim_indbad = len(indbad)
+        testlist = [indbad[k].size for k in range(dim_indbad)]
+        if not all(v == 0 for v in testlist):
+            if dims>1:
+                CE[indbad] = np.nan
+            else:
+                CE = np.nan
 
     return CE
 
@@ -615,6 +671,9 @@ def global_hemispheric_means(field, lat):
     #             University of Washington
     #             August 2015
     #
+    # Modifications:
+    #           - Modified to handle presence of missing values (nan) in arrays
+    #             in calculation of spatial averages [ R. Tardif, November 2015) ]
     #
 
     # set number of times, lats, lons; array indices for lat and lon    
@@ -653,15 +712,45 @@ def global_hemispheric_means(field, lat):
     gm = np.zeros(ntime)
     nhm = np.zeros(ntime)
     shm = np.zeros(ntime)
+
+    # Check for valid (non-NAN) values & use numpy average function (includes weighted avg calculation)
+    # Get arrays indices of valid values
+    indok    = np.isfinite(field)
+    indok_nh = np.isfinite(field_NH)
+    indok_sh = np.isfinite(field_SH)
     for t in xrange(ntime):
         if lati == 0:
-            gm[t] = np.nansum(np.multiply(W, field))/(np.sum(np.sum(W)))
-            nhm[t] = np.nansum(np.multiply(W_NH, field_NH))/(np.sum(np.sum(W_NH)))
-            shm[t] = np.nansum(np.multiply(W_SH, field_SH))/(np.sum(np.sum(W_SH)))
+            # Global
+            gm[t]  = np.average(field[indok],weights=W[indok])
+            # NH
+            nhm[t] = np.average(field_NH[indok_nh],weights=W_NH[indok_nh])
+            # SH
+            shm[t] = np.average(field_SH[indok_sh],weights=W_SH[indok_sh])
         else:
-            gm[t] = np.nansum(np.multiply(W, field[t, :, :]))/(np.sum(np.sum(W)))
-            nhm[t] = np.nansum(np.multiply(W_NH, field_NH[t, :, :]))/(np.sum(np.sum(W_NH)))
-            shm[t] = np.nansum(np.multiply(W_SH, field_SH[t, :, :]))/(np.sum(np.sum(W_SH)))
+            # Global
+            indok_2d    = indok[t,:,:]
+            field_2d    = np.squeeze(field[t,:,:])
+            gm[t]       = np.average(field_2d[indok_2d],weights=W[indok_2d])
+            # NH
+            indok_nh_2d = indok_nh[t,:,:]
+            field_nh_2d = np.squeeze(field_NH[t,:,:])
+            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W[indok_nh_2d])
+            # SH
+            indok_sh_2d = indok_sh[t,:,:]
+            field_sh_2d = np.squeeze(field_SH[t,:,:])
+            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W[indok_sh_2d])
+
+# original code (keep for now...)
+#    for t in xrange(ntime):
+#        if lati == 0:
+#            gm[t]  = np.sum(np.multiply(W,field))/(np.sum(np.sum(W)))
+#            nhm[t] = np.sum(np.multiply(W_NH,field_NH))/(np.sum(np.sum(W_NH)))
+#            shm[t] = np.sum(np.multiply(W_SH,field_SH))/(np.sum(np.sum(W_SH)))
+#        else:
+#            gm[t]  = np.sum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
+#            nhm[t] = np.sum(np.multiply(W_NH,field_NH[t,:,:]))/(np.sum(np.sum(W_NH)))
+#            shm[t] = np.sum(np.multiply(W_SH,field_SH[t,:,:]))/(np.sum(np.sum(W_SH)))
+
 
     return gm, nhm, shm
 
