@@ -1,10 +1,15 @@
 
-
-
 #==========================================================================================
 # 
 # 
 #========================================================================================== 
+
+from netCDF4 import Dataset, date2num, num2date
+from datetime import datetime, timedelta
+import numpy as np
+import os.path
+import string
+
 
 
 def read_gridded_data_GISTEMP(data_dir,data_file,data_vars):
@@ -34,10 +39,7 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars):
 # 
 #========================================================================================== 
 
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+    nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
 
     # Check if file exists
     infile = data_dir+'/GISTEMP/'+data_file
@@ -76,7 +78,7 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars):
     # ------------------------------
     # List years available in dataset and sort
     years_all = []
-    for i in xrange(0,len(time_yrs)):
+    for i in range(0,len(time_yrs)):
         isotime = time_yrs[i].isoformat()
         years_all.append(int(isotime.split("-")[0]))
     years = list(set(years_all)) # 'set' is used to get unique values in list
@@ -84,12 +86,13 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars):
 
     time_yrs  = np.empty(len(years), dtype=int)
     value = np.empty([len(years), len(lat), len(lon)], dtype=float)
+    value[:] = np.nan # initialize with nan's
 
     fillval = np.power(2,15)-1
-    tmp = np.copy(data.variables['tempanomaly'])
-    tmp[tmp == fillval] = np.NAN
+    cpy = np.copy(data.variables['tempanomaly'])
+    cpy[cpy == fillval] = np.NAN
     # Loop over years in dataset
-    for i in xrange(0,len(years)):        
+    for i in range(0,len(years)):        
         # find indices in time array where "years[i]" appear
         ind = [j for j, k in enumerate(years_all) if k == years[i]]
         time_yrs[i] = years[i]
@@ -97,8 +100,11 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars):
         # Calculate annual mean from monthly data
         # Note: data has dims [time,lat,lon]
         # ---------------------------------------
-        #value[i,:,:] = np.nanmean(data.variables['tempanomaly'][ind],axis=0)
-        value[i,:,:] = np.nanmean(tmp[ind],axis=0)
+        tmp = np.nanmean(cpy[ind],axis=0)
+        # apply check of max nb of nan values allowed
+        nancount = np.isnan(cpy[ind]).sum(axis=0)
+        tmp[nancount > nbmaxnan] = np.nan # put nan back if nb of nan's in current year above threshold
+        value[i,:,:] = tmp
 
     return time_yrs, lat, lon, value
 
@@ -132,10 +138,7 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars):
 # 
 #========================================================================================== 
 
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+    nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
 
     # Check if file exists
     infile = data_dir+'/HadCRUT/'+data_file
@@ -174,7 +177,7 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars):
     # ------------------------------
     # List years available in dataset and sort
     years_all = []
-    for i in xrange(0,len(time_yrs)):
+    for i in range(0,len(time_yrs)):
         isotime = time_yrs[i].isoformat()
         years_all.append(int(isotime.split("-")[0]))
     years = list(set(years_all)) # 'set' is used to get unique values in list
@@ -182,12 +185,12 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars):
 
     time_yrs  = np.empty(len(years), dtype=int)
     value = np.empty([len(years), len(lat), len(lon)], dtype=float)
+    value[:] = np.nan # initialize with nan's
 
-    tmp = np.copy(data.variables['temperature_anomaly'])
-    tmp[tmp == -1e+30] = np.NAN
-
+    cpy = np.copy(data.variables['temperature_anomaly'])
+    cpy[cpy == -1e+30] = np.NAN
     # Loop over years in dataset
-    for i in xrange(0,len(years)):        
+    for i in range(0,len(years)):        
         # find indices in time array where "years[i]" appear
         ind = [j for j, k in enumerate(years_all) if k == years[i]]
         time_yrs[i] = years[i]
@@ -195,8 +198,11 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars):
         # Calculate annual mean from monthly data
         # Note: data has dims [time,lat,lon]
         # ---------------------------------------
-        #value[i,:,:] = np.nanmean(data.variables['temperature_anomaly'][ind],axis=0)
-        value[i,:,:] = np.nanmean(tmp[ind],axis=0)
+        tmp = np.nanmean(cpy[ind],axis=0)
+        # apply check of max nb of nan values allowed
+        nancount = np.isnan(cpy[ind]).sum(axis=0)
+        tmp[nancount > nbmaxnan] = np.nan # put nan back if nb of nan's in current year above threshold
+        value[i,:,:] = tmp
 
     return time_yrs, lat, lon, value
 
@@ -230,10 +236,7 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars):
 # 
 #========================================================================================== 
 
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+    nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
 
     # Check if file exists
     infile = data_dir+'/BerkeleyEarth/'+data_file
@@ -275,7 +278,7 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars):
     # ------------------------------
     # List years available in dataset and sort
     years_all = []
-    for i in xrange(0,len(time_yrs)):
+    for i in range(0,len(time_yrs)):
         isotime = time_yrs[i].isoformat()
         years_all.append(int(isotime.split("-")[0]))
     years = list(set(years_all)) # 'set' is used to get unique values in list
@@ -283,12 +286,13 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars):
 
     time_yrs  = np.empty(len(years), dtype=int)
     value = np.empty([len(years), len(lat), len(lon)], dtype=float)
+    value[:] = np.nan # initialize with nan's
 
     fillval = data.variables['temperature'].missing_value
-    tmp = np.copy(data.variables['temperature'])    
-    tmp[tmp == fillval] = np.NAN
+    cpy = np.copy(data.variables['temperature'])    
+    cpy[cpy == fillval] = np.NAN
     # Loop over years in dataset
-    for i in xrange(0,len(years)):        
+    for i in range(0,len(years)):        
         # find indices in time array where "years[i]" appear
         ind = [j for j, k in enumerate(years_all) if k == years[i]]
         time_yrs[i] = years[i]
@@ -296,8 +300,11 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars):
         # Calculate annual mean from monthly data
         # Note: data has dims [time,lat,lon]
         # ---------------------------------------
-        #value[i,:,:] = np.nanmean(data.variables['temperature'][ind],axis=0)
-        value[i,:,:] = np.nanmean(tmp[ind],axis=0)
+        tmp = np.nanmean(cpy[ind],axis=0)
+        # apply check of max nb of nan values allowed
+        nancount = np.isnan(cpy[ind]).sum(axis=0)
+        tmp[nancount > nbmaxnan] = np.nan # put nan back if nb of nan's in current year above threshold
+        value[i,:,:] = tmp
 
     return time_yrs, lat, lon, value
 
@@ -330,10 +337,7 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars):
 # 
 #========================================================================================== 
 
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+    nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
 
     # Check if file exists
     infile = data_dir+'/MLOST/'+data_file
@@ -371,7 +375,7 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars):
     # ------------------------------
     # List years available in dataset and sort
     years_all = []
-    for i in xrange(0,len(time_yrs)):
+    for i in range(0,len(time_yrs)):
         isotime = time_yrs[i].isoformat()
         years_all.append(int(isotime.split("-")[0]))
     years = list(set(years_all)) # 'set' is used to get unique values in list
@@ -379,13 +383,13 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars):
 
     time_yrs  = np.zeros(len(years), dtype=int)
     value = np.zeros([len(years), len(lat), len(lon)], dtype=float)
-
+    value[:] = np.nan # initialize with nan's
     
     fillval = data.variables['air'].missing_value
-    tmp = np.copy(data.variables['air'])
-    tmp[tmp == fillval] = np.NAN
+    cpy = np.copy(data.variables['air'])
+    cpy[cpy == fillval] = np.NAN
     # Loop over years in dataset
-    for i in xrange(0,len(years)):        
+    for i in range(0,len(years)):        
         # find indices in time array where "years[i]" appear
         ind = [j for j, k in enumerate(years_all) if k == years[i]]
         time_yrs[i] = years[i]
@@ -393,7 +397,11 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars):
         # Calculate annual mean from monthly data
         # Note: data has dims [time,lat,lon]
         # ---------------------------------------
-        value[i,:,:] = np.nanmean(tmp[ind],axis=0)
+        tmp = np.nanmean(cpy[ind],axis=0)
+        # apply check of max nb of nan values allowed
+        nancount = np.isnan(cpy[ind]).sum(axis=0)
+        tmp[nancount > nbmaxnan] = np.nan # put nan back if nb of nan's in current year above threshold
+        value[i,:,:] = tmp
 
     return time_yrs, lat, lon, value
 
@@ -426,10 +434,7 @@ def read_gridded_data_NOAA(data_dir,data_file,data_vars):
 # 
 #========================================================================================== 
 
-    from netCDF4 import Dataset
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
+    nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
 
     # Check if file exists
     infile = data_dir+'/NOAA/'+data_file
@@ -467,7 +472,7 @@ def read_gridded_data_NOAA(data_dir,data_file,data_vars):
     # ------------------------------
     # List years available in dataset and sort
     years_all = []
-    for i in xrange(0,len(time_yrs)):
+    for i in range(0,len(time_yrs)):
         isotime = time_yrs[i].isoformat()
         years_all.append(int(isotime.split("-")[0]))
     years = list(set(years_all)) # 'set' is used to get unique values in list
@@ -475,12 +480,13 @@ def read_gridded_data_NOAA(data_dir,data_file,data_vars):
 
     time_yrs  = np.empty(len(years), dtype=int)
     value = np.empty([len(years), len(lat), len(lon)], dtype=float)
+    value[:] = np.nan # initialize with nan's
 
     fillval = np.power(2,15)-1
-    tmp = np.copy(data.variables['data'])
-    tmp[tmp == fillval] = np.NAN
+    cpy = np.copy(data.variables['data'])
+    cpy[cpy == fillval] = np.NAN
     # Loop over years in dataset
-    for i in xrange(0,len(years)):        
+    for i in range(0,len(years)):        
         # find indices in time array where "years[i]" appear
         ind = [j for j, k in enumerate(years_all) if k == years[i]]
         time_yrs[i] = years[i]
@@ -488,8 +494,11 @@ def read_gridded_data_NOAA(data_dir,data_file,data_vars):
         # Calculate annual mean from monthly data
         # Note: data has dims [time,lat,lon]
         # ---------------------------------------
-        #value[i,:,:] = np.nanmean(data.variables['data'][ind],axis=0)
-        value[i,:,:] = np.nanmean(tmp[ind],axis=0)
+        tmp = np.nanmean(cpy[ind],axis=0)
+        # apply check of max nb of nan values allowed
+        nancount = np.isnan(cpy[ind]).sum(axis=0)
+        tmp[nancount > nbmaxnan] = np.nan # put nan back if nb of nan's in current year above threshold
+        value[i,:,:] = tmp
 
     return time_yrs, lat, lon, value
 
@@ -527,12 +536,6 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
 #                    datadict['tas_sfc_Amon']['value'] => array of 'tas' data values
 #
 #========================================================================================== 
-
-    from netCDF4 import Dataset, date2num, num2date
-    from datetime import datetime, timedelta
-    import numpy as np
-    import os.path
-    import string
 
     datadict = {}
 
@@ -639,22 +642,55 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
             print 'Cannot handle this variable yet! To many dimensions... Exiting!'
             exit(1)
 
-        # Transform longitudes from [-180,180] domain to [0,360] domain if needed
+        # data array
+        data = data.variables[var_to_extract][:]
+        print data.shape
+
+
+        # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
         if vartype == '2D:horizontal':
-            # which dim is lon?
+            # which dim is lat & which is lon?
+            indlat = spacecoords.index('lat')
             indlon = spacecoords.index('lon')
+            print 'indlat=', indlat, ' indlon=', indlon
+
             if indlon == 0:
-                vartmp = spacevar1
+                varlon = spacevar1
+                varlat = spacevar2
             elif indlon == 1:
-                vartmp = spacevar2
-            indneg = np.where(vartmp < 0)[0]
+                varlon = spacevar2
+                varlat = spacevar1
+
+            # Transform latitudes to [-90,90] domain if needed
+            if varlat[0] > varlat[-1]: # not as [-90,90] => array upside-down
+                # flip coord variable
+                varlat = np.flipud(varlat)
+
+                # flip data variable
+                if indlat == 0:
+                    tmp = data[:,::-1,:]             
+                else:
+                    tmp = data[:,:,::-1] 
+                data = tmp
+
+            # Transform longitudes from [-180,180] domain to [0,360] domain if needed
+            indneg = np.where(varlon < 0)[0]
             if len(indneg) > 0: # if non-empty
-                vartmp[indneg] = 360.0 + vartmp[indneg]
-            # Back into right array
+                varlon[indneg] = 360.0 + varlon[indneg]
+
+            # Back into right arrays
             if indlon == 0:
-                spacevar1 = vartmp
+                spacevar1 = varlon
+                spacevar2 = varlat
             elif indlon == 1:
-                spacevar2 = vartmp
+                spacevar2 = varlon
+                spacevar1 = varlat
+        
+
+        # if 2D:meridional_vertical variable,
+        # TO DO ...
+
+
             
         # Loop over years in dataset
         for i in range(0,len(years)): 
@@ -667,12 +703,16 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
             # Note: assume data has dims [time,lat,lon]
             # -----------------------------------------
             if vartype == '1D:time series':
-                value[i] = np.nanmean(data.variables[var_to_extract][ind],axis=0)    
+                #value[i] = np.nanmean(data.variables[var_to_extract][ind],axis=0)
+                value[i] = np.nanmean(data[ind],axis=0)
             elif '2D' in vartype: 
                 if nbdims > 3:
-                    value[i,:,:] = np.nanmean(np.squeeze(data.variables[var_to_extract][ind]),axis=0)
+                    #value[i,:,:] = np.nanmean(np.squeeze(data.variables[var_to_extract][ind]),axis=0)
+                    value[i,:,:] = np.nanmean(np.squeeze(data[ind]),axis=0)
                 else:
-                    value[i,:,:] = np.nanmean(data.variables[var_to_extract][ind],axis=0)
+                    #value[i,:,:] = np.nanmean(data.variables[var_to_extract][ind],axis=0)
+                    value[i,:,:] = np.nanmean(data[ind],axis=0)
+
 
         # Model data, so need to standardize (i.e. calculate anomalies)
         #print 'Standardizing the prior...'
@@ -680,7 +720,8 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
         #value = (value - np.nanmean(value))/np.nanstd(value)
 
         print 'Removing the temporal mean (for every gridpoint) from the prior...'
-        value = (value - np.nanmean(value,axis=0))
+        climo = np.nanmean(value,axis=0)
+        value = (value - climo)
         print var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
 
         # Dictionary of dictionaries
@@ -690,6 +731,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
         d['vartype'] = vartype
         d['years']   = time_yrs
         d['value']   = value
+        d['climo']   = climo
         d['spacecoords'] = spacecoords
         if '2D' in vartype:
             d[spacecoords[0]] = spacevar1
