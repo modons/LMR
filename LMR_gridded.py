@@ -9,7 +9,7 @@ from abc import abstractmethod, ABCMeta
 from netCDF4 import Dataset, num2date
 from datetime import datetime, timedelta
 from collections import OrderedDict
-from itertools import izip
+from itertools import izip, izip_longest
 import numpy as np
 import os
 from copy import deepcopy
@@ -734,7 +734,7 @@ class State(object):
     Class to create state vector and information
     """
 
-    def __init__(self, prior_vars, base_res):
+    def __init__(self, prior_vars, base_res, adaptive=False):
 
         self._prior_vars = prior_vars
         self.base_res = base_res
@@ -744,6 +744,7 @@ class State(object):
         self.var_view_range = {}
         self.var_space_shp = {}
         self.augmented = False
+        self._adaptive = adaptive
 
         # Attr for backend storage
         self.output_backend = None
@@ -782,12 +783,21 @@ class State(object):
         self.shape = self.state_list[0].shape
         self.old_state_info = self.get_old_state_info()
 
+        # Information for adaptive inflation
+        if adaptive:
+            self.infl_factor_mean = np.ones((self.shape[0]))
+            self.infl_factor_var = self.infl_factor_mean * 0.6
+        else:
+            self.infl_factor_mean = None
+            self.infl_factor_var = None
+
     @classmethod
     def from_config(cls, config):
         pvars = PriorVariable.load_allvars(config)
         base_res = config.core.sub_base_res
+        adaptive = config.core.adaptive_inflate
 
-        return cls(pvars, base_res)
+        return cls(pvars, base_res, adaptive=adaptive)
 
     def get_var_data(self, var_name, idx=None):
         """
@@ -812,7 +822,7 @@ class State(object):
         for var_name, pvar in self._prior_vars.iteritems():
             trunc_pvars[var_name] = [pobj.truncate() for pobj in pvar]
         state_class = type(self)
-        return state_class(trunc_pvars, self.base_res)
+        return state_class(trunc_pvars, self.base_res, adaptive=self._adaptive)
 
     def augment_state(self, ye_vals):
 
@@ -827,6 +837,144 @@ class State(object):
         self.var_view_range['state'] = (0, self.len_state)
         self.var_view_range['ye_vals'] = (self.len_state,
                                           self.len_state + nproxies)
+
+    def adaptive_inflate_xb(self, prox_man, t):
+        """
+        J.L. Anderson adaptive inflation algorithm. Only takes annual data for
+        now.
+
+        Parameters
+        ----------
+        self
+        prox_man
+        t
+
+        Returns
+        -------
+
+        """
+        assert self.resolution == 1.0
+
+        lambda_upper_bound = 1.e6
+        lambda_lower_bound = 1.
+        lambda_sd_lower_bound = 0.0
+
+        # Inflation factor mean and variance
+        lambda_p_bar = self.infl_factor_mean
+        lambda_p_sd = self.infl_factor_var
+
+        sigma_lambda_p_2 = lambda_p_sd ** 2
+
+        ye_vals = self.get_var_data('ye_vals', idx=0)
+        y_vals_iter = prox_man.sites_assim_res_proxy_objs(1.0, t)
+
+        xb_vals = self.get_var_data('state', idx=0)
+        xb_mean = xb_vals.mean(axis=1)
+        xb_pert = xb_vals - xb_mean[:, None]
+        nens = xb_pert.shape[1]
+        xb_var = (xb_pert**2).sum(axis=1) / (nens - 1)
+
+        for y, ye in izip(y_vals_iter, ye_vals):
+
+            try:
+                y_val = y.values[t]
+                y_err = y.psm_obj.R
+            except KeyError:
+                # No ob for current year ... skip
+                continue
+
+            ye_mean = ye.mean()
+            ye_pert = ye - ye_mean
+            ye_err = ye.var(ddof=1)
+
+            D = abs(y_val - ye.mean())
+            D2 = D**2
+
+            # Correlation between state (at every location) and ye_ens
+
+            state_ye_cov = (ye_pert * xb_pert).sum(axis=1) / (nens - 1)
+            norm = np.sqrt(ye_err * xb_var)
+
+            r = state_ye_cov / norm
+
+            # Expected inflation for observation
+            lambda_o_bar = (1 + r * (np.sqrt(lambda_p_bar) - 1)) ** 2
+
+            theta_bar_2 = lambda_o_bar*ye_err + y_err
+            theta_bar = np.sqrt(theta_bar_2)
+
+            dtheta_dlambda = 0.5 * ye_err * r
+            dtheta_dlambda *= (1 - r + (r * np.sqrt(lambda_p_bar)))
+            dtheta_dlambda /= (theta_bar * np.sqrt(lambda_p_bar))
+
+            # Update the mean
+            u_bar = 1. / (np.sqrt(2*np.pi) * theta_bar)
+            l_exp_bar = D2 / (-2. * theta_bar_2)
+            v_bar = np.exp(l_exp_bar)
+            l_bar = u_bar * v_bar
+
+            l_prime = l_bar * (D2 / theta_bar_2 - 1) / theta_bar
+            l_prime *= dtheta_dlambda
+
+            a = np.array([1])
+            b = l_bar/l_prime - 2 * lambda_p_bar
+            c = lambda_p_bar**2 - sigma_lambda_p_2 - l_bar*lambda_p_bar/l_prime
+
+            # Quadratic equation
+            disc = np.sqrt(b**2 - 4*a*c)
+            pos_root = (-b + disc) / (2*a)
+            neg_root = (-b - disc) / (2*a)
+
+            root_comp = np.zeros((2, len(pos_root)))
+            root_comp[0] = abs(neg_root - lambda_p_bar)
+            root_comp[1] = abs(pos_root - lambda_p_bar)
+            chosen = root_comp.argmin(axis=0)
+            lambda_u = root_comp[chosen, xrange(len(pos_root))]
+
+            revert_idx = ((lambda_u < lambda_lower_bound) &
+                          (lambda_u > lambda_upper_bound))
+            lambda_u[revert_idx] = lambda_p_bar[revert_idx]
+
+            # Calculate ratio for variance update
+            num_max = self._compute_new_density(D2, ye_err, y_err, lambda_p_bar,
+                                                lambda_p_sd, r, lambda_u)
+            num_2 = self._compute_new_density(D2, ye_err, y_err, lambda_p_bar,
+                                              lambda_p_sd, r,
+                                              lambda_u + lambda_p_sd)
+
+            # TODO: add check for finite or 0 before taking ratio
+
+            ratio = num_2 / num_max
+
+            lambda_u_sd = np.sqrt(-sigma_lambda_p_2 / (2 * np.log(ratio)))
+            lambda_u_sd[ratio > 0.99] = lambda_p_sd[ratio > 0.99]
+
+            revert_idx = (lambda_u_sd < lambda_sd_lower_bound)
+
+            # If out of bounds, revert
+            lambda_u_sd[revert_idx] = lambda_p_sd[revert_idx]
+            # update prior
+
+            lambda_p_bar[:] = lambda_u
+            lambda_p_sd[:] = lambda_u_sd
+
+        # Inflate the state perturbation
+        xb_pert *= lambda_p_bar[:, None]
+        xb_vals[:] = xb_mean[:, None] + xb_pert
+
+    @staticmethod
+    def _compute_new_density(D2, sigma_p_2, sigma_o_2, lambda_p_bar,
+                             lambda_sd, r, lambda_new):
+
+        exp_prior = (lambda_new - lambda_p_bar)**2 / (-2 * lambda_sd**2)
+        theta_2 = ((1 + r * (np.sqrt(lambda_p_bar) - 1))**2 * sigma_p_2 +
+                   sigma_o_2)
+        theta = np.sqrt(theta_2)
+
+        exp_likeli = D2 / (-2 * theta_2)
+        new_density = (np.exp(exp_likeli + exp_prior) /
+                       (2 * np.pi * lambda_sd * theta))
+        return new_density
 
     def reset_augmented_ye(self, ye_vals):
 

@@ -41,13 +41,13 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = True
+fsave = False
 
 # file specification
 #
 # current datasets
 #
-nexp = 'testdev_addlim_backend_test_NPY'
+nexp = 'testdev_addlim_b4adaptive'
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 
 # specify directories for LMR and calibration data

@@ -101,6 +101,9 @@ class core:
     hybrid_update &= online_reconstruction
     hybrid_a = 0.75
 
+    # Adaptive Covariance Inflation
+    adaptive_inflate = True
+
 
     # TODO: add rules for shift?
     # If shifting on smaller time scales than smallest time chunk it becomes

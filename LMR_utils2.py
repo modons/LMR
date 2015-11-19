@@ -565,7 +565,8 @@ def coefficient_efficiency_old(ref,test):
 
 def coefficient_efficiency(ref,test,valid=None):
     """
-    Compute the coefficient of efficiency for a test time series, with respect to a reference time series.
+    Compute the coefficient of efficiency for a test time series, with respect
+    to a reference time series.
 
     Inputs:
     test:  test array
@@ -592,6 +593,7 @@ def coefficient_efficiency(ref,test,valid=None):
     else:
         print 'Problem with input array dimension! Exiting...'
         exit(1)
+
     #print 'dims CE: ', dims
     CE = np.zeros(dims)
 
