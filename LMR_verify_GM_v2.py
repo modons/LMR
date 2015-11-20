@@ -20,8 +20,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 #
 from LMR_plot_support import *
-from LMR_exp_NAMELIST import *
-from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
+from LMR_utils2 import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
@@ -61,39 +60,14 @@ fsave = True
 #
 # current datasets
 #
-#nexp = 'testdev_150yr_75pct_gmttest_1iter'
-#nexp = 'testing_1000_75pct_ens_size_Nens_10'
-#nexp = 'testing_1000_75pct_200members'
-#nexp = 'testdev_check_1000_75pct'
-#nexp = 'ReconDevTest_1000_testing_coral'
-#nexp = 'ReconDevTest_1000_testing_icecore'
-#nexp = 'testdev_1000_100pct_icecoreonly'
-#nexp = 'testdev_1000_100pct_mxdonly'
-#nexp = 'testdev_1000_100pct_sedimentonly'
-#nexp = 'testdev_detrend4_1000_75pct'
-# ---
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-# ---
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
-nexp = 'production_mlost_ccsm4_pagesall_0.75'
-#nexp = 'production_cru_ccsm4_pagesall_0.75'
+nexp = 'testdev_paramsearch_noxbblend_a9_d0_25itr'
 
 # specify directories for LMR and calibration data
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+datadir_output = '/home/disk/kalman2/wperkins/LMR_output/testing'
 
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
@@ -599,6 +573,7 @@ if iplot:
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_annual.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_annual.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
+    plt.show()
 #
 # time averages
 #
@@ -768,6 +743,7 @@ if iplot:
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.pdf',bbox_inches='tight', dpi=300, format='pdf')        
 
+    plt.show()
 
 # =======================================
 # detrend and verify the detrended signal
@@ -1012,6 +988,8 @@ if iplot:
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
+    plt.show()
+
 """
 # rank histograms
 # loop over all years; send ensemble and a verification value
@@ -1201,8 +1179,12 @@ plt.axis('off') # remove the axes that came with imshow
 plt.title('Correlation',fontweight='bold',y=1.05)
 
 fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_corr_table'
-plt.savefig(fname+'.png')
-plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
+
+if fsave:
+    plt.savefig(fname+'.png')
+    plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
+
+plt.show()
 
 
 #
@@ -1244,12 +1226,9 @@ for cell in table_cells: cell.set_width(cellsize)
 plt.axis('off') # remove the axes that came with imshow
 plt.title('Coefficient of efficiency',fontweight='bold',y=1.05)
 
-fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_ce_table'
-plt.savefig(fname+'.png')
-plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
+fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_ce_table'
+if fsave:
+    plt.savefig(fname+'.png')
+    plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
 
-
-
-
-
-
+plt.show()

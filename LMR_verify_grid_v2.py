@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 # LMR specific imports
-from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
+from LMR_utils2 import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
@@ -75,13 +75,14 @@ var = 'tas_sfc_Amon'
 #nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 # ---
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
-nexp = 'production_mlost_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
+nexp = 'testdev_paramsearch_xbblend_a5_d0_50itr'
 
 # override datadir
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+datadir_output = '/home/disk/kalman2/wperkins/LMR_output/testing'
 
 
 # threshold for fraction of valid data in calculation of verif. stats
