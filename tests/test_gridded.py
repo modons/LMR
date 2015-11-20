@@ -891,8 +891,9 @@ def test_analysisvar(extra, fname, varname):
     aobj = calib_class._main_load_helper(analysis_dir, fname,
                                          varname, 'NCD', 1.0,
                                          split_varname=False,
-                                         ignore_pre_avg=False,
-                                         save=True)[0]
+                                         ignore_pre_avg=True,
+                                         save=False,
+                                         )[0]
 
     # Bug in MLOST load_gridded_data for partial years
     if extra == 'MLOST':

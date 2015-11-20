@@ -205,7 +205,7 @@ class GriddedVariable(object):
     @classmethod
     def _main_load_helper(cls, file_dir, file_name, varname, file_type,
                           base_resolution, nens=None, seed=None, sample=None,
-                          split_varname=True, data_req_frac=None, save=True,
+                          split_varname=True, data_req_frac=1.0, save=True,
                           ignore_pre_avg=False):
 
         try:
