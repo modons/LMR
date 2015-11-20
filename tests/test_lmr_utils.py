@@ -83,8 +83,8 @@ def test_global_mean2(ncf_data):
 
     longrid, latgrid = np.meshgrid(lon, lat)
 
-    gm_time = Utils.global_mean(dat, lat, lon)
-    gm0 = Utils.global_mean(dat[0], lat, lon)
+    gm_time, _, _ = Utils.global_hemispheric_means(dat, lat)
+    gm0, _, _ = Utils.global_hemispheric_means(dat[0], lat)
 
     # with time
     gm_test = Utils.global_mean2(dat, lat)
@@ -102,6 +102,12 @@ def test_global_mean2(ncf_data):
     # no time flattened spatial
     gm_test = Utils.global_mean2(dat[0].flatten(), latgrid.flatten())
     np.testing.assert_allclose(gm_test, gm0)
+
+    # NaN values
+    dat[:, 0, :] = np.nan
+    gm_nan_time, _, _ = Utils.global_hemispheric_means(dat, lat)
+    gm_nan_test = Utils.global_mean2(dat, lat)
+    np.testing.assert_allclose(gm_nan_test, gm_nan_time)
 
     # Test hemispheric
     gm_time, nhm_time, shm_time = Utils.global_hemispheric_means(dat, lat)

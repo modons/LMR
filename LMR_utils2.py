@@ -91,51 +91,6 @@ def smooth2D(im, n=15):
     return improc
 
 
-def global_mean(field, lat, lon):
-
-    """
-     compute global mean value for all times in the input array
-     input: field[ntime,nlat,nlon] or field{nlat,nlon]
-            lat[nlat,nlon] in degrees
-            lon[nlat,nlon] in degrees
-    """
-
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             May 2015
-    #
-    #             revised 16 June 2015 (GJH)
-
-    # set number of times, lats, lons; array indices for lat and lon
-    if len(np.shape(field)) == 3:
-        ntime, nlat, nlon = np.shape(field)
-        lati = 1
-        loni = 2
-    else:
-        ntime = 1
-        nlat, nlon = np.shape(field)
-        lati = 0
-        loni = 1
-
-    # latitude weighting for global mean
-    lat_weight = np.cos(np.deg2rad(lat))
-    # --old
-    # tmp = np.ones([len(lat),len(lon)])
-    # W = np.multiply(lat_weight,tmp.T).T
-    # --new
-    tmp = np.ones([nlon, nlat])
-    W = np.multiply(lat_weight, tmp).T
-
-    gm = np.zeros(ntime)
-    for t in xrange(ntime):
-        if lati == 0:
-            gm[t] = np.nansum(np.multiply(W, field))/(np.sum(np.sum(W)))
-        else:
-            gm[t] = np.nansum(np.multiply(W, field[t, :, :]))/(np.sum(np.sum(W)))
-
-    return gm
-
-
 def global_mean2(field, lat, output_hemispheric=False):
 
     """
@@ -161,7 +116,7 @@ def global_mean2(field, lat, output_hemispheric=False):
     # index for start of spatial dimensions
 
     if not lat.shape == field.shape[-lat.ndim:]:
-        # must have singleton lat
+        # received singleton lat
         lat_idx = field.shape.index(len(lat))
 
         tmp = np.ones(field.shape[lat_idx:])
@@ -175,19 +130,27 @@ def global_mean2(field, lat, output_hemispheric=False):
 
     # latitude weighting for global mean
     lat_weight = np.cos(np.deg2rad(lat))
+    # If nan-values in the field, result in nan
     field_weighted = field * lat_weight
-    gm = np.nansum(field_weighted, axis=-1) / np.nansum(lat_weight)
+
+    # mask lat_weights
+    lat_weight = np.ones_like(field_weighted) * lat_weight
+    lat_weight[~np.isfinite(field_weighted)] = np.nan
+
+    gm = np.nansum(field_weighted, axis=-1) / np.nansum(lat_weight, axis=-1)
 
     if output_hemispheric:
         nh_idx, = np.where(lat > 0)
         nh_wgt_field = np.take(field_weighted, nh_idx, axis=-1)
+        nh_lat_wgt = np.take(lat_weight, nh_idx, axis=-1)
         nhm = np.nansum(nh_wgt_field, axis=-1)
-        nhm /= np.nansum(lat_weight[nh_idx])
+        nhm /= np.nansum(nh_lat_wgt, axis=-1)
 
         sh_idx, = np.where(lat < 0)
         sh_wgt_field = np.take(field_weighted, sh_idx, axis=-1)
+        sh_lat_wgt = np.take(lat_weight, sh_idx, axis=-1)
         shm = np.nansum(sh_wgt_field, axis=-1)
-        shm /= np.nansum(lat_weight[sh_idx])
+        shm /= np.nansum(sh_lat_wgt, axis=-1)
 
         return gm, nhm, shm
 
@@ -676,7 +639,7 @@ def global_hemispheric_means(field, lat):
     #             in calculation of spatial averages [ R. Tardif, November 2015) ]
     #
 
-    # set number of times, lats, lons; array indices for lat and lon    
+    # set number of times, lats, lons; array indices for lat and lon
     if len(np.shape(field)) == 3:  # time is a dimension
         ntime, nlat, nlon = np.shape(field)
         lati = 1
@@ -688,13 +651,13 @@ def global_hemispheric_means(field, lat):
         lati = 1
         loni = 2
 
-    # latitude weighting 
+    # latitude weighting
     lat_weight = np.cos(np.deg2rad(lat))
     tmp = np.ones([nlon, nlat])
     W = np.multiply(lat_weight, tmp).T
 
     # define hemispheres
-    eqind = nlat/2 
+    eqind = nlat/2
 
     if lat[0] > 0:
         # data has NH -> SH format
@@ -734,11 +697,11 @@ def global_hemispheric_means(field, lat):
             # NH
             indok_nh_2d = indok_nh[t,:,:]
             field_nh_2d = np.squeeze(field_NH[t,:,:])
-            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W[indok_nh_2d])
+            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W_NH[indok_nh_2d])
             # SH
             indok_sh_2d = indok_sh[t,:,:]
             field_sh_2d = np.squeeze(field_SH[t,:,:])
-            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W[indok_sh_2d])
+            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W_SH[indok_sh_2d])
 
 # original code (keep for now...)
 #    for t in xrange(ntime):
