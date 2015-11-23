@@ -100,6 +100,7 @@ class core:
     hybrid_update = False
     hybrid_update &= online_reconstruction
     hybrid_a = 0.75
+    blend_prior = True
 
 
     # TODO: add rules for shift?

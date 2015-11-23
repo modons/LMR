@@ -95,6 +95,7 @@ def LMR_driver_callable(cfg=None):
     online = core.online_reconstruction
     hybrid_update = core.hybrid_update
     hybrid_a_val = core.hybrid_a
+    blend_prior = core.blend_prior
     nens = core.nens
     loc_rad = core.loc_rad
     trunc_state = prior.truncate_state
@@ -305,10 +306,11 @@ def LMR_driver_callable(cfg=None):
                         Yevals_static = Xb_one.get_var_data('ye_vals')[0]
                         Xb_one.stash_pop_state_list('tmp')
 
-                    # xbf = Xb_one.state_list[0]
-                    # blend_forecast = (hybrid_a_val * xbf +
-                    #                   (1-hybrid_a_val) * Xb_static)
-                    # Xb_one.state_list[0] = blend_forecast
+                    if blend_prior:
+                        xbf = Xb_one.state_list[0]
+                        blend_forecast = (hybrid_a_val * xbf +
+                                          (1-hybrid_a_val) * Xb_static)
+                        Xb_one.state_list[0] = blend_forecast
 
 
                 # overwrite prior GMT from last sub_annual with annual

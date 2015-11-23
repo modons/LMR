@@ -61,7 +61,7 @@ fsave = True
 # current datasets
 #
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
-nexp = 'testdev_paramsearch_noxbblend_a9_d0_25itr'
+nexp = 'testdev_paramsearch_noxbblend_a7_d0_100itr'
 
 # specify directories for LMR and calibration data
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
