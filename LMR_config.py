@@ -75,7 +75,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_paramsearch_noxbblend_a0a9pt2_d0_25itr'
+    nexp = 'testdev_adaptive_inflate'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
@@ -85,7 +85,7 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     seed = 2
-    iter_range = [9, 24]
+    iter_range = [0, 1]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -98,6 +98,9 @@ class core:
     hybrid_a = 0.75
     blend_prior = True
 
+    # Adaptive Covariance Inflation
+    adaptive_inflate = True
+
 
     # TODO: add rules for shift?
     # If shifting on smaller time scales than smallest time chunk it becomes
@@ -109,13 +112,13 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    archive_dir = '/home/disk/kalman2/wperkins/LMR_output/testing'
+    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    #archive_dir = '/home/disk/kalman2/wperkins/LMR_output/testing'
     #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
@@ -343,4 +346,4 @@ class forecaster:
         fcast_num_pcs = 15
         detrend = True
 
-        eig_adjust = 0.2
+        eig_adjust = 0.0

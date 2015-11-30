@@ -43,6 +43,7 @@
 import numpy as np
 from os.path import join
 from time import time
+from itertools import izip, izip_longest
 
 import LMR_proxy2
 import LMR_gridded
@@ -96,6 +97,7 @@ def LMR_driver_callable(cfg=None):
     hybrid_update = core.hybrid_update
     hybrid_a_val = core.hybrid_a
     blend_prior = core.blend_prior
+    adaptive = core.adaptive_inflate
     nens = core.nens
     loc_rad = core.loc_rad
     trunc_state = prior.truncate_state
@@ -324,6 +326,11 @@ def LMR_driver_callable(cfg=None):
                 nhmt_save[iproxy+1, curr_yr_idx] = nhmt
                 shmt_save[iproxy+1, curr_yr_idx] = shmt
 
+                # Adaptive Inflation Adjustment
+                if iyr//nelem_pr_yr > 0:
+                    Xb_one.adaptive_inflate_xb(prox_manager, t)
+
+            # Update Xb with each proxy
             for iproxy, Y in enumerate(
                     prox_manager.sites_assim_res_proxy_objs(res, t),
                     iproxy+1):
