@@ -97,7 +97,8 @@ def LMR_driver_callable(cfg=None):
     hybrid_update = core.hybrid_update
     hybrid_a_val = core.hybrid_a
     blend_prior = core.blend_prior
-    adaptive = core.adaptive_inflate
+    reg_inf = core.reg_inflate
+    inf_factor = core.inf_factor
     nens = core.nens
     loc_rad = core.loc_rad
     trunc_state = prior.truncate_state
@@ -327,8 +328,8 @@ def LMR_driver_callable(cfg=None):
                 shmt_save[iproxy+1, curr_yr_idx] = shmt
 
                 # Adaptive Inflation Adjustment
-                if iyr//nelem_pr_yr > 0:
-                    Xb_one.adaptive_inflate_xb(prox_manager, t)
+                if (iyr//nelem_pr_yr > 0) and reg_inf:
+                    Xb_one.reg_inflate_xb(inf_factor)
 
             # Update Xb with each proxy
             for iproxy, Y in enumerate(

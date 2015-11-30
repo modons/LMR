@@ -838,6 +838,25 @@ class State(object):
         self.var_view_range['ye_vals'] = (self.len_state,
                                           self.len_state + nproxies)
 
+    def reg_inflate_xb(self, inf_factor):
+        """
+        Regular variance inflation
+
+        Parameters
+        ----------
+        inf_factor
+
+        Returns
+        -------
+        """
+
+        xb_vals = self.get_var_data('state', idx=0)
+        xb_mean = xb_vals.mean(axis=1, keepdims=True)
+        xb_pert = xb_vals - xb_mean
+
+        xb_pert *= inf_factor
+        xb_vals[:] = xb_pert + xb_mean
+
     def adaptive_inflate_xb(self, prox_man, t):
         """
         J.L. Anderson adaptive inflation algorithm. Only takes annual data for

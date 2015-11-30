@@ -99,8 +99,9 @@ class core:
     blend_prior = True
 
     # Adaptive Covariance Inflation
-    adaptive_inflate = True
-
+    adaptive_inflate = False
+    reg_inflate = True
+    inf_factor = 1.1
 
     # TODO: add rules for shift?
     # If shifting on smaller time scales than smallest time chunk it becomes
