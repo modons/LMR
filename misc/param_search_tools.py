@@ -1,5 +1,4 @@
 import numpy as np
-import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sns
@@ -9,7 +8,6 @@ from itertools import izip, product
 from os.path import join, exists
 import os
 from sklearn import linear_model
-sys.path.append('../.')
 
 import LMR_utils2 as utils2
 import LMR_gridded as lmrgrid
@@ -262,7 +260,7 @@ def main():
     ignore_npz = False
     do_detrended = True
     sns.set_style(style='whitegrid')
-    a_vals = np.arange(0, 1, 0.1)
+    a_vals = np.arange(0.5, 1, 0.1)
     d_vals = np.array([0])
     sns.set_context('talk', font_scale=1.5)
 
@@ -270,6 +268,8 @@ def main():
     data_dir = '/home/disk/kalman2/wperkins/LMR_output/testing'
     exp_name = ['testdev_paramsearch_xbblend_a0a9pt2_d0_51itr',
                 'testdev_paramsearch_noxbblend_a0a9pt2_d0_25itr']
+    exp_name = ['testdev_paramsearch_infl_1pt1',
+                'testdev_paramsearch_infl_1pt4']
     exp_dirs = [join(data_dir, exp) for exp in exp_name]
 
     production_dir = '/home/disk/kalman2/wperkins/LMR_output/archive'
