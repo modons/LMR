@@ -40,9 +40,9 @@ class constants:
 
     prior = {}
     prior['ccsm4_last_millenium'] = \
-        {'fname': 'tas_Amon_CCSM4_past1000_r1i1p1_085001-185012.nc',
+        {'fname': '[vardef_template]_CCSM4_past1000_085001-185012.nc',
          'type': 'NCD',
-         'state_vars': ['tas_sfc_Amon']}
+         'state_vars': ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']}
 
     prior['mpi-esm-p_last_millenium'] = \
         {'fname': '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc',
@@ -75,17 +75,17 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_addlim_backend_test_NPY'
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
-    online_reconstruction = True
+    nexp = 'testdev_addlim_slowcheck'
+    lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
+    online_reconstruction = False
     clean_start = True
     ignore_pre_avg_file = False
-    overwrite_pre_avg_file = False
+    save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1850, 2000]
+    recon_period = [0, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 2]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -108,8 +108,8 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
@@ -275,7 +275,7 @@ class psm:
         dataformat_calib = constants.calib[datatag_calib]['type']
 
         ignore_pre_avg_file = core.ignore_pre_avg_file
-        overwrite_pre_avg_file = core.overwrite_pre_avg_file
+        overwrite_pre_avg_file = core.save_pre_avg_file
 
         # pre_calib_datafile = join(core.lmr_path,
         #                           'PSM',
@@ -339,7 +339,7 @@ class forecaster:
         dataformat = 'NCD'
         fcast_times = [1]
         wsize = 12
-        fcast_num_pcs = 15
+        fcast_num_pcs = 8
         detrend = True
 
-        eig_adjust = 0.2
+        eig_adjust = 0.0
