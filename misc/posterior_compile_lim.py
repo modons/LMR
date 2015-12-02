@@ -5,6 +5,7 @@ import netCDF4 as ncf
 
 from itertools import izip
 
+
 def compile_posterior_for_lim(dir, varnames):
     if opth.isdir(dir):
         iter_fldrs = glob.glob(opth.join(dir, 'r*'))
@@ -39,7 +40,9 @@ def compile_posterior_for_lim(dir, varnames):
 
     ens_out = np.zeros((len(iter_fldrs), len(time), sptl_len))
 
-    for fldr, ens_itr_out in izip(iter_fldrs, ens_out):
+    for k, (fldr, ens_itr_out) in enumerate(izip(iter_fldrs, ens_out)):
+
+        print 'Processing iteration {:d}/{:d}'.format(k+1, len(iter_fldrs))
 
         ens_file = opth.join(fldr, ens_filename)
         var_start = 0
@@ -66,18 +69,44 @@ def compile_posterior_for_lim(dir, varnames):
     return itr_mean, time, lat_out, lon_out
 
 
-def save_to_netcdf(data, time, lat, lon, outfilename):
-    pass
+def save_to_netcdf(data, time, lat, lon, outfilename, outvarname):
+
+    try:
+        f = ncf.Dataset(outfilename, 'w')
+        f.createDimension('time', len(time))
+        f.createDimension('lat', len(lat))
+        f.createDimension('lon', len(lon))
+        ftime = f.createVariable('time', 'i4', ('time',))
+        flat = f.createVariable('lat', 'f4', ('lat',))
+        flon = f.createVariable('lon', 'f4', ('lon',))
+        fdata = f.createVariable(outvarname, 'f8', ('time', 'lat', 'lon'))
+
+        ftime[:] = time
+        flat[:] = lat
+        flon[:] = lon
+        fdata[:] = data
+    finally:
+        try:
+            f.close()
+        except NameError:
+            pass
 
 
 def main():
     workdir = '/home/disk/kalman2/wperkins/LMR_output/archive'
-    nexp = 'production_gis_ccsm4_pagesall_0.75'
+    nexp = 'production_gis_mpi_pagesall_0.75'
 
     use_vars = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
 
     expdir = opth.join(workdir, nexp)
-    compile_posterior_for_lim(expdir, use_vars)
+    [compiled_recon,
+     years,
+     lat,
+     lon] = compile_posterior_for_lim(expdir, use_vars)
+
+    outfile = opth.join(expdir, 'lim_recon_compiled.nc')
+    save_to_netcdf(compiled_recon, years, lat, lon, outfile, 'state')
+
 
 if __name__ == '__main__':
     main()
