@@ -79,7 +79,7 @@ def save_to_netcdf(data, time, lat, lon, outfilename, outvarname):
         ftime = f.createVariable('time', 'i4', ('time',))
         flat = f.createVariable('lat', 'f4', ('lat',))
         flon = f.createVariable('lon', 'f4', ('lon',))
-        fdata = f.createVariable(outvarname, 'f8', ('time', 'lat', 'lon'))
+        fdata = f.createVariable(outvarname, 'f8', ('time', 'lat'))
 
         ftime[:] = time
         flat[:] = lat
@@ -103,7 +103,7 @@ def main():
      years,
      lat,
      lon] = compile_posterior_for_lim(expdir, use_vars)
-
+    
     outfile = opth.join(expdir, 'lim_recon_compiled.nc')
     save_to_netcdf(compiled_recon, years, lat, lon, outfile, 'state')
 
