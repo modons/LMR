@@ -76,14 +76,14 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_paramsearch_inflation'
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    nexp = 'testdev_addlim_posterior_calib'
+    lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
     save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [0, 2000]
+    recon_period = [1900, 2000]
     nens = 100
     seed = 2
     iter_range = [0, 0]
@@ -351,4 +351,4 @@ class forecaster:
         fcast_num_pcs = 8
         detrend = False
 
-        eig_adjust = 0.0
+        eig_adjust = None 

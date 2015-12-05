@@ -51,8 +51,7 @@ class LIMForecaster:
             data_obj = DT.netcdf_to_data_obj(infile, varname, force_flat=True)
             do_regrid = True
         elif fmt == 'POSNCD':
-            data_obj = DT.posterior_ncf_to_data_obj(infile, varname,
-                                                    force_flat=True)
+            data_obj = DT.posterior_ncf_to_data_obj(infile, varname)
             do_regrid = False
         else:
             raise TypeError('Unsupported calibration data'

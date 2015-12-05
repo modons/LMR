@@ -82,7 +82,7 @@ class core:
     online_reconstruction = False
     clean_start = True
     ignore_pre_avg_file = False
-    overwrite_pre_avg_file = True
+    save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1950, 1953]
     nens = 2
@@ -275,7 +275,7 @@ class psm:
         dataformat_calib = constants.calib[datatag_calib]['type']
 
         ignore_pre_avg_file = core.ignore_pre_avg_file
-        overwrite_pre_avg_file = core.overwrite_pre_avg_file
+        overwrite_pre_avg_file = core.save_pre_avg_file
 
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',

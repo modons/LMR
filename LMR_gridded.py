@@ -348,7 +348,7 @@ class GriddedVariable(object):
                     dim_keys.append(dim)
                 else:
                     dims.append(_ALT_DIMENSION_DEFS[dim.lower()])
-                    dim_keys.append()
+                    dim_keys.append(dim)
 
             # Make sure it has time dimension
             if _TIME not in dims:
