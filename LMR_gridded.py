@@ -83,7 +83,7 @@ class GriddedVariable(object):
 
         self._space_dims = [dim for dim in dims_ordered if dim != _TIME]
         self.space_shp = [len(self._dim_coord_map[dim])
-                           for dim in self._space_dims]
+                          for dim in self._space_dims]
 
         if len(self._space_dims) > 2:
             raise ValueError('Class cannot handle 3D data yet!')
@@ -338,14 +338,17 @@ class GriddedVariable(object):
 
             # Convert to key names defined in _DEFAULT_DIM_ORDER
             dims = []
+            dim_keys = []
             dim_exclude = []
             for i, dim in enumerate(var.dimensions):
                 if data_shp[i] == 1:
                     dim_exclude.append(dim)
                 elif dim in _DEFAULT_DIM_ORDER:
                     dims.append(dim.lower())
+                    dim_keys.append(dim)
                 else:
                     dims.append(_ALT_DIMENSION_DEFS[dim.lower()])
+                    dim_keys.append()
 
             # Make sure it has time dimension
             if _TIME not in dims:
@@ -359,8 +362,7 @@ class GriddedVariable(object):
 
             # Load dimension values
             dim_vals = {dim_name: f.variables[dim_key]
-                        for dim_name, dim_key in zip(dims, var.dimensions)
-                        if dim_key not in dim_exclude}
+                        for dim_name, dim_key in zip(dims, dim_keys)}
 
             # Convert time to datetimes
             dim_vals[_TIME] = cls._netcdf_datetime_convert(dim_vals[_TIME])
@@ -368,10 +370,12 @@ class GriddedVariable(object):
             # Extract data for each dimension
             dim_vals = {k: val[:] for k, val in dim_vals.iteritems()}
 
+            var_dat = np.squeeze(var[:])
+
             # Average to correct time resolution
             dim_vals[_TIME], avg_data = \
                 cls._time_avg_gridded_to_resolution(dim_vals[_TIME],
-                                                    var[:],
+                                                    var_dat,
                                                     resolution,
                                                     data_req_frac=data_req_frac)
 
@@ -563,7 +567,7 @@ class PriorVariable(GriddedVariable):
         base_resolution = config.core.sub_base_res
         nens = config.core.nens
         seed = config.core.seed
-        overwrite = config.core.overwrite_pre_avg_file
+        save = config.core.save_pre_avg_file
         ignore_pre_avg = config.core.ignore_pre_avg_file
 
         return cls._main_load_helper(file_dir, file_name, varname, file_type,
@@ -571,7 +575,7 @@ class PriorVariable(GriddedVariable):
                                      nens=nens,
                                      seed=seed,
                                      sample=sample,
-                                     save=overwrite,
+                                     save=save,
                                      ignore_pre_avg=ignore_pre_avg)
 
     @classmethod
@@ -765,7 +769,7 @@ class State(object):
                 if i == 0:
                     var_end = flat_data.T.shape[0] + var_start
                     self.var_view_range[var] = (var_start, var_end)
-                    self.len_state += var_end
+                    self.len_state = var_end
 
                 # Add prior to state vector, transposed to make state the first
                 # dimension, and ensemble members along the 2nd
@@ -820,7 +824,12 @@ class State(object):
         """
         trunc_pvars = OrderedDict()
         for var_name, pvar in self._prior_vars.iteritems():
-            trunc_pvars[var_name] = [pobj.truncate() for pobj in pvar]
+            trunc_pvars[var_name] = []
+            for pobj in pvar:
+                if pobj.type == 'horizontal':
+                    trunc_pvars[var_name].append(pobj.truncate())
+                else:
+                    trunc_pvars[var_name].append(pobj)
         state_class = type(self)
         return state_class(trunc_pvars, self.base_res, adaptive=self._adaptive)
 
@@ -1069,8 +1078,12 @@ class State(object):
 
             space_dims = [dim for dim in _DEFAULT_DIM_ORDER
                           if dim in self.var_coords[var].keys()]
+
             var_info['spacecoords'] = space_dims
-            var_info['spacedims'] = self.var_space_shp[var]
+            if not space_dims:
+                var_info['spacedims'] = None
+            else:
+                var_info['spacedims'] = self.var_space_shp[var]
             state_info[var] = var_info
 
         return state_info

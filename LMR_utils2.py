@@ -270,7 +270,7 @@ def ensemble_stats(workdir, y_assim):
                 exit(1)
 
         else:  # var has no spatial dims
-            Xb = Xbtmp[ibeg:iend+1, :]  # prior ensemble
+            Xb = Xbtmp[ibeg:iend, :]  # prior ensemble
             xbm = np.mean(Xb, axis=1)  # ensemble mean
             xbv = np.var(Xb, axis=1)  # ensemble variance
 
@@ -286,7 +286,7 @@ def ensemble_stats(workdir, y_assim):
                 year = f[i+4:i+8]
                 years.append(year)
                 Xatmp = np.load(f)
-                Xa = Xatmp[ibeg:iend+1, :]
+                Xa = Xatmp[ibeg:iend, :]
                 xa_ens[k] = Xa  # total ensemble
                 xam[k] = np.mean(Xa, axis=1)  # ensemble mean
                 xav[k] = np.var(Xa, axis=1)  # ensemble variance
