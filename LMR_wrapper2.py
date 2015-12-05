@@ -55,6 +55,10 @@ for iter_num in MCiters:
                ' output directory')
         os.system('rm -f {}'.format(core.datadir_output + '/*'))
 
+    loc_dir = core.datadir_output
+    arc_dir = os.path.join(core.archive_dir, core.nexp)
+    mc_dir = os.path.join(arc_dir, 'r' + str(iter_num))
+
     # Call the driver
     try:
         all_proxy_objs = LMR.LMR_driver_callable(cfg)
@@ -73,10 +77,6 @@ for iter_num in MCiters:
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
-
-    loc_dir = core.datadir_output
-    arc_dir = os.path.join(core.archive_dir, core.nexp)
-    mc_dir = os.path.join(arc_dir, 'r' + str(iter_num), ad_folder_name)
 
     # scrub the monte carlo subdirectory if this is a clean start
     if os.path.isdir(mc_dir):
