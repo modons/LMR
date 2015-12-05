@@ -6,6 +6,7 @@ matplotlib.use('Agg')
 # generic imports
 import numpy as np
 import glob, os
+import cPickle as cpk
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
@@ -78,6 +79,10 @@ var = 'tas_sfc_Amon'
 #nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
 nexp = 'testdev_paramsearch_xbblend_a5_d0_50itr'
+
+# Output for replotting
+output_vals = {}
+output_vals_fname = 'ce_r_calib_' + nexp + '.pckl'
 
 # override datadir
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
@@ -1050,8 +1055,13 @@ for la in range(nlat_TCR):
             bias_lmr_tcr[la,lo] = np.nan
             ce_lmr_tcr_unbiased[la,lo] = np.nan
 
+output_vals['lmr_tcr'] = {'ce': ce_lmr_tcr, 'r': r_lmr_tcr,
+                          'lat': lat2d_TCR, 'lon': lon2d_TCR}
+
 # LMR-ERA
 ce_lmr_era = coefficient_efficiency(era_allyears,lmr_on_era_allyears,valid_frac)
+output_vals['ce_lmr_era'] = {'ce': ce_lmr_era, 'lat': lat2d_ERA20C,
+                             'lon': lon2d_ERA20C}
 for la in range(nlat_ERA20C):
     for lo in range(nlon_ERA20C):
         indok = np.isfinite(era_allyears[:,la,lo])
@@ -1068,6 +1078,8 @@ for la in range(nlat_ERA20C):
             r_lmr_era[la,lo]  = np.nan
             bias_lmr_era[la,lo] = np.nan
             ce_lmr_era_unbiased[la,lo] = np.nan
+output_vals['lmr_era'] = {'ce': ce_lmr_era, 'r': r_lmr_era,
+                          'lat': lat2d_ERA20C, 'lon': lon2d_ERA20C}
 
 # LMR-GIS
 ce_lmr_gis = coefficient_efficiency(gis_allyears,lmr_on_gis_allyears,valid_frac)
@@ -1087,6 +1099,8 @@ for la in range(nlat_GIS):
             r_lmr_gis[la,lo]  = np.nan
             bias_lmr_gis[la,lo] = np.nan
             ce_lmr_gis_unbiased[la,lo] = np.nan
+output_vals['lmr_gis'] = {'ce': ce_lmr_gis, 'r': r_lmr_gis,
+                          'lat': lat2d_GIS, 'lon': lon2d_GIS}
 
 # LMR-BE
 ce_lmr_be = coefficient_efficiency(be_allyears,lmr_on_be_allyears,valid_frac)
@@ -1106,6 +1120,8 @@ for la in range(nlat_BE):
             r_lmr_be[la,lo]  = np.nan
             bias_lmr_be[la,lo] = np.nan
             ce_lmr_be_unbiased[la,lo] = np.nan
+output_vals['lmr_be'] = {'ce': ce_lmr_be, 'r': r_lmr_be,
+                         'lat': lat2d_BE, 'lon': lon2d_BE}
 
 # LMR-CRU
 ce_lmr_cru = coefficient_efficiency(cru_allyears,lmr_on_cru_allyears,valid_frac)
@@ -1125,6 +1141,8 @@ for la in range(nlat_CRU):
             r_lmr_cru[la,lo]  = np.nan
             bias_lmr_cru[la,lo] = np.nan
             ce_lmr_cru_unbiased[la,lo] = np.nan
+output_vals['lmr_cru'] = {'ce': ce_lmr_cru, 'r': r_lmr_cru,
+                          'lat': lat2d_CRU, 'lon': lon2d_CRU}
 
 # LMR-MLOST
 ce_lmr_mlost = coefficient_efficiency(mlost_allyears,lmr_on_mlost_allyears,valid_frac)
@@ -1144,9 +1162,13 @@ for la in range(nlat_MLOST):
             r_lmr_mlost[la,lo]  = np.nan
             bias_lmr_mlost[la,lo] = np.nan
             ce_lmr_mlost_unbiased[la,lo] = np.nan
+output_vals['lmr_mlost'] = {'ce': ce_lmr_mlost, 'r': r_lmr_mlost,
+                            'lat': lat2d_MLOST, 'lon': lon2d_MLOST}
 
 # TCR-GIS
 ce_tcr_gis = coefficient_efficiency(gis_allyears,tcr_on_gis_allyears,valid_frac)
+output_vals['ce_tcr_gis'] = {'ce': ce_tcr_gis, 'lat': lat2d_GIS,
+                             'lon': lon2d_GIS}
 for la in range(nlat_GIS):
     for lo in range(nlon_GIS):
         indok1 = np.isfinite(gis_allyears[:,la,lo])
@@ -1165,6 +1187,8 @@ for la in range(nlat_GIS):
             r_tcr_gis[la,lo]  = np.nan
             bias_tcr_gis[la,lo] = np.nan
             ce_tcr_gis_unbiased[la,lo] = np.nan
+output_vals['tcr_gis'] = {'ce': ce_tcr_gis, 'r': r_tcr_gis,
+                          'lat': lat2d_GIS, 'lon': lon2d_GIS}
 
 # ERA-GIS
 ce_era_gis = coefficient_efficiency(gis_allyears,era_on_gis_allyears,valid_frac)
@@ -1186,6 +1210,8 @@ for la in range(nlat_GIS):
             r_era_gis[la,lo]  = np.nan
             bias_era_gis[la,lo] = np.nan
             ce_era_gis_unbiased[la,lo] = np.nan
+output_vals['era_gis'] = {'ce': ce_era_gis, 'r': r_era_gis,
+                          'lat': lat2d_GIS, 'lon': lon2d_GIS}
 
 # -------
 # LMR-TCR
@@ -1907,6 +1933,8 @@ svar = xam_var[LMR_smatch:LMR_ematch,:,:]
 calib_tcr = lmr_err_vs_tcr.var(0)/svar.mean(0)
 print calib_tcr[0:-1,:].mean()
 
+output_vals['calib_tcr'] = {'calib': calib_tcr, 'lat': lat2, 'lon': lon2}
+
 
 # create the plot
 mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
@@ -1925,4 +1953,7 @@ if fsave:
 # NEW look at trends over specified time periods as a function of latitude
 
 # zonal means of the original LMR data
+
+with open(output_vals_fname, 'w') as f:
+    cpk.dump(output_vals, f)
 
