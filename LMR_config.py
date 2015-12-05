@@ -42,7 +42,8 @@ class constants:
     prior['ccsm4_last_millenium'] = \
         {'fname': '[vardef_template]_CCSM4_past1000_085001-185012.nc',
          'type': 'NCD',
-         'state_vars': ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']}
+         'state_vars': ['tas_sfc_Amon']}
+    # ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
 
     prior['mpi-esm-p_last_millenium'] = \
         {'fname': '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc',
@@ -75,9 +76,9 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_addlim_slowcheck'
+    nexp = 'testdev_addlim_predcorrect'
     lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
-    online_reconstruction = False
+    online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
     save_pre_avg_file = True
@@ -335,11 +336,14 @@ class forecaster:
         fcast_times: A list of lead times (in years) to forecast
         """
         calib_filename = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
-        calib_varname = 'air'
-        dataformat = 'NCD'
+        calib_filename = ('/home/disk/kalman2/wperkins/LMR_output/testing/'
+                          'testdev_gis_ccsm4_pagesall_75/'
+                          'lim_recon_compiled.nc')
+        calib_varname = 'tas_sfc_Amon'
+        dataformat = 'POSNCD'
         fcast_times = [1]
-        wsize = 12
+        wsize = 1
         fcast_num_pcs = 8
-        detrend = True
+        detrend = False
 
         eig_adjust = 0.0

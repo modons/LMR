@@ -49,30 +49,38 @@ class LIMForecaster:
 
         if fmt == 'NCD':
             data_obj = DT.netcdf_to_data_obj(infile, varname, force_flat=True)
+            do_regrid = True
+        elif fmt == 'POSNCD':
+            data_obj = DT.posterior_ncf_to_data_obj(infile, varname,
+                                                    force_flat=True)
+            do_regrid = False
         else:
             raise TypeError('Unsupported calibration data'
                             ' type for LIM: {}'.format(fmt))
 
         coords = data_obj.get_dim_coords(['lat', 'lon', 'time'])
 
-        # TODO: May want to tie this more into LMR regridding
-        # Truncate the calibration data
-        dat_new, lat_new, lon_new = regrid_sphere(len(coords['lat'][1]),
-                                                  len(coords['lon'][1]),
-                                                  len(coords['time'][1]),
-                                                  data_obj.data.T,
-                                                  42)
+        if do_regrid:
+            # TODO: May want to tie this more into LMR regridding
+            # Truncate the calibration data
+            dat_new, lat_new, lon_new = regrid_sphere(len(coords['lat'][1]),
+                                                      len(coords['lon'][1]),
+                                                      len(coords['time'][1]),
+                                                      data_obj.data.T,
+                                                      42)
 
-        new_coords = {'time': coords['time'],
-                      'lat': (1, lat_new[:, 0]),
-                      'lon': (2, lon_new[0])}
-        new_shp = (len(new_coords['time'][1]),
-                   len(new_coords['lat'][1]),
-                   len(new_coords['lon'][1]))
-        dat_new = dat_new.T.reshape(new_shp)
+            new_coords = {'time': coords['time'],
+                          'lat': (1, lat_new[:, 0]),
+                          'lon': (2, lon_new[0])}
+            new_shp = (len(new_coords['time'][1]),
+                       len(new_coords['lat'][1]),
+                       len(new_coords['lon'][1]))
+            dat_new = dat_new.T.reshape(new_shp)
 
-        calib_obj = DT.BaseDataObject(dat_new, dim_coords=new_coords,
-                                      force_flat=True)
+            calib_obj = DT.BaseDataObject(dat_new, dim_coords=new_coords,
+                                          force_flat=True)
+        else:
+            calib_obj = data_obj
 
         self.lim = LIM.LIM(calib_obj, cfg.wsize, cfg.fcast_times,
                            cfg.fcast_num_pcs, detrend_data=cfg.detrend,
