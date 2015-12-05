@@ -96,7 +96,7 @@ class core:
     # Forecasting Hybrid Update
     hybrid_update = True
     hybrid_update &= online_reconstruction
-    hybrid_a = 0.75
+    hybrid_a = 0.70
     blend_prior = True
 
     # Adaptive Covariance Inflation
