@@ -93,10 +93,11 @@ def save_to_netcdf(data, time, lat, lon, outfilename, outvarname):
 
 
 def main():
-    workdir = '/home/disk/kalman2/wperkins/LMR_output/archive'
-    nexp = 'production_gis_mpi_pagesall_0.75'
+    workdir = '/home/disk/kalman2/wperkins/LMR_output/testing'
+    nexp = 'testdev_gis_ccsm4_pagesall_75'
 
-    use_vars = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    # use_vars = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    use_vars = ['tas_sfc_Amon']
 
     expdir = opth.join(workdir, nexp)
     [compiled_recon,
@@ -105,7 +106,7 @@ def main():
      lon] = compile_posterior_for_lim(expdir, use_vars)
     
     outfile = opth.join(expdir, 'lim_recon_compiled.nc')
-    save_to_netcdf(compiled_recon, years, lat, lon, outfile, 'state')
+    save_to_netcdf(compiled_recon, years, lat, lon, outfile, 'tas_sfc_Amon')
 
 
 if __name__ == '__main__':
