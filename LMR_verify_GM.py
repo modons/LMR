@@ -47,7 +47,7 @@ fsave = False
 #
 # current datasets
 #
-nexp = 'testdev_addlim_b4adaptive'
+nexp = 'testdev_gis_ccsm4_pagesall_75'
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 
 # specify directories for LMR and calibration data

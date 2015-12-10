@@ -1,7 +1,7 @@
 
 import matplotlib
 # need to do this backend when running remotely or to suppress figures interactively
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 
 # generic imports
 import numpy as np
@@ -40,7 +40,7 @@ iplot = True
 nya = 0
 
 # option to print figures
-fsave = True
+fsave = False
 #fsave = False
 
 # variable
@@ -78,7 +78,7 @@ var = 'tas_sfc_Amon'
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 #nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
-nexp = 'testdev_paramsearch_xbblend_a5_d0_50itr'
+nexp = 'testdev_gis_ccsm4_posterior_lim'
 
 # Output for replotting
 output_vals = {}
@@ -88,7 +88,7 @@ output_vals_fname = 'ce_r_calib_' + nexp + '.pckl'
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
 datadir_output = '/home/disk/kalman2/wperkins/LMR_output/testing'
-
+#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
 
 # threshold for fraction of valid data in calculation of verif. stats
 valid_frac = 0.5

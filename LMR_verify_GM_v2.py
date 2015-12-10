@@ -60,14 +60,15 @@ fsave = False
 #
 # current datasets
 #
-nexp = 'production_gis_ccsm4_pagesall_0.75'
+#nexp = 'production_gis_ccsm4_pagesall_0.75'
 #nexp = 'testdev_paramsearch_noxbblend_a7_d0_100itr'
+nexp = 'testdev_gis_ccsm4_posterior_lim'
 
 # specify directories for LMR and calibration data
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/testing'
+#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+datadir_output = '/home/disk/kalman2/wperkins/LMR_output/testing'
 
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
