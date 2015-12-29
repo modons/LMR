@@ -5,7 +5,7 @@
 
 import matplotlib
 # need to do this when running remotely, and to suppress figures
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 
 import csv
 import glob, os, fnmatch
@@ -14,9 +14,11 @@ import mpl_toolkits.basemap as bm
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib import ticker
+from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 from scipy import stats
 from netCDF4 import Dataset
 from datetime import datetime, timedelta
+
 import pandas as pd
 #
 from LMR_plot_support import *
@@ -555,12 +557,12 @@ if iplot:
     lw = 2
     fig = plt.figure()
     plt.plot(LMR_time,lmr_gm,'k-'    ,linewidth=lw*2,label='LMR')
-    plt.plot(GIS_time,gis_gm,'r-'    ,linewidth=lw,label='GIS',alpha=alpha)
-    plt.plot(CRU_time,cru_gm,'m-'    ,linewidth=lw,label='CRU',alpha=alpha)
+    plt.plot(GIS_time,gis_gm,'r-'    ,linewidth=lw,label='GISTEMP',alpha=alpha)
+    plt.plot(CRU_time,cru_gm,'m-'    ,linewidth=lw,label='HadCRUT4',alpha=alpha)
     plt.plot(BE_time,be_gm,'g-'      ,linewidth=lw,label='BE',alpha=alpha)
     plt.plot(MLOST_time,mlost_gm,'c-',linewidth=lw,label='MLOST',alpha=alpha)
-    plt.plot(TCR_time,tcr_gm,'y-'    ,linewidth=lw,label='TCR',alpha=alpha)
-    plt.plot(ERA20C_time,era_gm,'b-' ,linewidth=lw,label='ERA',alpha=alpha)
+    plt.plot(TCR_time,tcr_gm,'y-'    ,linewidth=lw,label='20CR-V2',alpha=alpha)
+    plt.plot(ERA20C_time,era_gm,'b-' ,linewidth=lw,label='ERA-20C',alpha=alpha)
     plt.plot(CON_time,con_gm,color='lime',linestyle='-',linewidth=lw,label='consensus',alpha=alpha)
     plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha = 0.5,linewidth=0.)
     #plt.plot(LMR_time,lmr_gm,'k-'    ,linewidth=lw*2) # LMR back on top
@@ -577,17 +579,17 @@ if iplot:
     tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.2
     offset = 0.05
 
-    plt.text(txl,tyl,'(LMR,GIS)      : r= ' + lgc.ljust(5,' ') + ' CE= ' + lgce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,GISTEMP)  : r= ' + lgc.ljust(5,' ') + ' CE= ' + lgce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,CRU)      : r= ' + lcc.ljust(5,' ') + ' CE= ' + lcce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,HadCRUT4) : r= ' + lcc.ljust(5,' ') + ' CE= ' + lcce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
     plt.text(txl,tyl,'(LMR,BE)       : r= ' + lbc.ljust(5,' ') + ' CE= ' + lbce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
     plt.text(txl,tyl,'(LMR,MLOST)    : r= ' + lmc.ljust(5,' ') + ' CE= ' + lmce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,TCR)      : r= ' + ltc.ljust(5,' ') + ' CE= ' + ltce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,20CR-V2)  : r= ' + ltc.ljust(5,' ') + ' CE= ' + ltce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,ERA)      : r= ' + lec.ljust(5,' ') + ' CE= ' + lece.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,ERA-20C)  : r= ' + lec.ljust(5,' ') + ' CE= ' + lece.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
     plt.text(txl,tyl,'(LMR,consensus): r= ' + loc.ljust(5,' ') + ' CE= ' + loce.ljust(5,' '), fontsize=14, family='monospace')
 
@@ -720,12 +722,12 @@ if iplot:
 
     # add smoothed lines
     plt.plot(LMR_smoothed_years,LMR_smoothed,'k-'    ,linewidth=4, label='LMR')
-    plt.plot(GIS_smoothed_years,GIS_smoothed,'r-'    ,linewidth=4, label='GIS',alpha=alpha)
-    plt.plot(CRU_smoothed_years,CRU_smoothed,'m-'    ,linewidth=4, label='CRU',alpha=alpha)
+    plt.plot(GIS_smoothed_years,GIS_smoothed,'r-'    ,linewidth=4, label='GISTEMP',alpha=alpha)
+    plt.plot(CRU_smoothed_years,CRU_smoothed,'m-'    ,linewidth=4, label='HadCRUT4',alpha=alpha)
     plt.plot(BE_smoothed_years,BE_smoothed,'g-'      ,linewidth=4, label='BE',alpha=alpha)
     plt.plot(MLOST_smoothed_years,MLOST_smoothed,'c-',linewidth=4, label='MLOST',alpha=alpha)
-    plt.plot(TCR_smoothed_years,TCR_smoothed,'y-'    ,linewidth=4, label='TCR',alpha=alpha)
-    plt.plot(ERA_smoothed_years,ERA_smoothed,'b-'    ,linewidth=4, label='ERA',alpha=alpha)
+    plt.plot(TCR_smoothed_years,TCR_smoothed,'y-'    ,linewidth=4, label='20CR-V2',alpha=alpha)
+    plt.plot(ERA_smoothed_years,ERA_smoothed,'b-'    ,linewidth=4, label='ERA-20C',alpha=alpha)
     #plt.title('Global mean temperature range (gray) and ' +str(nsyrs) + '-year moving average\n(' + nexp + ')',weight='bold',y=1.03)
     plt.title('Global mean temperature range (gray) and ' +str(nsyrs) + '-year moving average',weight='bold',y=1.03)
     plt.xlabel('Year CE', fontweight='bold')
@@ -746,17 +748,17 @@ if iplot:
     txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.4
     tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.2
 
-    plt.text(txl,tyl,'(LMR,GIS)      : r= ' + lsgsc.ljust(5,' ') + ' CE= ' + lsgsce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,GISTEMP)  : r= ' + lsgsc.ljust(5,' ') + ' CE= ' + lsgsce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-0.05
-    plt.text(txl,tyl,'(LMR,CRU)      : r= ' + lscsc.ljust(5,' ') + ' CE= ' + lscsce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,HadCRUT4) : r= ' + lscsc.ljust(5,' ') + ' CE= ' + lscsce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-0.05
     plt.text(txl,tyl,'(LMR,BE)       : r= ' + lsbsc.ljust(5,' ') + ' CE= ' + lsbsce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-0.05
     plt.text(txl,tyl,'(LMR,MLOST)    : r= ' + lsmsc.ljust(5,' ') + ' CE= ' + lsmsce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-0.05
-    plt.text(txl,tyl,'(LMR,TCR)      : r= ' + lstsc.ljust(5,' ') + ' CE= ' + lstsce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,20CR-V2)  : r= ' + lstsc.ljust(5,' ') + ' CE= ' + lstsce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-0.05
-    plt.text(txl,tyl,'(LMR,ERA)      : r= ' + lsesc.ljust(5,' ') + ' CE= ' + lsesce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,ERA-20C)  : r= ' + lsesc.ljust(5,' ') + ' CE= ' + lsesce.ljust(5,' '), fontsize=14, family='monospace')
     #tyl = tyl-0.05
     #plt.text(txl,tyl,'(LMR,consensus): r= ' + lsosc.ljust(5,' ') + ' CE= ' + lsosce.ljust(5,' '), fontsize=14, family='monospace')
 
@@ -961,31 +963,31 @@ print 'ce: ' + str(lgcf) + ' ' + str(lgcd)
 
 if iplot:
     lw = 2
-    # LMR & GIS
+    # LMR
     fig = plt.figure()
-    plt.plot(LMR_time_copy,lmr_trend,'k-',lw=lw*2,label='LMR (trend: '+lmrs+' K/100yrs)')
-    plt.plot(LMR_time_copy,lmr_gm_detrend,'k-',lw=lw*2)
-
-    plt.plot(GIS_time_copy,gis_trend,'r-',lw=lw,label='GIS  (trend: '+gs+' K/100yrs)',alpha=alpha)
-    plt.plot(GIS_time_copy,gis_gm_detrend,'r-',lw=lw,alpha=alpha)
-
-    plt.plot(CRU_time_copy,cru_trend,'m-',lw=lw,label='CRU (trend: '+crus+' K/100yrs)',alpha=alpha)
-    plt.plot(CRU_time_copy,cru_gm_detrend,'m-',lw=lw,alpha=alpha)
-
-    plt.plot(BE_time_copy,be_trend,'g-',lw=lw,label='BE   (trend: '+bes+' K/100yrs)',alpha=alpha)
-    plt.plot(BE_time_copy,be_gm_detrend,'g-',lw=lw,alpha=alpha)
-
-    plt.plot(MLOST_time_copy,mlost_trend,'c-',lw=lw,label='MLOST (trend: '+mlosts+' K/100yrs)',alpha=alpha)
-    plt.plot(MLOST_time_copy,mlost_gm_detrend,'c-',lw=lw,alpha=alpha)
-
-    plt.plot(TCR_time_copy,tcr_trend,'y-',lw=lw,label='TCR (trend: '+tcrs+' K/100yrs)',alpha=alpha)
-    plt.plot(TCR_time_copy,tcr_gm_detrend,'y-',lw=lw,alpha=alpha)
-
-    plt.plot(ERA_time_copy,era_trend,'b-',lw=lw,label='ERA (trend: '+eras+' K/100yrs)',alpha=alpha)
-    plt.plot(ERA_time_copy,era_gm_detrend,'b-',lw=lw,alpha=alpha)
+    #plt.plot(LMR_time_copy,lmr_trend,'k-',lw=lw*2)
+    plt.plot(LMR_time_copy,lmr_gm_detrend,'k-',lw=lw*2,label='LMR (trend: '+lmrs+' K/100yrs)')
+    # GIS
+    #plt.plot(GIS_time_copy,gis_trend,'r-',lw=lw,alpha=alpha)
+    plt.plot(GIS_time_copy,gis_gm_detrend,'r-',lw=lw,alpha=alpha,label='GISTEMP (trend: '+gs+' K/100yrs)')
+    # CRU
+    #plt.plot(CRU_time_copy,cru_trend,'m-',lw=lw,alpha=alpha)
+    plt.plot(CRU_time_copy,cru_gm_detrend,'m-',lw=lw,alpha=alpha,label='HadCRUT4 (trend: '+crus+' K/100yrs)')
+    # BE
+    #plt.plot(BE_time_copy,be_trend,'g-',lw=lw,alpha=alpha)
+    plt.plot(BE_time_copy,be_gm_detrend,'g-',lw=lw,alpha=alpha,label='BE (trend: '+bes+' K/100yrs)')
+    # MLOST
+    #plt.plot(MLOST_time_copy,mlost_trend,'c-',lw=lw,alpha=alpha)
+    plt.plot(MLOST_time_copy,mlost_gm_detrend,'c-',lw=lw,alpha=alpha,label='MLOST (trend: '+mlosts+' K/100yrs)')
+    # TCR
+    #plt.plot(TCR_time_copy,tcr_trend,'y-',lw=lw,alpha=alpha)
+    plt.plot(TCR_time_copy,tcr_gm_detrend,'y-',lw=lw,alpha=alpha,label='20CR-V2 (trend: '+tcrs+' K/100yrs)')
+    # ERA
+    #plt.plot(ERA_time_copy,era_trend,'b-',lw=lw,alpha=alpha)
+    plt.plot(ERA_time_copy,era_gm_detrend,'b-',lw=lw,alpha=alpha,label='ERA-20C (trend: '+eras+' K/100yrs)')
 
     plt.ylim(-1,1)    
-    plt.legend(loc=2)
+    plt.legend(loc=2,fontsize=12)
 
     # add to figure
     #plt.title('Detrended global mean temperature \n(' + nexp + ')',weight='bold',y=1.03)
@@ -993,19 +995,19 @@ if iplot:
     plt.xlabel('Year CE',fontweight='bold')
     plt.ylabel('Temperature anomaly (K)',fontweight='bold')
     xl_loc = [stime,etime]
-    yl_loc = [-.7,.7]
+    yl_loc = [-.6,.7]
     plt.xlim(xl_loc)
     plt.ylim(yl_loc)
     txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.005
     tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.14
     
     off = .03
-    plt.text(txl,tyl,      '(LMR,GIS)  : r full= ' + lgrf.ljust(4,' ') + ' r detrend= ' + lgrd.ljust(4,' ') + ' CE full= ' + lgcf.ljust(5,' ') + ' CE detrend= ' + lgcd.ljust(5,' '), fontsize=12, family='monospace')
-    plt.text(txl,tyl-off,  '(LMR,CRU)  : r full= ' + lcrf.ljust(4,' ') + ' r detrend= ' + lcrd.ljust(4,' ') + ' CE full= ' + lccf.ljust(5,' ') + ' CE detrend= ' + lccd.ljust(5,' '), fontsize=12, family='monospace')
-    plt.text(txl,tyl-2*off,'(LMR,BE)   : r full= ' + lbrf.ljust(4,' ') + ' r detrend= ' + lbrd.ljust(4,' ') + ' CE full= ' + lbcf.ljust(5,' ') + ' CE detrend= ' + lbcd.ljust(5,' '), fontsize=12, family='monospace')
-    plt.text(txl,tyl-3*off,'(LMR,MLOST): r full= ' + lmrf.ljust(4,' ') + ' r detrend= ' + lmrd.ljust(4,' ') + ' CE full= ' + lmcf.ljust(5,' ') + ' CE detrend= ' + lmcd.ljust(5,' '), fontsize=12, family='monospace')
-    plt.text(txl,tyl-4*off,'(LMR,TCR)  : r full= ' + ltrf.ljust(4,' ') + ' r detrend= ' + ltrd.ljust(4,' ') + ' CE full= ' + ltcf.ljust(5,' ') + ' CE detrend= ' + ltcd.ljust(5,' '), fontsize=12, family='monospace')
-    plt.text(txl,tyl-5*off,'(LMR,ERA)  : r full= ' + lerf.ljust(4,' ') + ' r detrend= ' + lerd.ljust(4,' ') + ' CE full= ' + lecf.ljust(5,' ') + ' CE detrend= ' + lecd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl,      '(LMR,GISTEMP) : r full= ' + lgrf.ljust(4,' ') + ' r detrend= ' + lgrd.ljust(4,' ') + ' CE full= ' + lgcf.ljust(5,' ') + ' CE detrend= ' + lgcd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl-off,  '(LMR,HadCRUT4): r full= ' + lcrf.ljust(4,' ') + ' r detrend= ' + lcrd.ljust(4,' ') + ' CE full= ' + lccf.ljust(5,' ') + ' CE detrend= ' + lccd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl-2*off,'(LMR,BE)      : r full= ' + lbrf.ljust(4,' ') + ' r detrend= ' + lbrd.ljust(4,' ') + ' CE full= ' + lbcf.ljust(5,' ') + ' CE detrend= ' + lbcd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl-3*off,'(LMR,MLOST)   : r full= ' + lmrf.ljust(4,' ') + ' r detrend= ' + lmrd.ljust(4,' ') + ' CE full= ' + lmcf.ljust(5,' ') + ' CE detrend= ' + lmcd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl-4*off,'(LMR,20CR-V2) : r full= ' + ltrf.ljust(4,' ') + ' r detrend= ' + ltrd.ljust(4,' ') + ' CE full= ' + ltcf.ljust(5,' ') + ' CE detrend= ' + ltcd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl-5*off,'(LMR,ERA-20C) : r full= ' + lerf.ljust(4,' ') + ' r detrend= ' + lerd.ljust(4,' ') + ' CE full= ' + lecf.ljust(5,' ') + ' CE detrend= ' + lecd.ljust(5,' '), fontsize=12, family='monospace')
     
     if fsave:
         print 'saving to .png'
@@ -1037,7 +1039,7 @@ if iplot:
 #  Summary "table" figures
 
 # dataset catalog IN ORDER
-dset = ['LMR', 'GIS', 'CRU', 'BE', 'MLOST', 'TCR','ERA', 'CON']
+dset = ['LMR', 'GISTEMP', 'HadCRUT4', 'BE', 'MLOST', '20CR-V2','ERA-20C', 'CON']
 ndset = len(dset)
 
 # construct a master array with each dataset in a column in the order of dset
@@ -1112,8 +1114,7 @@ k += 1; ALL_array[:,k] = con_gm_pad
 
 # get ALL_array in a pandas data frame -> pandas is nan-friendly for calculations of correlation
 df = pd.DataFrame(ALL_array,columns=dset)
-#orr_matrix = df.corr()
-
+#corr_matrix = df.corr()
 corr_matrix = df.corr().as_matrix()
 
 
@@ -1134,21 +1135,22 @@ for i in range(ndset): # verification dataset
 #----------- plotting starts here:
 ##################################
 
-plt.figure()
+plt.figure(figsize=[12,12])
 
 # make sure this matches what is in the plt.table call below
 #cmap = plt.cm.Reds
 cmap = truncate_colormap(plt.cm.Reds,0.0,0.9)
 #cmap = truncate_colormap(plt.cm.gist_heat_r,0.0,0.6)
 
-cellsize = 0.12 # table cell size
-fontsize = 12 
+cellsize = 0.15 # table cell size
+fontsize = 16
 
 nticks = 7
 
 # cell padding for the row labels; not sure why this is needed, but it is
-lpad = '     '
-rpad = lpad + ' '
+lpad = ' '
+#rpad = lpad + ' '
+rpad = lpad
 idx = []
 for d in dset:
     idx.append(lpad+d+rpad)
@@ -1167,7 +1169,7 @@ vmin = 0.7
 
 # this is here just to get the colorbar; apparently plt.table has no association
 img = plt.imshow(vals, cmap=cmap, vmin = vmin, vmax =vmax)
-cbar = plt.colorbar(shrink=.8)
+cbar = plt.colorbar(img,fraction=0.046, pad = 0.095)
 tick_locator = ticker.MaxNLocator(nbins=nticks)
 cbar.locator = tick_locator
 cbar.ax.yaxis.set_major_locator(ticker.AutoLocator())
@@ -1198,7 +1200,7 @@ for cell in table_cells: cell.set_height(cellsize)
 for cell in table_cells: cell.set_width(cellsize)
 
 plt.axis('off') # remove the axes that came with imshow
-plt.title('Correlation',fontweight='bold',y=1.05)
+plt.title('Correlation',fontweight='bold',fontsize=18, y=1.2)
 
 fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_corr_table'
 plt.savefig(fname+'.png')
@@ -1206,10 +1208,10 @@ plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
 
 
 #
-# CE figure
+# CE table
 #
 
-plt.figure()
+plt.figure(figsize=[12,12])
 
 vals = np.around(CE_matrix,2)
 
@@ -1219,7 +1221,7 @@ vmin = 0.7
 
 # this is here just to get the colorbar; apparently plt.table has no association
 img = plt.imshow(vals, cmap=cmap, vmin = vmin, vmax =vmax)
-cbar = plt.colorbar(shrink=.8)
+cbar = plt.colorbar(img,fraction=0.046, pad = 0.095)
 tick_locator = ticker.MaxNLocator(nbins=nticks)
 cbar.locator = tick_locator
 cbar.ax.yaxis.set_major_locator(ticker.AutoLocator())
@@ -1242,7 +1244,7 @@ for cell in table_cells: cell.set_height(cellsize)
 for cell in table_cells: cell.set_width(cellsize)
 
 plt.axis('off') # remove the axes that came with imshow
-plt.title('Coefficient of efficiency',fontweight='bold',y=1.05)
+plt.title('Coefficient of efficiency',fontweight='bold', fontsize=18, y=1.2)
 
 fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_ce_table'
 plt.savefig(fname+'.png')

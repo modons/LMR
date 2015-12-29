@@ -544,11 +544,11 @@ def global_hemispheric_means(field,lat):
             # NH
             indok_nh_2d = indok_nh[t,:,:]
             field_nh_2d = np.squeeze(field_NH[t,:,:])
-            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W[indok_nh_2d])
+            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W_NH[indok_nh_2d])
             # SH
             indok_sh_2d = indok_sh[t,:,:]
             field_sh_2d = np.squeeze(field_SH[t,:,:])
-            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W[indok_sh_2d])
+            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W_SH[indok_sh_2d])
 
 # original code (keep for now...)
 #    for t in xrange(ntime):
