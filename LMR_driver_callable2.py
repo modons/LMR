@@ -57,9 +57,6 @@ def LMR_driver_callable(cfg=None):
     #  2 = many; >=3 = all)
     verbose = 1
 
-    # TODO: AP Fix Configuration
-    # daylight the variables passed in the state object (easier for code
-    # migration than leaving attached)
     nexp = core.nexp
     workdir = core.datadir_output
     recon_period = core.recon_period
@@ -93,29 +90,6 @@ def LMR_driver_callable(cfg=None):
     recon_times = np.arange(recon_period[0], recon_period[1]+1)
 
     # ==========================================================================
-    # Load calibration data ----------------------------------------------------
-    # # ========================================================================
-    # if verbose > 0:
-    #     print '------------------------------'
-    #     print 'Creating calibration object...'
-    #     print '------------------------------'
-    #     print 'Source for calibration: ' + datatag_calib
-    #     print ''
-
-    # TODO: Doesn't appear to use C at all...
-    # Assign calibration object according to "datatag_calib" (from namelist)
-    # C = LMR_calibrate.calibration_assignment(datatag_calib)
-    #
-    # TODO: AP Required attributes need explicit declaration in method/class
-    # # the path to the calibration directory is specified in the namelist file;
-    #  bind it here
-    # C.datadir_calib = datadir_calib;
-    #
-    # # read the data !!!!!!!!!!!!!!!!!! don't need this with all pre-calculated
-    #  PSMs !!!!!!!!!!!!!!!!!!
-    # C.read_calibration()
-
-    # ==========================================================================
     # Load prior data ----------------------------------------------------------
     # ==========================================================================
     if verbose > 0:
@@ -137,7 +111,6 @@ def LMR_driver_callable(cfg=None):
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source)
     Xb_one_full = X.ens
-
 
     # Prepare to check for files in the prior (work) directory (this object just
     #  points to a directory)

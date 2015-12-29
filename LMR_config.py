@@ -18,6 +18,8 @@ class core:
         Name of reconstruction experiment
     lmr_path: str
         Absolute path for the experiment
+    online_reconstruction: bool
+        Perform reconstruction with (True) or without (False) cycling
     clean_start: bool
         Delete existing files in output directory (otherwise they will be used
         as the prior!)
