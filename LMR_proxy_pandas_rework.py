@@ -70,8 +70,6 @@ class ProxyManager:
 
             nsites_assim = int(nsites * proxy_frac)
 
-            # TODO: AP added seed
-            seed(0)
             self.ind_assim = sample(range(nsites), nsites_assim)
             self.ind_assim.sort()
             self.ind_eval = list(set(range(nsites)) - set(self.ind_assim))

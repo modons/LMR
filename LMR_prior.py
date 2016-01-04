@@ -100,10 +100,6 @@ class prior_master(object):
 
         # ***NOTE: Following code assumes that data for a given year are located at same array time index across all state variables
         print 'Random selection of', str(self.Nens), 'ensemble members'
-
-        # TODO: AP added seed
-        seed(0)
-
         # Populate prior ensemble from randomly sampled states
         ind_ens = sample(range(ntime), self.Nens)
 
