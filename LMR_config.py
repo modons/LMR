@@ -76,14 +76,14 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_paramsearch_inflation'
+    nexp = 'testdev_paramsearch_online_nolim'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
     save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [0, 2000]
+    recon_period = [1850, 2000]
     nens = 100
     seed = 2
     iter_range = [0, 0]
@@ -101,7 +101,7 @@ class core:
 
     # Adaptive Covariance Inflation
     adaptive_inflate = False
-    reg_inflate = True
+    reg_inflate = False
     inf_factor = 1.1
 
     # TODO: add rules for shift?
@@ -341,14 +341,11 @@ class forecaster:
         fcast_times: A list of lead times (in years) to forecast
         """
         calib_filename = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
-        calib_filename = ('/home/disk/kalman2/wperkins/LMR_output/testing/'
-                          'testdev_gis_ccsm4_pagesall_75/'
-                          'lim_recon_compiled.nc')
         calib_varname = 'tas_sfc_Amon'
-        dataformat = 'POSNCD'
+        dataformat = 'NCD'
         fcast_times = [1]
-        wsize = 1
+        wsize = 12
         fcast_num_pcs = 8
-        detrend = False
+        detrend = True
 
         eig_adjust = 0.0

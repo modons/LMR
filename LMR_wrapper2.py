@@ -38,7 +38,7 @@ if not os.path.isdir(expdir):
     os.system('mkdir {}'.format(expdir))
 
 # Temporary for parameter sweep
-a = np.arange(0.5, 1.0, 0.1)
+a = np.arange(0.0, 1.0, 0.1)
 d = [0]
 seeds = [9271, 687, 4312, 7175, 4999, 3318, 3344, 3667, 6975, 1766, 7374, 1820,
          2598, 1729, 9674, 3394, 239, 6039, 5670, 2679, 3334, 7684, 8701, 8719,
