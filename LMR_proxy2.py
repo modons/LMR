@@ -9,7 +9,7 @@ from LMR_utils2 import augment_docstr, class_docs_fixer
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from random import sample
+from random import sample, seed
 from copy import deepcopy
 
 class ProxyManager:
@@ -66,8 +66,11 @@ class ProxyManager:
 
         # Sample from all proxies if specified
         if proxy_frac < 1.0:
+
             nsites_assim = int(nsites * proxy_frac)
 
+            # TODO: AP added seed
+            seed(0)
             self.ind_assim = sample(range(nsites), nsites_assim)
             self.ind_assim.sort()
             self.ind_eval = list(set(range(nsites)) - set(self.ind_assim))

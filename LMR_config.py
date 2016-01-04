@@ -36,24 +36,24 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_onlineDA_comparison'
+    nexp = 'testdev_onlineDA_comparison1pt0_gis_ccsm4'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    iter_range = [75, 100]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
 
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
 class proxies:
@@ -249,10 +249,11 @@ class prior:
 
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     dataformat_prior = 'NCD'
+    state_variables = ['tas_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
-    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
-                       'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
-                       'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
-                       'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon']
+    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
+    #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
+    #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
+    #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon']
 
