@@ -37,9 +37,9 @@ import numpy as np
 from os.path import join
 from time import time
 
-import LMR_proxy2
+import LMR_proxy_pandas_rework
 import LMR_prior
-import LMR_utils2
+import LMR_utils
 import LMR_config as BaseCfg
 from LMR_DA import enkf_update_array, cov_localization
 
@@ -135,7 +135,7 @@ def LMR_driver_callable(cfg=None):
 
     # Build dictionaries of proxy sites to assimilate and those set aside for
     # verification
-    prox_manager = LMR_proxy2.ProxyManager(BaseCfg, recon_period)
+    prox_manager = LMR_proxy_pandas_rework.ProxyManager(BaseCfg, recon_period)
     type_site_assim = prox_manager.assim_ids_by_group
 
     if verbose > 0:
@@ -195,7 +195,7 @@ def LMR_driver_callable(cfg=None):
 
             # calculate the truncated fieldNtimes
             [var_array_new, lat_new, lon_new] = \
-                LMR_utils2.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
+                LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
             nlat_new = np.shape(lat_new)[0]
             nlon_new = np.shape(lat_new)[1]
 
@@ -285,7 +285,7 @@ def LMR_driver_callable(cfg=None):
     iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
     xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
     xbm_lalo = xbm.reshape(nlat_new, nlon_new)
-    [gmt,nhmt,shmt] = LMR_utils2.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
+    [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
     # First row is prior GMT
     gmt_save[0, :] = gmt
     nhmt_save[0,:] = nhmt
@@ -357,7 +357,7 @@ def LMR_driver_callable(cfg=None):
             xam = Xa.mean(axis=1)
             xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
             [gmt, nhmt, shmt] = \
-                LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
+                LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
             gmt_save[proxy_idx+1, yr_idx] = gmt
             nhmt_save[proxy_idx+1, yr_idx] = nhmt
             shmt_save[proxy_idx+1, yr_idx] = shmt
@@ -397,7 +397,7 @@ def LMR_driver_callable(cfg=None):
         for k in xrange(nens):
             xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
             [gmt, nhmt, shmt] = \
-                LMR_utils2.global_hemispheric_means(xam_lalo, lat_new[:, 0])
+                LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
             gmt_ensemble[iyr, k] = gmt
             nhmt_ensemble[iyr, k] = nhmt
             shmt_ensemble[iyr, k] = shmt

@@ -19,10 +19,10 @@
 import os
 import numpy as np
 import datetime
-import LMR_driver_callable2 as LMR
+import LMR_driver_callable as LMR
 import LMR_config as cfg
 
-from LMR_utils2 import ensemble_stats
+from LMR_utils import ensemble_stats
 
 print '\n' + str(datetime.datetime.now()) + '\n'
 

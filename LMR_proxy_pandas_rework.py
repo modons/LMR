@@ -1,11 +1,12 @@
 """
 Module containing proxy classes.  Rewritten by AndreP to incorporate features
-from the original LMR_proxy code using OOP.
+from the original LMR_proxy code using OOP and Pandas. Is used by the driver
+but not by verification scripts.
 """
 
 import LMR_psms
 from load_data import load_data_frame
-from LMR_utils2 import augment_docstr, class_docs_fixer
+from LMR_utils import augment_docstr, class_docs_fixer
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict

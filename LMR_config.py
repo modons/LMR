@@ -36,7 +36,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_onlineDA_comparison1pt0_gis_ccsm4'
+    nexp = 'testdev_onlineDA_comparison1pt0_gis_ccsm4_no2s'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True

@@ -20,10 +20,10 @@ import cPickle
 from time import time
 from os.path import join
 # LMR specific imports
-import LMR_proxy2
+import LMR_proxy_pandas_rework
 import LMR_calibrate
 import LMR_prior
-from LMR_utils2 import haversine, coefficient_efficiency
+from LMR_utils import haversine, coefficient_efficiency
 #from load_proxy_data import read_proxy_metadata_S1csv as read_proxy_metadata
 
 import matplotlib
@@ -494,7 +494,7 @@ def main():
     Cfg.proxies.proxy_frac = 1.0
 
 
-    prox_manager = LMR_proxy2.ProxyManager(Cfg, Cfg.core.verif_period)
+    prox_manager = LMR_proxy_pandas_rework.ProxyManager(Cfg, Cfg.core.verif_period)
     type_site_assim = prox_manager.assim_ids_by_group
 
     print '--------------------------------------------------------------------'

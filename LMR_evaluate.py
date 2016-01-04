@@ -39,7 +39,7 @@ def recon_eval_stats(sites_eval,recon_period,recondir,calib,prior,datadir_proxy,
 #==========================================================================================
 
     import LMR_proxy
-    import LMR_utils2
+    import LMR_utils
     import cPickle
     import numpy as np
 
@@ -91,7 +91,7 @@ def recon_eval_stats(sites_eval,recon_period,recondir,calib,prior,datadir_proxy,
                 indt = Yeval.time.index(t)
                 truth[tcount] = Yeval.value[indt]
 
-                ypad = LMR_utils2.year_fix(t)
+                ypad = LMR_utils.year_fix(t)
                 #print 'Processing year:', ypad
                 filen = recondir + '/' + 'year' + ypad
                 Xrecon = np.load(filen+'.npy')
