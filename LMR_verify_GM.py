@@ -17,7 +17,6 @@ from netCDF4 import Dataset
 from datetime import datetime, timedelta
 #
 from LMR_plot_support import *
-from LMR_exp_NAMELIST import *
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
@@ -42,13 +41,13 @@ iplot = True
 
 # option to save figures to a file
 #fsave = True
-fsave = True
+fsave = False
 
 # file specification
 #
 # current datasets
 #
-#nexp = 'testdev_150yr_75pct_gmttest_1iter'
+nexp = 'testdev_onlineDA_comparison'
 #nexp = 'testing_1000_75pct_ens_size_Nens_10'
 #nexp = 'testing_1000_75pct_200members'
 #nexp = 'testdev_check_1000_75pct'
@@ -58,29 +57,20 @@ fsave = True
 #nexp = 'testdev_1000_100pct_mxdonly'
 #nexp = 'testdev_1000_100pct_sedimentonly'
 #nexp = 'testdev_detrend4_1000_75pct'
-# ---
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-
-#nexp = 'production_gis_ccsm4_pagesall_0.75'
-#nexp = 'production_mlost_ccsm4_pagesall_0.75'
-#nexp = 'production_cru_ccsm4_pagesall_0.75'
+#nexp = 'p1rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p1rl_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p2rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+nexp = 'p2rl_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
+#nexp = 'p2rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 
 # specify directories for LMR and calibration data
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/home/chaos2/wperkins/data/LMR/output/archive'
 #datadir_output = './data/'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-
-datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
+datadir_calib = '/home/chaos2/wperkins/data/LMR/data/analyses'
 
 # plotting preferences
 nlevs = 30 # number of contours
@@ -155,8 +145,7 @@ calib_vars = ['Tsfc']
 
 # load NOAA MLOST
 path = datadir_calib + '/NOAA/'
-#fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v3.5.4.201504.asc'
-fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v4.0.0.201506.asc'
+fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v3.5.4.201504.asc'
 f = open(path+fname,'r')
 dat = csv.reader(f)
 mlost_time = []
@@ -174,9 +163,8 @@ MLOST_time = np.array(mlost_time)
 # load 20th century reanalysis
 # this is copied from R. Tardif's load_gridded_data.py routine
 
-#infile = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
+infile = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
 #infile = './data/500_allproxies_0/air.sig995.mon.mean.nc'
-infile = '/home/disk/ekman/rtardif/kalman3/LMR/data/model/20cr/air.sig995.mon.mean.nc'
 
 data = Dataset(infile,'r')
 lat_20CR   = data.variables['lat'][:]

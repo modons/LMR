@@ -8,7 +8,7 @@ import matplotlib.pyplot as pylab
 import numpy as np
 import logging
 import LMR_calibrate
-from LMR_utils2 import haversine, smooth2D, class_docs_fixer
+from LMR_utils import haversine, smooth2D, class_docs_fixer
 
 from scipy.stats import linregress
 from abc import ABCMeta, abstractmethod

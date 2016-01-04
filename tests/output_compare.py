@@ -11,11 +11,13 @@ import os.path as path
 from itertools import izip
 
 # proxy-first version vs time-first version comparison
-off_v_on = True
+off_v_on = False
 
 #dir1 = '/home/disk/ekman/rtardif/kalman3/LMR/output/validationWithAndre/r0/'
-dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/proxyfirstloop_10yr_100members_1itr_100pct/r0/'
-dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/timefirst_10yr_100members_1itr_100pct/r0/'
+# dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/proxyfirstloop_10yr_100members_1itr_100pct/r0/'
+# dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/timefirst_10yr_100members_1itr_100pct/r0/'
+dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4/r0/'
+dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4_no2s/r0/'
 
 d1_npfiles = glob.glob(dir1 + '*.npz')
 d1_pckl_files = glob.glob(dir1 + '*.pckl')

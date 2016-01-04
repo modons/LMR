@@ -36,7 +36,7 @@ class prior_master(object):
     def populate_ensemble(self,prior_source):
 
         import numpy as np
-        from random import sample
+        from random import sample, seed
         
 
         # Load prior **annually averaged** data from file(s) - multiple state variables
@@ -101,7 +101,7 @@ class prior_master(object):
         # ***NOTE: Following code assumes that data for a given year are located at same array time index across all state variables
         print 'Random selection of', str(self.Nens), 'ensemble members'
         # Populate prior ensemble from randomly sampled states
-        ind_ens = sample(range(0,ntime-1),self.Nens)
+        ind_ens = sample(range(ntime), self.Nens)
 
 
 

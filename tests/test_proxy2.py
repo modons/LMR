@@ -8,7 +8,7 @@ sys.path.append('../')
 import pytest
 import cPickle
 import numpy as np
-import LMR_proxy2 as proxy2
+import LMR_proxy_pandas_rework as proxy2
 import LMR_config as cfg
 from itertools import izip
 

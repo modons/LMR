@@ -115,7 +115,7 @@ def cov_localization(locRad,X,Y):
     # declare the localization array (Nx = nlat x nlon for now ... assume single state variable) 
     covLoc = np.zeros(shape=[nlat*nlon])
 
-    dists = np.array([ LMR_utils.haversine(site_lon,site_lat,X.lon[i],X.lat[i]) for i in xrange(len(X.lon)) ])
+    dists = np.array(LMR_utils.haversine(site_lon, site_lat, X.lon, X.lat))
     
     hlr = 0.5*locRad; # work with half the localization radius
     r = dists/hlr;

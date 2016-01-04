@@ -18,6 +18,8 @@ class core:
         Name of reconstruction experiment
     lmr_path: str
         Absolute path for the experiment
+    online_reconstruction: bool
+        Perform reconstruction with (True) or without (False) cycling
     clean_start: bool
         Delete existing files in output directory (otherwise they will be used
         as the prior!)
@@ -34,52 +36,24 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    # *Note: Series with Near Sfc temperature, 500 hPa height and AMOC index as state variables
-    #nexp = 'p1rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p1rl_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p1rl_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p1rl_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p1rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    # *Note: As "p1rl", with OHC in various ocean basins added to state variables
-    #nexp = 'p2rl_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p2rl_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p2rl_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    # *Note: As "p2rl", but with r_crit = 0
-    #nexp = 'p2rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p2rlrc0bf_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    # ---
-    #nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    # ---
-    nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    nexp = 'testdev_onlineDA_comparison1pt0_gis_ccsm4_no2s'
+    lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1800, 2000]
+    recon_period = [1850, 2000]
     nens = 100
-    iter_range = [75, 100]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
 
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
 class proxies:
@@ -235,8 +209,7 @@ class psm:
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
                                   'PSMs_' + datatag_calib + '.pckl')
-        #psm_r_crit = 0.2
-        psm_r_crit = 0.0
+        psm_r_crit = 0.2
 
 class prior:
     """
@@ -256,11 +229,11 @@ class prior:
         List of variables to use in the state vector for the prior
     """
     # Prior data directory & model source
-    prior_source     = 'ccsm4_last_millenium'
+    prior_source = 'ccsm4_last_millenium'
     datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 
     #prior_source     = 'ccsm4_preindustrial_control'
-    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc'
+    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
 
     #prior_source     = 'gfdl-cm3_preindustrial_control'
     #datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
@@ -276,7 +249,11 @@ class prior:
 
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     dataformat_prior = 'NCD'
+    state_variables = ['tas_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
-    #state_variables = ['tas_sfc_Amon','zg_500hPa_Amon','AMOCindex_Omon','ohcAtlanticNH_0-700m_Omon','ohcAtlanticSH_0-700m_Omon','ohcPacificNH_0-700m_Omon','ohcPacificSH_0-700m_Omon','ohcIndian_0-700m_Omon','ohcSouthern_0-700m_Omon']
-    state_variables = ['tas_sfc_Amon','zg_500hPa_Amon','AMOCindex_Omon','AMOC26N1000m_Omon','AMOC45N1000m_Omon','AMOC26Nmax_Omon','ohcAtlanticNH_0-700m_Omon','ohcAtlanticSH_0-700m_Omon','ohcPacificNH_0-700m_Omon','ohcPacificSH_0-700m_Omon','ohcIndian_0-700m_Omon','ohcSouthern_0-700m_Omon','ohcArctic_0-700m_Omon']
+    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
+    #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
+    #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
+    #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon']
+

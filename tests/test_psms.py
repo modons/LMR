@@ -27,6 +27,8 @@ def dummy_proxy(pid='Aus_01', ptype='Tree ring_Width'):
     p = Proxy()
     p.id = pid
     p.type = ptype
+    p.lat = -42
+    p.lon = 147
 
     return p
 

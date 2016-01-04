@@ -2,7 +2,7 @@ import sys
 sys.path.append('../')
 
 import pytest
-import LMR_utils2 as Utils
+import LMR_utils as Utils
 
 
 @pytest.mark.parametrize("doc", [

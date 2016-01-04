@@ -60,45 +60,43 @@ var = 'zg_500hPa_Amon'
 #nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-# ---
+
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
-nexp = 'production_mlost_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
 
 # override datadir
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
 
 # number of contours for plots
-nlevs = 21
+nlevs = 30
 
 # plot alpha transparency
 alpha = 0.5
 
 # time range for verification (in years CE)
-trange = [1880,2000] #works for nya = 0 
-#trange = [1900,2000] #works for nya = 0 
+trange = [1880,2000] #works for nya = 0
+#trange = [1900,2000] #works for nya = 0
 #trange = [1885,1995] #works for nya = 5
 #trange = [1890,1990] #works for nya = 10
 
-# reference period over which mean is calculated & subtracted 
+# reference period over which mean is calculated & subtracted
 # from all datasets (in years CE)
 ref_period = [1900, 1999] # 20th century
 
 valid_frac = 0.0
 
 
-# set the default size of the figure in inches. ['figure.figsize'] = width, height;  
+# set the default size of the figure in inches. ['figure.figsize'] = width, height;
 # aspect ratio appears preserved on smallest of the two
 plt.rcParams['figure.figsize'] = 10, 10 # that's default image size for this interactive session
 plt.rcParams['axes.linewidth'] = 2.0    # set the value globally
@@ -226,7 +224,7 @@ ERA20C = dd[vardef]['value']                        # Anomalies (long-term mean 
 ###############################################################
 
 # ----------------------------------------------------------
-# Adjust so that all anomaly data pertain to the mean over a 
+# Adjust so that all anomaly data pertain to the mean over a
 # user-defined reference period (e.g. 20th century)
 # ----------------------------------------------------------
 stime = ref_period[0]
@@ -312,7 +310,7 @@ for yr in cyears:
 
 
     # LMR
-    pdata_lmr = np.mean(LMR[LMR_smatch:LMR_ematch,:,:],0)    
+    pdata_lmr = np.mean(LMR[LMR_smatch:LMR_ematch,:,:],0)
     lmr_trunc = regrid(specob_lmr, specob_new, pdata_lmr, ntrunc=nlat_new-1, smooth=None)
 
     
@@ -350,22 +348,22 @@ for yr in cyears:
         #fmin = -80.0; fmax = +80.0; nflevs=41
         fmin = -60.0; fmax = +60.0; nflevs=41
         fig = plt.figure()
-        ax = fig.add_subplot(3,1,1)    
+        ax = fig.add_subplot(3,1,1)
         LMR_plotter(lmr_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
         plt.title('LMR Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
         plt.clim(fmin,fmax)
-        ax = fig.add_subplot(3,1,2)    
+        ax = fig.add_subplot(3,1,2)
         LMR_plotter(tcr_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
         plt.title('TCR Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
         plt.clim(fmin,fmax)
-        ax = fig.add_subplot(3,1,3)    
+        ax = fig.add_subplot(3,1,3)
         LMR_plotter(era20c_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
         plt.title('ERA20C Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
         plt.clim(fmin,fmax)
         fig.tight_layout()
         plt.savefig(nexp+'_LMR_TCR_ERA20C_Z500anom_'+str(yr)+'.png')
         plt.close()
-        
+
     # save the full grids
     lmr_allyears[k,:,:] = lmr_trunc
     tcr_allyears[k,:,:] = tcr_trunc
@@ -452,7 +450,7 @@ for yr in cyears:
         # plt.tight_layout(pad=0.3)
         fig.suptitle('500hPa height for ' +str(nya) +' year centered average')
     
-        
+
 
 
     # anomaly correlation
@@ -695,7 +693,7 @@ for la in range(nlat_new):
         r_lt_zm[la]  = np.nan
 
     # LMR-ERA20C
-    ce_le_zm[la] = coefficient_efficiency(era20c_zm[:,la],lmr_zm[:,la],valid=valid_frac)    
+    ce_le_zm[la] = coefficient_efficiency(era20c_zm[:,la],lmr_zm[:,la],valid=valid_frac)
     indok = np.isfinite(era20c_zm[:,la])
     nbok = np.sum(indok)
     nball = len(cyears)
@@ -734,7 +732,7 @@ plt.suptitle('LMR zonal-mean verification - 500hPa heights')
 fig.tight_layout(pad = 2.0)
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_Z500_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') 
+    plt.savefig(nexp+'_verify_grid_Z500_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png')
     plt.savefig(nexp+'_verify_grid_Z500_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
     plt.close()
 
