@@ -92,10 +92,14 @@ class LIMForecaster:
         state_var = 'tas_sfc_Amon'
         var_data = state_obj.get_var_data(state_var, idx=0)
 
-        fcast_data = self._forecast_helper(var_data)
+        # Take the ensemble mean and forecast on that
+        var_data_ensmean = var_data.mean(axis=-1, keepdims=True)
+        var_data_enspert = var_data - var_data_ensmean
+
+        fcast_data = self._forecast_helper(var_data_ensmean)
 
         # var_data is returned as a view for annual, so this re-assigns
-        var_data[:] = fcast_data
+        var_data[:] = fcast_data + var_data_enspert
 
     def _forecast_helper(self, t0_data):
 
@@ -111,7 +115,7 @@ class LIMForecaster:
         fcast, eofs = self.lim.forecast(fcast_obj)
 
         # return physical forecast (dimensions of stateDim x nens)
-        return np.dot(eofs, np.squeeze(fcast))
+        return np.dot(eofs, np.squeeze(fcast, axis=0))
 
 
 _forecaster_classes = {'lim': LIMForecaster}
