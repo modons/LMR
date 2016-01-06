@@ -77,7 +77,7 @@ class core:
         Absolute path to LMR reconstruction archive directory
     """
     nexp = 'testdev_paramsearch_priorblend_noinflate'
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
@@ -115,7 +115,7 @@ class core:
             sub_base_res = shift
 
     #datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
-    datadir_output = '/home/disk/enkf_local/wperkins'
+    datadir_output = '/home/enkf_local/wperkins'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
