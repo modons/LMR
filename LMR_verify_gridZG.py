@@ -16,8 +16,6 @@ from spharm import Spharmt, getspecindx, regrid
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
 from load_gridded_data import read_gridded_data_CMIP5_model
 from LMR_plot_support import *
-from LMR_exp_NAMELIST import *
-from LMR_plot_support import *
 
 # change default value of latlon kwarg to True.
 bm.latlon_default = True
@@ -60,43 +58,45 @@ var = 'zg_500hPa_Amon'
 #nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
 #nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-
+#nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+#nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
+# ---
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
-#nexp = 'production_mlost_ccsm4_pagesall_0.75'
+nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
 
 # override datadir
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
 
 # number of contours for plots
-nlevs = 30
+nlevs = 21
 
 # plot alpha transparency
 alpha = 0.5
 
 # time range for verification (in years CE)
-trange = [1880,2000] #works for nya = 0
-#trange = [1900,2000] #works for nya = 0
+trange = [1880,2000] #works for nya = 0 
+#trange = [1900,2000] #works for nya = 0 
 #trange = [1885,1995] #works for nya = 5
 #trange = [1890,1990] #works for nya = 10
 
-# reference period over which mean is calculated & subtracted
+# reference period over which mean is calculated & subtracted 
 # from all datasets (in years CE)
 ref_period = [1900, 1999] # 20th century
 
 valid_frac = 0.0
 
 
-# set the default size of the figure in inches. ['figure.figsize'] = width, height;
+# set the default size of the figure in inches. ['figure.figsize'] = width, height;  
 # aspect ratio appears preserved on smallest of the two
 plt.rcParams['figure.figsize'] = 10, 10 # that's default image size for this interactive session
 plt.rcParams['axes.linewidth'] = 2.0    # set the value globally
@@ -224,7 +224,7 @@ ERA20C = dd[vardef]['value']                        # Anomalies (long-term mean 
 ###############################################################
 
 # ----------------------------------------------------------
-# Adjust so that all anomaly data pertain to the mean over a
+# Adjust so that all anomaly data pertain to the mean over a 
 # user-defined reference period (e.g. 20th century)
 # ----------------------------------------------------------
 stime = ref_period[0]
@@ -310,7 +310,7 @@ for yr in cyears:
 
 
     # LMR
-    pdata_lmr = np.mean(LMR[LMR_smatch:LMR_ematch,:,:],0)
+    pdata_lmr = np.mean(LMR[LMR_smatch:LMR_ematch,:,:],0)    
     lmr_trunc = regrid(specob_lmr, specob_new, pdata_lmr, ntrunc=nlat_new-1, smooth=None)
 
     
@@ -348,22 +348,22 @@ for yr in cyears:
         #fmin = -80.0; fmax = +80.0; nflevs=41
         fmin = -60.0; fmax = +60.0; nflevs=41
         fig = plt.figure()
-        ax = fig.add_subplot(3,1,1)
+        ax = fig.add_subplot(3,1,1)    
         LMR_plotter(lmr_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
         plt.title('LMR Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
         plt.clim(fmin,fmax)
-        ax = fig.add_subplot(3,1,2)
+        ax = fig.add_subplot(3,1,2)    
         LMR_plotter(tcr_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
-        plt.title('TCR Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
+        plt.title('20CR-V2 Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
         plt.clim(fmin,fmax)
-        ax = fig.add_subplot(3,1,3)
+        ax = fig.add_subplot(3,1,3)    
         LMR_plotter(era20c_trunc,lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
-        plt.title('ERA20C Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
+        plt.title('ERA-20C Z500 anom.'+ ' T'+str(nlat_new-ifix)+' '+str(yr))
         plt.clim(fmin,fmax)
         fig.tight_layout()
         plt.savefig(nexp+'_LMR_TCR_ERA20C_Z500anom_'+str(yr)+'.png')
         plt.close()
-
+        
     # save the full grids
     lmr_allyears[k,:,:] = lmr_trunc
     tcr_allyears[k,:,:] = tcr_trunc
@@ -450,7 +450,7 @@ for yr in cyears:
         # plt.tight_layout(pad=0.3)
         fig.suptitle('500hPa height for ' +str(nya) +' year centered average')
     
-
+        
 
 
     # anomaly correlation
@@ -499,12 +499,12 @@ fig = plt.figure()
 ax = fig.add_subplot(3,2,1)
 ax.plot(cyears,lt_csave,lw=2)
 ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_title('LMR-TCR')
+ax.set_title('LMR - 20CR-V2')
 ax.set_ylim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(3,2,2)
 ax.hist(lt_csave,bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-TCR')
+ax.set_title('LMR - 20CR-V2')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
 xmin,xmax = ax.get_xlim()
@@ -516,12 +516,12 @@ ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lt_csave)),fontsize=11
 ax = fig.add_subplot(3,2,3)
 ax.plot(cyears,le_csave,lw=2)
 ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_title('LMR-ERA20C')
+ax.set_title('LMR - ERA-20C')
 ax.set_ylim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(3,2,4)
 ax.hist(le_csave,bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-ERA20C')
+ax.set_title('LMR - ERA-20C')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
 xmin,xmax = ax.get_xlim()
@@ -534,13 +534,13 @@ ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(le_csave)),fontsize=11
 ax = fig.add_subplot(3,2,5)
 ax.plot(cyears,te_csave,lw=2)
 ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_title('ERA20C-TCR')
+ax.set_title('ERA-20C - 20CR-V2')
 ax.set_ylim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Correlation',fontweight='bold')
 ax.set_xlabel('Year CE',fontweight='bold')
 ax = fig.add_subplot(3,2,6)
 ax.hist(te_csave,bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('ERA20c-TCR')
+ax.set_title('ERA-20C - 20CR-V2')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
 ax.set_xlabel('Correlation',fontweight='bold')
@@ -551,12 +551,64 @@ xpos = xmin+0.025*(xmax-xmin)
 ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(te_csave)),fontsize=11,fontweight='bold')
 #fig.tight_layout()
 plt.subplots_adjust(left=0.1, bottom=0.45, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
-fig.suptitle('500hPa height anomaly correlation') 
+fig.suptitle('500hPa height anomaly correlation',fontweight='bold') 
 if fsave:
     print 'saving to .png'
     plt.savefig(nexp+'_verify_grid_Z500_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
     plt.savefig(nexp+'_verify_grid_Z500_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf', bbox_inches='tight', dpi=300, format='pdf')
     plt.close()
+
+    # =================================================================================================================================
+    # For paper 1 :
+
+    fig = plt.figure()
+    # TCR
+    ax = fig.add_subplot(2,2,1)
+    ax.plot(cyears,lt_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR - 20CR-V2')
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(2,2,2)
+    ax.hist(lt_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR - 20CR-V2')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lt_csave)),fontsize=11,fontweight='bold')
+    # ERA20C
+    ax = fig.add_subplot(2,2,3)
+    ax.plot(cyears,le_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR - ERA-20C')
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax.set_xlabel('Year CE',fontweight='bold')    
+    ax = fig.add_subplot(2,2,4)
+    ax.hist(le_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR - ERA-20C')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    ax.set_xlabel('Correlation',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(le_csave)),fontsize=11,fontweight='bold')
+    
+    fig.tight_layout()
+    plt.subplots_adjust(left=0.1, bottom=0.45, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
+    fig.suptitle('500hPa height anomaly correlation',fontweight='bold') 
+
+    plt.savefig(nexp+'_verify_grid_Z500_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
+    plt.savefig(nexp+'_verify_grid_Z500_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf', bbox_inches='tight', dpi=300, format='pdf')
+    plt.close()
+    
+    # =================================================================================================================================
+
 
 #
 # BEGIN bias, r and CE calculations
@@ -693,7 +745,7 @@ for la in range(nlat_new):
         r_lt_zm[la]  = np.nan
 
     # LMR-ERA20C
-    ce_le_zm[la] = coefficient_efficiency(era20c_zm[:,la],lmr_zm[:,la],valid=valid_frac)
+    ce_le_zm[la] = coefficient_efficiency(era20c_zm[:,la],lmr_zm[:,la],valid=valid_frac)    
     indok = np.isfinite(era20c_zm[:,la])
     nbok = np.sum(indok)
     nball = len(cyears)
@@ -709,8 +761,8 @@ for la in range(nlat_new):
 major_ticks = np.arange(-90, 91, 30)
 fig = plt.figure()
 ax = fig.add_subplot(1,2,1)    
-tcrleg, = ax.plot(r_lt_zm,veclat,'k-',linestyle='--',lw=2,label='TCR')
-eraleg, = ax.plot(r_le_zm,veclat,'k-',linestyle='-',lw=2,label='ERA20C')
+tcrleg, = ax.plot(r_lt_zm,veclat,'k-',linestyle='--',lw=2,label='20CR-V2')
+eraleg, = ax.plot(r_le_zm,veclat,'k-',linestyle='-',lw=2,label='ERA-20C')
 ax.plot([0,0],[-90,90],'k:')
 ax.set_yticks(major_ticks)                                                       
 plt.ylim([-90,90])
@@ -728,11 +780,11 @@ plt.ylim([-90,90])
 plt.xlim([-1.5,1])
 plt.xlabel('Coefficient of efficiency',fontweight='bold')
 #plt.title('CE (TCR dashed; ERA20C solid)')
-plt.suptitle('LMR zonal-mean verification - 500hPa heights')
+plt.suptitle('LMR zonal-mean verification - 500hPa heights',fontweight='bold')
 fig.tight_layout(pad = 2.0)
 if fsave:
     print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_Z500_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png')
+    plt.savefig(nexp+'_verify_grid_Z500_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') 
     plt.savefig(nexp+'_verify_grid_Z500_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
     plt.close()
 
@@ -747,43 +799,43 @@ if iplot:
     fig = plt.figure()
     ax = fig.add_subplot(4,2,1)    
     LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-    #plt.title('LMR-TCR Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_rmean))
-    plt.title('LMR-TCR Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
+    #plt.title('LMR - 20CR-V2 Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_rmean))
+    plt.title('LMR - 20CR-V2 Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
     plt.clim(-1,1)
     ax.title.set_position([.5, 1.05])
 
     ax = fig.add_subplot(4,2,2)    
     LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-    #plt.title('LMR-TCR Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_cemean))
-    plt.title('LMR-TCR Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
+    #plt.title('LMR - 20CR-V2 Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lt_cemean))
+    plt.title('LMR - 20CR-V2 Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
     plt.clim(-1,1)
     ax.title.set_position([.5, 1.05])
 
     ax = fig.add_subplot(4,2,3)    
     LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-    #plt.title('LMR-ERA20C Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(le_rmean))
-    plt.title('LMR-ERA20C Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
+    #plt.title('LMR - ERA-20C Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(le_rmean))
+    plt.title('LMR - ERA-20C Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
     plt.clim(-1,1)
     ax.title.set_position([.5, 1.05])
 
     ax = fig.add_subplot(4,2,4)    
     LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-    #plt.title('LMR-ERA20C Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(le_cemean))
-    plt.title('LMR-ERA20C Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
+    #plt.title('LMR - ERA-20C Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(le_cemean))
+    plt.title('LMR - ERA-20C Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
     plt.clim(-1,1)
     ax.title.set_position([.5, 1.05])
 
     ax = fig.add_subplot(4,2,5)    
     LMR_plotter(r_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-    #plt.title('TCR-ERA20C Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(te_rmean))
-    plt.title('TCR-ERA20C Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_rmean_global))
+    #plt.title('TCR - ERA-20C Z r '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(te_rmean))
+    plt.title('20CR-V2 - ERA-20C Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_rmean_global))
     plt.clim(-1,1)
     ax.title.set_position([.5, 1.05])
 
     ax = fig.add_subplot(4,2,6)    
     LMR_plotter(ce_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-    #plt.title('TCR-ERA20C Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(te_cemean))
-    plt.title('TCR-ERA20C Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_cemean_global))
+    #plt.title('20CR-V2 - ERA-20C Z CE '+ 'T'+str(nlat_new-ifix)+' '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(te_cemean))
+    plt.title('20CR-V2 - ERA-20C Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_cemean_global))
     plt.clim(-1,1)
     ax.title.set_position([.5, 1.05])
   
@@ -793,6 +845,42 @@ if iplot:
         plt.savefig(nexp+'_verify_grid_Z500_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png')
         plt.savefig(nexp+'_verify_grid_Z500_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
+
+        # =================================================================================================================================
+        # For paper 1 :
+
+        fig = plt.figure()
+        ax = fig.add_subplot(4,2,1)    
+        LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - 20CR-V2 Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,2)    
+        LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - 20CR-V2 Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,3)    
+        LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - ERA-20C Z500 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,4)    
+        LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - ERA-20C Z500 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        fig.tight_layout()
+        print 'saving to .png'
+        plt.savefig(nexp+'_verify_grid_Z500_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
+        plt.savefig(nexp+'_verify_grid_Z500_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf',bbox_inches='tight', dpi=300, format='pdf')
+        plt.close()
+
+        # =================================================================================================================================
 
 if iplot:
     plt.show()

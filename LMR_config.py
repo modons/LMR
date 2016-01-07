@@ -64,7 +64,7 @@ class proxies:
     ----------
     use_from: list(str)
         A list of keys for proxy classes to load from.  Keys available are
-        stored in LMR_proxy2.
+        stored in LMR_proxy_pandas_rework.
     proxy_frac: float
         Fraction of available proxy data (sites) to assimilate
     """
