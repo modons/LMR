@@ -76,7 +76,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_save_xbv'
+    nexp = 'testdev_paramsearch_ccm4gis_ccsm4lim'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
@@ -342,13 +342,19 @@ class forecaster:
         calib_varname: Variable name to grab from calib_filename
         fcast_times: A list of lead times (in years) to forecast
         """
-        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
-                          '/tas_sfc_Amon_20CR_185101-201112.nc')
+        # calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
+        #                   '/tas_sfc_Amon_20CR_185101-201112.nc')
+        # calib_varname = 'tas'
+        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
+                          '/ccsm4_last_millenium/'
+                          'tas_sfc_Amon_CCSM4_past1000_085001-185012.nc')
         calib_varname = 'tas'
+
         dataformat = 'NCD'
         fcast_times = [1]
         wsize = 12
         fcast_num_pcs = 8
         detrend = True
+        ignore_precalib = False
 
         eig_adjust = 0.0
