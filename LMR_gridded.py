@@ -859,7 +859,7 @@ class State(object):
         -------
         """
 
-        xb_vals = self.get_var_data('state', idx=0)
+        xb_vals = self.state_list[0]
         xb_mean = xb_vals.mean(axis=1, keepdims=True)
         xb_pert = xb_vals - xb_mean
 
