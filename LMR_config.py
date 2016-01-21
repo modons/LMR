@@ -76,8 +76,8 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_paramsearch_ccm4gis_ccsm4lim'
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    nexp = 'testdev_paramsearch_ccm4gis_belim'
+    lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
@@ -342,14 +342,28 @@ class forecaster:
         calib_varname: Variable name to grab from calib_filename
         fcast_times: A list of lead times (in years) to forecast
         """
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/'
+        #                  'era20c/tas_sfc_Amon_ERA20C_190001-201212.nc')
+        #calib_varname = 'tas'
         # calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
         #                   '/tas_sfc_Amon_20CR_185101-201112.nc')
         # calib_varname = 'tas'
-        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
-                          '/ccsm4_last_millenium/'
-                          'tas_sfc_Amon_CCSM4_past1000_085001-185012.nc')
-        calib_varname = 'tas'
-
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
+        #                  '/ccsm4_last_millenium/'
+        #                  'tas_sfc_Amon_CCSM4_past1000_085001-185012.nc')
+        #calib_varname = 'tas'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
+        #                  '/mpi-esm-p_last_millenium/'
+        #                  'tas_sfc_Amon_MPI-ESM-P_past1000_085001-185012.nc')
+        #calib_varname='tas'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc')
+        #calib_varname = 'air'
+        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/'
+                          'analyses/Experimental/tas_run_mean_berkely_'
+                          'earth_monthly_195701-201412.nc')
+        calib_varname = 'tas_run_mean' 
+        calib_is_anomaly = True
+        calib_is_runmean = True
         dataformat = 'NCD'
         fcast_times = [1]
         wsize = 12

@@ -49,6 +49,8 @@ class LIMForecaster:
         fmt = cfg.dataformat
         eig_adjust = cfg.eig_adjust
         ignore_precalib = cfg.ignore_precalib
+        is_anomaly = cfg.calib_is_anomaly
+        is_runmean = cfg.calib_is_runmean
 
         # Search for pre-calibrated LIM to save time
         fpath, fname = path.split(infile)
@@ -80,6 +82,8 @@ class LIMForecaster:
                             ' type for LIM: {}'.format(fmt))
 
         coords = data_obj.get_dim_coords(['lat', 'lon', 'time'])
+        data_obj.is_run_mean = is_runmean
+        data_obj.is_anomaly = is_anomaly
 
         if do_regrid:
             # TODO: May want to tie this more into LMR regridding
@@ -102,7 +106,8 @@ class LIMForecaster:
             calib_obj = DT.BaseDataObject(dat_new, dim_coords=new_coords,
                                           force_flat=True,
                                           time_units=data_obj.time_units,
-                                          time_cal=data_obj.time_cal)
+                                          time_cal=data_obj.time_cal,
+                                          is_anomaly=is_anomaly, is_run_mean=is_runmean)
             # calib_obj.save_dataobj_pckl(pre_avg_fname)
         else:
             calib_obj = data_obj
