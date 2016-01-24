@@ -86,7 +86,7 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 0]
+    iter_range = [0, 25]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -114,8 +114,8 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
-    #datadir_output = '/home/enkf_local/wperkins'
+    #datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
+    datadir_output = '/home/enkf_local/wperkins'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
@@ -361,7 +361,7 @@ class forecaster:
         # calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/'
         #                   'analyses/Experimental/tas_run_mean_berkely_'
         #                   'earth_monthly_195701-201412.nc')
-        calib_varname = 'tas_run_mean' 
+        #calib_varname = 'tas_run_mean' 
         calib_is_anomaly = False
         calib_is_runmean = False
         dataformat = 'NCD'
