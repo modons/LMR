@@ -30,7 +30,7 @@ class constants:
                               'varname': 'temperature',
                               'type': 'NCD'}
 
-    calib['MLOST'] = {'fname': 'MLOST_air.mon.anom.V3.5.4.nc',
+    calib['MLOST'] = {'fname': 'MLOST_air.mon.anom_V3.5.4.nc',
                       'varname': 'air',
                       'type': 'NCD'}
 
@@ -76,17 +76,17 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_paramsearch_ccm4gis_belim'
+    nexp = 'testdev_mlost_mpi_pagesall_75'
     lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
-    online_reconstruction = True
+    online_reconstruction = False
     clean_start = True
     ignore_pre_avg_file = False
     save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1850, 2000]
     nens = 100
-    seed = 2
-    iter_range = [0, 24]
+    seed = None
+    iter_range = [1, 49]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -114,8 +114,8 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    #datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
-    datadir_output = '/home/enkf_local/wperkins'
+    datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output = '/home/enkf_local/wperkins'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
@@ -275,7 +275,7 @@ class psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
-        datatag_calib = 'GISTEMP'
+        datatag_calib = 'MLOST'
         sub_base_res = core.sub_base_res
         datadir_calib = join(core.lmr_path, 'data', 'analyses', datatag_calib)
         datafile_calib = constants.calib[datatag_calib]['fname']
@@ -315,8 +315,8 @@ class prior:
         List of variables to use in the state vector for the prior
     """
     # Prior data directory & model source
-    prior_source = 'ccsm4_last_millenium'
-    #prior_source = 'mpi-esm-p_last_millenium'
+    #prior_source = 'ccsm4_last_millenium'
+    prior_source = 'mpi-esm-p_last_millenium'
 
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     datafile_prior   = constants.prior[prior_source]['fname']
@@ -352,18 +352,18 @@ class forecaster:
         #                  '/ccsm4_last_millenium/'
         #                  'tas_sfc_Amon_CCSM4_past1000_085001-185012.nc')
         #calib_varname = 'tas'
-        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
-        #                  '/mpi-esm-p_last_millenium/'
-        #                  'tas_sfc_Amon_MPI-ESM-P_past1000_085001-185012.nc')
-        #calib_varname='tas'
+        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
+                          '/mpi-esm-p_last_millenium/'
+                          'tas_sfc_Amon_MPI-ESM-P_past1000_085001-185012.nc')
+        calib_varname = 'tas'
         #calib_filename = ('/home/disk/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc')
         #calib_varname = 'air'
-        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/'
-                          'analyses/Experimental/tas_run_mean_berkely_'
-                          'earth_monthly_195701-201412.nc')
-        calib_varname = 'tas_run_mean'
-        calib_is_anomaly = True
-        calib_is_runmean = True
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/'
+        #                  'analyses/Experimental/tas_run_mean_berkely_'
+        #                  'earth_monthly_195701-201412.nc')
+        #calib_varname = 'tas_run_mean'
+        calib_is_anomaly = False
+        calib_is_runmean = False
         dataformat = 'NCD'
         fcast_times = [1]
         wsize = 12
