@@ -128,17 +128,22 @@ def detrend_data(X, y, ret_coef=True):
         return linfit_line
 
 
-def calc_analysis_gmt(analysis_var_obj, center_trange=(1900,2000),
+def calc_analysis_gmt(analysis_var_obj, trange=(1880,2000),
+                      center_trange=(1900,2000),
                       detrend=False):
     gm_analysis = utils2.global_mean2(analysis_var_obj.data,
                                       analysis_var_obj.lat)
     gm_analysis = center_to_time_range(analysis_var_obj.time, gm_analysis, 0,
                                        trange=center_trange)
+    analysis_tidx = ((analysis_var_obj.time >= trange[0]) &
+                     (analysis_var_obj.time <= trange[1]))
+    gm_analysis = gm_analysis[analysis_tidx]
 
     if detrend:
-        linfit_line = detrend_data(analysis_var_obj.time[:, None],
-                                   gm_analysis[:, None],
-                                   ret_coef=False)
+        linfit_line, coef = detrend_data(
+                analysis_var_obj.time[analysis_tidx][:, None],
+                gm_analysis[:, None],
+                ret_coef=True)
         gm_analysis -= linfit_line.squeeze()
 
     return gm_analysis
@@ -296,99 +301,99 @@ def main():
     gm_analysis = gm_analysis[analysis_tidx]
     detrended_gm_analysis = detrended_gm_analysis[analysis_tidx]
 
-    result_dicts = []
-    for exp_dir, out_dir in zip(exp_dirs, out_dirs):
-        result_dicts.append(load_from_paramsearch_exp(exp_dir, out_dir,
-                                                      out_fname, ignore_npz,
-                                                      gm_analysis, gm_times,
-                                                      a_vals, d_vals,
-                                                      trange=trange,
-                                                      center_trange=center_trange))
-
-    # A-values ensemble mean GMT
-    psearch_avggmt_times = []
-    for result in result_dicts:
-        gmts = result['gmt_vals']
-        gmt_avg = np.nanmean(gmts, axis=0)
-        num_nans = (~np.isfinite(result['ce_vals'])).sum(axis=0)
-        nan_pct = num_nans/float(len(gmts))
-        gmt_avg[nan_pct > 0.25] = np.nan
-        psearch_avggmt_times.append((gmt_avg, result['times']))
-
-    ce_r_values = [ce_r_ens_avg(tup[0], tup[1], gm_analysis, gm_times,
-                                trange=trange,
-                                center_trange=center_trange)
-                   for tup in psearch_avggmt_times]
-
-    trend_res = [trends_ens_avg(tup[0], tup[1], trange=trange,
-                                ret_detrend_ens=do_detrended)
-                 for tup in psearch_avggmt_times]
-
-    if do_detrended:
-        trends, detr_times, detr_ens = zip(*trend_res)
-        dtr_ce_r_values = [ce_r_ens_avg(tmp_ens, tmp_time,
-                                        detrended_gm_analysis, gm_times,
-                                        trange=trange,
-                                        center_trange=center_trange)
-                           for tmp_ens, tmp_time in izip(detr_ens,
-                                                         detr_times)]
-
-        detr_ens_ce, detr_ens_r = zip(*dtr_ce_r_values)
-    else:
-        trends, = zip(*trend_res)
-
-    ens_ce, ens_r = zip(*ce_r_values)
-    # plot_heatmap(ens_ce, a_vals, d_vals)
-
-    title = ('Hybrid DA {} Comparison (' + trange_tag + '_' + center_tag +
-             ')')
-    leg = ['Blended Cov. & Prior', 'Blended Cov. Only', 'Ref. Gistemp']
-
-    # Production baseline
-    prod_times, prod_gmt = compile_gmts(join(production_dir, prod_exp_name))
-    prod_ens_gmt = prod_gmt.mean(axis=0, keepdims=True)
-    prod_ce, prod_r = ce_r_ens_avg(prod_ens_gmt, prod_times, gm_analysis,
-                                   gm_times, trange=trange,
-                                   center_trange=center_trange)
-
-    prod_trend, detr_prod_times, detr_prod_ens_gmt = \
-        trends_ens_avg(prod_ens_gmt, prod_times, trange=trange,
-                       ret_detrend_ens=True)
-
-    detr_prod_ce, detr_prod_r = ce_r_ens_avg(detr_prod_ens_gmt,
-                                             detr_prod_times,
-                                             detrended_gm_analysis,
-                                             gm_times,
-                                             trange=trange,
-                                             center_trange=center_trange)
-
-    plot_baseline_compare(a_vals, list(ens_ce), prod_ce,
-                          xlabel='blending coefficient',
-                          legend_labels=leg,
-                          title=title.format('CE'))
-    rstr = 'correlation'
-    plot_baseline_compare(a_vals, list(ens_r), prod_r, ylabel=rstr,
-                          xlabel='Blending Coefficient',
-                          legend_labels=leg,
-                          title=title.format(rstr))
-    tstr = 'Trend'
-    plot_baseline_compare(a_vals, trends, prod_trend,
-                          xlabel='Blending Coefficcient',
-                          legend_labels=leg,
-                          title=title.format(tstr),
-                          ylabel='Trend (K/yr)')
-
-    if do_detrended:
-        plot_baseline_compare(a_vals, list(detr_ens_ce), detr_prod_ce,
-                              xlabel='blending coefficient',
-                              legend_labels=leg,
-                              title=(title.format('CE') + ' (detrended)'))
-        rstr = 'correlation'
-        plot_baseline_compare(a_vals, list(detr_ens_r), detr_prod_r,
-                              ylabel=rstr,
-                              xlabel='Blending Coefficient',
-                              legend_labels=leg,
-                              title=(title.format(rstr) + ' (detrended)'))
+    # result_dicts = []
+    # for exp_dir, out_dir in zip(exp_dirs, out_dirs):
+    #     result_dicts.append(load_from_paramsearch_exp(exp_dir, out_dir,
+    #                                                   out_fname, ignore_npz,
+    #                                                   gm_analysis, gm_times,
+    #                                                   a_vals, d_vals,
+    #                                                   trange=trange,
+    #                                                   center_trange=center_trange))
+    #
+    # # A-values ensemble mean GMT
+    # psearch_avggmt_times = []
+    # for result in result_dicts:
+    #     gmts = result['gmt_vals']
+    #     gmt_avg = np.nanmean(gmts, axis=0)
+    #     num_nans = (~np.isfinite(result['ce_vals'])).sum(axis=0)
+    #     nan_pct = num_nans/float(len(gmts))
+    #     gmt_avg[nan_pct > 0.25] = np.nan
+    #     psearch_avggmt_times.append((gmt_avg, result['times']))
+    #
+    # ce_r_values = [ce_r_ens_avg(tup[0], tup[1], gm_analysis, gm_times,
+    #                             trange=trange,
+    #                             center_trange=center_trange)
+    #                for tup in psearch_avggmt_times]
+    #
+    # trend_res = [trends_ens_avg(tup[0], tup[1], trange=trange,
+    #                             ret_detrend_ens=do_detrended)
+    #              for tup in psearch_avggmt_times]
+    #
+    # if do_detrended:
+    #     trends, detr_times, detr_ens = zip(*trend_res)
+    #     dtr_ce_r_values = [ce_r_ens_avg(tmp_ens, tmp_time,
+    #                                     detrended_gm_analysis, gm_times,
+    #                                     trange=trange,
+    #                                     center_trange=center_trange)
+    #                        for tmp_ens, tmp_time in izip(detr_ens,
+    #                                                      detr_times)]
+    #
+    #     detr_ens_ce, detr_ens_r = zip(*dtr_ce_r_values)
+    # else:
+    #     trends, = zip(*trend_res)
+    #
+    # ens_ce, ens_r = zip(*ce_r_values)
+    # # plot_heatmap(ens_ce, a_vals, d_vals)
+    #
+    # title = ('Hybrid DA {} Comparison (' + trange_tag + '_' + center_tag +
+    #          ')')
+    # leg = ['Blended Cov. & Prior', 'Blended Cov. Only', 'Ref. Gistemp']
+    #
+    # # Production baseline
+    # prod_times, prod_gmt = compile_gmts(join(production_dir, prod_exp_name))
+    # prod_ens_gmt = prod_gmt.mean(axis=0, keepdims=True)
+    # prod_ce, prod_r = ce_r_ens_avg(prod_ens_gmt, prod_times, gm_analysis,
+    #                                gm_times, trange=trange,
+    #                                center_trange=center_trange)
+    #
+    # prod_trend, detr_prod_times, detr_prod_ens_gmt = \
+    #     trends_ens_avg(prod_ens_gmt, prod_times, trange=trange,
+    #                    ret_detrend_ens=True)
+    #
+    # detr_prod_ce, detr_prod_r = ce_r_ens_avg(detr_prod_ens_gmt,
+    #                                          detr_prod_times,
+    #                                          detrended_gm_analysis,
+    #                                          gm_times,
+    #                                          trange=trange,
+    #                                          center_trange=center_trange)
+    #
+    # plot_baseline_compare(a_vals, list(ens_ce), prod_ce,
+    #                       xlabel='blending coefficient',
+    #                       legend_labels=leg,
+    #                       title=title.format('CE'))
+    # rstr = 'correlation'
+    # plot_baseline_compare(a_vals, list(ens_r), prod_r, ylabel=rstr,
+    #                       xlabel='Blending Coefficient',
+    #                       legend_labels=leg,
+    #                       title=title.format(rstr))
+    # tstr = 'Trend'
+    # plot_baseline_compare(a_vals, trends, prod_trend,
+    #                       xlabel='Blending Coefficcient',
+    #                       legend_labels=leg,
+    #                       title=title.format(tstr),
+    #                       ylabel='Trend (K/yr)')
+    #
+    # if do_detrended:
+    #     plot_baseline_compare(a_vals, list(detr_ens_ce), detr_prod_ce,
+    #                           xlabel='blending coefficient',
+    #                           legend_labels=leg,
+    #                           title=(title.format('CE') + ' (detrended)'))
+    #     rstr = 'correlation'
+    #     plot_baseline_compare(a_vals, list(detr_ens_r), detr_prod_r,
+    #                           ylabel=rstr,
+    #                           xlabel='Blending Coefficient',
+    #                           legend_labels=leg,
+    #                           title=(title.format(rstr) + ' (detrended)'))
 
 
 if __name__ == '__main__':
