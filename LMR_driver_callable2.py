@@ -483,12 +483,13 @@ def LMR_driver_callable(cfg=None):
     # Close H5 file
     Xb_one.close_xb_container()
 
-    # Save prior ensemble variance
-    filen = join(workdir, 'prior_ensvar_tas_sfc_Amon')
-    tmp_coords = Xb_one.var_coords['tas_sfc_Amon']
-    np.savez(filen, xbv=xbv_out,
-             lat=tmp_coords['lat'].reshape(xbv.shape),
-             lon=tmp_coords['lon'].reshape(xbv.shape))
+    if online:
+        # Save prior ensemble variance
+        filen = join(workdir, 'prior_ensvar_tas_sfc_Amon')
+        tmp_coords = Xb_one.var_coords['tas_sfc_Amon']
+        np.savez(filen, xbv=xbv_out,
+                 lat=tmp_coords['lat'].reshape(xbv.shape),
+                 lon=tmp_coords['lon'].reshape(xbv.shape))
 
     # 3 July 2015: compute and save the GMT for the full ensemble
     gmt_ensemble = np.zeros([ntimes, nens])
