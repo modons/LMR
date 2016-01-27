@@ -76,17 +76,17 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_addlim_posterior_calib'
+    nexp = 'testdev_paramsearch_ccm4gis_belim'
     lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
     ignore_pre_avg_file = False
     save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1900, 2000]
+    recon_period = [1850, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 0]
+    iter_range = [0, 24]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -101,7 +101,7 @@ class core:
 
     # Adaptive Covariance Inflation
     adaptive_inflate = False
-    reg_inflate = True
+    reg_inflate = False
     inf_factor = 1.1
 
     # TODO: add rules for shift?
@@ -114,13 +114,15 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
+    datadir_output = '/home/enkf_local/wperkins'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
     #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    archive_dir = '/home/disk/kalman2/wperkins/LMR_output/testing'
+    archive_dir = '/home/disk/chaos/wperkins/LMR_output/testing'
+    #archive_dir = '/home/disk/kalman2/wperkins/LMR_output/testing'
     #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
@@ -340,15 +342,33 @@ class forecaster:
         calib_varname: Variable name to grab from calib_filename
         fcast_times: A list of lead times (in years) to forecast
         """
-        calib_filename = '/home/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc'
-        calib_filename = ('/home/disk/kalman2/wperkins/LMR_output/testing/'
-                          'testdev_gis_ccsm4_pagesall_75/'
-                          'lim_recon_compiled.nc')
-        calib_varname = 'tas_sfc_Amon'
-        dataformat = 'POSNCD'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/'
+        #                  'era20c/tas_sfc_Amon_ERA20C_190001-201212.nc')
+        #calib_varname = 'tas'
+        # calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
+        #                   '/tas_sfc_Amon_20CR_185101-201112.nc')
+        # calib_varname = 'tas'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
+        #                  '/ccsm4_last_millenium/'
+        #                  'tas_sfc_Amon_CCSM4_past1000_085001-185012.nc')
+        #calib_varname = 'tas'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
+        #                  '/mpi-esm-p_last_millenium/'
+        #                  'tas_sfc_Amon_MPI-ESM-P_past1000_085001-185012.nc')
+        #calib_varname='tas'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc')
+        #calib_varname = 'air'
+        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/'
+                          'analyses/Experimental/tas_run_mean_berkely_'
+                          'earth_monthly_195701-201412.nc')
+        calib_varname = 'tas_run_mean'
+        calib_is_anomaly = True
+        calib_is_runmean = True
+        dataformat = 'NCD'
         fcast_times = [1]
-        wsize = 1
+        wsize = 12
         fcast_num_pcs = 8
-        detrend = False
+        detrend = True
+        ignore_precalib = False
 
-        eig_adjust = None 
+        eig_adjust = None

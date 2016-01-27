@@ -315,7 +315,6 @@ def LMR_driver_callable(cfg=None):
                                           (1-hybrid_a_val) * Xb_static)
                         Xb_one.state_list[0] = blend_forecast
 
-
                 # overwrite prior GMT from last sub_annual with annual
                 xam = Xb_one.get_var_data('tas_sfc_Amon',
                                           idx=0).mean(axis=1)
@@ -327,9 +326,20 @@ def LMR_driver_callable(cfg=None):
                 nhmt_save[iproxy+1, curr_yr_idx] = nhmt
                 shmt_save[iproxy+1, curr_yr_idx] = shmt
 
-                # Adaptive Inflation Adjustment
+                # Inflation Adjustment
                 if (iyr//nelem_pr_yr > 0) and reg_inf:
                     Xb_one.reg_inflate_xb(inf_factor)
+
+                # Save prior variance if online assimilation
+                if online:
+                    xbv = Xb_one.get_var_data('tas_sfc_Amon', idx=0)
+                    xbv = xbv.var(ddof=1, axis=1)
+                    grd_shp = Xb_one.var_space_shp['tas_sfc_Amon']
+                    xbv = xbv.reshape(grd_shp)
+                    if iyr//nelem_pr_yr == 0:
+                        xbv_out = np.zeros((len(assim_times), grd_shp[0],
+                                            grd_shp[1]))
+                    xbv_out[curr_yr_idx] = xbv
 
             # Update Xb with each proxy
             for iproxy, Y in enumerate(
@@ -472,6 +482,13 @@ def LMR_driver_callable(cfg=None):
 
     # Close H5 file
     Xb_one.close_xb_container()
+
+    # Save prior ensemble variance
+    filen = join(workdir, 'prior_ensvar_tas_sfc_Amon')
+    tmp_coords = Xb_one.var_coords['tas_sfc_Amon']
+    np.savez(filen, xbv=xbv_out,
+             lat=tmp_coords['lat'].reshape(xbv.shape),
+             lon=tmp_coords['lon'].reshape(xbv.shape))
 
     # 3 July 2015: compute and save the GMT for the full ensemble
     gmt_ensemble = np.zeros([ntimes, nens])
