@@ -7,15 +7,20 @@ import LMR_proxy2
 import cPickle as cpckl
 from os.path import join
 
+# NOTE: Loads from misc_config, should have pre_calib_datafile set to None
+
 calib_datatag = cfg.psm.linear.datatag_calib
-fracs = [0, 1./3., 2./3., 1.0]
+fracs = [1.0]
 
 output_dir = '/home/chaos2/wperkins/data/LMR/PSM/test_psms'
 
+print 'Starting pre-calibration for ' + calib_datatag + ' fracs ' + str(fracs)
 for frac in fracs:
     print 'Working on fraction {:1.2f}'.format(frac)
     cfg.psm.linear.min_data_req_frac = frac
-    pre_calib_fname = 'PSMs_{}_multires_{:1.2f}datfrac'.format(calib_datatag, frac)
+    # pre_calib_fname = 'PSMs_{}_multires_{:1.2f}datfrac'.format(calib_datatag, frac)
+    pre_calib_fname = 'PSMs_{}_1pt0res_{:1.2f}datfrac'.format(calib_datatag, frac)
+
 
     # Load and calibrate
     _, proxies = LMR_proxy2.ProxyPages.load_all(cfg, [1850, 2000])
