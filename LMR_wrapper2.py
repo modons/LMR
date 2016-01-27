@@ -56,6 +56,7 @@ MCiters = np.arange(iter_range[0], iter_range[1]+1)
 for iter_num in MCiters:
 
     cfg.core.curr_iter = iter_num
+    cfg.core.seed = seeds[iter_num]
     itr_dir = os.path.join(expdir, 'r' + str(iter_num))
     core.datadir_output = itr_dir
 

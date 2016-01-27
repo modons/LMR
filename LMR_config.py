@@ -76,17 +76,17 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_mlost_mpi_pagesall_75'
+    nexp = 'testdev_mlost_mpi_pagesall_75_seeded'
     lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     ignore_pre_avg_file = False
     save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1850, 2000]
+    recon_period = [1950, 2000]
     nens = 100
     seed = None
-    iter_range = [1, 49]
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
