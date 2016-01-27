@@ -1,5 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import numpy as  np
+import os.path as path
+import os
 
 import pylim.LIM as LIM
 import pylim.DataTools as DT
@@ -46,22 +48,47 @@ class LIMForecaster:
         varname = cfg.calib_varname
         fmt = cfg.dataformat
         eig_adjust = cfg.eig_adjust
+        ignore_precalib = cfg.ignore_precalib
+        is_anomaly = cfg.calib_is_anomaly
+        is_runmean = cfg.calib_is_runmean
+
+        # Search for pre-calibrated LIM to save time
+        fpath, fname = path.split(infile)
+        precalib_path = path.join(fpath, 'lim_precalib')
+        precalib_fname = path.splitext(fname)[0] + '.lim.pckl'
+        precalib_pathfname = path.join(precalib_path, precalib_fname)
+
+        if not ignore_precalib:
+            try:
+                self.lim = LIM.LIM.from_precalib(precalib_pathfname)
+                print ('Pre-calibrated lim loaded from '
+                       '{}'.format(precalib_pathfname))
+                return
+            except IOError:
+                print ('No pre-calibrated LIM found.')
 
         if fmt == 'NCD':
-            data_obj = DT.netcdf_to_data_obj(infile, varname, force_flat=True)
+            print ('Loading LIM calibration from ' + infile)
+            data_obj = DT.BaseDataObject.from_netcdf(infile, varname)
             do_regrid = True
         elif fmt == 'POSNCD':
             data_obj = DT.posterior_ncf_to_data_obj(infile, varname)
+            do_regrid = False
+        elif fmt == 'PCKL':
+            data_obj = DT.BaseDataObject.from_pickle(infile)
             do_regrid = False
         else:
             raise TypeError('Unsupported calibration data'
                             ' type for LIM: {}'.format(fmt))
 
         coords = data_obj.get_dim_coords(['lat', 'lon', 'time'])
+        data_obj.is_run_mean = is_runmean
+        data_obj.is_anomaly = is_anomaly
 
         if do_regrid:
             # TODO: May want to tie this more into LMR regridding
             # Truncate the calibration data
+            print 'Regridding calibration data...'
             dat_new, lat_new, lon_new = regrid_sphere(len(coords['lat'][1]),
                                                       len(coords['lon'][1]),
                                                       len(coords['time'][1]),
@@ -77,13 +104,22 @@ class LIMForecaster:
             dat_new = dat_new.T.reshape(new_shp)
 
             calib_obj = DT.BaseDataObject(dat_new, dim_coords=new_coords,
-                                          force_flat=True)
+                                          force_flat=True,
+                                          time_units=data_obj.time_units,
+                                          time_cal=data_obj.time_cal,
+                                          is_anomaly=is_anomaly, is_run_mean=is_runmean)
+            # calib_obj.save_dataobj_pckl(pre_avg_fname)
         else:
             calib_obj = data_obj
 
         self.lim = LIM.LIM(calib_obj, cfg.wsize, cfg.fcast_times,
                            cfg.fcast_num_pcs, detrend_data=cfg.detrend,
                            L_eig_bump=eig_adjust)
+
+        if not path.exists(precalib_path):
+            os.makedirs(precalib_path)
+
+        self.lim.save_precalib(precalib_pathfname)
 
     def forecast(self, state_obj):
 

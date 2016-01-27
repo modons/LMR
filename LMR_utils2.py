@@ -357,7 +357,7 @@ def ensemble_stats(workdir, y_assim):
     return
 
 
-def regrid_sphere(nlat, nlon, Nens, X, ntrunc):
+def regrid_sphere(nlat, nlon, Nens, X, ntrunc, shift_lons=False):
 
     """
     Truncate lat,lon grid to another resolution in spherical harmonic space.
@@ -369,6 +369,8 @@ def regrid_sphere(nlat, nlon, Nens, X, ntrunc):
     Nens            : number of ensemble members
     X               : data array of shape (nlat*nlon,Nens) 
     ntrunc          : triangular truncation (e.g., use 42 for T42)
+    shift_lons      : whether to shift longitudes by half the world
+                      eg. (0, 90, 180, 270) -> (180, 270, 0, 90)
 
     Outputs :
     lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
@@ -403,6 +405,8 @@ def regrid_sphere(nlat, nlon, Nens, X, ntrunc):
     dlon = 360./nlon_new
     veclat = np.arange(-90., 90.+dlat, dlat)
     veclon = np.arange(0., 360., dlon)
+    if shift_lons:
+        veclon = np.roll(veclon, len(veclon)//2)
     blank = np.zeros([nlat_new, nlon_new])
     lat_new = (veclat + blank.T).T  
     lon_new = (veclon + blank)
