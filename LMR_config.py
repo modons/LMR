@@ -371,4 +371,4 @@ class forecaster:
         detrend = True
         ignore_precalib = False
 
-        eig_adjust = 0.0
+        eig_adjust = None

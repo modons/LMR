@@ -61,7 +61,7 @@ for iter_num in MCiters:
 
     for a_val, d_val in itertools.product(a, d):
         cfg.core.hybrid_a = a_val
-        cfg.forecaster.LIM.eig_adjust = d_val
+        # cfg.forecaster.LIM.eig_adjust = d_val
 
         # Define work directory
         ad_folder_name = 'a{:1.1f}_d{:1.2f}'.format(a_val, d_val)
