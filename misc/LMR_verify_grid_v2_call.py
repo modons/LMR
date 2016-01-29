@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 
-sys.path.append('../.')
+sys.path.append('/home/disk/p/wperkins/Research/LMR')
 
 # LMR specific imports
 from LMR_utils2 import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
@@ -33,7 +33,7 @@ def verify_grid(data_dir, nexp, output_dir, iplot=False, fsave=True):
     # change default value of latlon kwarg to True.
 
     if not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(output_dir)
 
     fig_outputdir = os.path.join(output_dir, nexp + '_figs')
     if not os.path.exists(fig_outputdir):
