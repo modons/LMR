@@ -760,230 +760,232 @@ corr_range = [-0.6,0.8]
 #corr_range = [-0.4,1.0]
 bins = np.linspace(corr_range[0],corr_range[1],nbins)
 
-# LMR compared to TCR, ERA, GIS, BE, CRU and MLOST
-#fig = plt.figure(figsize=(10,12))
-fig = plt.figure()
+if iplot:
+    # LMR compared to TCR, ERA, GIS, BE, CRU and MLOST
+    #fig = plt.figure(figsize=(10,12))
+    fig = plt.figure()
 
-# TCR
-ax = fig.add_subplot(6,2,1)
-ax.plot(cyears,lmr_tcr_csave,lw=2)
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_title('LMR-TCR')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax = fig.add_subplot(6,2,2)
-ax.hist(lmr_tcr_csave,bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-TCR')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_tcr_csave)),fontsize=11,fontweight='bold')
+    # TCR
+    ax = fig.add_subplot(6,2,1)
+    ax.plot(cyears,lmr_tcr_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR-TCR')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(6,2,2)
+    ax.hist(lmr_tcr_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR-TCR')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_tcr_csave)),fontsize=11,fontweight='bold')
 
-# ERA
-ax = fig.add_subplot(6,2,3)
-ax.plot(cyears,lmr_era_csave,lw=2)
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_title('LMR-ERA')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax = fig.add_subplot(6,2,4)
-ax.hist(lmr_era_csave,bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-ERA')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_era_csave)),fontsize=11,fontweight='bold')
+    # ERA
+    ax = fig.add_subplot(6,2,3)
+    ax.plot(cyears,lmr_era_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR-ERA')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(6,2,4)
+    ax.hist(lmr_era_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR-ERA')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_era_csave)),fontsize=11,fontweight='bold')
 
-# GIS
-ax = fig.add_subplot(6,2,5)
-ax.plot(cyears,lmr_gis_csave,lw=2)
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_title('LMR-GIS')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax = fig.add_subplot(6,2,6)
-indok = np.isfinite(lmr_gis_csave)
-if np.sum(indok) > 0:
-    ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-GIS')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_gis_csave)),fontsize=11,fontweight='bold')
+    # GIS
+    ax = fig.add_subplot(6,2,5)
+    ax.plot(cyears,lmr_gis_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR-GIS')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(6,2,6)
+    indok = np.isfinite(lmr_gis_csave)
+    if np.sum(indok) > 0:
+        ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR-GIS')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_gis_csave)),fontsize=11,fontweight='bold')
 
-# BE
-ax = fig.add_subplot(6,2,7)
-ax.plot(cyears,lmr_be_csave,lw=2)
-ax.set_title('LMR-BE')
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax = fig.add_subplot(6,2,8)
-indok = np.isfinite(lmr_be_csave)
-if np.sum(indok) > 0:
-    ax.hist(lmr_be_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-BE')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_be_csave)),fontsize=11,fontweight='bold')
+    # BE
+    ax = fig.add_subplot(6,2,7)
+    ax.plot(cyears,lmr_be_csave,lw=2)
+    ax.set_title('LMR-BE')
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(6,2,8)
+    indok = np.isfinite(lmr_be_csave)
+    if np.sum(indok) > 0:
+        ax.hist(lmr_be_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR-BE')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_be_csave)),fontsize=11,fontweight='bold')
 
-# CRU
-ax = fig.add_subplot(6,2,9)
-ax.plot(cyears,lmr_cru_csave,lw=2)
-ax.set_title('LMR-CRU')
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax = fig.add_subplot(6,2,10)
-indok = np.isfinite(lmr_cru_csave)
-if np.sum(indok) > 0:
-    ax.hist(lmr_cru_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-CRU')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_cru_csave)),fontsize=11,fontweight='bold')
+    # CRU
+    ax = fig.add_subplot(6,2,9)
+    ax.plot(cyears,lmr_cru_csave,lw=2)
+    ax.set_title('LMR-CRU')
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(6,2,10)
+    indok = np.isfinite(lmr_cru_csave)
+    if np.sum(indok) > 0:
+        ax.hist(lmr_cru_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR-CRU')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_cru_csave)),fontsize=11,fontweight='bold')
 
-# MLOST
-ax = fig.add_subplot(6,2,11)
-ax.plot(cyears,lmr_mlost_csave,lw=2)
-ax.set_title('LMR-MLOST')
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax.set_xlabel('Year CE',fontweight='bold')
-ax = fig.add_subplot(6,2,12)
-indok = np.isfinite(lmr_mlost_csave)
-if np.sum(indok) > 0:
-    ax.hist(lmr_mlost_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('LMR-MLOST')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-ax.set_xlabel('Correlation',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_mlost_csave)),fontsize=11,fontweight='bold')
+    # MLOST
+    ax = fig.add_subplot(6,2,11)
+    ax.plot(cyears,lmr_mlost_csave,lw=2)
+    ax.set_title('LMR-MLOST')
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax.set_xlabel('Year CE',fontweight='bold')
+    ax = fig.add_subplot(6,2,12)
+    indok = np.isfinite(lmr_mlost_csave)
+    if np.sum(indok) > 0:
+        ax.hist(lmr_mlost_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR-MLOST')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    ax.set_xlabel('Correlation',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_mlost_csave)),fontsize=11,fontweight='bold')
 
-fig.tight_layout()
-plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
-fig.suptitle('Surface air temperature anomaly correlation') 
-if fsave:
-    print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
+    fig.tight_layout()
+    plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
+    fig.suptitle('Surface air temperature anomaly correlation')
+    if fsave:
+        print 'saving to .png'
+        plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
+        plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
-# TCR compared to GIS (reference)
-fig = plt.figure()
-ax = fig.add_subplot(2,2,1)
-ax.plot(cyears,tcr_gis_csave,lw=2)
-ax.set_title('TCR-GIS')
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax = fig.add_subplot(2,2,2)
-ax.hist(tcr_gis_csave,bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('TCR-GIS')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(tcr_gis_csave)),fontsize=11,fontweight='bold')
+    # TCR compared to GIS (reference)
+    fig = plt.figure()
+    ax = fig.add_subplot(2,2,1)
+    ax.plot(cyears,tcr_gis_csave,lw=2)
+    ax.set_title('TCR-GIS')
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(2,2,2)
+    ax.hist(tcr_gis_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('TCR-GIS')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(tcr_gis_csave)),fontsize=11,fontweight='bold')
 
-# ERA compared to GIS (reference)
-ax = fig.add_subplot(2,2,3)
-ax.plot(cyears,era_gis_csave,lw=2)
-ax.set_title('ERA-GIS')
-ax.plot([trange[0],trange[-1]],[0,0],'k:')
-ax.set_xlim(trange[0],trange[-1])
-ax.set_ylim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Correlation',fontweight='bold')
-ax.set_xlabel('Year CE',fontweight='bold')
-ax = fig.add_subplot(2,2,4)
-ax.hist(era_gis_csave,bins=bins,histtype='stepfilled',alpha=0.25)
-ax.set_title('ERA-GIS')
-ax.set_xlim(corr_range[0],corr_range[-1])
-ax.set_ylabel('Counts',fontweight='bold')
-ax.set_xlabel('Correlation',fontweight='bold')
-xmin,xmax = ax.get_xlim()
-ymin,ymax = ax.get_ylim()
-if ymax < 10:
-    ymax = 10
-elif ymax >= 10 and ymax < 20:
-    ymax = 20
-ax.set_ylim(ymin,ymax)
-ypos = ymax-0.15*(ymax-ymin)
-xpos = xmin+0.025*(xmax-xmin)
-ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(era_gis_csave)),fontsize=11,fontweight='bold')
+    # ERA compared to GIS (reference)
+    ax = fig.add_subplot(2,2,3)
+    ax.plot(cyears,era_gis_csave,lw=2)
+    ax.set_title('ERA-GIS')
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax.set_xlabel('Year CE',fontweight='bold')
+    ax = fig.add_subplot(2,2,4)
+    ax.hist(era_gis_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('ERA-GIS')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    ax.set_xlabel('Correlation',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(era_gis_csave)),fontsize=11,fontweight='bold')
 
-#fig.tight_layout()
-plt.subplots_adjust(left=0.1, bottom=0.55, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
-fig.suptitle('Surface air temperature anomaly correlation') 
-if fsave:
-    print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
-    plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
+    #fig.tight_layout()
+    plt.subplots_adjust(left=0.1, bottom=0.55, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
+    fig.suptitle('Surface air temperature anomaly correlation')
+
+    if fsave:
+        print 'saving to .png'
+        plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
+        plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
 # ===================================================================================
 # BEGIN bias, r and CE calculations
@@ -1556,133 +1558,134 @@ for la in range(nlat_MLOST):
         r_lmr_mlost_zm[la]  = np.nan
         bias_lmr_mlost_zm[la] = np.nan
 
-#
-# plot zonal mean statistics
-#
-major_ticks = np.arange(-90, 91, 30)
-fig = plt.figure()
-# Bias
-#ax = fig.add_subplot(1,3,1)    
-#tcrleg,   = ax.plot(bias_lmr_tcr_zm,  lat_TCR,  'black',         linestyle='-',lw=2,label='TCR')
-#gisleg,   = ax.plot(bias_lmr_gis_zm,  lat_GIS,  'red',           linestyle='-',lw=2,label='GIS')
-#beleg,    = ax.plot(bias_lmr_be_zm,   lat_BE,   'steelblue',     linestyle='-',lw=2,label='BE')
-#cruleg,   = ax.plot(bias_lmr_cru_zm,  lat_CRU,  'mediumseagreen',linestyle='-',lw=2,label='CRU')
-#mlostleg, = ax.plot(bias_lmr_mlost_zm,lat_MLOST,'darkorange',    linestyle='-',lw=2,label='MLOST')
-#ax.plot([0,0],[-90,90],'k:')
-#ax.set_yticks(major_ticks)                                                       
-#plt.ylim([-90,90])
-#plt.xlim([-1,1])
-#plt.ylabel('latitude',fontweight='bold')
-#plt.xlabel('bias',fontweight='bold')
-#ax.legend(handles=[tcrleg,gisleg,beleg,cruleg,mlostleg],handlelength=1.5,ncol=1,fontsize=11,loc='upper left',frameon=False)
-
-# Correlation
-ax = fig.add_subplot(1,2,1)    
-tcrleg,   = ax.plot(r_lmr_tcr_zm,  lat_TCR,   'black',         linestyle='-',lw=2,label='TCR')
-eraleg,   = ax.plot(r_lmr_era_zm,  lat_ERA20C,'blue',          linestyle='-',lw=2,label='ERA')
-gisleg,   = ax.plot(r_lmr_gis_zm,  lat_GIS,   'red',           linestyle='-',lw=2,label='GIS')
-beleg,    = ax.plot(r_lmr_be_zm,   lat_BE,    'steelblue',     linestyle='-',lw=2,label='BE')
-cruleg,   = ax.plot(r_lmr_cru_zm,  lat_CRU,   'mediumseagreen',linestyle='-',lw=2,label='CRU')
-mlostleg, = ax.plot(r_lmr_mlost_zm,lat_MLOST, 'darkorange',    linestyle='-',lw=2,label='MLOST')
-ax.plot([0,0],[-90,90],'k:')
-ax.set_yticks(major_ticks)                                                       
-#ax.set_yticks([]) 
-plt.ylim([-90,90])
-plt.xlim([-1,1])
-plt.ylabel('latitude',fontweight='bold')
-plt.xlabel('Correlation',fontweight='bold')
-ax.legend(handles=[tcrleg,eraleg,gisleg,beleg,cruleg,mlostleg],handlelength=1.5,ncol=1,fontsize=11,loc='upper left',frameon=False)
-# CE
-ax = fig.add_subplot(1,2,2)    
-ax.plot(ce_lmr_tcr_zm,  lat_TCR,   'black',         linestyle='-',lw=2)
-ax.plot(ce_lmr_era_zm,  lat_ERA20C,'blue',          linestyle='-',lw=2)
-ax.plot(ce_lmr_gis_zm,  lat_GIS,   'red',           linestyle='-',lw=2)
-ax.plot(ce_lmr_be_zm,   lat_BE,    'steelblue',     linestyle='-',lw=2)
-ax.plot(ce_lmr_cru_zm,  lat_CRU,   'mediumseagreen',linestyle='-',lw=2)
-ax.plot(ce_lmr_mlost_zm,lat_MLOST, 'darkorange',    linestyle='-',lw=2)
-ax.plot([0,0],[-90,90],'k:')
-ax.set_yticks([])                                                       
-plt.ylim([-90,90])
-plt.xlim([-1.0,1.0])
-plt.xlabel('Coefficient of efficiency',fontweight='bold')
-plt.suptitle('LMR zonal-mean verification - surface air temperature')
-fig.tight_layout(pad = 2.0)
-if fsave:
-    print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png')
-    plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
-    plt.close()
-
-# ---------
-# bias maps
-# ---------
-
-cbarfmt = '%4.1f'
-nticks = 4 # number of ticks on the colorbar
-bmin = -1.0
-bmax = 1.0
 if iplot:
+    #
+    # plot zonal mean statistics
+    #
+    major_ticks = np.arange(-90, 91, 30)
     fig = plt.figure()
-    ax = fig.add_subplot(3,2,1)    
-    LMR_plotter(bias_lmr_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('LMR-TCR T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_tcr_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
+    # Bias
+    #ax = fig.add_subplot(1,3,1)
+    #tcrleg,   = ax.plot(bias_lmr_tcr_zm,  lat_TCR,  'black',         linestyle='-',lw=2,label='TCR')
+    #gisleg,   = ax.plot(bias_lmr_gis_zm,  lat_GIS,  'red',           linestyle='-',lw=2,label='GIS')
+    #beleg,    = ax.plot(bias_lmr_be_zm,   lat_BE,   'steelblue',     linestyle='-',lw=2,label='BE')
+    #cruleg,   = ax.plot(bias_lmr_cru_zm,  lat_CRU,  'mediumseagreen',linestyle='-',lw=2,label='CRU')
+    #mlostleg, = ax.plot(bias_lmr_mlost_zm,lat_MLOST,'darkorange',    linestyle='-',lw=2,label='MLOST')
+    #ax.plot([0,0],[-90,90],'k:')
+    #ax.set_yticks(major_ticks)
+    #plt.ylim([-90,90])
+    #plt.xlim([-1,1])
+    #plt.ylabel('latitude',fontweight='bold')
+    #plt.xlabel('bias',fontweight='bold')
+    #ax.legend(handles=[tcrleg,gisleg,beleg,cruleg,mlostleg],handlelength=1.5,ncol=1,fontsize=11,loc='upper left',frameon=False)
 
-    ax = fig.add_subplot(3,2,2)    
-    LMR_plotter(bias_lmr_era,lat2d_ERA20C,lon2d_ERA20C,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('LMR-ERA T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_era_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
-
-    ax = fig.add_subplot(3,2,3)    
-    LMR_plotter(bias_lmr_gis,lat2d_GIS,lon2d_GIS,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('LMR-GIS T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_gis_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
-
-    ax = fig.add_subplot(3,2,4)    
-    LMR_plotter(bias_lmr_be,lat2d_BE,lon2d_BE,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('LMR-BE T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_be_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
-
-    ax = fig.add_subplot(3,2,5)    
-    LMR_plotter(bias_lmr_mlost,lat2d_MLOST,lon2d_MLOST,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('LMR-MLOST T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_mlost_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
-
-    ax = fig.add_subplot(3,2,6)    
-    LMR_plotter(bias_lmr_cru,lat2d_CRU,lon2d_CRU,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('LMR-CRU T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_cru_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
-
-    fig.tight_layout()
+    # Correlation
+    ax = fig.add_subplot(1,2,1)
+    tcrleg,   = ax.plot(r_lmr_tcr_zm,  lat_TCR,   'black',         linestyle='-',lw=2,label='TCR')
+    eraleg,   = ax.plot(r_lmr_era_zm,  lat_ERA20C,'blue',          linestyle='-',lw=2,label='ERA')
+    gisleg,   = ax.plot(r_lmr_gis_zm,  lat_GIS,   'red',           linestyle='-',lw=2,label='GIS')
+    beleg,    = ax.plot(r_lmr_be_zm,   lat_BE,    'steelblue',     linestyle='-',lw=2,label='BE')
+    cruleg,   = ax.plot(r_lmr_cru_zm,  lat_CRU,   'mediumseagreen',linestyle='-',lw=2,label='CRU')
+    mlostleg, = ax.plot(r_lmr_mlost_zm,lat_MLOST, 'darkorange',    linestyle='-',lw=2,label='MLOST')
+    ax.plot([0,0],[-90,90],'k:')
+    ax.set_yticks(major_ticks)
+    #ax.set_yticks([])
+    plt.ylim([-90,90])
+    plt.xlim([-1,1])
+    plt.ylabel('latitude',fontweight='bold')
+    plt.xlabel('Correlation',fontweight='bold')
+    ax.legend(handles=[tcrleg,eraleg,gisleg,beleg,cruleg,mlostleg],handlelength=1.5,ncol=1,fontsize=11,loc='upper left',frameon=False)
+    # CE
+    ax = fig.add_subplot(1,2,2)
+    ax.plot(ce_lmr_tcr_zm,  lat_TCR,   'black',         linestyle='-',lw=2)
+    ax.plot(ce_lmr_era_zm,  lat_ERA20C,'blue',          linestyle='-',lw=2)
+    ax.plot(ce_lmr_gis_zm,  lat_GIS,   'red',           linestyle='-',lw=2)
+    ax.plot(ce_lmr_be_zm,   lat_BE,    'steelblue',     linestyle='-',lw=2)
+    ax.plot(ce_lmr_cru_zm,  lat_CRU,   'mediumseagreen',linestyle='-',lw=2)
+    ax.plot(ce_lmr_mlost_zm,lat_MLOST, 'darkorange',    linestyle='-',lw=2)
+    ax.plot([0,0],[-90,90],'k:')
+    ax.set_yticks([])
+    plt.ylim([-90,90])
+    plt.xlim([-1.0,1.0])
+    plt.xlabel('Coefficient of efficiency',fontweight='bold')
+    plt.suptitle('LMR zonal-mean verification - surface air temperature')
+    fig.tight_layout(pad = 2.0)
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_bias_'+str(trange[0])+'-'+str(trange[1])+'.png')
+        plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png')
+        plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
+        plt.close()
+
+    # ---------
+    # bias maps
+    # ---------
+
+    cbarfmt = '%4.1f'
+    nticks = 4 # number of ticks on the colorbar
+    bmin = -1.0
+    bmax = 1.0
+    if iplot:
+        fig = plt.figure()
+        ax = fig.add_subplot(3,2,1)
+        LMR_plotter(bias_lmr_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR-TCR T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_tcr_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,2)
+        LMR_plotter(bias_lmr_era,lat2d_ERA20C,lon2d_ERA20C,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR-ERA T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_era_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,3)
+        LMR_plotter(bias_lmr_gis,lat2d_GIS,lon2d_GIS,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR-GIS T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_gis_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,4)
+        LMR_plotter(bias_lmr_be,lat2d_BE,lon2d_BE,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR-BE T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_be_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,5)
+        LMR_plotter(bias_lmr_mlost,lat2d_MLOST,lon2d_MLOST,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR-MLOST T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_mlost_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,6)
+        LMR_plotter(bias_lmr_cru,lat2d_CRU,lon2d_CRU,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR-CRU T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_cru_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        fig.tight_layout()
+        if fsave:
+            print 'saving to .png'
+            plt.savefig(nexp+'_verify_grid_bias_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
 
-    # reference (TCR vs GIS & ERA vs GIS)
-    fig = plt.figure()
-    ax = fig.add_subplot(3,2,1)    
-    LMR_plotter(bias_tcr_gis,lat2d_GIS,lon2d_GIS,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('TCR-GIS T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(tcr_gis_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
+        # reference (TCR vs GIS & ERA vs GIS)
+        fig = plt.figure()
+        ax = fig.add_subplot(3,2,1)
+        LMR_plotter(bias_tcr_gis,lat2d_GIS,lon2d_GIS,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('TCR-GIS T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(tcr_gis_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
 
-    ax = fig.add_subplot(3,2,2)    
-    LMR_plotter(bias_era_gis,lat2d_GIS,lon2d_GIS,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-    plt.title('ERA-GIS T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(era_gis_biasmean_global))
-    plt.clim(-1,1)
-    ax.title.set_position([.5, 1.05])
+        ax = fig.add_subplot(3,2,2)
+        LMR_plotter(bias_era_gis,lat2d_GIS,lon2d_GIS,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('ERA-GIS T bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(era_gis_biasmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
 
-    fig.tight_layout()
-    if fsave:
-        print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_bias_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
+        fig.tight_layout()
+        if fsave:
+            print 'saving to .png'
+            plt.savefig(nexp+'_verify_grid_bias_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
 
 
@@ -1935,17 +1938,17 @@ print calib_tcr[0:-1,:].mean()
 
 output_vals['calib_tcr'] = {'calib': calib_tcr, 'lat': lat2, 'lon': lon2}
 
-
-# create the plot
-mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
-fig = plt.figure()
-cb = LMR_plotter(calib_tcr,lat2,lon2,mapcolor_calib,11,0,10,extend='max',nticks=10)
-#cb.set_ticks(range(11))
-# overlay stations!
-plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n Surface air temperature')
-if fsave:
-    print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')
+if iplot:
+    # create the plot
+    mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
+    fig = plt.figure()
+    cb = LMR_plotter(calib_tcr,lat2,lon2,mapcolor_calib,11,0,10,extend='max',nticks=10)
+    #cb.set_ticks(range(11))
+    # overlay stations!
+    plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n Surface air temperature')
+    if fsave:
+        print 'saving to .png'
+        plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
 
 # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
@@ -1953,7 +1956,7 @@ if fsave:
 # NEW look at trends over specified time periods as a function of latitude
 
 # zonal means of the original LMR data
-
+output_vals['lmr_on_gis_grid'] = lmr_on_gis_allyears
 with open(output_vals_fname, 'w') as f:
     cpk.dump(output_vals, f)
 
