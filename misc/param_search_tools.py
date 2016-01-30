@@ -20,9 +20,15 @@ def compile_gmts(parent_dir, a_d_vals=None):
 
     # Directories for each parameter value
     if a_d_vals is not None:
-        ad_dir = 'a{:1.1f}_d{:1.2f}'
-        param_iters = [join(parent_dir, ad_dir.format(a, d))
-                       for a, d in a_d_vals]
+        ad_dir = 'a{:1.2g}_d{:1.2f}'
+        ad_dir2 = 'a{:1.1f}_d{:1.2f}'
+        param_iters = []
+        for a, d in a_d_vals:
+            if a % 1.0  > 0:
+                curr_ad = ad_dir.format(a, d)
+            else:
+                curr_ad = ad_dir2.format(a, d)
+            param_iters.append(join(parent_dir, curr_ad))
     else:
         param_iters = glob.glob(join(parent_dir, 'r*'))
 
