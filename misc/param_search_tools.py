@@ -16,7 +16,7 @@ import LMR_config
 mpl.rcParams['figure.figsize'] = (10., 6.)
 mpl.rcParams['font.size'] = 16
 
-def compile_gmts(parent_dir, a_d_vals=None):
+def compile_gmts(parent_dir, a_d_vals=None, r_iters=None):
 
     # Directories for each parameter value
     if a_d_vals is not None:
@@ -28,9 +28,16 @@ def compile_gmts(parent_dir, a_d_vals=None):
                 curr_ad = ad_dir.format(a, d)
             else:
                 curr_ad = ad_dir2.format(a, d)
+                if a == 1.0:
+                    if not exists(join(parent_dir, curr_ad)):
+                       curr_ad = ad_dir.format(a,d)
             param_iters.append(join(parent_dir, curr_ad))
     else:
-        param_iters = glob.glob(join(parent_dir, 'r*'))
+        if r_iters is not None:
+            print 'Joining on r iters ', r_iters
+            param_iters = [join(parent_dir, 'r{:d}'.format(r)) for r in r_iters]
+        else:
+            param_iters = glob.glob(join(parent_dir, 'r*'))
 
     gmts = None
     times = None
