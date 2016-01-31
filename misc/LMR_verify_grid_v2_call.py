@@ -1971,6 +1971,11 @@ def verify_grid(data_dir, nexp, output_dir, iplot=False, fsave=True):
 
     # zonal means of the original LMR data
     output_vals['lmr_on_gis_grid'] = lmr_on_gis_allyears
+    output_vals['gis_on_gis'] = gis_allyears
+    output_vals['gis_lats'] = lat2d_GIS
+    output_vals['gis_lons'] = lon2d_GIS
+    output_vals['Details'] = '''The grid values are anomaly relative to
+    {}-{}'''.format(*ref_period)
     with open(os.path.join(output_dir, output_vals_fname), 'w') as f:
         cpk.dump(output_vals, f)
 
