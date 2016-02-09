@@ -51,11 +51,15 @@ class LIMForecaster:
         ignore_precalib = cfg.ignore_precalib
         is_anomaly = cfg.calib_is_anomaly
         is_runmean = cfg.calib_is_runmean
+        do_detrend = cfg.detrend
 
         # Search for pre-calibrated LIM to save time
         fpath, fname = path.split(infile)
         precalib_path = path.join(fpath, 'lim_precalib')
-        precalib_fname = path.splitext(fname)[0] + '.lim.pckl'
+        if do_detrend:
+            precalib_fname = path.splitext(fname)[0] + '.lim.pckl'
+        else:
+            precalib_fname = path.splitext(fname)[0] + '_nodetr.lim.pckl'
         precalib_pathfname = path.join(precalib_path, precalib_fname)
 
         if not ignore_precalib:
