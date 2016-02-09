@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 
-sys.path.append('../.')
+sys.path.append('/home/disk/p/wperkins/Research/LMR')
 
 # LMR specific imports
 from LMR_utils2 import global_hemispheric_means, assimilated_proxies, coefficient_efficiency

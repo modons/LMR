@@ -60,7 +60,7 @@ fsave = False
 #
 # current datasets
 #
-nexp = 'production_gis_ccsm4_pagesall_0.75'
+nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'testdev_paramsearch_noxbblend_a7_d0_100itr'
 
 # specify directories for LMR and calibration data
