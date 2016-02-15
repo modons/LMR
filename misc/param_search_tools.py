@@ -24,13 +24,10 @@ def compile_gmts(parent_dir, a_d_vals=None, r_iters=None):
         ad_dir2 = 'a{:1.1f}_d{:1.2f}'
         param_iters = []
         for a, d in a_d_vals:
-            if a % 1.0  > 0:
-                curr_ad = ad_dir.format(a, d)
-            else:
-                curr_ad = ad_dir2.format(a, d)
-                if a == 1.0:
-                    if not exists(join(parent_dir, curr_ad)):
-                       curr_ad = ad_dir.format(a,d)
+            curr_ad = ad_dir2.format(a, d)
+            if a == 1.0 or a == 0.0:
+                if not exists(join(parent_dir, curr_ad)):
+                    curr_ad = ad_dir.format(parent_dir, curr_ad)
             param_iters.append(join(parent_dir, curr_ad))
     else:
         if r_iters is not None:
