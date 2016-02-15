@@ -27,7 +27,7 @@ def compile_gmts(parent_dir, a_d_vals=None, r_iters=None):
             curr_ad = ad_dir2.format(a, d)
             if a == 1.0 or a == 0.0:
                 if not exists(join(parent_dir, curr_ad)):
-                    curr_ad = ad_dir.format(parent_dir, curr_ad)
+                    curr_ad = ad_dir.format(a, d)
             param_iters.append(join(parent_dir, curr_ad))
     else:
         if r_iters is not None:
