@@ -53,6 +53,74 @@ def compile_gmts(parent_dir, a_d_vals=None, r_iters=None):
     return times, gmts
 
 
+def compile_ens_var(parent_dir, out_dir, out_fname,
+                    a_d_vals=None, r_iters=None, ignore_npz=False):
+
+    if exists(join(out_dir, out_fname)) and not ignore_npz:
+        print 'Loading pre-compiled ensemble variance metrics.'
+        return np.load(join(out_dir, out_fname))
+
+    # Get reconstruction iteration directory
+    if r_iters is not None:
+        print 'Joining on r iters ', r_iters
+        parent_iters = [join(parent_dir, 'r{:d}'.format(r)) for r in r_iters]
+    else:
+        parent_iters = glob.glob(join(parent_dir, 'r*'))
+
+    ens_var = None
+    gm_ens_var = None
+    times = None
+
+    for i, parent in enumerate(parent_iters):
+        # Directories for each parameter value
+        if a_d_vals is not None:
+            ad_dir = 'a{:1.2g}_d{:1.2f}'
+            ad_dir2 = 'a{:1.1f}_d{:1.2f}'
+            param_iters = []
+            for a, d in a_d_vals:
+                curr_ad = ad_dir.format(a, d)
+                if a == 1.0 or a == 0.0:
+                    if not exists(join(parent, curr_ad)):
+                        curr_ad = ad_dir2.format(a, d)
+                param_iters.append(join(parent, curr_ad))
+        else:
+            param_iters = [parent]
+
+        for j, f in enumerate(param_iters):
+            try:
+                # Load analysis ensemble variance
+                analy_var = np.load(join(f, 'ensemble_variance_tas_sfc_Amon.npz'))
+                if times is None:
+                    times = analy_var['years']
+                    lats = analy_var['lat']
+                    lons = analy_var['lon']
+                    var_shape = [len(parent_iters), len(param_iters)] + \
+                                list(analy_var['xav'].shape)
+                    ens_var = np.zeros(var_shape) * np.nan
+                    gm_ens_var = np.zeros(var_shape[:3]) * np.nan
+                    pri_ens_var = np.zeros_like(ens_var) * np.nan
+                    pri_gm_ens_var = np.zeros_like(gm_ens_var) * np.nan
+
+                ens_var[i, j] = analy_var['xav']
+                gm_ens_var[i, j] = utils2.global_mean2(ens_var[i, j], lats)
+
+                prior_var = np.load(join(f, 'prior_ensvar_tas_sfc_Amon.npz'))
+                pri_ens_var[i, j] = prior_var['xbv']
+                pri_gm_ens_var[i, j] = utils2.global_mean2(pri_ens_var[i, j], lats)
+
+            except IOError as e:
+                print e
+
+    res_dict = {'times': times,
+                'lats': lats,
+                'lons': lons,
+                'ens_var': ens_var.squeeze(),
+                'gm_ens_var': gm_ens_var.squeeze(),
+                'pri_ens_var': pri_ens_var.squeeze(),
+                'pri_gm_ens_var': pri_gm_ens_var.squeeze()}
+    return res_dict
+
+
 def center_to_time_range(times, analysis, time_axis, trange=(1900, 2000)):
 
     start, end = trange
