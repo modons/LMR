@@ -69,9 +69,15 @@ def compile_ens_var(parent_dir, out_dir, out_fname,
 
     ens_var = None
     gm_ens_var = None
+    pri_ens_var = None
+    pri_gm_ens_var = None
+    lats = None
+    lons = None
     times = None
 
     for i, parent in enumerate(parent_iters):
+
+        print 'Compiling iteration {:d}/{:d}'.format(i+1, len(parent_iters))
         # Directories for each parameter value
         if a_d_vals is not None:
             ad_dir = 'a{:1.2g}_d{:1.2f}'
@@ -111,6 +117,11 @@ def compile_ens_var(parent_dir, out_dir, out_fname,
             except IOError as e:
                 print e
 
+    ens_var = ens_var.mean(axis=0).astype(np.float32)
+    gm_ens_var = gm_ens_var.mean(axis=0)
+    pri_ens_var = pri_ens_var.mean(axis=0).astype(np.float32)
+    pri_gm_ens_var = pri_gm_ens_var.mean(axis=0)    
+
     res_dict = {'times': times,
                 'lats': lats,
                 'lons': lons,
@@ -118,6 +129,11 @@ def compile_ens_var(parent_dir, out_dir, out_fname,
                 'gm_ens_var': gm_ens_var.squeeze(),
                 'pri_ens_var': pri_ens_var.squeeze(),
                 'pri_gm_ens_var': pri_gm_ens_var.squeeze()}
+   
+    if not exists(out_dir):
+        os.makedirs(out_dir)
+    np.savez(join(out_dir, out_fname), **res_dict)
+
     return res_dict
 
 
