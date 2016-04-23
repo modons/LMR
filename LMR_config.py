@@ -7,8 +7,7 @@ Adapted from LMR_exp_NAMELIST by AndreP
 
 from os.path import join
 
-
-class core:
+class core(object):
     """
     High-level parameters of reconstruction experiment
 
@@ -44,7 +43,6 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     iter_range = [0, 0]
-    curr_iter = iter_range[0]
     loc_rad = None
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
@@ -56,7 +54,20 @@ class core:
     #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
-class proxies:
+    def __init__(self):
+        self.nexp = self.nexp
+        self.lmr_path = self.lmr_path
+        self.online_reconstruction = self.online_reconstruction
+        self.clean_start = self.clean_start
+        self.recon_period = self.recon_period
+        self.nens = self.nens
+        self.iter_range = [0, 0]
+        self.curr_iter = self.iter_range[0]
+        self.loc_rad = self.loc_rad
+        self.datadir_output = self.datadir_output
+        self.archive_dir = self.archive_dir
+
+class proxies(object):
     """
     Parameters for proxy data
 
@@ -72,20 +83,20 @@ class proxies:
     use_from = ['pages']
     proxy_frac = 0.75
 
-    class pages:
+    class _pages(object):
         """
         Parameters for PagesProxy class
 
         Attributes
         ----------
         datadir_proxy: str
-            Absolute path to proxy data
+            Absolute path to proxy data *or* None if using default lmr_path
         datafile_proxy: str
-            Absolute path to proxy records file
+            proxy records filename
         metafile_proxy: str
-            Absolute path to proxy meta data
+            proxy metadata filename
         dataformat_proxy: str
-            File format of the proxy data
+            File format of the proxy data files
         regions: list(str)
             List of proxy data regions (data keys) to use.
         proxy_resolution: list(float)
@@ -105,11 +116,8 @@ class proxies:
             to filter by.
         """
 
-        datadir_proxy = join(core.lmr_path, 'data', 'proxies')
-        datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata.df.pckl')
+        datafile_proxy = 'Pages2k_Proxies.df.pckl'
+        metafile_proxy = 'Pages2k_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
@@ -154,19 +162,41 @@ class proxies:
             'Speleothem_All': ['Lamina thickness'],
             }
 
-        # Create mapping for Proxy Type/Measurement Type to type names above
-        proxy_type_mapping = {}
-        for type, measurements in proxy_assim2.iteritems():
-            # Fetch proxy type name that occurs before underscore
-            type_name = type.split('_', 1)[0]
-            for measure in measurements:
-                proxy_type_mapping[(type_name, measure)] = type
+        def __init__(self, datadir_proxy=None):
+            if datadir_proxy is None:
+                self.datadir_proxy = join(core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = datadir_proxy
 
-        simple_filters = {'PAGES 2k Region': regions,
-                          'Resolution (yr)': proxy_resolution}
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)\
 
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = self.regions
+            self.proxy_resolution = self.proxy_resolution
+            self.proxy_order = self.proxy_order
+            self.proxy_assim2 = self.proxy_assim2
 
-class psm:
+            # Create mapping for Proxy Type/Measurement Type to type names above
+            self.proxy_type_mapping = {}
+            for ptype, measurements in self.proxy_assim2.iteritems():
+                # Fetch proxy type name that occurs before underscore
+                type_name = ptype.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = ptype
+
+            self.simple_filters = {'PAGES 2k Region': self.regions,
+                                   'Resolution (yr)': self.proxy_resolution}
+
+    # Initialize subclasses with all attributes
+    def __init__(self, **kwargs):
+        self.use_from = self.use_from
+        self.proxy_frac = self.proxy_frac
+        self.pages = self._pages(**kwargs)
+
+class psm(object):
     """
     Parameters for PSM classes
 
@@ -174,21 +204,23 @@ class psm:
     ----------
     use_psm: dict{str: str}
         Maps proxy class key to psm class key.  Used to determine which psm
-        is associated with what Proxy type.
+        is associated with what Proxy type. This mapping can be extended to
+        make more intricate proxy - psm relationships.
     """
 
     use_psm = {'pages': 'linear'}
 
-    class linear:
+    class _linear(object):
         """
         Parameters for the linear fit PSM.
 
         Attributes
         ----------
         datatag_calib: str
-            Source of calibration data for PSM
+            Source key of calibration data for PSM
         datadir_calib: str
-            Absolute path to calibration data
+            Absolute path to calibration data *or* None if using default
+            lmr_path
         datafile_calib: str
             Filename for calibration data
         dataformat_calib: str
@@ -200,16 +232,36 @@ class psm:
         """
         datatag_calib = 'GISTEMP'
         datafile_calib = 'gistemp1200_ERSST.nc'
+        dataformat_calib = 'NCD'
         #datatag_calib = 'MLOST'
         #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
 
-        datadir_calib = join(core.lmr_path, 'data', 'analyses')
-        dataformat_calib = 'NCD'
-
-        pre_calib_datafile = join(core.lmr_path,
-                                  'PSM',
-                                  'PSMs_' + datatag_calib + '.pckl')
         psm_r_crit = 0.2
+
+        def __init__(self, datadir_calib=None, pre_calib_datafile=None):
+            self.datatag_calib = self.datatag_calib
+            self.datafile_calib = self.datafile_calib
+            self.dataformat_calib = self.dataformat_calib
+            self.psm_r_crit = self.psm_r_crit
+
+            if datadir_calib is None:
+                self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = datadir_calib
+
+            if pre_calib_datafile is None:
+                filename = 'PSMs_'+self.datatag_calib+'.pckl'
+                self.pre_calib_datafile = join(core.lmr_path,
+                                               'PSM',
+                                               filename)
+            else:
+                self.pre_calib_datafile = pre_calib_datafile
+
+    def __init__(self, **kwargs):
+        self.use_psm = self.use_psm
+        self.linear = self._linear(**kwargs)
+
+
 
 class prior:
     """
@@ -247,7 +299,6 @@ class prior:
     #prior_source     = 'era20c'
     #datafile_prior   = '[vardef_template]_ERA20C_190001-201212.nc'
 
-    datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     dataformat_prior = 'NCD'
     state_variables = ['tas_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
@@ -256,4 +307,25 @@ class prior:
     #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
     #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
     #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon']
+
+    def __init__(self, datadir_prior=None):
+        self.prior_source = self.prior_source
+        self.datafile_prior = self.datafile_prior
+        self.dataformat_prior = self.dataformat_prior
+        self.state_variables = self.state_variables
+
+        if datadir_prior is None:
+            self.datadir_prior = join(core.lmr_path, 'data', 'model',
+                                      self.prior_source)
+        else:
+            self.datadir_prior = datadir_prior
+
+
+class Config(object):
+
+    def __init__(self):
+        self.core = core()
+        self.proxies = proxies()
+        self.psm = psm()
+        self.prior = prior()
 
