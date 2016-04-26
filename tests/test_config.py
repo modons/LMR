@@ -29,6 +29,19 @@ def test_default_configuration_core(cfg):
     assert hasattr(cfg_object.prior, 'datadir_prior')
 
 
+def test_default_configuration_seed(cfg):
+    new_seed = 1234
+    cfg.core.seed = new_seed
+    cfg_object = cfg.Config()
+
+    assert hasattr(cfg_object.core, 'seed')
+    assert hasattr(cfg_object.proxies, 'seed')
+    assert hasattr(cfg_object.prior, 'seed')
+
+    assert cfg_object.proxies.seed == new_seed
+    assert cfg_object.prior.seed == new_seed
+
+
 def test_default_configuration_proxies_pages(cfg):
     cfg_object = cfg.Config()
 
@@ -84,3 +97,4 @@ def test_configuration_keyword_arg_usage(cfg):
     psm_config = cfg.psm(datadir_calib=new_dir, pre_calib_datafile=new_file)
     assert new_dir in psm_config.linear.datadir_calib
     assert new_file in psm_config.linear.pre_calib_datafile
+
