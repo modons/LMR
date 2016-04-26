@@ -7,6 +7,23 @@ Adapted from LMR_exp_NAMELIST by AndreP
 
 from os.path import join
 
+class wrapper(object):
+    """
+    Parameters for reconstruction realization manager LMR_wrapper.
+
+    Attributes
+    ----------
+    multi_seed: list(int), None
+        List of RNG seeds to be used during a reconstruction for each
+        realization.  This overrides the 'core.seed' parameter.
+
+    """
+
+    multi_seed = None
+
+    def __init__(self):
+        self.multi_seed = self.multi_seed
+
 class core(object):
     """
     High-level parameters of reconstruction experiment
@@ -30,6 +47,9 @@ class core(object):
         Number of Monte-Carlo iterations to perform
     loc_rad: float
         Localization radius for DA (in km)
+    seed: int, None
+        RNG seed.  Passed to all random function calls. (e.g. Prior and proxy
+        record sampling)  Overridden by wrapper.multi_seed.
     datadir_output: str
         Absolute path to working directory output for LMR
     archive_dir: str
@@ -43,6 +63,7 @@ class core(object):
     recon_period = [1850, 2000]
     nens = 100
     iter_range = [0, 0]
+    seed = None
     loc_rad = None
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
@@ -64,6 +85,7 @@ class core(object):
         self.iter_range = [0, 0]
         self.curr_iter = self.iter_range[0]
         self.loc_rad = self.loc_rad
+        self.seed = self.seed
         self.datadir_output = self.datadir_output
         self.archive_dir = self.archive_dir
 
@@ -194,6 +216,7 @@ class proxies(object):
     def __init__(self, **kwargs):
         self.use_from = self.use_from
         self.proxy_frac = self.proxy_frac
+        self.seed = core.seed
         self.pages = self._pages(**kwargs)
 
 class psm(object):
@@ -313,6 +336,7 @@ class prior:
         self.datafile_prior = self.datafile_prior
         self.dataformat_prior = self.dataformat_prior
         self.state_variables = self.state_variables
+        self.seed = core.seed
 
         if datadir_prior is None:
             self.datadir_prior = join(core.lmr_path, 'data', 'model',
@@ -324,6 +348,7 @@ class prior:
 class Config(object):
 
     def __init__(self):
+        self.wrapper = wrapper()
         self.core = core()
         self.proxies = proxies()
         self.psm = psm()

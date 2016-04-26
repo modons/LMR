@@ -19,7 +19,7 @@ def cfg(request):
 def test_default_configuration_core(cfg):
     cfg_object = cfg.Config()
 
-    attrs = ['core', 'proxies', 'psm', 'prior']
+    attrs = ['wrapper', 'core', 'proxies', 'psm', 'prior']
     for attr in attrs:
         assert hasattr(cfg_object, attr)
 
