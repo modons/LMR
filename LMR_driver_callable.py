@@ -109,7 +109,7 @@ def LMR_driver_callable(cfg=None):
     X.Nens = nens
 
     # Read data file & populate initial prior ensemble
-    X.populate_ensemble(prior_source)
+    X.populate_ensemble(prior_source, prior)
     Xb_one_full = X.ens
 
     # Prepare to check for files in the prior (work) directory (this object just

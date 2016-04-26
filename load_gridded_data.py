@@ -587,7 +587,11 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
         # Transform into calendar dates using netCDF4 variable attributes (units & calendar)
         # TODO: may not want to depend on netcdf4.num2date...
         try:
-            time_yrs = num2date(time[:],units=time.units,calendar=time.calendar)
+            if hasattr(time, 'calendar'):
+                time_yrs = num2date(time[:],units=time.units,
+                                    calendar=time.calendar)
+            else:
+                time_yrs = num2date(time[:],units=time.units)
             time_yrs_list = time_yrs.tolist()
         except ValueError:
             # num2date needs calendar year start >= 0001 C.E. (bug submitted
@@ -600,7 +604,11 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars):
             new_start_date = datetime(0001, 01, 01, 0, 0, 0)
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
-            time_yrs = num2date(time[:], new_units, calendar=time.calendar)
+            if hasattr(time, 'calendar'):
+                time_yrs = num2date(time[:], new_units, calendar=time.calendar)
+            else:
+                time_yrs = num2date(time[:], new_units)
+
             time_yrs_list = [datetime(d.year + year_diff, d.month, d.day,
                                       d.hour, d.minute, d.second)
                              for d in time_yrs]

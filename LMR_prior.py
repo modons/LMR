@@ -33,7 +33,7 @@ class prior_master(object):
     '''
 
     # Populate the prior ensemble from gridded model/analysis data
-    def populate_ensemble(self,prior_source):
+    def populate_ensemble(self,prior_source, prior_cfg):
 
         import numpy as np
         from random import sample, seed
@@ -101,6 +101,7 @@ class prior_master(object):
         # ***NOTE: Following code assumes that data for a given year are located at same array time index across all state variables
         print 'Random selection of', str(self.Nens), 'ensemble members'
         # Populate prior ensemble from randomly sampled states
+        seed(prior_cfg.seed)
         ind_ens = sample(range(ntime), self.Nens)
 
 
