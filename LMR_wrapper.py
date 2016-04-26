@@ -20,15 +20,17 @@ import os
 import numpy as np
 import datetime
 import LMR_driver_callable as LMR
-import LMR_config as cfg
+import LMR_config
 
 from LMR_utils import ensemble_stats
 
 print '\n' + str(datetime.datetime.now()) + '\n'
 
 # Define main experiment output directory
+cfg = LMR_config.Config()
+
 core = cfg.core
-iter_range = core.iter_range
+iter_range = cfg.wrapper.iter_range
 expdir = os.path.join(core.datadir_output, core.nexp)
 
 # Check if it exists, if not, create it
@@ -39,7 +41,14 @@ if not os.path.isdir(expdir):
 # namelist)
 MCiters = np.arange(iter_range[0], iter_range[1]+1)
 for iter_num in MCiters:
+
+    # Use seed list if specified
+    if cfg.wrapper.multi_seed:
+        cfg.core.seed = cfg.wrapper.multi_seed[iter_num]
+
+    # Set iteration number
     cfg.core.curr_iter = iter_num
+
     # Define work directory
     core.datadir_output = os.path.join(expdir, 'r' + str(iter_num))
     # Check if it exists, if not create it

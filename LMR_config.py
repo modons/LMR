@@ -16,13 +16,16 @@ class wrapper(object):
     multi_seed: list(int), None
         List of RNG seeds to be used during a reconstruction for each
         realization.  This overrides the 'core.seed' parameter.
-
+    iter_range: list(int)
+        Range of Monte-Carlo iterations to perform
     """
 
-    multi_seed = None
+    multi_seed = [1, 2, 3]
+    iter_range = [0, 1]
 
     def __init__(self):
         self.multi_seed = self.multi_seed
+        self.iter_range = self.iter_range
 
 class core(object):
     """
@@ -43,8 +46,6 @@ class core(object):
         Time period for reconstruction
     nens: int
         Ensemble size
-    iter_range: list(int)
-        Number of Monte-Carlo iterations to perform
     loc_rad: float
         Localization radius for DA (in km)
     seed: int, None
@@ -55,14 +56,13 @@ class core(object):
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_onlineDA_comparison1pt0_gis_ccsm4_no2s'
+    nexp = 'testdev_multi_seed'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1850, 2000]
-    nens = 100
-    iter_range = [0, 0]
+    recon_period = [1950, 1960]
+    nens = 5
     seed = None
     loc_rad = None
 
@@ -82,8 +82,7 @@ class core(object):
         self.clean_start = self.clean_start
         self.recon_period = self.recon_period
         self.nens = self.nens
-        self.iter_range = [0, 0]
-        self.curr_iter = self.iter_range[0]
+        self.curr_iter = wrapper.iter_range[0]
         self.loc_rad = self.loc_rad
         self.seed = self.seed
         self.datadir_output = self.datadir_output
@@ -304,8 +303,8 @@ class prior:
         List of variables to use in the state vector for the prior
     """
     # Prior data directory & model source
-    prior_source = 'ccsm4_last_millenium'
-    datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+    # prior_source = 'ccsm4_last_millenium'
+    # datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 
     #prior_source     = 'ccsm4_preindustrial_control'
     #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
@@ -316,8 +315,8 @@ class prior:
     #prior_source     = 'mpi-esm-p_last_millenium'
     #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
 
-    #prior_source     = '20cr'
-    #datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
+    prior_source     = '20cr'
+    datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
 
     #prior_source     = 'era20c'
     #datafile_prior   = '[vardef_template]_ERA20C_190001-201212.nc'

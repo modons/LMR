@@ -47,7 +47,7 @@ from LMR_DA import enkf_update_array, cov_localization
 def LMR_driver_callable(cfg=None):
 
     if cfg is None:
-        cfg = BaseCfg  # Use base configuration from LMR_config
+        cfg = BaseCfg.Config()  # Use base configuration from LMR_config
 
     # Temporary fix for old 'state usage'
     core = cfg.core
@@ -135,7 +135,7 @@ def LMR_driver_callable(cfg=None):
 
     # Build dictionaries of proxy sites to assimilate and those set aside for
     # verification
-    prox_manager = LMR_proxy_pandas_rework.ProxyManager(BaseCfg, recon_period)
+    prox_manager = LMR_proxy_pandas_rework.ProxyManager(cfg, recon_period)
     type_site_assim = prox_manager.assim_ids_by_group
 
     if verbose > 0:
