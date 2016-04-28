@@ -258,7 +258,7 @@ class psm(object):
         #datatag_calib = 'MLOST'
         #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
 
-        psm_r_crit = 0.2
+        psm_r_crit = 0.0
 
         def __init__(self, datadir_calib=None, pre_calib_datafile=None):
             self.datatag_calib = self.datatag_calib
@@ -299,12 +299,14 @@ class prior:
         Name of prior file to use
     dataformat_prior: str
         Datatype of prior container
+    psm_required_variables: list(str)
+        List of variables used to calculate ye values.
     state_variables: list(str)
-        List of variables to use in the state vector for the prior
+        List of variables to use in the state vector for the prior.
     """
     # Prior data directory & model source
-    # prior_source = 'ccsm4_last_millenium'
-    # datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+    prior_source = 'ccsm4_last_millenium'
+    datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 
     #prior_source     = 'ccsm4_preindustrial_control'
     #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
@@ -315,15 +317,16 @@ class prior:
     #prior_source     = 'mpi-esm-p_last_millenium'
     #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
 
-    prior_source     = '20cr'
-    datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
+    # prior_source     = '20cr'
+    # datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
 
     #prior_source     = 'era20c'
     #datafile_prior   = '[vardef_template]_ERA20C_190001-201212.nc'
 
     dataformat_prior = 'NCD'
-    state_variables = ['tas_sfc_Amon']
-    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+    psm_required_variables = ['tas_sfc_Amon']
+    # state_variables = ['tas_sfc_Amon']
+    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
     #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
@@ -335,6 +338,7 @@ class prior:
         self.datafile_prior = self.datafile_prior
         self.dataformat_prior = self.dataformat_prior
         self.state_variables = self.state_variables
+        self.psm_required_variables = self.psm_required_variables
         self.seed = core.seed
 
         if datadir_prior is None:

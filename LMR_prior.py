@@ -103,6 +103,7 @@ class prior_master(object):
         # Populate prior ensemble from randomly sampled states
         seed(prior_cfg.seed)
         ind_ens = sample(range(ntime), self.Nens)
+        self.prior_sample_indices = ind_ens
 
 
 

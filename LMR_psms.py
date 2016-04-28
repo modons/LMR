@@ -207,6 +207,54 @@ class LinearPSM(BasePSM):
 
         return Ye
 
+    def basic_psm(self, data):
+        """
+        PSM that doesn't need to do the state unpacking steps...
+
+        Parameters
+        ----------
+        data
+
+        Returns
+        -------
+        ye
+        """
+
+        return self.slope * data + self.intercept
+
+    def get_close_grid_point_data(self, data, lon, lat):
+
+        # If not equal we got a single vector?
+        if lon.shape != lat.shape:
+            lonshp, = lon.shape
+            latshp, = lat.shape
+            lon, lat = np.meshgrid(lon, lat)
+
+        if len(lon.shape) > 1:
+            lon = lon.ravel()
+            lat = lon.ravel()
+
+        # Calculate distance
+        dist = haversine(self.lon, self.lat, lon, lat)
+
+        if len(dist) in data.shape:
+            loc_idx = dist.argmin()
+            tmp_dat = data[loc_idx]
+        else:
+            min_dist_lon_idx, \
+            min_dist_lat_idx = np.unravel_index(dist.argmin(), (lonshp, latshp))
+
+            lon_dim = data.shape.index(lonshp)
+            lat_dim = data.shape.index(latshp)
+
+            tmp_dat = data
+            for dim, idx in ((lon_dim, min_dist_lon_idx),
+                             (lat_dim, min_dist_lat_idx)):
+                tmp_dat = np.take(tmp_dat, idx, axis=dim)
+            tmp_dat = np.squeeze(tmp_dat)
+
+        return tmp_dat
+
     # Define the error model for this proxy
     @staticmethod
     def error():
