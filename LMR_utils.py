@@ -563,15 +563,16 @@ def class_docs_fixer(cls):
     for name, func in vars(cls).items():
         if not func.__doc__ or '%%aug%%' in func.__doc__:
             for parent in cls.__bases__:
-                parfunc = getattr(parent, name)
-                if parfunc and getattr(parfunc, '__doc__', None):
-                    if not func.__doc__:
-                        func.__doc__ = parfunc.__doc__
-                        break
-                    elif '%%aug%%' in func.__doc__:
-                        func.__doc__ = func.__doc__.replace('%%aug%%', '')
-                        func.__doc__ = parfunc.__doc__ + func.__doc__
-                        break
+                if hasattr(parent, name):
+                    parfunc = getattr(parent, name)
+                    if parfunc and getattr(parfunc, '__doc__', None):
+                        if not func.__doc__:
+                            func.__doc__ = parfunc.__doc__
+                            break
+                        elif '%%aug%%' in func.__doc__:
+                            func.__doc__ = func.__doc__.replace('%%aug%%', '')
+                            func.__doc__ = parfunc.__doc__ + func.__doc__
+                            break
 
     return cls
 
