@@ -42,6 +42,7 @@ import LMR_prior
 import LMR_utils
 import LMR_config as BaseCfg
 from LMR_DA import enkf_update_array, cov_localization
+from LMR_utils import FlagError
 
 
 def LMR_driver_callable(cfg=None):
@@ -253,9 +254,34 @@ def LMR_driver_callable(cfg=None):
 
     # Extract all the Ye's from master list of proxy objects into numpy array
     if not online:
-        Ye_all = np.empty(shape=[total_proxy_count, nens])
-        for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-            Ye_all[k, :] = proxy.psm(Xb_one_full, X.full_state_info, X.coords)
+        # Load pre calculated ye values if desired or possible
+        try:
+            if not cfg.core.use_precalc_ye:
+                raise FlagError('Flag set to forego loading precalculated ye '
+                                'values.')
+
+            print 'Loading precalculated Ye values.'
+            Ye_all = \
+                LMR_utils.load_precalculated_ye_vals(cfg,
+                                                     prox_manager,
+                                                     X.prior_sample_indices)
+        except (IOError, FlagError) as e:
+            print e
+
+            for psm_required_var in cfg.prior.psm_required_variables:
+                if psm_required_var not in cfg.prior.state_variables:
+                    print ('Could not calculate required ye_values from prior.'
+                           ' Add the required variable to the state variable'
+                           ' list.')
+                    raise SystemExit()
+
+            # Manually calculate ye_values from state vector
+            print 'Calculating ye_values from the prior...'
+            Ye_all = np.empty(shape=[total_proxy_count, nens])
+            for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
+                Ye_all[k, :] = proxy.psm(Xb_one_full,
+                                         X.full_state_info,
+                                         X.coords)
 
         # Append ensemble of Ye's to prior state vector
         Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)

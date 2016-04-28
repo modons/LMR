@@ -60,6 +60,7 @@ class core(object):
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
+    use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1950, 1960]
     nens = 5
@@ -80,6 +81,7 @@ class core(object):
         self.lmr_path = self.lmr_path
         self.online_reconstruction = self.online_reconstruction
         self.clean_start = self.clean_start
+        self.use_precalc_ye = self.use_precalc_ye
         self.recon_period = self.recon_period
         self.nens = self.nens
         self.curr_iter = wrapper.iter_range[0]

@@ -10,6 +10,7 @@ from math import radians, cos, sin, asin, sqrt
 #========================================================================================== 
 
 import glob
+import os
 import numpy as np
 import cPickle
 from math import radians, cos, sin, asin, sqrt
@@ -580,3 +581,29 @@ def augment_docstr(func):
     """ Decorator to mark augmented function docstrings. """
     func.func_doc = '%%aug%%' + func.func_doc
     return func
+
+
+def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
+    load_fname = '{}_{}_{}.npz'.format(config.prior.prior_source,
+                                       config.psm.linear.datatag_calib,
+                                       'tas_sfc_Amon')
+    load_dir = os.path.join(config.prior.datadir_prior, 'precalc_ye_files')
+    load_abs_path = os.path.join(load_dir, load_fname)
+
+    precalc_file = np.load(load_abs_path)
+    pid_index_map = precalc_file['pid_index_map']
+    ye_vals = precalc_file['ye_vals']
+
+    # Indices of proxies we're assimilating this reconstruction
+    proxy_id_indices = [pid_index_map[pid] for pid in proxy_manager.sites_assim]
+
+    ye_all = ye_vals[proxy_id_indices][:, sample_idxs]
+
+    return ye_all
+
+
+class FlagError(ValueError):
+    """
+    Error for exiting code sections
+    """
+    pass
