@@ -257,8 +257,8 @@ def LMR_driver_callable(cfg=None):
         # Load pre calculated ye values if desired or possible
         try:
             if not cfg.core.use_precalc_ye:
-                raise FlagError('Flag set to forego loading precalculated ye '
-                                'values.')
+                raise FlagError('use_precalc_ye=False: forego loading precalcul'
+                                'ated ye values.')
 
             print 'Loading precalculated Ye values.'
             Ye_all = \
@@ -303,23 +303,26 @@ def LMR_driver_callable(cfg=None):
 
     # Array containing the global and hemispheric-mean state (for diagnostic purposes)
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
-    gmt_save = np.zeros([total_proxy_count+1,recon_period[1] - recon_period[0] + 1])
-    nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    # get state vector indices where to find surface air temperature
-    ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
-    iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
-    xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
-    xbm_lalo = xbm.reshape(nlat_new, nlon_new)
-    [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
-    # First row is prior GMT
-    gmt_save[0, :] = gmt
-    nhmt_save[0,:] = nhmt
-    shmt_save[0,:] = shmt
-    # Prior for first proxy assimilated
-    gmt_save[1, :] = gmt 
-    nhmt_save[1,:] = nhmt
-    shmt_save[1,:] = shmt
+
+    # TODO: AP temporary fix for no TAS in state
+    if 'tas_sfc_Amon' in cfg.prior.state_variables:
+        gmt_save = np.zeros([total_proxy_count+1,recon_period[1] - recon_period[0] + 1])
+        nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
+        shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
+        # get state vector indices where to find surface air temperature
+        ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
+        iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
+        xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
+        xbm_lalo = xbm.reshape(nlat_new, nlon_new)
+        [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
+        # First row is prior GMT
+        gmt_save[0, :] = gmt
+        nhmt_save[0,:] = nhmt
+        shmt_save[0,:] = shmt
+        # Prior for first proxy assimilated
+        gmt_save[1, :] = gmt
+        nhmt_save[1,:] = nhmt
+        shmt_save[1,:] = shmt
 
     lasttime = time()
     for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1)):
@@ -344,7 +347,9 @@ def LMR_driver_callable(cfg=None):
                 Y.values[t]
             except KeyError:
                 # Make sure GMT spot filled from previous proxy
-                gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
+                # TODO: AP temporary fix for no TAS in state
+                if 'tas_sfc_Amon' in cfg.prior.state_variables:
+                    gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
                 continue
 
             if verbose > 2:
@@ -380,13 +385,16 @@ def LMR_driver_callable(cfg=None):
 
             # Update the state
             Xa = enkf_update_array(Xb, Y.values[t], Ye, ob_err, loc)
-            xam = Xa.mean(axis=1)
-            xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
-            [gmt, nhmt, shmt] = \
-                LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
-            gmt_save[proxy_idx+1, yr_idx] = gmt
-            nhmt_save[proxy_idx+1, yr_idx] = nhmt
-            shmt_save[proxy_idx+1, yr_idx] = shmt
+
+            # TODO: AP Temporary fix for no TAS in state
+            if 'tas_sfc_Amon' in cfg.prior.state_variables:
+                xam = Xa.mean(axis=1)
+                xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
+                [gmt, nhmt, shmt] = \
+                    LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
+                gmt_save[proxy_idx+1, yr_idx] = gmt
+                nhmt_save[proxy_idx+1, yr_idx] = nhmt
+                shmt_save[proxy_idx+1, yr_idx] = shmt
 
             # check the variance change for sign
             thistime = time()
@@ -414,32 +422,34 @@ def LMR_driver_callable(cfg=None):
 
     # 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
     # need to fix this so that every year is counted
-    gmt_ensemble = np.zeros([ntimes, nens])
-    nhmt_ensemble = np.zeros([ntimes,nens])
-    shmt_ensemble = np.zeros([ntimes,nens])
-    for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1)):
-        filen = join(workdir, 'year{:04d}'.format(yr))
-        Xa = np.load(filen+'.npy')
-        for k in xrange(nens):
-            xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
-            [gmt, nhmt, shmt] = \
-                LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
-            gmt_ensemble[iyr, k] = gmt
-            nhmt_ensemble[iyr, k] = nhmt
-            shmt_ensemble[iyr, k] = shmt
+    # TODO: AP temporary fix for no TAS
+    if 'tas_sfc_Amon' in cfg.prior.state_variables:
+        gmt_ensemble = np.zeros([ntimes, nens])
+        nhmt_ensemble = np.zeros([ntimes,nens])
+        shmt_ensemble = np.zeros([ntimes,nens])
+        for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1)):
+            filen = join(workdir, 'year{:04d}'.format(yr))
+            Xa = np.load(filen+'.npy')
+            for k in xrange(nens):
+                xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
+                [gmt, nhmt, shmt] = \
+                    LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
+                gmt_ensemble[iyr, k] = gmt
+                nhmt_ensemble[iyr, k] = nhmt
+                shmt_ensemble[iyr, k] = shmt
 
-    filen = join(workdir, 'gmt_ensemble')
-    np.savez(filen, gmt_ensemble=gmt_ensemble, nhmt_ensemble=nhmt_ensemble,
-             shmt_ensemble=shmt_ensemble, recon_times=recon_times)
+        filen = join(workdir, 'gmt_ensemble')
+        np.savez(filen, gmt_ensemble=gmt_ensemble, nhmt_ensemble=nhmt_ensemble,
+                 shmt_ensemble=shmt_ensemble, recon_times=recon_times)
 
-    # save global mean temperature history and the proxies assimilated
-    print ('saving global mean temperature update history and ',
-           'assimilated proxies...')
-    filen = join(workdir, 'gmt')
-    np.savez(filen, gmt_save=gmt_save, nhmt_save=nhmt_save, shmt_save=shmt_save,
-             recon_times=recon_times,
-             apcount=total_proxy_count,
-             tpcount=total_proxy_count)
+        # save global mean temperature history and the proxies assimilated
+        print ('saving global mean temperature update history and ',
+               'assimilated proxies...')
+        filen = join(workdir, 'gmt')
+        np.savez(filen, gmt_save=gmt_save, nhmt_save=nhmt_save, shmt_save=shmt_save,
+                 recon_times=recon_times,
+                 apcount=total_proxy_count,
+                 tpcount=total_proxy_count)
 
     # TODO: (AP) The assim/eval lists of lists instead of lists of 1-item dicts
     assimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time]}
