@@ -13,11 +13,20 @@ from itertools import izip
 # proxy-first version vs time-first version comparison
 off_v_on = False
 
+# Use this if the two reconstructions use different state variables
+# Also use the
+diff_state_vectors = True
+
 #dir1 = '/home/disk/ekman/rtardif/kalman3/LMR/output/validationWithAndre/r0/'
-# dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/proxyfirstloop_10yr_100members_1itr_100pct/r0/'
-# dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/timefirst_10yr_100members_1itr_100pct/r0/'
-dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4/r0/'
-dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4_no2s/r0/'
+#
+# dir1 = ('/home/chaos2/wperkins/data/LMR/output/testing/'
+#         'testdev_ye_precalc_include_tas_statevar_falseflag/r0/')
+dir1 = ('/home/chaos2/wperkins/data/LMR/output/testing/'
+        'testdev_ye_precalc_no_include_tas_statevar/r0/')
+dir2 = ('/home/chaos2/wperkins/data/LMR/output/testing/'
+        'testdev_ye_precalc_include_tas_statevar/r0/')
+# dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4/r0/'
+# dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4_no2s/r0/'
 
 d1_npfiles = glob.glob(dir1 + '*.npz')
 d1_pckl_files = glob.glob(dir1 + '*.pckl')
@@ -51,7 +60,8 @@ for proxy2 in assim2:
 nproxies = len(assim2)
 assert len(assim2) == len(assim1)
 
-#Test that they created the same files.
+#Test that they created the same files. NOTE: if first dir is missing files
+# they will not be checked.  Reference (first directory) should be the benchmark
 for name in d1_names:
     assert name in d2_names
 
@@ -60,6 +70,11 @@ for idx, file in enumerate(d1_files):
 
     idx2 = d2_names.index(d1_names[idx])
     print d1_names[idx]
+
+    if diff_state_vectors:
+        exclude = ['Xb_one.npz', 'gmt.npz', 'gmt_ensemble.npz']
+        if d1_names[idx] in exclude:
+            continue
 
     if path.splitext(file)[1] == '.npz':
         f1 = np.load(file)
@@ -89,12 +104,12 @@ for idx, file in enumerate(d1_files):
                         # Proxies assimilated in different order check ending
                         np.testing.assert_allclose(values[-1], values2[-1],
                                                    rtol=1e-4,
-                                                   atol=1e-4)
+                                                   atol=1e-6)
                 elif len(values.shape) > 1:
                     np.testing.assert_allclose(values.mean(axis=1),
                                                values2.mean(axis=1),
                                                rtol=1e-4,
-                                               atol=1e-4)
+                                               atol=1e-6)
                 else:
                     np.testing.assert_allclose(values, values2, rtol=1e-4)
             else:

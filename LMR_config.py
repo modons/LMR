@@ -20,8 +20,8 @@ class wrapper(object):
         Range of Monte-Carlo iterations to perform
     """
 
-    multi_seed = [1, 2, 3]
-    iter_range = [0, 1]
+    multi_seed = None
+    iter_range = [0, 0]
 
     def __init__(self):
         self.multi_seed = self.multi_seed
@@ -56,15 +56,15 @@ class core(object):
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_multi_seed'
+    nexp = 'testdev_ye_precalc_no_include_tas_statevar'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1950, 1960]
-    nens = 5
-    seed = None
+    recon_period = [1900, 1960]
+    nens = 10
+    seed = 42
     loc_rad = None
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
@@ -72,7 +72,7 @@ class core(object):
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
     #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
@@ -328,7 +328,7 @@ class prior:
     dataformat_prior = 'NCD'
     psm_required_variables = ['tas_sfc_Amon']
     # state_variables = ['tas_sfc_Amon']
-    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+    state_variables = ['zg_500hPa_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
     #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',

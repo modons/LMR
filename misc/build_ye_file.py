@@ -3,13 +3,21 @@ import numpy as np
 import os
 from itertools import izip
 
+sys.path.append('../')
+
 import LMR_prior
 import LMR_psms
 import LMR_proxy_pandas_rework
 import LMR_config
 
-sys.path.append('../')
-
+# This script gives a method for pre-calculating ye values for our linear psm.
+# It outputs this file in a subdirectory of the prior source directory which
+# is then in turn checked for by the driver.  Files created will be unique to
+# the prior, psm calibration source, and state variable used to calculate it.
+# I'm choosing to forego on the fly creation of these files for now.  If a user
+# would like to create one for their current configuration (and currently
+# hard-coded for the tas_sfc_Amon state variable), this script should just be
+# an easy one-off run with no editing required.
 
 cfg = LMR_config.Config()
 
