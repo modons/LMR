@@ -39,7 +39,8 @@ for i, pobj in enumerate(pages_pobjs):
                                                      lat)
     ye_out[i] = pobj.psm_obj.basic_psm(tmp_dat)
 
-pid_map = {pid: idx for pid, idx in izip(pages_pids, xrange(len(pages_pids)))}
+pid_map = {pobj.id: idx
+           for pobj, idx in izip(pages_pobjs, xrange(len(pages_pobjs)))}
 out_fname = '{}_{}_{}.npz'.format(cfg.prior.prior_source,
                                   cfg.psm.linear.datatag_calib,
                                   'tas_sfc_Amon')
