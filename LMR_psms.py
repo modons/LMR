@@ -224,34 +224,29 @@ class LinearPSM(BasePSM):
 
     def get_close_grid_point_data(self, data, lon, lat):
 
+        lonshp = lon.shape
+        latshp = lat.shape
+
         # If not equal we got a single vector?
-        if lon.shape != lat.shape:
-            lonshp, = lon.shape
-            latshp, = lat.shape
+        if lonshp != latshp:
             lon, lat = np.meshgrid(lon, lat)
 
         if len(lon.shape) > 1:
             lon = lon.ravel()
-            lat = lon.ravel()
+            lat = lat.ravel()
 
         # Calculate distance
         dist = haversine(self.lon, self.lat, lon, lat)
 
         if len(dist) in data.shape:
             loc_idx = dist.argmin()
-            tmp_dat = data[loc_idx]
+            tmp_dat = data[..., loc_idx]
         else:
-            min_dist_lon_idx, \
-            min_dist_lat_idx = np.unravel_index(dist.argmin(), (lonshp, latshp))
+            # TODO: This is not general to lat/lon being swapped, OK for now...
+            min_dist_lat_idx, \
+            min_dist_lon_idx = np.unravel_index(dist.argmin(), data.shape[-2:])
 
-            lon_dim = data.shape.index(lonshp)
-            lat_dim = data.shape.index(latshp)
-
-            tmp_dat = data
-            for dim, idx in ((lon_dim, min_dist_lon_idx),
-                             (lat_dim, min_dist_lat_idx)):
-                tmp_dat = np.take(tmp_dat, idx, axis=dim)
-            tmp_dat = np.squeeze(tmp_dat)
+            tmp_dat = data[..., min_dist_lat_idx, min_dist_lon_idx]
 
         return tmp_dat
 

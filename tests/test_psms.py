@@ -7,11 +7,14 @@ sys.path.append('../')
 import pytest
 import cPickle
 import LMR_psms as psms
-import LMR_config as cfg
+import LMR_config
+import numpy as np
+from LMR_utils import haversine
 
 
 @pytest.fixture()
 def psm_dat(request):
+    cfg = LMR_config.Config()
 
     f = open(cfg.psm.linear.pre_calib_datafile)
     dat = cPickle.load(f)
@@ -33,12 +36,14 @@ def dummy_proxy(pid='Aus_01', ptype='Tree ring_Width'):
     return p
 
 
-@pytest.mark.xfail
+
 def test_abstract_class_creation():
-    x = psms.BasePSM()
+    with pytest.raises(TypeError):
+        x = psms.BasePSM()
 
 
 def test_linear_with_psm_data(psm_dat):
+    cfg = LMR_config.Config()
     proxy = dummy_proxy()
 
     lpsm = psms.LinearPSM(cfg, dummy_proxy(), psm_data=psm_dat)
@@ -53,6 +58,7 @@ def test_linear_with_psm_data(psm_dat):
 
 
 def test_linear_load_from_config(psm_dat):
+    cfg = LMR_config.Config()
     proxy = dummy_proxy()
 
     lpsm = psms.LinearPSM(cfg, dummy_proxy())
@@ -81,6 +87,8 @@ def test_linear_calibrate_pasm_data_config_file_not_found():
 
 
 def test_linear_corr_below_rcrit(psm_dat):
+    cfg = LMR_config.Config()
+    cfg.psm.linear.psm_r_crit = 0.2
     proxy = dummy_proxy(pid='SAm_19', ptype='Tree ring_Width')
     with pytest.raises(ValueError):
         psms.LinearPSM(cfg, proxy, psm_data=psm_dat)
@@ -92,6 +100,7 @@ def test_linear_psm_ye_val():
 
 
 def test_linear_get_kwargs(psm_dat):
+    cfg = LMR_config.Config()
     psm_kwargs = psms.LinearPSM.get_kwargs(cfg)
 
     assert 'psm_data' in psm_kwargs.keys()
@@ -100,6 +109,51 @@ def test_linear_get_kwargs(psm_dat):
 
 def test_get_psm_class():
     assert type(psms.get_psm_class('linear')) is type(psms.LinearPSM)
+
+
+def test_get_close_grid_point_data(psm_dat):
+    cfg = LMR_config.Config()
+    proxy = dummy_proxy()
+
+    lpsm = psms.LinearPSM(cfg, dummy_proxy(), psm_data=psm_dat)
+
+    lats = np.linspace(-90, 90, 192)
+    lons = np.linspace(0, 360, 288, endpoint=False)
+
+    lon_grid, lat_grid = np.meshgrid(lons, lats)
+    lon_flatgrid = lon_grid.ravel()
+    lat_flatgrid = lat_grid.ravel()
+    test_dat = np.empty((10, 192, 288))
+    test_dat_flat = test_dat.reshape(10, 192*288)
+
+    # Find row index of X for which [X_lat,X_lon] corresponds to closest
+    # grid point to
+    dist = haversine(proxy.lon, proxy.lat, lon_flatgrid, lat_flatgrid)
+
+    min_flat_idx = dist.argmin()
+    ref_lon = lon_flatgrid[min_flat_idx]
+    ref_lat = lat_flatgrid[min_flat_idx]
+
+    ref_data = test_dat_flat[:, min_flat_idx]
+
+    # test with lat/lon vectors
+    func_data = lpsm.get_close_grid_point_data(test_dat, lons, lats)
+    np.testing.assert_equal(ref_data, func_data)
+
+    # test with lat/lon flattened
+    func_data = lpsm.get_close_grid_point_data(test_dat, lon_flatgrid,
+                                               lat_flatgrid)
+    np.testing.assert_equal(ref_data, func_data)
+
+    # test with lat/lon grid
+    func_data = lpsm.get_close_grid_point_data(test_dat, lon_grid, lat_grid)
+    np.testing.assert_equal(ref_data, func_data)
+
+    # test with flattened data
+    func_data = lpsm.get_close_grid_point_data(test_dat_flat, lon_grid,
+                                               lat_grid)
+    np.testing.assert_equal(ref_data, func_data)
+
 
 if __name__ == '__main__':
     test_linear_corr_below_rcrit(psm_dat(None))

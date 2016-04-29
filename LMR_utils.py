@@ -591,11 +591,12 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     load_abs_path = os.path.join(load_dir, load_fname)
 
     precalc_file = np.load(load_abs_path)
-    pid_index_map = precalc_file['pid_index_map']
+    pid_index_map = precalc_file['pid_index_map'][()] # [()] retrieves dict
     ye_vals = precalc_file['ye_vals']
 
     # Indices of proxies we're assimilating this reconstruction
-    proxy_id_indices = [pid_index_map[pid] for pid in proxy_manager.sites_assim]
+    proxy_id_indices = [pid_index_map[pobj.id]
+                        for pobj in proxy_manager.sites_assim_proxy_objs()]
 
     ye_all = ye_vals[proxy_id_indices][:, sample_idxs]
 
