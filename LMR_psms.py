@@ -184,26 +184,14 @@ class LinearPSM(BasePSM):
         tas_startidx, tas_endidx = X_state_info[state_var]['pos']
         ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
         ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
+        X_lons = X_coords[tas_startidx:(tas_endidx+1), ind_lon]
+        X_lats = X_coords[tas_startidx:(tas_endidx+1), ind_lat]
+        tas_data = Xb[tas_startidx:(tas_endidx+1), :]
 
-        # Find row index of X for which [X_lat,X_lon] corresponds to closest
-        # grid point to
-        # location of proxy site [self.lat,self.lon]
-        # Calclulate distances from proxy site.
-        stateDim = tas_endidx - tas_startidx + 1
-        ensDim = Xb.shape[1]
-        dist = np.empty(stateDim)
-        # dist = np.array(
-        #     [haversine(self.lon, self.lat, X_coords[k, ind_lon],
-        #                X_coords[k, ind_lat])
-        #      for k in xrange(tas_startidx, tas_endidx + 1)])
-        dist = haversine(self.lon, self.lat,
-                          X_coords[tas_startidx:(tas_endidx+1), ind_lon],
-                          X_coords[tas_startidx:(tas_endidx+1), ind_lat])
-
-        # row index of nearest grid pt. in prior (minimum distance)
-        kind = np.unravel_index(dist.argmin(), dist.shape)[0] + tas_startidx
-
-        Ye = self.slope * np.squeeze(Xb[kind, :]) + self.intercept
+        gridpoint_data = self.get_close_grid_point_data(tas_data.T,
+                                                        X_lons,
+                                                        X_lats)
+        Ye = self.basic_psm(gridpoint_data)
 
         return Ye
 
@@ -213,16 +201,40 @@ class LinearPSM(BasePSM):
 
         Parameters
         ----------
-        data
+        data: ndarray
+            Data to be used in the psm calculation of estimated observations
+            (Ye)
 
         Returns
         -------
-        ye
+        Ye: ndarray
+            Estimated observations from the proxy system model
         """
 
         return self.slope * data + self.intercept
 
     def get_close_grid_point_data(self, data, lon, lat):
+        """
+        Extracts data along the sampling dimension that is closest to the
+        grid point (lat/lon) of the current PSM object.
+
+        Parameters
+        ----------
+        data: ndarray
+            Gridded data matching dimensions of (sample, lat, lon) or
+            (sample, lat*lon).
+        lon: ndarray
+            Longitudes pertaining to the input data.  Can have shape as a single
+            vector (lat), a grid (lat, lon), or a flattened grid (lat*lon).
+        lat: ndarray
+            Latitudes pertaining to the input data. Can have shape as a single
+            vector (lon), a grid (lat, lon), or a flattened grid (lat*lon).
+
+        Returns
+        -------
+        tmp_dat: ndarray
+            Grid point data closes to the lat/lon of the current PSM object
+        """
 
         lonshp = lon.shape
         latshp = lat.shape
@@ -242,7 +254,7 @@ class LinearPSM(BasePSM):
             loc_idx = dist.argmin()
             tmp_dat = data[..., loc_idx]
         else:
-            # TODO: This is not general to lat/lon being swapped, OK for now...
+            # TODO: This is not general lat/lon being swapped, OK for now...
             min_dist_lat_idx, \
             min_dist_lon_idx = np.unravel_index(dist.argmin(), data.shape[-2:])
 

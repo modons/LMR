@@ -56,11 +56,11 @@ class core(object):
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_ye_precalc_no_include_tas_statevar'
+    nexp = 'testdev_ye_precalc_include_tas_statevar_falseflag'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = True
+    use_precalc_ye = False
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = [1900, 1960]
     nens = 10
@@ -328,7 +328,7 @@ class prior:
     dataformat_prior = 'NCD'
     psm_required_variables = ['tas_sfc_Amon']
     # state_variables = ['tas_sfc_Amon']
-    state_variables = ['zg_500hPa_Amon']
+    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
     #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
