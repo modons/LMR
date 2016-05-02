@@ -20,11 +20,11 @@ diff_state_vectors = True
 #dir1 = '/home/disk/ekman/rtardif/kalman3/LMR/output/validationWithAndre/r0/'
 #
 dir1 = ('/home/chaos2/wperkins/data/LMR/output/testing/'
-        'testdev_ye_precalc_include_tas_statevar_falseflag/r0/')
+        'testdev_multiseed_500hpa_compare_ye_precalc/r2/')
 # dir1 = ('/home/chaos2/wperkins/data/LMR/output/testing/'
 #         'testdev_ye_precalc_no_include_tas_statevar/r0/')
 dir2 = ('/home/chaos2/wperkins/data/LMR/output/testing/'
-        'testdev_ye_precalc_include_tas_statevar/r0/')
+        'testdev_multiseed_500hpa_compare_no_ye_precalc/r2/')
 # dir1 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4/r0/'
 # dir2 = '/home/chaos2/wperkins/data/LMR/output/archive/testdev_onlineDA_comparison1pt0_gis_ccsm4_no2s/r0/'
 

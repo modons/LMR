@@ -20,8 +20,8 @@ class wrapper(object):
         Range of Monte-Carlo iterations to perform
     """
 
-    multi_seed = None
-    iter_range = [0, 0]
+    multi_seed = range(3)
+    iter_range = [0, 2]
 
     def __init__(self):
         self.multi_seed = self.multi_seed
@@ -56,15 +56,15 @@ class core(object):
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_ye_precalc_include_tas_statevar_falseflag'
+    nexp = 'testdev_multiseed_500hpa_compare_ye_precalc'
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = False
+    use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1900, 1960]
-    nens = 10
-    seed = 42
+    recon_period = [1900, 1980]
+    nens = 100
+    seed = None
     loc_rad = None
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
@@ -76,7 +76,7 @@ class core(object):
     #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
-    def __init__(self):
+    def __init__(self, curr_iter=None):
         self.nexp = self.nexp
         self.lmr_path = self.lmr_path
         self.online_reconstruction = self.online_reconstruction
@@ -84,11 +84,15 @@ class core(object):
         self.use_precalc_ye = self.use_precalc_ye
         self.recon_period = self.recon_period
         self.nens = self.nens
-        self.curr_iter = wrapper.iter_range[0]
         self.loc_rad = self.loc_rad
         self.seed = self.seed
         self.datadir_output = self.datadir_output
         self.archive_dir = self.archive_dir
+
+        if curr_iter is None:
+            self.curr_iter = wrapper.iter_range[0]
+        else:
+            self.curr_iter = curr_iter
 
 class proxies(object):
     """
@@ -220,6 +224,7 @@ class proxies(object):
         self.seed = core.seed
         self.pages = self._pages(**kwargs)
 
+
 class psm(object):
     """
     Parameters for PSM classes
@@ -260,7 +265,7 @@ class psm(object):
         #datatag_calib = 'MLOST'
         #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
 
-        psm_r_crit = 0.0
+        psm_r_crit = 0.2
 
         def __init__(self, datadir_calib=None, pre_calib_datafile=None):
             self.datatag_calib = self.datatag_calib
@@ -327,8 +332,9 @@ class prior:
 
     dataformat_prior = 'NCD'
     psm_required_variables = ['tas_sfc_Amon']
+    state_variables = ['zg_500hPa_Amon']
     # state_variables = ['tas_sfc_Amon']
-    state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon',
     #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',

@@ -29,9 +29,8 @@ print '\n' + str(datetime.datetime.now()) + '\n'
 # Define main experiment output directory
 cfg = LMR_config.Config()
 
-core = cfg.core
 iter_range = cfg.wrapper.iter_range
-expdir = os.path.join(core.datadir_output, core.nexp)
+expdir = os.path.join(cfg.core.datadir_output, cfg.core.nexp)
 
 # Check if it exists, if not, create it
 if not os.path.isdir(expdir):
@@ -44,13 +43,20 @@ for iter_num in MCiters:
 
     # Use seed list if specified
     if cfg.wrapper.multi_seed:
-        cfg.core.seed = cfg.wrapper.multi_seed[iter_num]
+        LMR_config.core.seed = cfg.wrapper.multi_seed[iter_num]
+        print ('Setting current iteration seed:'
+               ' {}'.format(cfg.wrapper.multi_seed[iter_num]))
 
     # Set iteration number
-    cfg.core.curr_iter = iter_num
+    LMR_config.core.curr_iter = iter_num
 
     # Define work directory
-    core.datadir_output = os.path.join(expdir, 'r' + str(iter_num))
+    LMR_config.core.datadir_output = os.path.join(expdir, 'r' + str(iter_num))
+
+    curr_cfg = LMR_config.Config()
+    core = curr_cfg.core
+    core.curr_iter = iter_num
+
     # Check if it exists, if not create it
     if not os.path.isdir(core.datadir_output):
         os.system('mkdir {}'.format(core.datadir_output))
@@ -60,7 +66,7 @@ for iter_num in MCiters:
         os.system('rm -f {}'.format(core.datadir_output + '/*'))
 
     # Call the driver
-    all_proxy_objs = LMR.LMR_driver_callable(cfg)
+    all_proxy_objs = LMR.LMR_driver_callable(curr_cfg)
 
     # write the analysis ensemble mean and variance to separate files (per
     # state variable)
