@@ -21,7 +21,8 @@ def compile_gmts(parent_dir, a_d_vals=None, a_infl_vals=None, r_iters=None):
     # Directories for each parameter value
     if a_d_vals is not None:
         ad_dir = 'a{:1.2g}_d{:1.2f}'
-        ad_dir2 = 'a{:1.1f}_d{:1.2f}'param_iters = []
+        ad_dir2 = 'a{:1.1f}_d{:1.2f}'
+        param_iters = []
         for a, d in a_d_vals:
             curr_ad = ad_dir.format(a, d)
             if a == 1.0 or a == 0.0:
