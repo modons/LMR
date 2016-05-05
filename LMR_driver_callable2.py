@@ -326,10 +326,6 @@ def LMR_driver_callable(cfg=None):
                 nhmt_save[iproxy+1, curr_yr_idx] = nhmt
                 shmt_save[iproxy+1, curr_yr_idx] = shmt
 
-                # Inflation Adjustment
-                if (iyr//nelem_pr_yr > 0) and reg_inf:
-                    Xb_one.reg_inflate_xb(inf_factor)
-
                 # Save prior variance if online assimilation
                 if online:
                     xbv = Xb_one.get_var_data('tas_sfc_Amon', idx=0)
@@ -467,6 +463,10 @@ def LMR_driver_callable(cfg=None):
                 ye_all = _calc_yevals_from_prior(assim_res_vals, res_yr_shift,
                                                  ye_shp, Xb_one, prox_manager)
                 Xb_one.reset_augmented_ye(ye_all)
+
+                # Inflation Adjustment
+                if reg_inf:
+                    Xb_one.reg_inflate_xb(inf_factor)
 
                 # Propagate forecasted state and Ye values back down to h5
                 Xb_one.propagate_avg_to_backend(inext_yr, 0.0)

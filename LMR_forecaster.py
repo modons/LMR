@@ -18,26 +18,23 @@ class BaseForecaster:
         pass
 
     @abstractmethod
-    def forecast(self, t0_data):
+    def forecast(self, state_obj):
         """
-        Perform forecast
+        Perform forecast.  Should edit the state vector in place.
+        TODO: might change this so that these are attached to
+        a state since they depend on them for input. See PSM obj.
+        for a similar situation....
 
         Parameters
         ----------
-        t0_data: ndarray-like
-            Initial data to forecast from (stateDim x nens)
-
-        Returns
-        -------
-        ndarray-like
-            Forecast results (stateDim x nens)
-        :return:
+        state_obj: LMR_gridded.State
+            Current state to be forecasted.
         """
         pass
 
 
 @class_docs_fixer
-class LIMForecaster:
+class LIMForecaster(BaseForecaster):
     """
     Linear Inverse Model Forecaster
     """
@@ -51,11 +48,15 @@ class LIMForecaster:
         ignore_precalib = cfg.ignore_precalib
         is_anomaly = cfg.calib_is_anomaly
         is_runmean = cfg.calib_is_runmean
+        do_detrend = cfg.detrend
 
         # Search for pre-calibrated LIM to save time
         fpath, fname = path.split(infile)
         precalib_path = path.join(fpath, 'lim_precalib')
-        precalib_fname = path.splitext(fname)[0] + '.lim.pckl'
+        if do_detrend:
+            precalib_fname = path.splitext(fname)[0] + '.lim.pckl'
+        else:
+            precalib_fname = path.splitext(fname)[0] + '_nodetr.lim.pckl'
         precalib_pathfname = path.join(precalib_path, precalib_fname)
 
         if not ignore_precalib:
@@ -107,7 +108,8 @@ class LIMForecaster:
                                           force_flat=True,
                                           time_units=data_obj.time_units,
                                           time_cal=data_obj.time_cal,
-                                          is_anomaly=is_anomaly, is_run_mean=is_runmean)
+                                          is_anomaly=is_anomaly,
+                                          is_run_mean=is_runmean)
             # calib_obj.save_dataobj_pckl(pre_avg_fname)
         else:
             calib_obj = data_obj
@@ -120,6 +122,7 @@ class LIMForecaster:
             os.makedirs(precalib_path)
 
         self.lim.save_precalib(precalib_pathfname)
+        self.use_ens_mean_fcast = cfg.use_ens_mean_fcast
 
     def forecast(self, state_obj):
 
@@ -128,7 +131,17 @@ class LIMForecaster:
         state_var = 'tas_sfc_Amon'
         var_data = state_obj.get_var_data(state_var, idx=0)
 
-        fcast_data = self._forecast_helper(var_data)
+        if self.use_ens_mean_fcast:
+            # Take the ensemble mean and forecast on that
+            var_data_ensmean = var_data.mean(axis=-1, keepdims=True)
+            var_data_enspert = var_data - var_data_ensmean
+
+            fcast_data = self._forecast_helper(var_data_ensmean)
+
+            fcast_data = fcast_data + var_data_enspert
+        else:
+            # Forecast each individual ensemble member
+            fcast_data = self._forecast_helper(var_data)
 
         # var_data is returned as a view for annual, so this re-assigns
         var_data[:] = fcast_data
@@ -147,10 +160,26 @@ class LIMForecaster:
         fcast, eofs = self.lim.forecast(fcast_obj)
 
         # return physical forecast (dimensions of stateDim x nens)
-        return np.dot(eofs, np.squeeze(fcast))
+        return np.dot(eofs, np.squeeze(fcast, axis=0))
 
 
-_forecaster_classes = {'lim': LIMForecaster}
+@class_docs_fixer
+class PersistanceForecaster(BaseForecaster):
+    """
+    Persistance Forecaster
+
+    Does nothing but persist the current state to the next time.
+    """
+
+    def __init__(self, config):
+        pass
+
+    def forecast(self, state_obj):
+        pass
+
+
+_forecaster_classes = {'lim': LIMForecaster,
+                       'persist': PersistanceForecaster}
 
 
 def get_forecaster_class(key):

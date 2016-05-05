@@ -101,7 +101,7 @@ class core:
 
     # Adaptive Covariance Inflation
     adaptive_inflate = False
-    reg_inflate = False
+    reg_inflate = True
     inf_factor = 1.1
 
     # TODO: add rules for shift?
@@ -345,9 +345,9 @@ class forecaster:
         #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/'
         #                  'era20c/tas_sfc_Amon_ERA20C_190001-201212.nc')
         #calib_varname = 'tas'
-        # calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
-        #                   '/tas_sfc_Amon_20CR_185101-201112.nc')
-        # calib_varname = 'tas'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
+        #                  '/tas_sfc_Amon_20CR_185101-201112.nc')
+        #calib_varname = 'tas'
         #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
         #                  '/ccsm4_last_millenium/'
         #                  'tas_sfc_Amon_CCSM4_past1000_085001-185012.nc')
@@ -370,5 +370,6 @@ class forecaster:
         fcast_num_pcs = 8
         detrend = True
         ignore_precalib = False
+        use_ens_mean_fcast = False
 
         eig_adjust = None

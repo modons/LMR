@@ -16,15 +16,29 @@ import LMR_config
 mpl.rcParams['figure.figsize'] = (10., 6.)
 mpl.rcParams['font.size'] = 16
 
-def compile_gmts(parent_dir, a_d_vals=None):
+def compile_gmts(parent_dir, a_d_vals=None, a_infl_vals=None, r_iters=None):
 
     # Directories for each parameter value
     if a_d_vals is not None:
-        ad_dir = 'a{:1.1f}_d{:1.2f}'
-        param_iters = [join(parent_dir, ad_dir.format(a, d))
-                       for a, d in a_d_vals]
+        ad_dir = 'a{:1.2g}_d{:1.2f}'
+        ad_dir2 = 'a{:1.1f}_d{:1.2f}'
+        param_iters = []
+        for a, d in a_d_vals:
+            curr_ad = ad_dir.format(a, d)
+            if a == 1.0 or a == 0.0:
+                if not exists(join(parent_dir, curr_ad)):
+                    curr_ad = ad_dir2.format(a, d)
+            param_iters.append(join(parent_dir, curr_ad))
+    elif a_infl_vals is not None:
+        ainfl_dir = 'a{:1.1f}_infl{:1.2f}'
+        param_iters = [join(parent_dir, ainfl_dir.format(a, infl))
+                       for a, infl in a_infl_vals]
     else:
-        param_iters = glob.glob(join(parent_dir, 'r*'))
+        if r_iters is not None:
+            print 'Joining on r iters ', r_iters
+            param_iters = [join(parent_dir, 'r{:d}'.format(r)) for r in r_iters]
+        else:
+            param_iters = glob.glob(join(parent_dir, 'r*'))
 
     gmts = None
     times = None
@@ -43,6 +57,90 @@ def compile_gmts(parent_dir, a_d_vals=None):
     return times, gmts
 
 
+def compile_ens_var(parent_dir, out_dir, out_fname,
+                    a_d_vals=None, r_iters=None, ignore_npz=False):
+
+    if exists(join(out_dir, out_fname)) and not ignore_npz:
+        print 'Loading pre-compiled ensemble variance metrics.'
+        return np.load(join(out_dir, out_fname))
+
+    # Get reconstruction iteration directory
+    if r_iters is not None:
+        print 'Joining on r iters ', r_iters
+        parent_iters = [join(parent_dir, 'r{:d}'.format(r)) for r in r_iters]
+    else:
+        parent_iters = glob.glob(join(parent_dir, 'r*'))
+
+    ens_var = None
+    gm_ens_var = None
+    pri_ens_var = None
+    pri_gm_ens_var = None
+    lats = None
+    lons = None
+    times = None
+
+    for i, parent in enumerate(parent_iters):
+
+        print 'Compiling iteration {:d}/{:d}'.format(i+1, len(parent_iters))
+        # Directories for each parameter value
+        if a_d_vals is not None:
+            ad_dir = 'a{:1.2g}_d{:1.2f}'
+            ad_dir2 = 'a{:1.1f}_d{:1.2f}'
+            param_iters = []
+            for a, d in a_d_vals:
+                curr_ad = ad_dir.format(a, d)
+                if a == 1.0 or a == 0.0:
+                    if not exists(join(parent, curr_ad)):
+                        curr_ad = ad_dir2.format(a, d)
+                param_iters.append(join(parent, curr_ad))
+        else:
+            param_iters = [parent]
+
+        for j, f in enumerate(param_iters):
+            try:
+                # Load analysis ensemble variance
+                analy_var = np.load(join(f, 'ensemble_variance_tas_sfc_Amon.npz'))
+                if times is None:
+                    times = analy_var['years']
+                    lats = analy_var['lat']
+                    lons = analy_var['lon']
+                    var_shape = [len(parent_iters), len(param_iters)] + \
+                                list(analy_var['xav'].shape)
+                    ens_var = np.zeros(var_shape) * np.nan
+                    gm_ens_var = np.zeros(var_shape[:3]) * np.nan
+                    pri_ens_var = np.zeros_like(ens_var) * np.nan
+                    pri_gm_ens_var = np.zeros_like(gm_ens_var) * np.nan
+
+                ens_var[i, j] = analy_var['xav']
+                gm_ens_var[i, j] = utils2.global_mean2(ens_var[i, j], lats)
+
+                prior_var = np.load(join(f, 'prior_ensvar_tas_sfc_Amon.npz'))
+                pri_ens_var[i, j] = prior_var['xbv']
+                pri_gm_ens_var[i, j] = utils2.global_mean2(pri_ens_var[i, j], lats)
+
+            except IOError as e:
+                print e
+
+    ens_var = ens_var.mean(axis=0).astype(np.float32)
+    gm_ens_var = gm_ens_var.mean(axis=0)
+    pri_ens_var = pri_ens_var.mean(axis=0).astype(np.float32)
+    pri_gm_ens_var = pri_gm_ens_var.mean(axis=0)
+
+    res_dict = {'times': times,
+                'lats': lats,
+                'lons': lons,
+                'ens_var': ens_var.squeeze(),
+                'gm_ens_var': gm_ens_var.squeeze(),
+                'pri_ens_var': pri_ens_var.squeeze(),
+                'pri_gm_ens_var': pri_gm_ens_var.squeeze()}
+
+    if not exists(out_dir):
+        os.makedirs(out_dir)
+    np.savez(join(out_dir, out_fname), **res_dict)
+
+    return res_dict
+
+
 def center_to_time_range(times, analysis, time_axis, trange=(1900, 2000)):
 
     start, end = trange
@@ -55,8 +153,11 @@ def center_to_time_range(times, analysis, time_axis, trange=(1900, 2000)):
     return centered
 
 
-def compile_iters(iter_folder, analysis_gmt, analysis_times, a_d_vals,
+def compile_iters(iter_folder, analysis_gmt, analysis_times, a_d_vals=None,
+                  a_infl_vals=None,
                   trange=(1880, 2000), center_trange=(1900, 2000)):
+
+    assert (a_d_vals is None) != (a_infl_vals is None), 'Which set of vals?'
 
     iter_folder_list = glob.glob(join(iter_folder, 'r*'))
 
@@ -66,7 +167,10 @@ def compile_iters(iter_folder, analysis_gmt, analysis_times, a_d_vals,
 
         print 'Compiling GMT: file {:02d}/{:02d}'.format(i+1,
                                                          len(iter_folder_list))
-        times, gmts = compile_gmts(fdir, a_d_vals=a_d_vals)
+        if a_d_vals is not None:
+            times, gmts = compile_gmts(fdir, a_d_vals=a_d_vals)
+        else:
+            times, gmts = compile_gmts(fdir, a_infl_vals=a_infl_vals)
         gmts = center_to_time_range(times, gmts, -1, trange=center_trange)
 
         if i == 0:
@@ -175,17 +279,27 @@ def trends_ens_avg(gmt_ens, times, trange=(1880, 2000), ret_detrend_ens=False):
 
 
 def load_from_paramsearch_exp(exp_dir, out_dir, out_fname, ignore_npz,
-                              analysis_gmt, analysis_times, a_vals, d_vals,
+                              analysis_gmt, analysis_times, a_vals,
+                              d_vals=None, infl_vals=None,
                               trange=(1880, 2000), center_trange=(1900, 2000)):
+
+    assert (d_vals is None) != (infl_vals is None), 'D or Inflate?'
+
     if not exists(join(out_dir, out_fname)) or ignore_npz:
 
-        a_d_vals = [result for result in product(a_vals, d_vals)]
+        if d_vals is not None:
+            a_d_vals = [result for result in product(a_vals, d_vals)]
+            a_infl_vals = None
+        else:
+            a_infl_vals = [result for result in product(a_vals, infl_vals)]
+            a_d_vals = None
 
         [times, gmt_vals,
          ce_vals, r_vals] = compile_iters(exp_dir,
                                           analysis_gmt,
                                           analysis_times,
-                                          a_d_vals,
+                                          a_d_vals=a_d_vals,
+                                          a_infl_vals=a_infl_vals,
                                           trange=trange,
                                           center_trange=center_trange)
 
@@ -199,7 +313,8 @@ def load_from_paramsearch_exp(exp_dir, out_dir, out_fname, ignore_npz,
                   'r_vals': r_vals,
                   'times': times,
                   'a_vals': a_vals,
-                  'd_vals': d_vals}
+                  'd_vals': d_vals,
+                  'infl_vals': infl_vals}
 
         np.savez(join(out_dir, out_fname), **result)
 
