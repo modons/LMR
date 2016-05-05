@@ -361,7 +361,7 @@ class forecaster:
         calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/'
                           'analyses/Experimental/tas_run_mean_berkely_'
                           'earth_monthly_195701-201412.nc')
-        calib_varname = 'tas_run_mean' 
+        calib_varname = 'tas_run_mean'
         calib_is_anomaly = True
         calib_is_runmean = True
         dataformat = 'NCD'
