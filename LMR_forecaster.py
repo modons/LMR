@@ -18,26 +18,23 @@ class BaseForecaster:
         pass
 
     @abstractmethod
-    def forecast(self, t0_data):
+    def forecast(self, state_obj):
         """
-        Perform forecast
+        Perform forecast.  Should edit the state vector in place.
+        TODO: might change this so that these are attached to
+        a state since they depend on them for input. See PSM obj.
+        for a similar situation....
 
         Parameters
         ----------
-        t0_data: ndarray-like
-            Initial data to forecast from (stateDim x nens)
-
-        Returns
-        -------
-        ndarray-like
-            Forecast results (stateDim x nens)
-        :return:
+        state_obj: LMR_gridded.State
+            Current state to be forecasted.
         """
         pass
 
 
 @class_docs_fixer
-class LIMForecaster:
+class LIMForecaster(BaseForecaster):
     """
     Linear Inverse Model Forecaster
     """
@@ -166,7 +163,23 @@ class LIMForecaster:
         return np.dot(eofs, np.squeeze(fcast, axis=0))
 
 
-_forecaster_classes = {'lim': LIMForecaster}
+@class_docs_fixer
+class PersistanceForecaster(BaseForecaster):
+    """
+    Persistance Forecaster
+
+    Does nothing but persist the current state to the next time.
+    """
+
+    def __init__(self, config):
+        pass
+
+    def forecast(self, state_obj):
+        pass
+
+
+_forecaster_classes = {'lim': LIMForecaster,
+                       'persist': PersistanceForecaster}
 
 
 def get_forecaster_class(key):
