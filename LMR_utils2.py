@@ -91,6 +91,33 @@ def smooth2D(im, n=15):
     return improc
 
 
+def regular_cov_infl(data, infl_factor):
+    """
+    Constant covariance inflation for every location.  Preserves relationships
+    between points.
+
+    Parameters
+    ----------
+    data: ndarray
+        2D array of state.  Nlocs x Nens
+    infl_factor: int
+        Inflation factor for state.  Multiplies by sqrt of this factor so
+        variance is increased by exactly this factor.
+
+    Returns
+    -------
+    ndarray
+    """
+
+    dat_mean = data.mean(axis=1, keepdims=True)
+    dat_pert = data - dat_mean
+
+    dat_pert *= np.sqrt(infl_factor)
+    infl_dat = dat_mean + dat_pert
+
+    return infl_dat
+
+
 def global_mean2(field, lat, output_hemispheric=False):
 
     """

@@ -39,7 +39,7 @@ if not os.path.isdir(expdir):
 
 # Temporary for parameter sweep
 a = np.arange(0.0, 1.0, 0.1)
-d = [0]
+infl_vals = [1.2, 1.5, 2.0, 2.5]
 seeds = [9271, 687, 4312, 7175, 4999, 3318, 3344, 3667, 6975, 1766, 7374, 1820,
          2598, 1729, 9674, 3394, 239, 6039, 5670, 2679, 3334, 7684, 8701, 8719,
          2767, 3988, 1341, 8734, 9880, 42, 2530, 6142, 5534, 1589, 7907, 8732, 5784,
@@ -59,12 +59,12 @@ for iter_num in MCiters:
     itr_dir = os.path.join(expdir, 'r' + str(iter_num))
     cfg.core.seed = seeds[iter_num]
 
-    for a_val, d_val in itertools.product(a, d):
+    for a_val, infl_val in itertools.product(a, infl_vals):
         cfg.core.hybrid_a = a_val
-        # cfg.forecaster.LIM.eig_adjust = d_val
+        cfg.core.inf_factor = infl_val
 
         # Define work directory
-        ad_folder_name = 'a{:1.1f}_d{:1.2f}'.format(a_val, d_val)
+        ad_folder_name = 'a{:1.1f}_infl{:1.2f}'.format(a_val, infl_val)
         core.datadir_output = os.path.join(itr_dir, ad_folder_name)
 
         # Check if it exists, if not create it

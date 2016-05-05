@@ -86,7 +86,7 @@ class core:
     recon_period = [1850, 2000]
     nens = 100
     seed = 2
-    iter_range = [0, 24]
+    iter_range = [00, 00]
     curr_iter = iter_range[0]
     loc_rad = None
     assimilation_time_res = [1.0]  # in yrs
@@ -101,7 +101,7 @@ class core:
 
     # Adaptive Covariance Inflation
     adaptive_inflate = False
-    reg_inflate = False
+    reg_inflate = True
     inf_factor = 1.1
 
     # TODO: add rules for shift?
@@ -114,8 +114,8 @@ class core:
            shift != 0.0):
             sub_base_res = shift
 
-    #datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
-    datadir_output = '/home/enkf_local/wperkins'
+    datadir_output = '/home/disk/chaos2/wperkins/data/LMR/output/working'
+    #datadir_output = '/home/enkf_local/wperkins'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
@@ -345,17 +345,17 @@ class forecaster:
         #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/'
         #                  'era20c/tas_sfc_Amon_ERA20C_190001-201212.nc')
         #calib_varname = 'tas'
-        # calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
-        #                   '/tas_sfc_Amon_20CR_185101-201112.nc')
-        # calib_varname = 'tas'
+        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model/20cr'
+        #                  '/tas_sfc_Amon_20CR_185101-201112.nc')
+        #calib_varname = 'tas'
         #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
         #                  '/ccsm4_last_millenium/'
         #                  'tas_sfc_Amon_CCSM4_past1000_085001-185012.nc')
         #calib_varname = 'tas'
-        #calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
-        #                  '/mpi-esm-p_last_millenium/'
-        #                  'tas_sfc_Amon_MPI-ESM-P_past1000_085001-185012.nc')
-        #calib_varname='tas'
+        calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/model'
+                          '/mpi-esm-p_last_millenium/'
+                          'tas_sfc_Amon_MPI-ESM-P_past1000_085001-185012.nc')
+        calib_varname='tas'
         #calib_filename = ('/home/disk/chaos2/wperkins/data/20CR/air.2m.mon.mean.nc')
         #calib_varname = 'air'
         calib_filename = ('/home/disk/chaos2/wperkins/data/LMR/data/'

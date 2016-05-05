@@ -20,7 +20,7 @@ import tables as tb
 
 from LMR_config import constants
 from LMR_utils2 import regrid_sphere2, var_to_hdf5_carray, empty_hdf5_carray
-from LMR_utils2 import fix_lon
+from LMR_utils2 import fix_lon, regular_cov_infl
 _LAT = 'lat'
 _LON = 'lon'
 _LEV = 'lev'
@@ -859,12 +859,8 @@ class State(object):
         -------
         """
 
-        xb_vals = self.get_var_data('state', idx=0)
-        xb_mean = xb_vals.mean(axis=1, keepdims=True)
-        xb_pert = xb_vals - xb_mean
-
-        xb_pert *= inf_factor
-        xb_vals[:] = xb_pert + xb_mean
+        xb_vals = self.state_list[0]
+        xb_vals[:] = regular_cov_infl(xb_vals, inf_factor)
 
     def adaptive_inflate_xb(self, prox_man, t):
         """
