@@ -455,7 +455,8 @@ def LMR_driver_callable(cfg=None):
                 Xb_one.insert_upcoming_prior(curr_yr_idx, use_curr=True)
 
                 # Forecast
-                forecaster.forecast(Xb_one)
+                # TODO: Commented out forecast step
+                # forecaster.forecast(Xb_one)
 
                 # Propagate forecast average to next year
                 Xb_one.propagate_avg_to_backend(inext_yr, 0)

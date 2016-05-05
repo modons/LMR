@@ -76,7 +76,7 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_paramsearch_ccm4gis_belim'
+    nexp = 'testdev_paramsearch_online_nolim'
     lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
     online_reconstruction = True
     clean_start = True
