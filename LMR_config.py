@@ -370,5 +370,6 @@ class forecaster:
         fcast_num_pcs = 8
         detrend = True
         ignore_precalib = False
+        use_ens_mean_fcast = False
 
         eig_adjust = None

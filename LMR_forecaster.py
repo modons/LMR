@@ -111,7 +111,8 @@ class LIMForecaster:
                                           force_flat=True,
                                           time_units=data_obj.time_units,
                                           time_cal=data_obj.time_cal,
-                                          is_anomaly=is_anomaly, is_run_mean=is_runmean)
+                                          is_anomaly=is_anomaly,
+                                          is_run_mean=is_runmean)
             # calib_obj.save_dataobj_pckl(pre_avg_fname)
         else:
             calib_obj = data_obj
@@ -124,6 +125,7 @@ class LIMForecaster:
             os.makedirs(precalib_path)
 
         self.lim.save_precalib(precalib_pathfname)
+        self.use_ens_mean_fcast = cfg.use_ens_mean_fcast
 
     def forecast(self, state_obj):
 
@@ -132,14 +134,20 @@ class LIMForecaster:
         state_var = 'tas_sfc_Amon'
         var_data = state_obj.get_var_data(state_var, idx=0)
 
-        # Take the ensemble mean and forecast on that
-        var_data_ensmean = var_data.mean(axis=-1, keepdims=True)
-        var_data_enspert = var_data - var_data_ensmean
+        if self.use_ens_mean_fcast:
+            # Take the ensemble mean and forecast on that
+            var_data_ensmean = var_data.mean(axis=-1, keepdims=True)
+            var_data_enspert = var_data - var_data_ensmean
 
-        fcast_data = self._forecast_helper(var_data_ensmean)
+            fcast_data = self._forecast_helper(var_data_ensmean)
+
+            fcast_data = fcast_data + var_data_enspert
+        else:
+            # Forecast each individual ensemble member
+            fcast_data = self._forecast_helper(var_data)
 
         # var_data is returned as a view for annual, so this re-assigns
-        var_data[:] = fcast_data + var_data_enspert
+        var_data[:] = fcast_data
 
     def _forecast_helper(self, t0_data):
 
