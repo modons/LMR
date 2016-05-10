@@ -18,12 +18,12 @@
 
 import os
 import numpy as np
-import datetime
 import itertools
+import datetime
 import LMR_driver_callable2 as LMR
 import LMR_config as cfg
-import random
 
+import LMR_utils2 as util2
 from LMR_utils2 import ensemble_stats
 
 print '\n' + str(datetime.datetime.now()) + '\n'
@@ -37,28 +37,44 @@ expdir = os.path.join(core.datadir_output, core.nexp)
 if not os.path.isdir(expdir):
     os.system('mkdir {}'.format(expdir))
 
-# Temporary for parameter sweep
-a = np.arange(0.0, 1.0, 0.1)
-infl_vals = [1.2, 1.5, 2.0, 2.5]
-seeds = [9271, 687, 4312, 7175, 4999, 3318, 3344, 3667, 6975, 1766, 7374, 1820,
-         2598, 1729, 9674, 3394, 239, 6039, 5670, 2679, 3334, 7684, 8701, 8719,
-         2767, 3988, 1341, 8734, 9880, 42, 2530, 6142, 5534, 1589, 7907, 8732, 5784,
-         1025, 6126, 6558, 3369, 8185, 9704, 6883, 9072, 7444, 9527, 1730, 567, 5294,
-         9677, 7105, 6497, 8558, 8651, 6829, 3944, 7014, 4166, 8141, 9964, 755, 872,
-         4372, 8599, 9030, 3291, 2659, 6914, 3874, 1227, 2239, 215, 9082, 1476, 2096,
-         1328, 5386, 6115, 5954, 3277, 8458, 6116, 3350, 7341, 1404, 8127, 9242, 2676,
-         5945, 3867, 4612, 810, 227, 422, 3830, 589, 2605, 8176, 7060]
-
-
 # Monte-Carlo approach: loop over iterations (range of iterations defined in
 # namelist)
-MCiters = np.arange(iter_range[0], iter_range[1]+1)
-for iter_num in MCiters:
+MCiters = xrange(iter_range[0], iter_range[1]+1)
+param_iterables = [MCiters]
 
+# get other parameters to sweep over in the reconstruction
+param_search = cfg.wrapper.param_search
+if param_search is not None:
+    sort_params = param_search.keys()
+    sort_params.sort(key=lambda x: x.split('.')[-1])
+    param_values = [param_search[key] for key in sort_params]
+    param_iterables = [MCiters] + param_values
+
+
+for iter_and_params in itertools.product(*param_iterables):
+
+    iter_num = iter_and_params[0]
     cfg.core.curr_iter = iter_num
-    cfg.core.seed = seeds[iter_num]
-    itr_dir = os.path.join(expdir, 'r' + str(iter_num))
-    core.datadir_output = itr_dir
+
+    if cfg.wrapper.multi_seed is not None:
+        cfg.core.seed = cfg.wrapper.multi_seed[iter_num]
+
+    itr_str = 'r{:d}'.format(iter_num)
+    working_dir = os.path.join(expdir, itr_str)
+    arc_dir = os.path.join(core.archive_dir, core.nexp)
+    mc_dir = os.path.join(arc_dir, itr_str)
+
+    # If parameter space search is being performed then set the current
+    # search space values and create a sub-directory
+    if param_search is not None:
+        curr_param_values = iter_and_params[1:]
+        psearch_dir = util2.set_paramsearch_attributes(sort_params,
+                                                       curr_param_values,
+                                                       cfg)
+        working_dir = os.path.join(working_dir, psearch_dir)
+        mc_dir = os.path.join(mc_dir, psearch_dir)
+
+    core.datadir_output = working_dir
 
     # Check if it exists, if not create it
     if not os.path.isdir(core.datadir_output):
@@ -68,10 +84,6 @@ for iter_num in MCiters:
                ' output directory')
         os.system('rm -f {}'.format(core.datadir_output + '/*'))
 
-    loc_dir = core.datadir_output
-    arc_dir = os.path.join(core.archive_dir, core.nexp)
-    mc_dir = os.path.join(arc_dir, 'r' + str(iter_num))
-
     # Call the driver
     try:
         all_proxy_objs = LMR.LMR_driver_callable(cfg)
@@ -79,7 +91,7 @@ for iter_num in MCiters:
         print e
 
         # removing the work output directory
-        cmd = 'rm -f -r ' + loc_dir
+        cmd = 'rm -f -r ' + working_dir
         print cmd
         os.system(cmd)
         continue
@@ -102,22 +114,22 @@ for iter_num in MCiters:
 
     # or just move select files and delete the rest
 
-    cmd = 'mv -f ' + loc_dir+'/*.npz' + ' ' + mc_dir + '/'
+    cmd = 'mv -f ' + working_dir + '/*.npz' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)
-    cmd = 'mv -f ' + loc_dir+'/*.pckl' + ' ' + mc_dir + '/'
+    cmd = 'mv -f ' + working_dir + '/*.pckl' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)
-    cmd = 'mv -f ' + loc_dir+'/assim*' + ' ' + mc_dir + '/'
+    cmd = 'mv -f ' + working_dir + '/assim*' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)
-    cmd = 'mv -f ' + loc_dir+'/nonassim*' + ' ' + mc_dir + '/'
+    cmd = 'mv -f ' + working_dir + '/nonassim*' + ' ' + mc_dir + '/'
     print cmd
     os.system(cmd)
 
     # removing the work output directory once selected files have been
     #  moved
-    cmd = 'rm -f -r ' + loc_dir
+    cmd = 'rm -f -r ' + working_dir
     print cmd
     os.system(cmd)
 

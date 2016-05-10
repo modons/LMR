@@ -761,16 +761,16 @@ def class_docs_fixer(cls):
     for name, func in vars(cls).items():
         if not func.__doc__ or '%%aug%%' in func.__doc__:
             for parent in cls.__bases__:
-                parfunc = getattr(parent, name)
-                if parfunc and getattr(parfunc, '__doc__', None):
-                    if not func.__doc__:
-                        func.__doc__ = parfunc.__doc__
-                        break
-                    elif '%%aug%%' in func.__doc__:
-                        func.__doc__ = func.__doc__.replace('%%aug%%', '')
-                        func.__doc__ = parfunc.__doc__ + func.__doc__
-                        break
-
+                if hasattr(parent, name):
+                    parfunc = getattr(parent, name)
+                    if parfunc and getattr(parfunc, '__doc__', None):
+                        if not func.__doc__:
+                            func.__doc__ = parfunc.__doc__
+                            break
+                        elif '%%aug%%' in func.__doc__:
+                            func.__doc__ = func.__doc__.replace('%%aug%%', '')
+                            func.__doc__ = parfunc.__doc__ + func.__doc__
+                            break
     return cls
 
 
@@ -877,3 +877,32 @@ def empty_hdf5_carray(h5file, group, node, in_atom, shape, **kwargs):
                                    shape=shape,
                                    **kwargs)
     return out_arr
+
+
+def set_cfg_attribute(key, value, cfg_object):
+
+    attr_list = key.split('.')
+
+    while len(attr_list) > 1:
+        cfg_object = getattr(cfg_object, attr_list[0])
+        attr_list = attr_list[1:]
+
+    setattr(cfg_object, attr_list[-1], value)
+    try:
+        value_str = '{:g}'.format(value)
+    except ValueError as e:
+        value_str = '{}'.format(value)
+
+    return attr_list[-1] + value_str
+
+
+def set_paramsearch_attributes(sorted_keys, values, cfg_object):
+
+    paramsearch_dir = []
+
+    for key, value in zip(sorted_keys, values):
+
+        param_str = set_cfg_attribute(key, value, cfg_object)
+        paramsearch_dir.append(param_str)
+
+    return '_'.join(paramsearch_dir)

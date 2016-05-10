@@ -50,6 +50,21 @@ class constants:
          'type': 'NCD',
          'state_vars': ['tas_sfc_Amon']}
 
+
+class wrapper:
+    param_search = {'core.hybrid_a': [0.6, 0.7, 0.8],
+                    'core.inf_factor': [1.1, 1.2, 1.3]}
+
+    multi_seed = [9271, 687, 4312, 7175, 4999, 3318, 3344, 3667, 6975, 1766, 7374, 1820,
+                  2598, 1729, 9674, 3394, 239, 6039, 5670, 2679, 3334, 7684, 8701, 8719,
+                  2767, 3988, 1341, 8734, 9880, 42, 2530, 6142, 5534, 1589, 7907, 8732, 5784,
+                  1025, 6126, 6558, 3369, 8185, 9704, 6883, 9072, 7444, 9527, 1730, 567, 5294,
+                  9677, 7105, 6497, 8558, 8651, 6829, 3944, 7014, 4166, 8141, 9964, 755, 872,
+                  4372, 8599, 9030, 3291, 2659, 6914, 3874, 1227, 2239, 215, 9082, 1476, 2096,
+                  1328, 5386, 6115, 5954, 3277, 8458, 6116, 3350, 7341, 1404, 8127, 9242, 2676,
+                  5945, 3867, 4612, 810, 227, 422, 3830, 589, 2605, 8176, 7060]
+
+
 class core:
     """
     High-level parameters of reconstruction experiment
@@ -76,15 +91,15 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'testdev_mlost_mpi_pagesall_75_seeded'
+    nexp = 'testdev_paramsearch_integration'
     lmr_path = '/home/disk/chaos2/wperkins/data/LMR'
     online_reconstruction = False
     clean_start = True
     ignore_pre_avg_file = False
     save_pre_avg_file = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1950, 2000]
-    nens = 100
+    recon_period = [1950, 1960]
+    nens = 10
     seed = None
     iter_range = [0, 0]
     curr_iter = iter_range[0]
@@ -120,8 +135,8 @@ class core:
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    archive_dir = '/home/disk/chaos/wperkins/LMR_output/testing'
+    archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    #archive_dir = '/home/disk/chaos/wperkins/LMR_output/testing'
     #archive_dir = '/home/disk/kalman2/wperkins/LMR_output/testing'
     #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
