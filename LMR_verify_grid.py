@@ -1,4 +1,15 @@
+""" 
+Module: LMR_verify_grid.py
 
+Purpose: Generates spatial verification statistics of LMR gridded air temperature
+         against various gridded historical instrumental temperature datasets
+         and reanalyses.  
+
+Originator: Greg Hakim, U. of Washington, November 2015
+
+Revisions: 
+
+"""
 import matplotlib
 # need to do this backend when running remotely or to suppress figures interactively
 matplotlib.use('Agg')
@@ -74,14 +85,37 @@ var = 'tas_sfc_Amon'
 #nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 # ---
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
-nexp = 'production_mlost_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_era20c_pagesall_0.75'
+#nexp = 'production_mlost_era20cm_pagesall_0.75'
+# ---
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesCoralsSrCaD18Oonly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesIceCoresOnly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesIceCoresOnly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesSpeleoD18Oonly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesNoTrees_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
+#nexp = 'testPslW500_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500_2c_ERA20C_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
+#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
+nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+
 
 # override datadir
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-
+#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
 
 # threshold for fraction of valid data in calculation of verif. stats
 valid_frac = 0.5
@@ -97,7 +131,6 @@ trange = [1880,2000] #works for nya = 0
 #trange = [1885,1995] #works for nya = 5
 #trange = [1890,1990] #works for nya = 10
 #trange = [1900,2000]
-#trange = [1951,1981]
 
 # reference period over which mean is calculated & subtracted 
 # from all other datasets (in years CE)
@@ -231,9 +264,9 @@ print '\nloading verification data...\n'
 # ===================
  
 # load ERA20C reanalysis -------------------------------------------------------
-#infile = '/home/disk/kalman3/rtardif/LMR/data/model/era20c/tas_sfc_Amon_ERA20C_190001-201212.nc'
+#infile = '/home/disk/kalman3/rtardif/LMR/data/model/era20c/tas_sfc_Amon_ERA20C_190001-201012.nc'
 datadir = '/home/disk/kalman3/rtardif/LMR/data/model/era20c'
-datafile = 'tas_sfc_Amon_ERA20C_190001-201212.nc'
+datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardef = 'tas_sfc_Amon'
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef])

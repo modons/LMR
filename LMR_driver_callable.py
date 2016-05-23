@@ -1,38 +1,42 @@
+"""
+Module: LMR_driver_callable.py
+ 
+Purpose: This is the "main" module of the LMR code. 
+         Generates a paleoclimate reconstruction (single Monte-Carlo realization)
+         through the assimilation of a set of proxy data. 
 
-# ==============================================================================
-# Program: LMR_driver_callable.py
-# 
-# Purpose: 
-#
-# Options: None. 
-#          Experiment parameters through namelist, passed through object called
-#          "state"
-# 
-# Originators: Greg Hakim   | Dept. of Atmospheric Sciences, Univ. of Washington
-#              Robert Tardif | January 2015
-# 
-# Revisions: 
-#  April 2015:
-#            - This version is callable by an outside script, accepts a single
-#              object, called state, which has everything needed for the driver
-#              (G. Hakim)
+Options: None. 
+         Experiment parameters defined in LMR_config. 
 
-#            - Re-organisation of code around PSM calibration and calculation of
-#              Code now assumes PSM parameters have been pre-calulated and
-#              Ye's are calculated up-front for all proxy types/sites. All
-#              proxy data are now also loaded up-front, prior to any loops.
-#              Ye's are appended to state vector to form an augmented state
-#              vector and are also updated by DA. (R. Tardif)
-#  May 2015:
-#            - Bug fix in calculation of global mean temperature + function
-#              now part of LMR_utils.py (G. Hakim)
-#  July 2015:
-#            - Switched time & proxy loops, simplified logic so more of the
-#              proxy and PSM specifics are contained within their classes,
-#              formatted to mostly adhere to PEP8 guidlines
-#              (A. Perkins)
-# ==============================================================================
+Originators: Greg Hakim    | Dept. of Atmospheric Sciences, Univ. of Washington
+             Robert Tardif | January 2015
 
+Revisions: 
+  April 2015:
+            - This version is callable by an outside script, accepts a single
+              object, called state, which has everything needed for the driver
+              (G. Hakim - U. of Washington)
+
+            - Re-organisation of code around PSM calibration and calculation of Ye.
+              Code now assumes PSM parameters have been pre-calulated and
+              Ye's are calculated up-front for all proxy types/sites. All
+              proxy data are now also loaded up-front, prior to any loops.
+              Ye's are appended to state vector to form an augmented state
+              vector and are also updated by DA. (R. Tardif - U. of Washington)
+    May 2015:
+            - Bug fix in calculation of global mean temperature + function
+              now part of LMR_utils.py (G. Hakim - U. of Washington)
+   July 2015:
+            - Switched time & proxy loops, simplified logic so more of the
+              proxy and PSM specifics are contained within their classes,
+              formatted to mostly adhere to PEP8 guidlines
+              (A. Perkins - U. of Washington)
+  April 2016:
+            - Added handling of the "sensitivity" attribute now attached to 
+              proxy psm objects that defines the climate variable to which 
+              each proxy record is deemed sensitive to.
+              (R. Tardif - U. of Washington)
+"""
 import numpy as np
 from os.path import join
 from time import time
@@ -55,7 +59,7 @@ def LMR_driver_callable(cfg=None):
 
     # verbose controls print comments (0 = none; 1 = most important;
     #  2 = many; >=3 = all)
-    verbose = 1
+    verbose = 3
 
     nexp = core.nexp
     workdir = core.datadir_output
@@ -107,10 +111,15 @@ def LMR_driver_callable(cfg=None):
     X.prior_datafile = datafile_prior
     X.statevars = state_variables
     X.Nens = nens
+    # new option: detrending the prior
+    X.detrend = prior.detrend
+    print 'detrend:', X.detrend
+
 
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source)
     Xb_one_full = X.ens
+
 
     # Prepare to check for files in the prior (work) directory (this object just
     #  points to a directory)
@@ -160,6 +169,7 @@ def LMR_driver_callable(cfg=None):
         print 'Loading completed in ' + str(proxy_load_time) + ' seconds'
         print '-----------------------------------------------------'
 
+
     # ==========================================================================
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
@@ -198,6 +208,9 @@ def LMR_driver_callable(cfg=None):
                 LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
             nlat_new = np.shape(lat_new)[0]
             nlon_new = np.shape(lat_new)[1]
+
+            print '=> Full array:      ', np.min(var_array_full), np.max(var_array_full), np.mean(var_array_full), np.std(var_array_full)
+            print '=> Truncated array: ', np.min(var_array_new), np.max(var_array_new), np.mean(var_array_new), np.std(var_array_new)
 
             # corresponding indices in truncated state vector
             ibeg_new = Nx
@@ -267,13 +280,10 @@ def LMR_driver_callable(cfg=None):
     np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
              Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
 
+    
     # ==========================================================================
-    # Loop over all proxies and perform assimilation ---------------------------
+    # Loop over all years & proxies and perform assimilation -------------------
     # ==========================================================================
-
-    # ---------------------
-    # Loop over proxy types
-    # ---------------------
 
     # Array containing the global and hemispheric-mean state (for diagnostic purposes)
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
@@ -295,6 +305,9 @@ def LMR_driver_callable(cfg=None):
     nhmt_save[1,:] = nhmt
     shmt_save[1,:] = shmt
 
+    # -------------------------------------
+    # Loop over years of the reconstruction
+    # -------------------------------------
     lasttime = time()
     for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1)):
 
@@ -312,6 +325,10 @@ def LMR_driver_callable(cfg=None):
                 print 'Prior file ', filen, ' does not exist...'
             Xb = Xb_one_aug.copy()
 
+            
+        # -----------------
+        # Loop over proxies
+        # -----------------
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
             # Crude check if we have proxy ob for current time
             try:
@@ -337,8 +354,10 @@ def LMR_driver_callable(cfg=None):
 
             # Get Ye values for current proxy
             if online:
+                # Calculate from latest updated prior
                 Ye = Y.psm(Xb)
             else:
+                # Extract latest updated Ye from appended state vector
                 Ye = Xb[proxy_idx - total_proxy_count]
 
             # Define the ob error variance
@@ -371,22 +390,25 @@ def LMR_driver_callable(cfg=None):
                 print 'max change in variance:' + str(np.max(vardiff))
                 print 'update took ' + str(thistime-lasttime) + 'seconds'
             lasttime = thistime
+
             # Put analysis Xa in Xb for next assimilation
             Xb = Xa
 
+            # End of loop on proxies
+            
         # Dump Xa to file (use Xb in case no proxies assimilated for current year)
         np.save(filen, Xb)
 
     end_time = time() - begin_time
 
-    # End of loop on proxy types
+    # End of loop on years
     if verbose > 0:
         print ''
         print '====================================================='
         print 'Reconstruction completed in ' + str(end_time/60.0)+' mins'
         print '====================================================='
 
-    # 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
+    # G. Hakim, 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
     # need to fix this so that every year is counted
     gmt_ensemble = np.zeros([ntimes, nens])
     nhmt_ensemble = np.zeros([ntimes,nens])
@@ -413,16 +435,16 @@ def LMR_driver_callable(cfg=None):
     np.savez(filen, gmt_save=gmt_save, nhmt_save=nhmt_save, shmt_save=shmt_save,
              recon_times=recon_times,
              apcount=total_proxy_count,
-             tpcount=total_proxy_count)
-
-    # TODO: (AP) The assim/eval lists of lists instead of lists of 1-item dicts
-    assimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time]}
+             tpcount=total_proxy_count)    
+    
+    # TODO: (AP) The assim/eval lists of lists instead of lists of 1-item dicts    
+    assimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time, p.psm_obj.sensitivity]}
                            for p in prox_manager.sites_assim_proxy_objs()]
     filen = join(workdir, 'assimilated_proxies')
     np.save(filen, assimilated_proxies)
     
     # collecting info on non-assimilated proxies and save to file
-    nonassimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time]}
+    nonassimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time, p.psm_obj.sensitivity]}
                               for p in prox_manager.sites_eval_proxy_objs()]
     if nonassimilated_proxies:
         filen = join(workdir, 'nonassimilated_proxies')

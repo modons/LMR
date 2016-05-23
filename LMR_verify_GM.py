@@ -1,8 +1,16 @@
+""" 
+Module: LMR_verify_GM.py
 
-# verify statistics related to the global-mean 2m air temperature
-#
-# started from LMR_plots.py r-86
+Purpose: Generates verification statistics of LMR global-mean 2m air temperature
+         against various gridded historical instrumental temperature datsasets 
+         and reanalyses.  
+         Note: started from LMR_plots.py r-86
 
+Originator: Greg Hakim, U. of Washington, November 2015
+
+Revisions: 
+
+"""
 import matplotlib
 # need to do this when running remotely, and to suppress figures
 matplotlib.use('Agg')
@@ -61,40 +69,39 @@ fsave = True
 # file specification
 #
 # current datasets
-#
-#nexp = 'testdev_150yr_75pct_gmttest_1iter'
-#nexp = 'testing_1000_75pct_ens_size_Nens_10'
-#nexp = 'testing_1000_75pct_200members'
-#nexp = 'testdev_check_1000_75pct'
-#nexp = 'ReconDevTest_1000_testing_coral'
-#nexp = 'ReconDevTest_1000_testing_icecore'
-#nexp = 'testdev_1000_100pct_icecoreonly'
-#nexp = 'testdev_1000_100pct_mxdonly'
-#nexp = 'testdev_1000_100pct_sedimentonly'
-#nexp = 'testdev_detrend4_1000_75pct'
-# ---
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 # ---
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
-nexp = 'production_mlost_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_era20c_pagesall_0.75'
+#nexp = 'production_mlost_era20cm_pagesall_0.75'
+# ---
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesCoralsSrCaD18Oonly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesIceCoresOnly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesIceCoresOnly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesSpeleoD18Oonly_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesNoTrees_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
+#nexp = 'testPslW500_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500_2c_ERA20C_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
+#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
+nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+
 
 # specify directories for LMR and calibration data
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = './data/'
-datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
 
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
@@ -198,7 +205,7 @@ MLOST_time = np.array(mlost_time)
 # ===================
 
 datadir = '/home/disk/kalman3/rtardif/LMR/data/model/era20c'
-datafile = 'tas_sfc_Amon_ERA20C_190001-201212.nc'
+datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardef = 'tas_sfc_Amon'
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef])
@@ -767,7 +774,7 @@ if iplot:
     if fsave:
         print 'saving to .png'
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.png')
-        plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.pdf',bbox_inches='tight', dpi=300, format='pdf')        
+        plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
 
 # =======================================
@@ -1038,8 +1045,8 @@ if iplot:
 #  Summary "table" figures
 
 # dataset catalog IN ORDER
-#dset = ['LMR', 'GISTEMP', 'HadCRUT4', '20CR-V2', 'BE', 'MLOST', 'ERA-20C', 'CON']
-dset = ['LMR', 'GISTEMP', 'HadCRUT4', '20CR-V2', 'BE', 'MLOST', 'CON']
+dset = ['LMR', 'GISTEMP', 'HadCRUT4', '20CR-V2', 'BE', 'MLOST', 'ERA-20C', 'CON']
+#dset = ['LMR', 'GISTEMP', 'HadCRUT4', '20CR-V2', 'BE', 'MLOST', 'CON']
 ndset = len(dset)
 
 # construct a master array with each dataset in a column in the order of dset
@@ -1104,7 +1111,7 @@ k += 1; ALL_array[:,k] = cru_gm_pad
 k += 1; ALL_array[:,k] = tcr_gm_pad
 k += 1; ALL_array[:,k] = be_gm_pad
 k += 1; ALL_array[:,k] = mlost_gm_pad
-#k += 1; ALL_array[:,k] = era_gm_pad
+k += 1; ALL_array[:,k] = era_gm_pad
 k += 1; ALL_array[:,k] = con_gm_pad
 
 #
@@ -1140,7 +1147,8 @@ plt.figure()
 #cmap = plt.cm.Reds
 cmap = truncate_colormap(plt.cm.Reds,0.0,0.9)
 
-cellsize = 0.2 # table cell size
+#cellsize = 0.2 # table cell size
+cellsize = 0.19 # table cell size
 fontsize = 14
 
 nticks = 11
