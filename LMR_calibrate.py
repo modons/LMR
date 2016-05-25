@@ -1,6 +1,11 @@
+"""
+Module containing definitions pertaining to linear PSM calibration sources.
 
+Revisions:
+- Addition of the GPCC precipitation dataset as a possible calibration source.
+  [R. Tardif, U. of Washington, Spring 2016] 
 
-
+"""
 # -------------------------------------------------------------------------------
 # *** Calibration type assignment  ----------------------------------------------
 # -------------------------------------------------------------------------------
@@ -15,8 +20,8 @@ def calibration_assignment(icalib):
         calib_object = calibration_BerkeleyEarth()
     elif icalib == 'MLOST':
         calib_object = calibration_MLOST()
-    elif icalib == 'NOAA':
-        calib_object = calibration_NOAA()
+    elif icalib == 'GPCC':
+        calib_object = calibration_precip_GPCC()
     else:
         print 'Error in calibration data specification! Exiting ...'
         exit(1)
@@ -113,4 +118,25 @@ class calibration_NOAA(calibration_master):
         from load_gridded_data import read_gridded_data_NOAA
 
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_NOAA(self.datadir_calib,self.datafile_calib,self.calib_vars)
+
+# -------------------------------------------------------------------------------
+# *** GPCC class --------------------------------------------------
+# -------------------------------------------------------------------------------
+class calibration_precip_GPCC(calibration_master):
+
+    source = 'GPCC'
+    #datafile_calib   = 'GPCC_precip.mon.total.0.5x0.5.v6.nc'
+    #datafile_calib   = 'GPCC_precip.mon.total.1x1.v6.nc'
+    #datafile_calib   = 'GPCC_precip.mon.total.2.5x2.5.v6.nc'
+    datafile_calib   = 'GPCC_precip.mon.flux.1x1.v6.nc'
+
+    dataformat_calib = 'NCD'
+    calib_vars = ['precip']
+    out_anomalies = True
+    
+    # read the data
+    def read_calibration(self):
+        from load_gridded_data import read_gridded_data_GPCC
+
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GPCC(self.datadir_calib,self.datafile_calib,self.calib_vars,self.out_anomalies)
 
