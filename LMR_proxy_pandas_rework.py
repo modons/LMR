@@ -1,22 +1,26 @@
 """
 Module: LMR_proxy_pandas_rework.py
 
-Purpose: Module containing various classes associated with proxy types to be assimilated in the LMR, 
-         as well as numerous functionalities for selection of proxy types/sites to be included in
-         the reanalysis. 
-         Rewritten by AndreP to incorporate features from the original LMR_proxy code using 
-         OOP and Pandas. Is used by the driver but not by verification scripts.
+Purpose: Module containing various classes associated with proxy types to be
+         assimilated in the LMR, as well as numerous functionalities for
+         selection of proxy types/sites to be included in the reanalysis.
+
+         Rewritten by AndreP to incorporate features from the original
+         LMR_proxy code using OOP and Pandas. Is used by the driver but not by
+         verification scripts.
 
 Originator: Andre Perkins, U. of Washington.
 
 Revisions:
-         - Added capability to filter uploaded *NCDC proxies* according to the database
-           they are included in (PAGES1, PAGES2, or LMR_FM). This information is
-           found in the metadata, as extracted from the NCDC-templated text files.
+         - Added capability to filter uploaded *NCDC proxies* according to the
+           database they are included in (PAGES1, PAGES2, or LMR_FM). This
+           information is found in the metadata, as extracted from the
+           NCDC-templated text files.
            [ R. Tardif, U. Washington, March 2016 ]
 
-         - Added capability to filter out *NCDC proxies* listed in a blacklist. This is 
-           mainly used to prevent the assimilation of chronologies known to be duplicates.
+         - Added capability to filter out *NCDC proxies* listed in a blacklist.
+           This is mainly used to prevent the assimilation of chronologies known
+           to be duplicates.
            [ R. Tardif, U. Washington, March 2016 ]
 """
 
@@ -28,6 +32,7 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from random import sample, seed
 from copy import deepcopy
+
 
 class ProxyManager:
     """
@@ -440,8 +445,6 @@ class ProxyPages(BaseProxyObject):
         return 0.1
 
 
-
-
 class ProxyNCDC(BaseProxyObject):
 
     @staticmethod
@@ -510,7 +513,6 @@ class ProxyNCDC(BaseProxyObject):
         dbase_filters = config.proxies.NCDC.database_filter
         proxy_blacklist = config.proxies.NCDC.proxy_blacklist
 
-
         # initial mask all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
         useable |= True
@@ -530,23 +532,27 @@ class ProxyNCDC(BaseProxyObject):
         # define boolean array with right dimension & set all to True
         dbase_mask = meta_src[database_col] != 0
 
-        if dbase_filters: # not "None" or empty list
+        # dbase_filters not "None" or empty list
+        if dbase_filters:
             for i in range(len(meta_src[database_col])):                
                 if meta_src[database_col][i]:
-                    dbase_mask[i] = not set(meta_src[database_col][i]).isdisjoint(dbase_filters)
+                    tmp_mask = set(meta_src[database_col][i])
+                    tmp_disjoint = tmp_mask.isdisjoint(dbase_filters)
+                    dbase_mask[i] = tmp_disjoint
                 else:
                     dbase_mask[i] = False
 
-
-        # Define mask of proxies listed in a user-defined "blacklist" (see LMR_config).
+        # Define mask of proxies listed in a user-defined "blacklist"
+        # (see LMR_config).
         # boolean array set with right dimension & all set to True
         blacklist_mask = meta_src['NCDC ID'] != ' '
-        if proxy_blacklist: # not "None" or empty list
-            # If site listed in blacklist, modify corresponding elements of boolean array to False
+        if proxy_blacklist:
+            # If site listed in blacklist, modify corresponding elements of
+            # boolean array to False
             for pbl in proxy_blacklist:
-                inds = meta_src['NCDC ID'][meta_src['NCDC ID'].map(lambda x: x.startswith(pbl))].index
+                tmp = meta_src['NCDC ID'].map(lambda x: x.startswith(pbl))
+                inds = meta_src['NCDC ID'][tmp].index
                 blacklist_mask[inds] = False
-
 
         # Create proxy id lists
         proxy_id_by_type = {}
@@ -571,9 +577,9 @@ class ProxyNCDC(BaseProxyObject):
                 measure_mask |= meta_src[measure_col] == measure
 
             # Extract proxy ids using mask and append to lists
-            proxies = meta_src['NCDC ID'][measure_mask & type_mask & dbase_mask & blacklist_mask &
-                                           useable].values
-
+            proxies = meta_src['NCDC ID'][measure_mask & type_mask &
+                                          dbase_mask & blacklist_mask &
+                                          useable].values
             # If we have ids after filtering add them to the type list
             if len(proxies) > 0:
                 proxy_id_by_type[name] = proxies.tolist()

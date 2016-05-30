@@ -2,8 +2,8 @@
 Module: LMR_driver_callable.py
  
 Purpose: This is the "main" module of the LMR code. 
-         Generates a paleoclimate reconstruction (single Monte-Carlo realization)
-         through the assimilation of a set of proxy data. 
+         Generates a paleoclimate reconstruction (single Monte-Carlo
+         realization) through the assimilation of a set of proxy data.
 
 Options: None. 
          Experiment parameters defined in LMR_config. 
@@ -17,8 +17,8 @@ Revisions:
               object, called state, which has everything needed for the driver
               (G. Hakim - U. of Washington)
 
-            - Re-organisation of code around PSM calibration and calculation of Ye.
-              Code now assumes PSM parameters have been pre-calulated and
+            - Re-organisation of code around PSM calibration and calculation of
+              Ye. Code now assumes PSM parameters have been pre-calulated and
               Ye's are calculated up-front for all proxy types/sites. All
               proxy data are now also loaded up-front, prior to any loops.
               Ye's are appended to state vector to form an augmented state
@@ -120,9 +120,8 @@ def LMR_driver_callable(cfg=None):
     X.populate_ensemble(prior_source)
     Xb_one_full = X.ens
 
-
     # Prepare to check for files in the prior (work) directory (this object just
-    #  points to a directory)
+    # points to a directory)
     prior_check = np.DataSource(workdir)
 
     load_time = time() - begin_time
@@ -209,8 +208,12 @@ def LMR_driver_callable(cfg=None):
             nlat_new = np.shape(lat_new)[0]
             nlon_new = np.shape(lat_new)[1]
 
-            print '=> Full array:      ', np.min(var_array_full), np.max(var_array_full), np.mean(var_array_full), np.std(var_array_full)
-            print '=> Truncated array: ', np.min(var_array_new), np.max(var_array_new), np.mean(var_array_new), np.std(var_array_new)
+            print ('=> Full array:      ' + np.min(var_array_full) +
+                   np.max(var_array_full) + np.mean(var_array_full) +
+                   np.std(var_array_full))
+            print ('=> Truncated array: ' + np.min(var_array_new) +
+                   np.max(var_array_new) + np.mean(var_array_new) +
+                   np.std(var_array_new))
 
             # corresponding indices in truncated state vector
             ibeg_new = Nx
@@ -280,22 +283,26 @@ def LMR_driver_callable(cfg=None):
     np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
              Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
 
-    
     # ==========================================================================
     # Loop over all years & proxies and perform assimilation -------------------
     # ==========================================================================
 
-    # Array containing the global and hemispheric-mean state (for diagnostic purposes)
+    # Array containing the global and hemispheric-mean state
+    # (for diagnostic purposes)
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
-    gmt_save = np.zeros([total_proxy_count+1,recon_period[1] - recon_period[0] + 1])
-    nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-    shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
+    gmt_save = np.zeros([total_proxy_count+1,
+                         recon_period[1] - recon_period[0] + 1])
+    nhmt_save = np.zeros([total_proxy_count+1,
+                          recon_period[1]-recon_period[0]+1])
+    shmt_save = np.zeros([total_proxy_count+1,
+                          recon_period[1]-recon_period[0]+1])
     # get state vector indices where to find surface air temperature
     ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
     iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
     xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
     xbm_lalo = xbm.reshape(nlat_new, nlon_new)
-    [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
+    [gmt, nhmt, shmt] = LMR_utils.global_hemispheric_means(xbm_lalo,
+                                                           lat_new[:, 0])
     # First row is prior GMT
     gmt_save[0, :] = gmt
     nhmt_save[0,:] = nhmt
@@ -325,7 +332,6 @@ def LMR_driver_callable(cfg=None):
                 print 'Prior file ', filen, ' does not exist...'
             Xb = Xb_one_aug.copy()
 
-            
         # -----------------
         # Loop over proxies
         # -----------------
@@ -396,7 +402,8 @@ def LMR_driver_callable(cfg=None):
 
             # End of loop on proxies
             
-        # Dump Xa to file (use Xb in case no proxies assimilated for current year)
+        # Dump Xa to file (use Xb in case no proxies assimilated for
+        # current year)
         np.save(filen, Xb)
 
     end_time = time() - begin_time
@@ -408,8 +415,9 @@ def LMR_driver_callable(cfg=None):
         print 'Reconstruction completed in ' + str(end_time/60.0)+' mins'
         print '====================================================='
 
-    # G. Hakim, 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
-    # need to fix this so that every year is counted
+    # G. Hakim, 3 July 2015: compute and save the GMT,NHMT,SHMT for the full
+    # ensemble
+    # TODO: need to fix this so that every year is counted (AP maybe done?)
     gmt_ensemble = np.zeros([ntimes, nens])
     nhmt_ensemble = np.zeros([ntimes,nens])
     shmt_ensemble = np.zeros([ntimes,nens])
@@ -438,13 +446,15 @@ def LMR_driver_callable(cfg=None):
              tpcount=total_proxy_count)    
     
     # TODO: (AP) The assim/eval lists of lists instead of lists of 1-item dicts    
-    assimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time, p.psm_obj.sensitivity]}
+    assimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time,
+                                     p.psm_obj.sensitivity]}
                            for p in prox_manager.sites_assim_proxy_objs()]
     filen = join(workdir, 'assimilated_proxies')
     np.save(filen, assimilated_proxies)
     
     # collecting info on non-assimilated proxies and save to file
-    nonassimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time, p.psm_obj.sensitivity]}
+    nonassimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time,
+                                        p.psm_obj.sensitivity]}
                               for p in prox_manager.sites_eval_proxy_objs()]
     if nonassimilated_proxies:
         filen = join(workdir, 'nonassimilated_proxies')

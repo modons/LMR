@@ -5,14 +5,17 @@ paleoclimate reconstruction experiments.
 Adapted from LMR_exp_NAMELIST by AndreP
 
 Revisions: 
- - Introduction of definitions related to use of newly developed NCDC proxy database.
+ - Introduction of definitions related to use of newly developed NCDC proxy
+   database.
  - Added functionality restricting assimilated proxy records to those belonging
    to specific databases (e.g. PAGES1, PAGES2, LMR) (only for NCDC proxies).
- - Introduction of "blacklist" to prevent the assimilation of specific proxy records as defined 
-   (through a python list) by the user. Applicable for both NCDC and Pages proxy sets.
- - Added boolean allowing the user to indicate whether the prior is to be detrended or not.
- - Added definitions associated with a new psm class (linear_TorP) allowing the use of
-   temperature-calibrated OR precipitation-calibrated linear PSMs.
+ - Introduction of "blacklist" to prevent the assimilation of specific proxy
+   records as defined (through a python list) by the user. Applicable for both
+   NCDC and Pages proxy sets.
+ - Added boolean allowing the user to indicate whether the prior is to be
+   detrended or not.
+ - Added definitions associated with a new psm class (linear_TorP) allowing the
+   use of temperature-calibrated OR precipitation-calibrated linear PSMs.
    [ R. Tardif, Univ. of Washington, Spring 2016 ]
 
 """
@@ -66,9 +69,9 @@ class core:
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
+    # archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
     archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
-    #archive_dir = '/home/disk/kalman3/hakim/LMR/'
+    # archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
 class proxies:
     """
@@ -87,11 +90,10 @@ class proxies:
     # Which proxy database to use ?
     # =============================
     use_from = ['pages']
-    #use_from = ['NCDC']
+    # use_from = ['NCDC']
 
-    #proxy_frac = 1.0
+    # proxy_frac = 1.0
     proxy_frac = 0.75
-
 
     # ---------------
     # PAGES2k proxies
@@ -145,17 +147,17 @@ class proxies:
         # DO NOT CHANGE FORMAT BELOW
 
         proxy_order = [
-                        'Tree ring_Width',
-                       'Tree ring_Density',
-                       'Ice core_d18O',
-                       'Ice core_d2H',
-                       'Ice core_Accumulation',
-                       'Coral_d18O',
-                       'Coral_Luminescence',
-                       'Lake sediment_All',
-                       'Marine sediment_All',
-                       'Speleothem_All'
-        ]
+            'Tree ring_Width',
+            'Tree ring_Density',
+            'Ice core_d18O',
+            'Ice core_d2H',
+            'Ice core_Accumulation',
+            'Coral_d18O',
+            'Coral_Luminescence',
+            'Lake sediment_All',
+            'Marine sediment_All',
+            'Speleothem_All'
+            ]
 
         proxy_assim2 = {
             'Tree ring_Width': ['Ring width',
@@ -193,7 +195,8 @@ class proxies:
         simple_filters = {'PAGES 2k Region': regions,
                           'Resolution (yr)': proxy_resolution}
 
-        # A blacklist on proxy records, to prevent assimilation of chronologies known to be duplicates
+        # A blacklist on proxy records, to prevent assimilation of chronologies
+        # known to be duplicates
         proxy_blacklist = []
 
     # ---------------
@@ -219,15 +222,15 @@ class proxies:
             List of proxy time resolutions to use
         database_filter: list(str)
             List of databases from which to limit the selection of proxies.
-            Use [] (empty list) if no restriction, or ['db_name1', db_name2'] to limit to 
-            proxies contained in "db_name1" OR "db_name2". 
+            Use [] (empty list) if no restriction, or ['db_name1', db_name2'] to
+            limit to proxies contained in "db_name1" OR "db_name2".
             Possible choices are: 'PAGES1', 'PAGES2', 'LMR_FM'
         proxy_order: list(str):
             Order of assimilation by proxy type key
         proxy_assim2: dict{ str: list(str)}
             Proxy types to be assimilated.
-            Uses dictionary with structure {<<proxy type>>: [.. list of measuremant
-            tags ..] where "proxy type" is written as
+            Uses dictionary with structure {<<proxy type>>: [.. list of
+            measuremant tags ..] where "proxy type" is written as
             "<<archive type>>_<<measurement type>>"
         proxy_type_mapping: dict{(str,str): str}
             Maps proxy type and measurement to our proxy type keys.
@@ -279,23 +282,31 @@ class proxies:
             ]
 
         proxy_assim2 = {
-            'Corals and Sclerosponges_d18O': ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm',
-                                              'd18o_avg','d18o_ave','dO18','d18O_4'],
-            'Corals and Sclerosponges_d14C': ['d14C','d14c','ac_d14c'],
-            'Corals and Sclerosponges_d13C': ['d13C','d13c','d13c_ave','d13c_ann_ave','d13C_int'],
-            'Corals and Sclerosponges_SrCa': ['Sr/Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
+            'Corals and Sclerosponges_d18O': ['d18O', 'delta18O', 'd18o',
+                                              'd18O_stk', 'd18O_int',
+                                              'd18O_norm', 'd18o_avg',
+                                              'd18o_ave', 'dO18',
+                                              'd18O_4'],
+            'Corals and Sclerosponges_d14C': ['d14C', 'd14c', 'ac_d14c'],
+            'Corals and Sclerosponges_d13C': ['d13C', 'd13c', 'd13c_ave',
+                                              'd13c_ann_ave', 'd13C_int'],
+            'Corals and Sclerosponges_SrCa': ['Sr/Ca', 'Sr/Ca_norm',
+                                              'Sr/Ca_anom', 'Sr/Ca_int'],
             'Corals and Sclerosponges_Sr'  : ['Sr'],
             'Corals and Sclerosponges_BaCa': ['Ba/Ca'],
             'Corals and Sclerosponges_CdCa': ['Cd/Ca'],
             'Corals and Sclerosponges_MgCa': ['Mg/Ca'],
-            'Corals and Sclerosponges_UCa' : ['U/Ca','U/Ca_anom'],
+            'Corals and Sclerosponges_UCa' : ['U/Ca', 'U/Ca_anom'],
             'Corals and Sclerosponges_Pb'  : ['Pb'],
-            'Ice Cores_d18O'               : ['d18O','delta18O','delta18o','d18o','d18o_int','d18O_int','d18O_norm',
-                                              'd18o_norm','dO18','d18O_anom'],
-            'Ice Cores_dD'                 : ['deltaD','delD'],
-            'Ice Cores_Accumulation'       : ['accum','accumu'],
+            'Ice Cores_d18O'               : ['d18O', 'delta18O', 'delta18o',
+                                              'd18o', 'd18o_int', 'd18O_int',
+                                              'd18O_norm', 'd18o_norm', 'dO18',
+                                              'd18O_anom'],
+            'Ice Cores_dD'                 : ['deltaD', 'delD'],
+            'Ice Cores_Accumulation'       : ['accum', 'accumu'],
             'Ice Cores_MeltFeature'        : ['MFP'],
-            'Lake Cores_Varve'             : ['varve', 'varve_thickness', 'varve thickness'],
+            'Lake Cores_Varve'             : ['varve', 'varve_thickness',
+                                              'varve thickness'],
             'Speleothems_d18O'             : ['d18O'],
             'Speleothems_d13C'             : ['d13C'],
             'Tree Rings_All'               : ['clim_signal'],
@@ -322,10 +333,11 @@ class proxies:
         #                  'Resolution (yr)': proxy_resolution}
         simple_filters = {'Resolution (yr)': proxy_resolution}
 
-        # A blacklist on proxy records, to prevent assimilation of chronologies known to be duplicates.
-        # An empty list will 
-        #proxy_blacklist = []
-        proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a','09japa01a', '10guad01a', '99aust01a', '99fpol01a']
+        # A blacklist on proxy records, to prevent assimilation of chronologies
+        # known to be duplicates.
+        # proxy_blacklist = []
+        proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
+                           '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
 
 
 class psm:
@@ -340,7 +352,7 @@ class psm:
     """
 
     use_psm = {'pages': 'linear', 'NCDC': 'linear'}
-    #use_psm = {'pages': 'linear', 'NCDC': 'linear_TorP'}
+    # use_psm = {'pages': 'linear', 'NCDC': 'linear_TorP'}
 
     class linear:
         """
@@ -364,30 +376,30 @@ class psm:
         datatag_calib = 'GISTEMP'
         datafile_calib = 'gistemp1200_ERSST.nc'
         # or
-        #datatag_calib = 'MLOST'
-        #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
-        # or 
-        #datatag_calib = 'HadCRUT'
-        #datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
-        # or 
-        #datatag_calib = 'BerkeleyEarth'
-        #datafile_calib = 'Land_and_Ocean_LatLong1.nc'
-        # or 
-        #datatag_calib = 'GPCC'
-        #datafile_calib = 'GPCC_precip.mon.total.1x1.v6.nc'
-        # or 
-        #datatag_calib = 'GPCC'
-        #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        # datatag_calib = 'MLOST'
+        # datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+        # or
+        # datatag_calib = 'HadCRUT'
+        # datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
+        # or
+        # datatag_calib = 'BerkeleyEarth'
+        # datafile_calib = 'Land_and_Ocean_LatLong1.nc'
+        # or
+        # datatag_calib = 'GPCC'
+        # datafile_calib = 'GPCC_precip.mon.total.1x1.v6.nc'
+        # or
+        # datatag_calib = 'GPCC'
+        # datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
-                                  'PSMs_'+'-'.join(proxies.use_from)+'_' + datatag_calib + '.pckl')
+                                  'PSMs_'+'-'.join(proxies.use_from)+'_' +
+                                  datatag_calib + '.pckl')
 
         psm_r_crit = 0.0
 
-    
     class linear_TorP:
         """
         Parameters for the linear fit PSM.
@@ -412,33 +424,33 @@ class psm:
         datatag_calib_T = 'GISTEMP'
         datafile_calib_T = 'gistemp1200_ERSST.nc'
         # or
-        #datatag_calib_T = 'MLOST'
-        #datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
-        # or 
-        #datatag_calib_T = 'HadCRUT'
-        #datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
-        # or 
-        #datatag_calib_T = 'BerkeleyEarth'
-        #datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
-
+        # datatag_calib_T = 'MLOST'
+        # datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
+        # or
+        # datatag_calib_T = 'HadCRUT'
+        # datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
+        # or
+        # datatag_calib_T = 'BerkeleyEarth'
+        # datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
+        #
         # linear PSM w.r.t. precipitation
         # ------------------------------
-        #datatag_calib_P = 'GPCC'
-        #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
+        # datatag_calib_P = 'GPCC'
+        # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
         # or 
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
-
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
         pre_calib_datafile_T = join(core.lmr_path,
-                                  'PSM',
-                                  'PSMs_'+'-'.join(proxies.use_from)+'_' + datatag_calib_T + '.pckl')
+                                    'PSM',
+                                    'PSMs_'+'-'.join(proxies.use_from)+'_' +
+                                    datatag_calib_T + '.pckl')
         pre_calib_datafile_P = join(core.lmr_path,
-                                  'PSM',
-                                  'PSMs_'+'-'.join(proxies.use_from)+'_' + datatag_calib_P + '.pckl')
-
+                                    'PSM',
+                                    'PSMs_'+'-'.join(proxies.use_from)+'_' +
+                                    datatag_calib_P + '.pckl')
 
         psm_r_crit = 0.0
 
@@ -462,38 +474,40 @@ class prior:
     """
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
-    datafile_prior   = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+    datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 
-    #prior_source     = 'ccsm4_preindustrial_control'
-    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
-
-    #prior_source     = 'gfdl-cm3_preindustrial_control'
-    #datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
-
-    #prior_source     = 'mpi-esm-p_last_millenium'
-    #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
-
-    #prior_source     = '20cr'
-    #datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
-
-    #prior_source     = 'era20c'
-    #datafile_prior   = '[vardef_template]_ERA20C_190001-201012.nc'
-
-    #prior_source     = 'era20cm'
-    #datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
-
+    # prior_source     = 'ccsm4_preindustrial_control'
+    # datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
+    #
+    # prior_source     = 'gfdl-cm3_preindustrial_control'
+    # datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
+    #
+    # prior_source     = 'mpi-esm-p_last_millenium'
+    # datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
+    #
+    # prior_source     = '20cr'
+    # datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
+    #
+    # prior_source     = 'era20c'
+    # datafile_prior   = '[vardef_template]_ERA20C_190001-201012.nc'
+    #
+    # prior_source     = 'era20cm'
+    # datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
 
     datadir_prior = join(core.lmr_path, 'data', 'model', prior_source)
     dataformat_prior = 'NCD'
     state_variables = ['tas_sfc_Amon']
-    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
-    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
-    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 
-    #                    'AMOCindex_Omon', 'AMOC26Nmax_Omon', 'AMOC26N1000m_Omon', 'AMOC45N1000m_Omon',
-    #                    'ohcAtlanticNH_0-700m_Omon', 'ohcAtlanticSH_0-700m_Omon',
+    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon',
+    #                    'AMOCindex_Omon', 'AMOC26Nmax_Omon',
+    #                    'AMOC26N1000m_Omon', 'AMOC45N1000m_Omon',
+    #                    'ohcAtlanticNH_0-700m_Omon',
+    #                    'ohcAtlanticSH_0-700m_Omon',
     #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
-    #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon', 'ohcArctic_0-700m_Omon']
-    #state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon',
+    #                    'ohcArctic_0-700m_Omon']
+    # state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
 
     # boolean : detrend prior?
     # by default, considers the entire length of the simulation

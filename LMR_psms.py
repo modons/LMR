@@ -7,12 +7,15 @@ Purpose: Module containing methods for various Proxy System Models (PSMs)
 Originator: Andre Perkins, U. of Washington
 
 Revisions: 
-          - Use of new more efficient "get_distance" function to calculate the distance between
-            proxy sites and analysis grid points.  [R. Tardif, U. of Washington, February 2016]
-          - Added the "LinearPSM_TorP" class, allowing the use of temperature-calibrated
-            *OR* precipitation-calibrated linear PSMs. For each proxy record to be assimilated, 
-            the selection of the PSM (i.e. T vs P) is perfomed on the basis of the smallest 
-            MSE of regression residuals. [R. Tardif, U. of Washington, April 2016]
+          - Use of new more efficient "get_distance" function to calculate the
+            distance between proxy sites and analysis grid points.
+            [R. Tardif, U. of Washington, February 2016]
+          - Added the "LinearPSM_TorP" class, allowing the use of
+            temperature-calibrated *OR* precipitation-calibrated linear PSMs.
+            For each proxy record to be assimilated, the selection of the PSM
+            (i.e. T vs P) is perfomed on the basis of the smallest MSE of
+            regression residuals.
+            [R. Tardif, U. of Washington, April 2016]
 
 """
 
@@ -137,7 +140,8 @@ class LinearPSM(BasePSM):
         self.lon  = proxy_obj.lon
         self.elev = proxy_obj.elev
 
-        # Very crude assignment of sensitivity (TODO (RT): more inclusive & flexible way of doing this)
+        # Very crude assignment of sensitivity
+        # TODO (RT): more inclusive & flexible way of doing this
         if config.psm.linear.datatag_calib == 'GPCC':
             self.sensitivity = 'precipitation'
         else:
@@ -439,8 +443,8 @@ class LinearPSM_TorP(BasePSM):
                       No attempts at calibration are performed here! 
                       The following code only assigns PSM linear regression 
                       parameters to individual proxies from fits to temperature
-                      OR precipitation according to a measure of "goodness-of-fit" 
-                      criteria (here, MSE of the resisduals).
+                      OR precipitation according to a measure of
+                      "goodness-of-fit" criteria (here, MSE of the resisduals).
 
     Attributes
     ----------
@@ -479,7 +483,8 @@ class LinearPSM_TorP(BasePSM):
 
     def __init__(self, config, proxy_obj, psm_data_T=None, psm_data_P=None):
 
-        TorP_types = ['Tree Rings_WidthBreit','Tree Rings_WidthPages','Tree Rings_WoodDensity']
+        TorP_types = ['Tree Rings_WidthBreit', 'Tree Rings_WidthPages',
+                      'Tree Rings_WoodDensity']
 
         proxy = proxy_obj.type
         site = proxy_obj.id
@@ -495,9 +500,10 @@ class LinearPSM_TorP(BasePSM):
             psm_site_data_T = psm_data_T[(proxy, site)]
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
-            #print 'PSM (temperature) not calibrated for:' + str((proxy, site))
+            # print 'PSM (temperature) not calibrated for:' + str((proxy, site))
             logger.error(e)
-            logger.info('PSM (temperature) not calibrated for:' + str((proxy, site)))
+            logger.info('PSM (temperature) not calibrated for:' +
+                        str((proxy, site)))
 
         # Try using pre-calibrated psm_data for **precipitation**
         try:
@@ -507,13 +513,12 @@ class LinearPSM_TorP(BasePSM):
 
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
-            #print 'PSM (precipitation) not calibrated for:' + str((proxy, site))
             logger.error(e)
-            logger.info('PSM (precipitation) not calibrated for:' + str((proxy, site)))
+            logger.info('PSM (precipitation) not calibrated for:' +
+                        str((proxy, site)))
 
-
-
-        # Check if PSM is calibrated w.r.t. temperature and/or w.r.t. precipitation
+        # Check if PSM is calibrated w.r.t. temperature and/or w.r.t.
+        # precipitation
         # Assign proxy "sensitivity" based on PSM calibration
 
         if proxy in TorP_types: # restrict this check to specific proxy types (e.g. tree rings)
