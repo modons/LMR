@@ -9,7 +9,7 @@ import pytest
 import cPickle
 import numpy as np
 import LMR_proxy_pandas_rework as proxy2
-import LMR_config as cfg
+import test_config as cfg
 from itertools import izip
 
 @pytest.fixture()
@@ -34,6 +34,7 @@ def dummy_proxy(request):
     p.values = range(11)
     p.lat = 45
     p.lon = 210
+    p.elev = 0
     p.time = range(1950, 1961)
 
     return p
@@ -69,7 +70,7 @@ def test_proxies_get_class():
 def test_pages_init(psm_dat, dummy_proxy):
     p = dummy_proxy
     pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                               p.lat, p.lon, p.values, p.time,
+                               p.lat, p.lon, p.elev, p.values, p.time,
                                **{'psm_data': psm_dat})
 
     assert pclass.id == p.pid
@@ -79,6 +80,7 @@ def test_pages_init(psm_dat, dummy_proxy):
     assert pclass.values == p.values
     assert pclass.lat == p.lat
     assert pclass.lon == p.lon
+    assert pclass.elev == p.elev
     assert pclass.time == p.time
     assert hasattr(pclass, 'psm')
 
@@ -87,7 +89,7 @@ def test_pages_empty_values(psm_dat, dummy_proxy):
     with pytest.raises(ValueError):
         p = dummy_proxy
         pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, [], p.time,
+                                   p.lat, p.lon, p.elev, [], p.time,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -95,7 +97,7 @@ def test_pages_none_values(psm_dat, dummy_proxy):
     with pytest.raises(ValueError):
         p = dummy_proxy
         pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, None, p.time,
+                                   p.lat, p.lon, p.elev, None, p.time,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -104,7 +106,7 @@ def test_pages_time_values_len_mismatch(psm_dat, dummy_proxy):
         p = dummy_proxy
         time = p.time[0:-2]
         pclass = proxy2.ProxyPages(cfg, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, p.values, time,
+                                   p.lat, p.lon, p.elev, p.values, time,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -120,6 +122,7 @@ def test_pages_load_site(meta, pdata, psm_dat):
     assert pclass.type == r'Coral_d18O'
     assert pclass.lat == -21
     assert pclass.lon == proxy2.fix_lon(-160)
+    assert pclass.elev == 0
     np.testing.assert_array_equal(pclass.values.values,
         pdata['Aus_16'][(pdata.index >= start) &
                         (pdata.index <= end) &
@@ -136,6 +139,7 @@ def test_pages_load_site_no_preloaded(meta, pdata, psm_dat):
     assert pclass.type == r'Coral_d18O'
     assert pclass.lat == -21
     assert pclass.lon == proxy2.fix_lon(-160)
+    assert pclass.elev == 0
     np.testing.assert_array_equal(pclass.values.values,
         pdata['Aus_16'][(pdata.index >= start) &
                         (pdata.index <= end) &
@@ -198,6 +202,9 @@ def test_pages_load_all_specific_regions(meta, pdata, psm_dat):
     drange = [1970, 2000]
     start, end = drange
 
+    tmp_regions = cfg.proxies.pages.regions
+    tmp_filter = cfg.proxies.pages.simple_filters['PAGES 2k Region']
+
     cfg.proxies.pages.regions = ['Australasia', 'Arctic', 'Europe']
     cfg.proxies.pages.simple_filters['PAGES 2k Region'] = \
         cfg.proxies.pages.regions
@@ -214,12 +221,17 @@ def test_pages_load_all_specific_regions(meta, pdata, psm_dat):
         region = meta['PAGES 2k Region'][meta['PAGES ID'] == p.id].iloc[0]
         assert region not in not_list
 
+    cfg.proxies.pages.regions = tmp_regions
+    cfg.proxies.pages.simple_filters['PAGES 2k Region'] = tmp_filter
     reload(cfg)
 
 def test_pages_load_all_specific_type(meta, pdata, psm_dat):
     psm_kwargs = {'psm_data': psm_dat}
     drange = [1970, 2000]
     start, end = drange
+
+    tmp_assim2 = cfg.proxies.pages.proxy_assim2
+    tmp_order = cfg.proxies.pages.proxy_order
 
     cfg.proxies.pages.proxy_assim2 = {
         'Tree ring_Width': ['Ring width',
@@ -243,6 +255,9 @@ def test_pages_load_all_specific_type(meta, pdata, psm_dat):
 
     with pytest.raises(KeyError):
         bytype['Tree ring_Density']
+
+    cfg.proxies.pages.proxy_assim2 = tmp_assim2
+    cfg.proxies.pages.proxy_order = tmp_order
 
     reload(cfg)
 

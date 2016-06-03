@@ -29,6 +29,7 @@ def dummy_proxy(pid='Aus_01', ptype='Tree ring_Width'):
     p.type = ptype
     p.lat = -42
     p.lon = 147
+    p.elev = 0
 
     return p
 
@@ -81,6 +82,7 @@ def test_linear_calibrate_pasm_data_config_file_not_found():
 
 
 def test_linear_corr_below_rcrit(psm_dat):
+    cfg.psm.linear.psm_r_crit = 0.2
     proxy = dummy_proxy(pid='SAm_19', ptype='Tree ring_Width')
     with pytest.raises(ValueError):
         psms.LinearPSM(cfg, proxy, psm_data=psm_dat)
