@@ -7,7 +7,7 @@ sys.path.append('../')
 import pytest
 import cPickle
 import LMR_psms as psms
-import LMR_config as cfg
+import test_config as cfg
 
 
 @pytest.fixture()

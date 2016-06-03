@@ -53,8 +53,8 @@ class core:
     """
     nexp = 'test'
 
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    # lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
@@ -393,10 +393,15 @@ class psm:
 
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
+        # For Roberts Files use below
+        # pre_calib_datafile = join(core.lmr_path,
+        #                           'PSM',
+        #                           'PSMs_'+'-'.join(proxies.use_from)+'_' +
+        #                           datatag_calib + '.pckl')
+        # For Andre's Files use below
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
-                                  'PSMs_'+'-'.join(proxies.use_from)+'_' +
-                                  datatag_calib + '.pckl')
+                                  'PSMs_' + datatag_calib + '.pckl')
 
         psm_r_crit = 0.2
 
