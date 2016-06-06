@@ -51,26 +51,26 @@ class core:
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
-    nexp = 'test'
+    nexp = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens'
 
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    # lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1800, 2000]
-    nens = 100
-    iter_range = [0, 1]
+    recon_period = [1900, 1960]
+    nens = 10
+    iter_range = [0, 0]
     curr_iter = iter_range[0]
     loc_rad = None
 
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    # datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
     #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
-    # archive_dir = '/home/chaos2/wperkins/data/LMR/output/archive'
-    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
+    # archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     # archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
 class proxies:
@@ -393,12 +393,18 @@ class psm:
 
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
+        # Robert's style below
+        # pre_calib_datafile_T = join(core.lmr_path,
+        #                             'PSM',
+        #                             'PSMs_'+'-'.join(proxies.use_from)+'_' +
+        #                             datatag_calib_T + '.pckl')
+
+        # Andre's style below
         pre_calib_datafile = join(core.lmr_path,
                                   'PSM',
-                                  'PSMs_'+'-'.join(proxies.use_from)+'_' +
-                                  datatag_calib + '.pckl')
+                                  'PSMs_' + datatag_calib + '.pckl')
 
-        psm_r_crit = 0.0
+        psm_r_crit = 0.2
 
     class linear_TorP:
         """
@@ -443,14 +449,16 @@ class psm:
 
         datadir_calib = join(core.lmr_path, 'data', 'analyses')
         dataformat_calib = 'NCD'
-        pre_calib_datafile_T = join(core.lmr_path,
-                                    'PSM',
-                                    'PSMs_'+'-'.join(proxies.use_from)+'_' +
-                                    datatag_calib_T + '.pckl')
+        # Robert's style below
+        # pre_calib_datafile_T = join(core.lmr_path,
+        #                             'PSM',
+        #                             'PSMs_'+'-'.join(proxies.use_from)+'_' +
+        #                             datatag_calib_T + '.pckl')
+
+        # Andre's style below
         pre_calib_datafile_P = join(core.lmr_path,
                                     'PSM',
-                                    'PSMs_'+'-'.join(proxies.use_from)+'_' +
-                                    datatag_calib_P + '.pckl')
+                                    'PSMs_' + datatag_calib_P + '.pckl')
 
         psm_r_crit = 0.0
 

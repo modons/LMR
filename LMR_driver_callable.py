@@ -59,7 +59,7 @@ def LMR_driver_callable(cfg=None):
 
     # verbose controls print comments (0 = none; 1 = most important;
     #  2 = many; >=3 = all)
-    verbose = 3
+    verbose = 1
 
     nexp = core.nexp
     workdir = core.datadir_output
@@ -208,12 +208,12 @@ def LMR_driver_callable(cfg=None):
             nlat_new = np.shape(lat_new)[0]
             nlon_new = np.shape(lat_new)[1]
 
-            print ('=> Full array:      ' + np.min(var_array_full) +
-                   np.max(var_array_full) + np.mean(var_array_full) +
-                   np.std(var_array_full))
-            print ('=> Truncated array: ' + np.min(var_array_new) +
-                   np.max(var_array_new) + np.mean(var_array_new) +
-                   np.std(var_array_new))
+            print ('=> Full array:      ' + str(np.min(var_array_full)) +
+                   str(np.max(var_array_full)) + str(np.mean(var_array_full)) +
+                   str(np.std(var_array_full)))
+            print ('=> Truncated array: ' + str(np.min(var_array_new)) +
+                   str(np.max(var_array_new)) + str(np.mean(var_array_new)) +
+                   str(np.std(var_array_new)))
 
             # corresponding indices in truncated state vector
             ibeg_new = Nx
