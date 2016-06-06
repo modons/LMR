@@ -65,6 +65,15 @@ def test_default_configuration_psm_linear(cfg):
     assert cfg_object.core.lmr_path in cfg_object.psm.linear.datadir_calib
 
 
+def test_default_configuration_psm_linear_t_or_p(cfg):
+    cfg_object = cfg.Config()
+
+    assert hasattr(cfg_object.psm, 'linear_TorP')
+    assert hasattr(cfg_object.psm.linear_TorP, 'datadir_calib')
+    assert hasattr(cfg_object.psm.linear_TorP, 'pre_calib_datafile_T')
+    assert hasattr(cfg_object.psm.linear_TorP, 'pre_calib_datafile_P')
+
+
 # test default and then changed default
 def test_default_configuration_change_default_path(cfg):
     orig_path = cfg.core.lmr_path

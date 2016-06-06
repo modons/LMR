@@ -466,19 +466,7 @@ class psm(object):
         # datatag_calib = 'GPCC'
         # datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
-        datadir_calib = None
         dataformat_calib = 'NCD'
-
-        # Robert's style below
-        # pre_calib_datafile_T = join(core.lmr_path,
-        #                             'PSM',
-        #                             'PSMs_'+'-'.join(proxies.use_from)+'_' +
-        #                             datatag_calib_T + '.pckl')
-
-        # Andre's style below
-        pre_calib_datafile = join(core.lmr_path,
-                                  'PSM',
-                                  'PSMs_' + datatag_calib + '.pckl')
 
         psm_r_crit = 0.2
 
@@ -501,7 +489,7 @@ class psm(object):
             else:
                 self.pre_calib_datafile = pre_calib_datafile
 
-    class _linear_TorP:
+    class _linear_TorP(_linear):
         """
         Parameters for the linear fit PSM.
 
@@ -539,25 +527,19 @@ class psm(object):
         # datatag_calib_P = 'GPCC'
         # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
         # or
-        datatag_calib = 'GPCC'
-        datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
-        dataformat_calib = 'NCD'
-        # Robert's style below
-        # pre_calib_datafile_T = join(core.lmr_path,
-        #                             'PSM',
-        #                             'PSMs_'+'-'.join(proxies.use_from)+'_' +
-        #                             datatag_calib_T + '.pckl')
+        datatag_calib_P = 'GPCC'
+        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
-        # Andre's style below
-        pre_calib_datafile_P = join(core.lmr_path,
-                                    'PSM',
-                                    'PSMs_' + datatag_calib + '.pckl')
+        dataformat_calib = 'NCD'
 
         psm_r_crit = 0.0
 
-        def __init__(self, datadir_calib=None, pre_calib_datafile=None):
-            self.datatag_calib = self.datatag_calib
-            self.datafile_calib = self.datafile_calib
+        def __init__(self, datadir_calib=None, pre_calib_datafile_T=None,
+                     pre_calib_datafile_P=None):
+            self.datatag_calib_T = self.datatag_calib_T
+            self.datafile_calib_T = self.datafile_calib_T
+            self.datatag_calib_P = self.datatag_calib_P
+            self.datafile_calib_P = self.datafile_calib_P
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
 
@@ -566,18 +548,30 @@ class psm(object):
             else:
                 self.datadir_calib = datadir_calib
 
-            if pre_calib_datafile is None:
-                filename = 'PSMs_'+self.datatag_calib+'.pckl'
-                self.pre_calib_datafile = join(core.lmr_path,
-                                               'PSM',
-                                               filename)
+            if pre_calib_datafile_T is None:
+                filename_t = 'PSMs_' + '-'.join(proxies.use_from) + '_' + \
+                             self.datatag_calib_T + '.pckl'
+                self.pre_calib_datafile_T = join(core.lmr_path,
+                                                 'PSM',
+                                                 filename_t)
             else:
-                self.pre_calib_datafile = pre_calib_datafile
+                self.pre_calib_datafile_T = pre_calib_datafile_T
+
+            if pre_calib_datafile_P is None:
+                filename_p = 'PSMs_' + '-'.join(proxies.use_from) + '_' + \
+                             self.datatag_calib_P + '.pckl'
+                self.pre_calib_datafile_P = join(core.lmr_path,
+                                                 'PSM',
+                                                 filename_p)
+            else:
+                self.pre_calib_datafile_P = pre_calib_datafile_P
 
     def __init__(self, **kwargs):
         self.use_psm = self.use_psm
         self.linear = self._linear(**kwargs)
-        self.linear_TorP = self._linear_TorP(**kwargs)
+
+        # TODO: had to take kwargs out, need to figure out a way to structure
+        self.linear_TorP = self._linear_TorP()
 
 
 class prior(object):
