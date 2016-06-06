@@ -1,4 +1,21 @@
+"""
+Module: LMR_prior.py
 
+Purpose: Contains definitions of classes defining the various sources
+         (i.e. model simulations and reanalyses) which may be used as to
+         populate the prior in the LMR. Also contains the code used to 
+         randomly pick model states along the temporal domain to populate
+         the prior ensemble. 
+
+Originator: Robert Tardif | Dept. of Atmospheric Sciences, Univ. of Washington
+                          | January 2015
+
+Revisions: 
+          - Added the ERA20CM (ECMWF 20th century ensemble simulation) as a 
+            possible source of prior data to be used by the LMR.
+            [R. Tardif, U. of Washington, December 2015]
+
+"""
 # -------------------------------------------------------------------------------
 # *** Prior source assignment  --------------------------------------------------
 # -------------------------------------------------------------------------------
@@ -20,6 +37,9 @@ def prior_assignment(iprior):
         prior_object = prior_20cr()
     elif iprior == 'era20c':
         prior_object = prior_era20c()
+    elif iprior == 'era20cm':
+        prior_object = prior_era20cm()
+
 
     return prior_object
 
@@ -59,7 +79,7 @@ class prior_master(object):
             dct = {}
             timedim.append(len(self.prior_dict[var]['years']))
             spacecoords = self.prior_dict[var]['spacecoords']
-            #print '==>', spacecoords
+            #print '==>', var, spacecoords
             if spacecoords:
                 #print 'spacecoords is not None: variable with space coordinates'
                 dim1, dim2 = spacecoords
@@ -83,6 +103,8 @@ class prior_master(object):
             Nx = Nx + (ndimtot)               
 
         # Looped through all state variables, now a summary:
+        print ' '
+        print 'State vector information:'
         print 'Nx =', Nx
         print 'state_vect_info=', state_vect_info
 
@@ -104,7 +126,6 @@ class prior_master(object):
         seed(prior_cfg.seed)
         ind_ens = sample(range(ntime), self.Nens)
         self.prior_sample_indices = ind_ens
-
 
 
         # To keep spatial coords of gridpoints (needed geo. information)
@@ -182,7 +203,7 @@ class prior_ccsm4_last_millenium(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
         return
 
 # class for the CCSM4 Pre-Industrial Control simulation
@@ -190,7 +211,7 @@ class prior_ccsm4_preindustrial_control(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
         return
 
 # class for the MPI-ESM-P Last Millenniun simulation
@@ -198,7 +219,7 @@ class prior_mpi_esm_p_last_millenium(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
         return
 
 # class for the GFDL-CM3 Pre-Industrial Control simulation
@@ -206,7 +227,7 @@ class prior_gfdl_cm3_preindustrial_control(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
         return
 
 # class for NOAA's 20th century reanalysis (20CR)
@@ -214,7 +235,7 @@ class prior_20cr(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
         return
 
 # class for ECMWF's 20th century reanalysis (ERA20C)
@@ -222,6 +243,14 @@ class prior_era20c(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
+        return
+
+# class for ECMWF's 20th century model ensemble (ERA20CM)
+class prior_era20cm(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_CMIP5_model_ensemble
+        self.prior_dict = read_gridded_data_CMIP5_model_ensemble(self.prior_datadir,self.prior_datafile,self.statevars)
         return
 

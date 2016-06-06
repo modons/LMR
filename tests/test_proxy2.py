@@ -9,7 +9,7 @@ import pytest
 import cPickle
 import numpy as np
 import LMR_proxy_pandas_rework as proxy2
-import LMR_config as cfg
+import test_config as cfg
 from itertools import izip
 
 
@@ -36,6 +36,7 @@ def dummy_proxy(request):
     p.values = range(11)
     p.lat = 45
     p.lon = 210
+    p.elev = 0
     p.time = range(1950, 1961)
 
     return p
@@ -72,7 +73,7 @@ def test_pages_init(psm_dat, dummy_proxy):
     cfg_obj = cfg.Config()
     p = dummy_proxy
     pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr, p.end_yr,
-                               p.lat, p.lon, p.values, p.time,
+                               p.lat, p.lon, p.elev, p.values, p.time,
                                **{'psm_data': psm_dat})
 
     assert pclass.id == p.pid
@@ -82,6 +83,7 @@ def test_pages_init(psm_dat, dummy_proxy):
     assert pclass.values == p.values
     assert pclass.lat == p.lat
     assert pclass.lon == p.lon
+    assert pclass.elev == p.elev
     assert pclass.time == p.time
     assert hasattr(pclass, 'psm')
 
@@ -90,8 +92,9 @@ def test_pages_empty_values(psm_dat, dummy_proxy):
     cfg_obj = cfg.Config()
     with pytest.raises(ValueError):
         p = dummy_proxy
-        pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, [], p.time,
+        pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr,
+                                   p.end_yr,
+                                   p.lat, p.lon, p.elev, [], p.time,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -99,8 +102,9 @@ def test_pages_none_values(psm_dat, dummy_proxy):
     cfg_obj = cfg.Config()
     with pytest.raises(ValueError):
         p = dummy_proxy
-        pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, None, p.time,
+        pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr,
+                                   p.end_yr,
+                                   p.lat, p.lon, p.elev, None, p.time,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -109,8 +113,9 @@ def test_pages_time_values_len_mismatch(psm_dat, dummy_proxy):
     with pytest.raises(AssertionError):
         p = dummy_proxy
         time = p.time[0:-2]
-        pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr, p.end_yr,
-                                   p.lat, p.lon, p.values, time,
+        pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr,
+                                   p.end_yr,
+                                   p.lat, p.lon, p.elev, p.values, time,
                                    psm_kwargs={'psm_data': psm_dat})
 
 
@@ -127,6 +132,7 @@ def test_pages_load_site(meta, pdata, psm_dat):
     assert pclass.type == r'Coral_d18O'
     assert pclass.lat == -21
     assert pclass.lon == proxy2.fix_lon(-160)
+    assert pclass.elev == 0
     np.testing.assert_array_equal(pclass.values.values,
         pdata['Aus_16'][(pdata.index >= start) &
                         (pdata.index <= end) &
@@ -144,6 +150,7 @@ def test_pages_load_site_no_preloaded(meta, pdata, psm_dat):
     assert pclass.type == r'Coral_d18O'
     assert pclass.lat == -21
     assert pclass.lon == proxy2.fix_lon(-160)
+    assert pclass.elev == 0
     np.testing.assert_array_equal(pclass.values.values,
         pdata['Aus_16'][(pdata.index >= start) &
                         (pdata.index <= end) &

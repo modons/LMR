@@ -1,7 +1,27 @@
 """
-Module containing proxy classes.  Rewritten by AndreP to incorporate features
-from the original LMR_proxy code using OOP and Pandas. Is used by the driver
-but not by verification scripts.
+Module: LMR_proxy_pandas_rework.py
+
+Purpose: Module containing various classes associated with proxy types to be
+         assimilated in the LMR, as well as numerous functionalities for
+         selection of proxy types/sites to be included in the reanalysis.
+
+         Rewritten by AndreP to incorporate features from the original
+         LMR_proxy code using OOP and Pandas. Is used by the driver but not by
+         verification scripts.
+
+Originator: Andre Perkins, U. of Washington.
+
+Revisions:
+         - Added capability to filter uploaded *NCDC proxies* according to the
+           database they are included in (PAGES1, PAGES2, or LMR_FM). This
+           information is found in the metadata, as extracted from the
+           NCDC-templated text files.
+           [ R. Tardif, U. Washington, March 2016 ]
+
+         - Added capability to filter out *NCDC proxies* listed in a blacklist.
+           This is mainly used to prevent the assimilation of chronologies known
+           to be duplicates.
+           [ R. Tardif, U. Washington, March 2016 ]
 """
 
 import LMR_psms
@@ -12,6 +32,7 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from random import sample, seed
 from copy import deepcopy
+
 
 class ProxyManager:
     """
@@ -47,7 +68,7 @@ class ProxyManager:
         for proxy_class_key in config.proxies.use_from:
             pclass = get_proxy_class(proxy_class_key)
 
-            #Get PSM kwargs
+            # Get PSM kwargs
             proxy_psm_key = config.psm.use_psm[proxy_class_key]
             psm_class = LMR_psms.get_psm_class(proxy_psm_key)
             psm_kwargs = psm_class.get_kwargs(config)
@@ -65,7 +86,7 @@ class ProxyManager:
         proxy_frac = config.proxies.proxy_frac
         nsites = len(self.all_proxies)
 
-        # Sample from all proxies if specified
+        # Sample subset from all proxies if specified
         if proxy_frac < 1.0:
 
             nsites_assim = int(nsites * proxy_frac)
@@ -154,6 +175,8 @@ class BaseProxyObject:
         Latitude of proxy site
     lon: float
         Longitude of proxy site
+    elev: float
+        Elevation/depth of proxy site
     time: ndarray
         List of times for which proxy contains valid data
     psm_obj: BasePSM like
@@ -171,6 +194,7 @@ class BaseProxyObject:
     end_yr
     lat
     lon
+    elev
     values
     time
     psm_kwargs: dict(unpacked)
@@ -184,7 +208,7 @@ class BaseProxyObject:
     __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
-                 lat, lon, values, time, **psm_kwargs):
+                 lat, lon, elev, values, time, **psm_kwargs):
 
         if (values is None) or len(values) == 0:
             raise ValueError('No proxy data given for object initialization')
@@ -198,6 +222,7 @@ class BaseProxyObject:
         self.values = values
         self.lat = lat
         self.lon = fix_lon(lon)
+        self.elev = elev
         self.time = time
 
         # Retrieve appropriate PSM function
@@ -320,6 +345,7 @@ class ProxyPages(BaseProxyObject):
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
         lon = site_meta['Lon (E)'].iloc[0]
+        elev = 0.0 # elev not info available in PAGES2kS1 data
         site_data = data_src[site]
         values = site_data[(site_data.index >= start) &
                            (site_data.index <= finish)]
@@ -330,7 +356,7 @@ class ProxyPages(BaseProxyObject):
         if len(values) == 0:
             raise ValueError('No observations in specified time range.')
 
-        return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon,
+        return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
                    values, times, **psm_kwargs)
 
     @classmethod
@@ -419,6 +445,170 @@ class ProxyPages(BaseProxyObject):
         # Constant error for now
         return 0.1
 
+
+class ProxyNCDC(BaseProxyObject):
+
+    @staticmethod
+    def get_psm_obj(config):
+        psm_key = config.psm.use_psm['NCDC']
+        return LMR_psms.get_psm_class(psm_key)
+
+    @classmethod
+    @augment_docstr
+    def load_site(cls, config, site, data_range, meta_src=None, data_src=None,
+                  **psm_kwargs):
+        """%%aug%%
+
+        Expects meta_src, data_src to be pickled pandas DataFrame objects.
+        """
+
+        #
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.NCDC.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.NCDC.datafile_proxy)
+        start, finish = data_range
+
+        site_meta = meta_src[meta_src['NCDC ID'] == site]
+        pid = site_meta['NCDC ID'].iloc[0]
+        pmeasure = site_meta['Proxy measurement'].iloc[0]
+        NCDC_type = site_meta['Archive type'].iloc[0]
+        proxy_type = config.proxies.NCDC.proxy_type_mapping[(NCDC_type,
+                                                              pmeasure)]
+        start_yr = site_meta['Youngest (C.E.)'].iloc[0]
+        end_yr = site_meta['Oldest (C.E.)'].iloc[0]
+        lat = site_meta['Lat (N)'].iloc[0]
+        lon = site_meta['Lon (E)'].iloc[0]
+        elev = site_meta['Elev'].iloc[0]
+        site_data = data_src[site]
+        values = site_data[(site_data.index >= start) &
+                           (site_data.index <= finish)]
+        # Might need to remove following line
+        values = values[values.notnull()]
+        times = values.index.values
+
+        if len(values) == 0:
+            raise ValueError('No observations in specified time range.')
+
+        return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
+                   values, times, **psm_kwargs)
+
+    @classmethod
+    @augment_docstr
+    def load_all(cls, config, data_range, meta_src=None,
+                 data_src=None, **psm_kwargs):
+        """%%aug%%
+
+        Expects meta_src, data_src to be pickled pandas DataFrame objects.
+        """
+
+        # Load source data files
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.NCDC.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.NCDC.datafile_proxy)
+
+        filters = config.proxies.NCDC.simple_filters
+        proxy_order = config.proxies.NCDC.proxy_order
+        ptype_filters = config.proxies.NCDC.proxy_assim2
+        dbase_filters = config.proxies.NCDC.database_filter
+        proxy_blacklist = config.proxies.NCDC.proxy_blacklist
+
+        # initial mask all true before filtering
+        useable = meta_src[meta_src.columns[0]] == 0
+        useable |= True
+
+        # Find indices matching simple filter specifications
+        for colname, filt_list in filters.iteritems():
+            simple_mask = meta_src[colname] == 0
+            simple_mask &= False
+
+            for value in filt_list:
+                simple_mask |= meta_src[colname] == value
+
+            useable &= simple_mask
+
+        # Find indices matching **database filter** specifications
+        database_col = 'Databases'
+        # define boolean array with right dimension & set all to True
+        dbase_mask = meta_src[database_col] != 0
+
+        # dbase_filters not "None" or empty list
+        if dbase_filters:
+            for i in range(len(meta_src[database_col])):                
+                if meta_src[database_col][i]:
+                    tmp_mask = set(meta_src[database_col][i])
+                    tmp_disjoint = tmp_mask.isdisjoint(dbase_filters)
+                    dbase_mask[i] = tmp_disjoint
+                else:
+                    dbase_mask[i] = False
+
+        # Define mask of proxies listed in a user-defined "blacklist"
+        # (see LMR_config).
+        # boolean array set with right dimension & all set to True
+        blacklist_mask = meta_src['NCDC ID'] != ' '
+        if proxy_blacklist:
+            # If site listed in blacklist, modify corresponding elements of
+            # boolean array to False
+            for pbl in proxy_blacklist:
+                tmp = meta_src['NCDC ID'].map(lambda x: x.startswith(pbl))
+                inds = meta_src['NCDC ID'][tmp].index
+                blacklist_mask[inds] = False
+
+        # Create proxy id lists
+        proxy_id_by_type = {}
+        all_proxy_ids = []
+
+        type_col = 'Archive type'
+        measure_col = 'Proxy measurement'
+        for name in proxy_order:
+
+            type_mask = meta_src[type_col] == 0
+            type_mask |= True
+
+            # Filter to proxies of a certain type
+            ptype = name.split('_', 1)[0]
+            type_mask &= meta_src[type_col] == ptype
+
+            # Reduce to listed measures
+            measure_mask = meta_src[measure_col] == 0
+            measure_mask &= False
+
+            for measure in ptype_filters[name]:
+                measure_mask |= meta_src[measure_col] == measure
+
+            # Extract proxy ids using mask and append to lists
+            proxies = meta_src['NCDC ID'][measure_mask & type_mask &
+                                          dbase_mask & blacklist_mask &
+                                          useable].values
+            # If we have ids after filtering add them to the type list
+            if len(proxies) > 0:
+                proxy_id_by_type[name] = proxies.tolist()
+
+            all_proxy_ids += proxies.tolist()
+
+        # Create proxy objects list
+        all_proxies = []
+        for site in all_proxy_ids:
+            try:
+                pobj = cls.load_site(config, site, data_range,
+                                     meta_src=meta_src, data_src=data_src,
+                                     **psm_kwargs)
+                all_proxies.append(pobj)
+            except ValueError as e:
+                # Proxy had no obs or didn't meet psm r crit
+                for group in proxy_id_by_type.values():
+                    if site in group:
+                        group.remove(site)
+                        break  # Should only be one instance
+
+        return proxy_id_by_type, all_proxies
+
+    def error(self):
+        # Constant error for now
+        return 0.1
+
+
 def fix_lon(lon):
     """
     Fixes negative longitude values.
@@ -433,7 +623,7 @@ def fix_lon(lon):
     return lon
 
 
-_proxy_classes = {'pages': ProxyPages}
+_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC}
 
 def get_proxy_class(proxy_key):
     """

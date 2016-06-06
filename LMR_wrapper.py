@@ -1,21 +1,20 @@
-# ==============================================================================
-# Program: LMR_wrapper.py
-# 
-# Purpose: Wrapper around the callable version of LMR_driver
-#          prototype for Monte Carlo iterations
-#
-# Options: None. 
-#          Experiment parameters defined through namelist, 
-#          passed through object called "state"
-#   
-# Originators: Greg Hakim   | Dept. of Atmospheric Sciences, Univ. of Washington
-#                           | April 2015
-# 
-# Revisions: 
-#          R. Tardif (April 15 2015): ... 
-#
-# ==============================================================================
+"""
+Module: LMR_wrapper.py
 
+Purpose: Wrapper around the callable version of LMR_driver
+         prototype for Monte Carlo iterations
+
+Options: None. 
+         Experiment parameters defined through namelist, 
+         passed through object called "state"
+
+Originator: Greg Hakim   | Dept. of Atmospheric Sciences, Univ. of Washington
+                         | April 2015
+ 
+Revisions: 
+          - Adapted to OOP coding of proxy- and prior-related classes [A. Perkins, U. of Washington] 
+
+"""
 import os
 import numpy as np
 import datetime
@@ -37,7 +36,7 @@ if not os.path.isdir(expdir):
     os.system('mkdir {}'.format(expdir))
 
 # Monte-Carlo approach: loop over iterations (range of iterations defined in
-# namelist)
+# LMR_config)
 MCiters = np.arange(iter_range[0], iter_range[1]+1)
 for iter_num in MCiters:
 

@@ -1,14 +1,17 @@
-import glob
-import numpy as np
-from scipy import signal
-from spharm import Spharmt, getspecindx, regrid
-from math import radians, cos, sin, asin, sqrt
+"""
+Module: LMR_utils.py
 
-#==========================================================================================
-#
-# 
-#========================================================================================== 
+Purpose: Contains miscellaneous "utility" functions used throughout the LMR code, 
+         including verification modules.
 
+Originators: Greg Hakim & Robert Tardif | U. of Washington
+                                        | March 2015
+
+Revisions: 
+          - Added the get_distance function for more efficient calculation of distances
+            between lat/lon points on the globe. [R. Tardif, U. of Washington, January 2016]
+
+"""
 import glob
 import os
 import numpy as np
@@ -32,6 +35,47 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * np.arcsin(np.sqrt(a))
     km = 6367.0 * c
     return km
+
+def get_distance(lon_pt, lat_pt, lon_ref, lat_ref):
+    """
+    Vectorized calculation the great circle distances between lat-lon points 
+    on the Earth (lat/lon are specified in decimal degrees)
+
+    Input:
+    lon_pt , lat_pt  : longitude, latitude of site w.r.t. which distances 
+                       are to be calculated. Both should be scalars.
+    lon_ref, lat_ref : longitudes, latitudes of reference field
+                       (e.g. calibration dataset, reconstruction grid)
+                       May be scalar, 1D array.
+
+    Output: Returns array containing distances between (lon_pt, lat_pt) and all other points
+            in (lon_ref,lat_ref). Array has dimensions [dim(lon_ref),dim(lat_ref)].
+
+    Originator: R. Tardif, Atmospheric sciences, U. of Washington, January 2016
+
+    """
+
+    # Convert decimal degrees to radians 
+    lon_pt, lat_pt, lon_ref, lat_ref = map(np.radians, [lon_pt, lat_pt, lon_ref, lat_ref])
+
+
+    lon_dim = len(lon_ref)
+    lat_dim = len(lat_ref)
+    nbpts = lon_dim*lat_dim
+    
+    lats = np.array([lat_ref,]*lon_dim).transpose()
+    lons = np.array([lon_ref,]*lat_dim)
+
+    # Haversine formula using arrays as input
+    dlon = lons - lon_pt 
+    dlat = lats - lat_pt 
+
+    a = np.sin(dlat/2.)**2 + np.cos(lat_pt) * np.cos(lats) * np.sin(dlon/2.)**2
+    c = 2. * np.arcsin(np.sqrt(a))
+    km = 6367.0 * c
+
+    return km
+
 
 
 def year_fix(t):
