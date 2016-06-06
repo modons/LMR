@@ -5,6 +5,8 @@ sys.path.append('../')
 import LMR_config as cfg
 import LMR_prior
 import numpy as np
+import pytest
+
 
 def test_prior_seed():
     cfg_obj = cfg.Config()
@@ -21,6 +23,7 @@ def test_prior_seed():
     X.prior_datafile = datafile_prior
     X.statevars = state_variables
     X.Nens = 1
+    X.detrend = False
 
     X.populate_ensemble(prior_source, prior_cfg)
 
@@ -30,6 +33,7 @@ def test_prior_seed():
     X2.prior_datafile = datafile_prior
     X2.statevars = state_variables
     X2.Nens = 1
+    X2.detrend = False
 
     X2.populate_ensemble(prior_source, prior_cfg)
 

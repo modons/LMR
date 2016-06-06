@@ -21,6 +21,7 @@ Revisions:
 """
 
 from os.path import join
+from copy import deepcopy
 
 class wrapper(object):
     """
@@ -31,15 +32,15 @@ class wrapper(object):
     multi_seed: list(int), None
         List of RNG seeds to be used during a reconstruction for each
         realization.  This overrides the 'core.seed' parameter.
-    iter_range: list(int)
+    iter_range: tuple(int)
         Range of Monte-Carlo iterations to perform
     """
 
     multi_seed = range(3)
-    iter_range = [0, 2]
+    iter_range = (0, 2)
 
     def __init__(self):
-        self.multi_seed = self.multi_seed
+        self.multi_seed = list(self.multi_seed)
         self.iter_range = self.iter_range
 
 class core(object):
@@ -57,7 +58,7 @@ class core(object):
     clean_start: bool
         Delete existing files in output directory (otherwise they will be used
         as the prior!)
-    recon_period: list(int)
+    recon_period: tuple(int)
         Time period for reconstruction
     nens: int
         Ensemble size
@@ -71,6 +72,7 @@ class core(object):
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
     """
+
     nexp = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens'
 
     lmr_path = '/home/chaos2/wperkins/data/LMR'
@@ -79,17 +81,14 @@ class core(object):
     clean_start = True
     use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = [1900, 1960]
+    recon_period = (1900, 1960)
     nens = 10
     seed = None
-    iter_range = [0, 0]
-    curr_iter = iter_range[0]
     loc_rad = None
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
     # datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
-    #datadir_output  = '/home/disk/ice4/hakim/svnwork/python-lib/trunk/src/ipython_notebooks/data'
 
     archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
     # archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
@@ -138,7 +137,7 @@ class proxies(object):
     # ---------------
     # PAGES2k proxies
     # ---------------
-    class _pages:
+    class _pages(object):
         """
         Parameters for PagesProxy class
 
@@ -219,6 +218,10 @@ class proxies(object):
             'Speleothem_All': ['Lamina thickness'],
             }
 
+        # A blacklist on proxy records, to prevent assimilation of chronologies
+        # known to be duplicates
+        proxy_blacklist = []
+
         def __init__(self, datadir_proxy=None):
             if datadir_proxy is None:
                 self.datadir_proxy = join(core.lmr_path, 'data', 'proxies')
@@ -228,13 +231,14 @@ class proxies(object):
             self.datafile_proxy = join(self.datadir_proxy,
                                        self.datafile_proxy)
             self.metafile_proxy = join(self.datadir_proxy,
-                                       self.metafile_proxy)\
+                                       self.metafile_proxy)
 
             self.dataformat_proxy = self.dataformat_proxy
-            self.regions = self.regions
+            self.regions = list(self.regions)
             self.proxy_resolution = self.proxy_resolution
-            self.proxy_order = self.proxy_order
-            self.proxy_assim2 = self.proxy_assim2
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.proxy_blacklist = list(self.proxy_blacklist)
 
             # Create mapping for Proxy Type/Measurement Type to type names above
             self.proxy_type_mapping = {}
@@ -247,32 +251,21 @@ class proxies(object):
             self.simple_filters = {'PAGES 2k Region': self.regions,
                                    'Resolution (yr)': self.proxy_resolution}
 
-        # A blacklist on proxy records, to prevent assimilation of chronologies
-        # known to be duplicates
-        proxy_blacklist = []
-
-    # Initialize subclasses with all attributes
-    def __init__(self, **kwargs):
-        self.use_from = self.use_from
-        self.proxy_frac = self.proxy_frac
-        self.seed = core.seed
-        self.pages = self._pages(**kwargs)
-
     # ---------------
     # NCDC proxies
     # ---------------
-    class NCDC:
+    class _ncdc(object):
         """
         Parameters for NCDCProxy class
 
         Attributes
         ----------
         datadir_proxy: str
-            Absolute path to proxy data
+            Absolute path to proxy data *or* None if using default lmf_path
         datafile_proxy: str
-            Absolute path to proxy records file
+            proxy records filename
         metafile_proxy: str
-            Absolute path to proxy meta data
+            proxy metadata filename
         dataformat_proxy: str
             File format of the proxy data
         regions: list(str)
@@ -298,12 +291,8 @@ class proxies(object):
             List mapping proxy metadata sheet columns to a list of values
             to filter by.
         """
-
-        datadir_proxy = join(core.lmr_path, 'data', 'proxies')
-        datafile_proxy = join(datadir_proxy,
-                              'NCDC_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'NCDC_Metadata.df.pckl')
+        datafile_proxy = 'Pages2k_Proxies.df.pckl'
+        metafile_proxy = 'Pages2k_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
@@ -380,24 +369,48 @@ class proxies(object):
                                               'MXD'],
             }
 
-        # Create mapping for Proxy Type/Measurement Type to type names above
-        proxy_type_mapping = {}
-        for type, measurements in proxy_assim2.iteritems():
-            # Fetch proxy type name that occurs before underscore
-            type_name = type.split('_', 1)[0]
-            for measure in measurements:
-                proxy_type_mapping[(type_name, measure)] = type
-
-        #simple_filters = {'NCDC Region': regions,
-        #                  'Resolution (yr)': proxy_resolution}
-        simple_filters = {'Resolution (yr)': proxy_resolution}
-
         # A blacklist on proxy records, to prevent assimilation of chronologies
         # known to be duplicates.
         # proxy_blacklist = []
         proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
                            '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
 
+        def __init__(self, datadir_proxy=None):
+            if datadir_proxy is None:
+                self.datadir_proxy = join(core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = datadir_proxy
+
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)
+
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = list(self.regions)
+            self.proxy_resolution = self.proxy_resolution
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.database_filter = list(self.database_filter)
+            self.proxy_blacklist = list(self.proxy_blacklist)
+
+            self.proxy_type_mapping = {}
+            for ptype, measurements in self.proxy_assim2.iteritems():
+                # Fetch proxy type name that occurs before underscore
+                type_name = ptype.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = ptype
+
+            self.simple_filters = {'NCDC Region': self.regions,
+                                   'Resolution (yr)': self.proxy_resolution}
+
+    # Initialize subclasses with all attributes
+    def __init__(self, **kwargs):
+        self.use_from = self.use_from
+        self.proxy_frac = self.proxy_frac
+        self.seed = core.seed
+        self.pages = self._pages(**kwargs)
+        self.ncdc = self._ncdc(**kwargs)
 
 
 class psm(object):
@@ -453,8 +466,9 @@ class psm(object):
         # datatag_calib = 'GPCC'
         # datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
-        datadir_calib = join(core.lmr_path, 'data', 'analyses')
+        datadir_calib = None
         dataformat_calib = 'NCD'
+
         # Robert's style below
         # pre_calib_datafile_T = join(core.lmr_path,
         #                             'PSM',
@@ -525,10 +539,8 @@ class psm(object):
         # datatag_calib_P = 'GPCC'
         # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
         # or
-        datatag_calib_P = 'GPCC'
-        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
-
-        datadir_calib = join(core.lmr_path, 'data', 'analyses')
+        datatag_calib = 'GPCC'
+        datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
         dataformat_calib = 'NCD'
         # Robert's style below
         # pre_calib_datafile_T = join(core.lmr_path,
@@ -539,16 +551,36 @@ class psm(object):
         # Andre's style below
         pre_calib_datafile_P = join(core.lmr_path,
                                     'PSM',
-                                    'PSMs_' + datatag_calib_P + '.pckl')
+                                    'PSMs_' + datatag_calib + '.pckl')
 
         psm_r_crit = 0.0
+
+        def __init__(self, datadir_calib=None, pre_calib_datafile=None):
+            self.datatag_calib = self.datatag_calib
+            self.datafile_calib = self.datafile_calib
+            self.dataformat_calib = self.dataformat_calib
+            self.psm_r_crit = self.psm_r_crit
+
+            if datadir_calib is None:
+                self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = datadir_calib
+
+            if pre_calib_datafile is None:
+                filename = 'PSMs_'+self.datatag_calib+'.pckl'
+                self.pre_calib_datafile = join(core.lmr_path,
+                                               'PSM',
+                                               filename)
+            else:
+                self.pre_calib_datafile = pre_calib_datafile
 
     def __init__(self, **kwargs):
         self.use_psm = self.use_psm
         self.linear = self._linear(**kwargs)
+        self.linear_TorP = self._linear_TorP(**kwargs)
 
 
-class prior:
+class prior(object):
     """
     Parameters for the ensDA prior
 
@@ -612,8 +644,9 @@ class prior:
         self.prior_source = self.prior_source
         self.datafile_prior = self.datafile_prior
         self.dataformat_prior = self.dataformat_prior
-        self.state_variables = self.state_variables
+        self.state_variables = list(self.state_variables)
         self.psm_required_variables = self.psm_required_variables
+        self.detrend = self.detrend
         self.seed = core.seed
 
         if datadir_prior is None:

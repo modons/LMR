@@ -9,7 +9,7 @@ import pytest
 import cPickle
 import numpy as np
 import LMR_proxy_pandas_rework as proxy2
-import test_config as cfg
+import LMR_config as cfg
 from itertools import izip
 
 
