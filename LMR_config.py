@@ -36,11 +36,11 @@ class wrapper(object):
         Range of Monte-Carlo iterations to perform
     """
 
-    multi_seed = range(3)
-    iter_range = (0, 2)
+    multi_seed = None
+    iter_range = (0, 0)
 
     def __init__(self):
-        self.multi_seed = list(self.multi_seed)
+        self.multi_seed = self.multi_seed
         self.iter_range = self.iter_range
 
 class core(object):
@@ -73,17 +73,17 @@ class core(object):
         Absolute path to LMR reconstruction archive directory
     """
 
-    nexp = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens'
+    nexp = 'testdev_using_precip_and_temp_psm_no_precalc'
 
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
-    # lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    # lmr_path = '/home/chaos2/wperkins/data/LMR'
+    lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = True
+    use_precalc_ye = False
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = (1900, 1960)
     nens = 10
-    seed = None
+    seed = 0
     loc_rad = None
 
     datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
@@ -128,8 +128,8 @@ class proxies(object):
     # =============================
     # Which proxy database to use ?
     # =============================
-    use_from = ['pages']
-    # use_from = ['NCDC']
+    # use_from = ['pages']
+    use_from = ['NCDC']
 
     # proxy_frac = 1.0
     proxy_frac = 0.75
@@ -291,8 +291,8 @@ class proxies(object):
             List mapping proxy metadata sheet columns to a list of values
             to filter by.
         """
-        datafile_proxy = 'Pages2k_Proxies.df.pckl'
-        metafile_proxy = 'Pages2k_Metadata.df.pckl'
+        datafile_proxy = 'NCDC_Proxies.df.pckl'
+        metafile_proxy = 'NCDC_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
@@ -401,8 +401,7 @@ class proxies(object):
                 for measure in measurements:
                     self.proxy_type_mapping[(type_name, measure)] = ptype
 
-            self.simple_filters = {'NCDC Region': self.regions,
-                                   'Resolution (yr)': self.proxy_resolution}
+            self.simple_filters = {'Resolution (yr)': self.proxy_resolution}
 
     # Initialize subclasses with all attributes
     def __init__(self, **kwargs):
@@ -425,8 +424,8 @@ class psm(object):
         make more intricate proxy - psm relationships.
     """
 
-    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
-    # use_psm = {'pages': 'linear', 'NCDC': 'linear_TorP'}
+    # use_psm = {'pages': 'linear', 'NCDC': 'linear'}
+    use_psm = {'pages': 'linear', 'NCDC': 'linear_TorP'}
 
     class _linear(object):
         """
@@ -616,8 +615,8 @@ class prior(object):
     # datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
 
     dataformat_prior = 'NCD'
-    psm_required_variables = ['tas_sfc_Amon']
-    state_variables = ['tas_sfc_Amon']
+    psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon',

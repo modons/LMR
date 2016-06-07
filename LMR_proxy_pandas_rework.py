@@ -464,16 +464,16 @@ class ProxyNCDC(BaseProxyObject):
 
         #
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.NCDC.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.ncdc.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(config.proxies.NCDC.datafile_proxy)
+            data_src = load_data_frame(config.proxies.ncdc.datafile_proxy)
         start, finish = data_range
 
         site_meta = meta_src[meta_src['NCDC ID'] == site]
         pid = site_meta['NCDC ID'].iloc[0]
         pmeasure = site_meta['Proxy measurement'].iloc[0]
         NCDC_type = site_meta['Archive type'].iloc[0]
-        proxy_type = config.proxies.NCDC.proxy_type_mapping[(NCDC_type,
+        proxy_type = config.proxies.ncdc.proxy_type_mapping[(NCDC_type,
                                                               pmeasure)]
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
@@ -504,15 +504,15 @@ class ProxyNCDC(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.NCDC.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.ncdc.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(config.proxies.NCDC.datafile_proxy)
+            data_src = load_data_frame(config.proxies.ncdc.datafile_proxy)
 
-        filters = config.proxies.NCDC.simple_filters
-        proxy_order = config.proxies.NCDC.proxy_order
-        ptype_filters = config.proxies.NCDC.proxy_assim2
-        dbase_filters = config.proxies.NCDC.database_filter
-        proxy_blacklist = config.proxies.NCDC.proxy_blacklist
+        filters = config.proxies.ncdc.simple_filters
+        proxy_order = config.proxies.ncdc.proxy_order
+        ptype_filters = config.proxies.ncdc.proxy_assim2
+        dbase_filters = config.proxies.ncdc.database_filter
+        proxy_blacklist = config.proxies.ncdc.proxy_blacklist
 
         # initial mask all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
