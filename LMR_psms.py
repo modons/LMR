@@ -488,7 +488,7 @@ class LinearPSM(BasePSM):
         return load_cpickle(pre_calib_file)
 
 
-class LinearPSM_TorP(BasePSM):
+class LinearPSM_TorP(LinearPSM):
     """
     PSM based on linear regression w.r.t. temperature or precipitation
     

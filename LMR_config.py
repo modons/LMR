@@ -75,8 +75,8 @@ class core(object):
 
     nexp = 'testdev_using_precip_and_temp_psm_no_precalc'
 
-    # lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    lmr_path = '/home/chaos2/wperkins/data/LMR'
+    # lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
     use_precalc_ye = False

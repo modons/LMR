@@ -21,53 +21,61 @@ import LMR_config
 
 cfg = LMR_config.Config()
 
-print ('Loading prior data from {}'.format(cfg.prior.prior_source))
+print ('Starting Ye precalculation using prior data from '
+       '{}'.format(cfg.prior.prior_source))
 X = LMR_prior.prior_assignment(cfg.prior.prior_source)
 X.prior_datadir = cfg.prior.datadir_prior
 X.prior_datafile = cfg.prior.datafile_prior
 X.statevars = cfg.prior.psm_required_variables
-
-X.read_prior()
-annual_data = X.prior_dict['tas_sfc_Amon']['value']
+X.detrend = cfg.prior.detrend
 
 cfg.psm.linear.psm_r_crit = 0.0
 print 'Loading proxies...'
-psm_kwargs = LMR_psms.LinearPSM.get_kwargs(cfg)
-pages_pids, pages_pobjs =\
-    LMR_proxy_pandas_rework.ProxyPages.load_all(cfg,
-                                                [0, 2000],
-                                                **psm_kwargs)
+proxy_database = cfg.proxies.use_from[0]
+psm_key = cfg.psm.use_psm[proxy_database]
+psm_class = LMR_psms.get_psm_class(psm_key)
+psm_kwargs = psm_class.get_kwargs(cfg)
 
-print pages_pids
+proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
+proxy_ids_by_grp, proxy_objects = proxy_class.load_all(cfg,
+                                                       [0, 2000],
+                                                       **psm_kwargs)
 
-ye_out = np.zeros((len(pages_pobjs), annual_data.shape[0]))
-lon = X.prior_dict['tas_sfc_Amon']['lon']
-lat = X.prior_dict['tas_sfc_Amon']['lat']
+X.read_prior()
 
-print ('Calculating ye values for {:d} proxies.'.format(len(pages_pobjs)))
-for i, pobj in enumerate(pages_pobjs):
-    tmp_dat = pobj.psm_obj.get_close_grid_point_data(annual_data,
-                                                     lon,
-                                                     lat)
-    ye_out[i] = pobj.psm_obj.basic_psm(tmp_dat)
+for state_var in cfg.prior.psm_required_variables:
+    print 'Working on prior variable {}'.format(state_var)
+    annual_data = X.prior_dict[state_var]['value']
 
-pid_map = {pobj.id: idx
-           for pobj, idx in izip(pages_pobjs, xrange(len(pages_pobjs)))}
-out_fname = '{}_{}_{}.npz'.format(cfg.prior.prior_source,
-                                  cfg.psm.linear.datatag_calib,
-                                  'tas_sfc_Amon')
+    ye_out = np.zeros((len(proxy_objects), annual_data.shape[0]))
+    lon = X.prior_dict[state_var]['lon']
+    lat = X.prior_dict[state_var]['lat']
 
-precalc_ye_dir = 'precalc_ye_files'
-out_dir = os.path.join(cfg.prior.datadir_prior, precalc_ye_dir)
+    print ('Calculating ye values for {:d} proxies.'.format(len(proxy_objects)))
+    for i, pobj in enumerate(proxy_objects):
+        tmp_dat = pobj.psm_obj.get_close_grid_point_data(annual_data,
+                                                         lon,
+                                                         lat)
+        ye_out[i] = pobj.psm_obj.basic_psm(tmp_dat)
 
-if not os.path.exists(out_dir):
-    os.mkdir(out_dir)
+    pid_map = {pobj.id: idx
+               for pobj, idx in izip(proxy_objects, xrange(len(proxy_objects)))}
+    out_fname = '{}_{}_{}_{}.npz'.format(cfg.prior.prior_source,
+                                         cfg.psm.linear.datatag_calib,
+                                         proxy_database,
+                                         state_var)
 
-out_full = os.path.join(out_dir, out_fname)
-print 'Writing precalculated ye file: {}'.format(out_full)
-np.savez(out_full,
-         pid_index_map=pid_map,
-         ye_vals=ye_out)
+    precalc_ye_dir = 'precalc_ye_files'
+    out_dir = os.path.join(cfg.prior.datadir_prior, precalc_ye_dir)
+
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    out_full = os.path.join(out_dir, out_fname)
+    print 'Writing precalculated ye file: {}'.format(out_full)
+    np.savez(out_full,
+             pid_index_map=pid_map,
+             ye_vals=ye_out)
 
 
 
