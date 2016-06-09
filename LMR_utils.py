@@ -628,21 +628,33 @@ def augment_docstr(func):
 
 
 def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
-    load_fname = '{}_{}_{}.npz'.format(config.prior.prior_source,
-                                       config.psm.linear.datatag_calib,
-                                       'tas_sfc_Amon')
-    load_dir = os.path.join(config.prior.datadir_prior, 'precalc_ye_files')
-    load_abs_path = os.path.join(load_dir, load_fname)
+    # TODO: think about removing this extra mapping in the psm
 
-    precalc_file = np.load(load_abs_path)
-    pid_index_map = precalc_file['pid_index_map'][()] # [()] retrieves dict
-    ye_vals = precalc_file['ye_vals']
+    sensitivity_map = {'precipitation': 'pr_sfc_Amon',
+                       'temperature:': 'tas_sfc_Amon'}
 
-    # Indices of proxies we're assimilating this reconstruction
-    proxy_id_indices = [pid_index_map[pobj.id]
-                        for pobj in proxy_manager.sites_assim_proxy_objs()]
+    proxy_database = config.proxies.use_from[0]
+    precalc_pid_index_map = {}
+    precalc_ye_vals = {}
+    for state_var in config.prior.psm_required_variables:
+        load_fname = '{}_{}_{}_{}.npz'.format(config.prior.prior_source,
+                                              config.psm.linear.datatag_calib,
+                                              proxy_database,
+                                              state_var)
 
-    ye_all = ye_vals[proxy_id_indices][:, sample_idxs]
+        load_dir = os.path.join(config.prior.datadir_prior, 'precalc_ye_files')
+        load_abs_path = os.path.join(load_dir, load_fname)
+
+        precalc_file = np.load(load_abs_path)
+        precalc_pid_index_map[state_var] = precalc_file['pid_index_map'][()]
+        precalc_ye_vals[state_var] = precalc_file['ye_vals']
+
+    # TODO: if this is slow, could also create ye_all by state_var
+    ye_all = np.zeros((len(proxy_manager.ind_assim), len(sample_idxs)))
+    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
+        state_var = sensitivity_map[pobj.psm_obj.sensitivity]
+        pidx = precalc_pid_index_map[state_var][pobj.id]
+        ye_all[i] = precalc_ye_vals[state_var][pidx][:, sample_idxs]
 
     return ye_all
 
