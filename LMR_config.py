@@ -467,7 +467,7 @@ class psm(object):
 
         dataformat_calib = 'NCD'
 
-        psm_r_crit = 0.2
+        psm_r_crit = 0.0
 
         def __init__(self, datadir_calib=None, pre_calib_datafile=None):
             self.datatag_calib = self.datatag_calib
