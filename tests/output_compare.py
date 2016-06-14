@@ -11,20 +11,20 @@ import os.path as path
 from itertools import izip
 
 # proxy-first version vs time-first version comparison
-is_proxy_first_driver_loop = True
+is_proxy_first_driver_loop = False
 
 # Use this if the two reconstructions use different state variables
 # Also use the
-diff_state_vectors = False
+diff_state_vectors = True
 
 # All close testing tolerances (checks for diff > atol + rtol*desired_value)
-rtol = 1e-1
+rtol = 1e-4
 atol = 1e-6
 
 base_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
 # sim_dir1 = 'testdev_production_comparison_1900_1960_seed0_nens10/r0/'
 # sim_dir2 = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens/r0/'
-sim_dir1 = 'testdev_ncdcwork_fromrob_seed0_1900_1960_nens10/r0/'
+sim_dir1 = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar/r0/'
 sim_dir2 = 'testdev_using_precip_and_temp_psm_no_precalc/r0/'
 
 dir1 = path.join(base_dir, sim_dir1)

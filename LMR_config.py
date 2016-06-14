@@ -73,13 +73,13 @@ class core(object):
         Absolute path to LMR reconstruction archive directory
     """
 
-    nexp = 'testdev_using_precip_and_temp_psm_no_precalc'
+    nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
 
     lmr_path = '/home/chaos2/wperkins/data/LMR'
     # lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = False
+    use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = (1900, 1960)
     nens = 10
@@ -616,7 +616,7 @@ class prior(object):
 
     dataformat_prior = 'NCD'
     psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
-    state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    state_variables = ['tas_sfc_Amon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon',
