@@ -288,7 +288,8 @@ def LMR_driver_callable(cfg=None):
                 if psm_required_var not in cfg.prior.state_variables:
                     print ('Could not calculate required ye_values from prior.'
                            ' Add the required variable to the state variable'
-                           ' list.')
+                           ' list -- OR -- run the precalc file builder: '
+                           'misc/build_ye_file.py')
                     raise SystemExit()
 
             # Manually calculate ye_values from state vector

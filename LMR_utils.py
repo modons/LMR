@@ -631,7 +631,7 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     # TODO: think about removing this extra mapping in the psm
 
     sensitivity_map = {'precipitation': 'pr_sfc_Amon',
-                       'temperature:': 'tas_sfc_Amon'}
+                       'temperature': 'tas_sfc_Amon'}
 
     proxy_database = config.proxies.use_from[0]
     precalc_pid_index_map = {}
@@ -654,7 +654,7 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
         state_var = sensitivity_map[pobj.psm_obj.sensitivity]
         pidx = precalc_pid_index_map[state_var][pobj.id]
-        ye_all[i] = precalc_ye_vals[state_var][pidx][:, sample_idxs]
+        ye_all[i] = precalc_ye_vals[state_var][pidx, sample_idxs]
 
     return ye_all
 
