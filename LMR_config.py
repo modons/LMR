@@ -17,6 +17,11 @@ Revisions:
  - Added definitions associated with a new psm class (linear_TorP) allowing the
    use of temperature-calibrated OR precipitation-calibrated linear PSMs.
    [ R. Tardif, Univ. of Washington, Spring 2016 ]
+ - Added initialization features to all configuration classes and sub_classes
+   The new usage should now grab an instance of Config and use that object.
+   This instance variable copies most values and generates some intermediate
+   values used by the reconstruction process.  This helps the configuration
+   stay consistent if one is altering values on the fly.
 
 """
 
@@ -45,7 +50,11 @@ class wrapper(object):
 
 class core(object):
     """
-    High-level parameters of reconstruction experiment
+    High-level parameters of LMR_driver_callable.
+
+    Notes
+    -----
+    curr_iter attribute is created during initialization
 
     Attributes
     ----------
@@ -58,6 +67,10 @@ class core(object):
     clean_start: bool
         Delete existing files in output directory (otherwise they will be used
         as the prior!)
+    use_precalc_ye: bool
+        Use pre-existing files for the psm Ye values.  If the file does not
+        exist and the required state variables are missing the reconstruction
+        will quit.
     recon_period: tuple(int)
         Time period for reconstruction
     nens: int
@@ -141,6 +154,11 @@ class proxies(object):
         """
         Parameters for PagesProxy class
 
+        Notes
+        -----
+        proxy_type_mappings and simple_filters are creating during instance
+        creation.
+
         Attributes
         ----------
         datadir_proxy: str
@@ -170,6 +188,7 @@ class proxies(object):
             to filter by.
         """
 
+        datadir_proxy = None
         datafile_proxy = 'Pages2k_Proxies.df.pckl'
         metafile_proxy = 'Pages2k_Metadata.df.pckl'
         dataformat_proxy = 'DF'
@@ -222,11 +241,11 @@ class proxies(object):
         # known to be duplicates
         proxy_blacklist = []
 
-        def __init__(self, datadir_proxy=None):
-            if datadir_proxy is None:
+        def __init__(self):
+            if self.datadir_proxy is None:
                 self.datadir_proxy = join(core.lmr_path, 'data', 'proxies')
             else:
-                self.datadir_proxy = datadir_proxy
+                self.datadir_proxy = self.datadir_proxy
 
             self.datafile_proxy = join(self.datadir_proxy,
                                        self.datafile_proxy)
@@ -258,10 +277,15 @@ class proxies(object):
         """
         Parameters for NCDCProxy class
 
+        Notes
+        -----
+        proxy_type_mappings and simple_filters are creating during instance
+        creation.
+
         Attributes
         ----------
         datadir_proxy: str
-            Absolute path to proxy data *or* None if using default lmf_path
+            Absolute path to proxy data *or* None if using default lmr_path
         datafile_proxy: str
             proxy records filename
         metafile_proxy: str
@@ -291,6 +315,8 @@ class proxies(object):
             List mapping proxy metadata sheet columns to a list of values
             to filter by.
         """
+
+        datadir_proxy = None
         datafile_proxy = 'NCDC_Proxies.df.pckl'
         metafile_proxy = 'NCDC_Metadata.df.pckl'
         dataformat_proxy = 'DF'
@@ -375,11 +401,11 @@ class proxies(object):
         proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
                            '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
 
-        def __init__(self, datadir_proxy=None):
-            if datadir_proxy is None:
+        def __init__(self):
+            if self.datadir_proxy is None:
                 self.datadir_proxy = join(core.lmr_path, 'data', 'proxies')
             else:
-                self.datadir_proxy = datadir_proxy
+                self.datadir_proxy = self.datadir_proxy
 
             self.datafile_proxy = join(self.datadir_proxy,
                                        self.datafile_proxy)
@@ -443,10 +469,13 @@ class psm(object):
         dataformat_calib: str
             Data storage type for calibration data
         pre_calib_datafile: str
-            Absolute path to precalibrated Linear PSM data
+            Absolute path to precalibrated Linear PSM data *or* None if using
+            default LMR path
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
+        datadir_calib = None
         datatag_calib = 'GISTEMP'
         datafile_calib = 'gistemp1200_ERSST.nc'
         # or
@@ -466,27 +495,28 @@ class psm(object):
         # datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
         dataformat_calib = 'NCD'
+        pre_calib_datafile = None
 
         psm_r_crit = 0.0
 
-        def __init__(self, datadir_calib=None, pre_calib_datafile=None):
+        def __init__(self):
             self.datatag_calib = self.datatag_calib
             self.datafile_calib = self.datafile_calib
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
 
-            if datadir_calib is None:
+            if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
             else:
-                self.datadir_calib = datadir_calib
+                self.datadir_calib = self.datadir_calib
 
-            if pre_calib_datafile is None:
+            if self.pre_calib_datafile is None:
                 filename = 'PSMs_'+self.datatag_calib+'.pckl'
                 self.pre_calib_datafile = join(core.lmr_path,
                                                'PSM',
                                                filename)
             else:
-                self.pre_calib_datafile = pre_calib_datafile
+                self.pre_calib_datafile = self.pre_calib_datafile
 
     class _linear_TorP(_linear):
         """
@@ -494,21 +524,33 @@ class psm(object):
 
         Attributes
         ----------
-        datatag_calib: str
-            Source of calibration data for PSM
-        datadir_calib: str
-            Absolute path to calibration data
-        datafile_calib: str
-            Filename for calibration data
+        datatag_calib_T: str
+            Source of temperature calibration data for PSM
+        datadir_calib_T: str
+            Absolute path to temperature calibration data *or* None if using
+            default lmr_path
+        datafile_calib_T: str
+            Filename for temperature calibration data
+        datatag_calib_P: str
+            Source of precipitation calibration data for PSM
+        datadir_calib_P: str
+            Absolute path to precipitation calibration data *or* None if using
+            default lmr_path
+        datafile_calib_P: str
+            Filename for precipitation calibration data
         dataformat_calib: str
             Data storage type for calibration data
-        pre_calib_datafile: str
-            Absolute path to precalibrated Linear PSM data
+        pre_calib_datafile_T: str
+            Absolute path to precalibrated Linear temperature PSM data
+        pre_calib_datafile_P: str
+            Absolute path to precalibrated Linear precipitation PSM data
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
         # linear PSM w.r.t. temperature
         # -----------------------------
+        datadir_calib_T = None
         datatag_calib_T = 'GISTEMP'
         datafile_calib_T = 'gistemp1200_ERSST.nc'
         # or
@@ -526,15 +568,18 @@ class psm(object):
         # datatag_calib_P = 'GPCC'
         # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
         # or
+        datadir_calib_P = None
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
         dataformat_calib = 'NCD'
 
+        pre_calib_datafile_T = None
+        pre_calib_datafile_P = None
+
         psm_r_crit = 0.0
 
-        def __init__(self, datadir_calib=None, pre_calib_datafile_T=None,
-                     pre_calib_datafile_P=None):
+        def __init__(self):
             self.datatag_calib_T = self.datatag_calib_T
             self.datafile_calib_T = self.datafile_calib_T
             self.datatag_calib_P = self.datatag_calib_P
@@ -542,35 +587,33 @@ class psm(object):
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
 
-            if datadir_calib is None:
+            if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
             else:
-                self.datadir_calib = datadir_calib
+                self.datadir_calib = self.datadir_calib
 
-            if pre_calib_datafile_T is None:
+            if self.pre_calib_datafile_T is None:
                 filename_t = 'PSMs_' + '-'.join(proxies.use_from) + '_' + \
                              self.datatag_calib_T + '.pckl'
                 self.pre_calib_datafile_T = join(core.lmr_path,
                                                  'PSM',
                                                  filename_t)
             else:
-                self.pre_calib_datafile_T = pre_calib_datafile_T
+                self.pre_calib_datafile_T = self.pre_calib_datafile_T
 
-            if pre_calib_datafile_P is None:
+            if self.pre_calib_datafile_P is None:
                 filename_p = 'PSMs_' + '-'.join(proxies.use_from) + '_' + \
                              self.datatag_calib_P + '.pckl'
                 self.pre_calib_datafile_P = join(core.lmr_path,
                                                  'PSM',
                                                  filename_p)
             else:
-                self.pre_calib_datafile_P = pre_calib_datafile_P
+                self.pre_calib_datafile_P = self.pre_calib_datafile_P
 
     def __init__(self, **kwargs):
         self.use_psm = self.use_psm
         self.linear = self._linear(**kwargs)
-
-        # TODO: had to take kwargs out, need to figure out a way to structure
-        self.linear_TorP = self._linear_TorP()
+        self.linear_TorP = self._linear_TorP(**kwargs)
 
 
 class prior(object):
@@ -582,7 +625,7 @@ class prior(object):
     prior_source: str
         Source of prior data
     datadir_prior: str
-        Absolute path to prior data
+        Absolute path to prior data *or* None if using default LMR path
     datafile_prior: str
         Name of prior file to use
     dataformat_prior: str
@@ -594,6 +637,7 @@ class prior(object):
     """
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
+    datadir_prior = None
     datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
 
     # prior_source     = 'ccsm4_preindustrial_control'
@@ -633,7 +677,7 @@ class prior(object):
     # by default, considers the entire length of the simulation
     detrend = False
 
-    def __init__(self, datadir_prior=None):
+    def __init__(self):
         self.prior_source = self.prior_source
         self.datafile_prior = self.datafile_prior
         self.dataformat_prior = self.dataformat_prior
@@ -642,11 +686,11 @@ class prior(object):
         self.detrend = self.detrend
         self.seed = core.seed
 
-        if datadir_prior is None:
+        if self.datadir_prior is None:
             self.datadir_prior = join(core.lmr_path, 'data', 'model',
                                       self.prior_source)
         else:
-            self.datadir_prior = datadir_prior
+            self.datadir_prior = self.datadir_prior
 
 
 class Config(object):
