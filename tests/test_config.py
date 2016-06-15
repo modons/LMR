@@ -94,6 +94,7 @@ def test_default_configuration_change_default_path(cfg):
     cfg.core.lmr_path = orig_path
 
 # test keyword args
+@pytest.mark.xfail()
 def test_configuration_keyword_arg_usage(cfg):
     core_dir = cfg.core.lmr_path
 

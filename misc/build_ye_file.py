@@ -13,14 +13,14 @@ import LMR_config
 # This script gives a method for pre-calculating ye values for our linear psm.
 # It outputs this file in a subdirectory of the prior source directory which
 # is then in turn checked for by the driver.  Files created will be unique to
-# the prior, psm calibration source, and state variable used to calculate it.
-# I'm choosing to forego on the fly creation of these files for now.  If a user
-# would like to create one for their current configuration (and currently
-# hard-coded for the tas_sfc_Amon state variable), this script should just be
-# an easy one-off run with no editing required.
+# the prior, psm calibration source, proxy source, and state variable used to
+# calculate it. I'm choosing to forego on the fly creation of these files for
+# now.  If a user would like to create one for their current configuration  this
+#  script should just be an easy one-off run with no editing required.
 
 cfg = LMR_config.Config()
 
+# Create prior source object
 print ('Starting Ye precalculation using prior data from '
        '{}'.format(cfg.prior.prior_source))
 X = LMR_prior.prior_assignment(cfg.prior.prior_source)
@@ -29,6 +29,7 @@ X.prior_datafile = cfg.prior.datafile_prior
 X.statevars = cfg.prior.psm_required_variables
 X.detrend = cfg.prior.detrend
 
+#  Load the proxy data
 cfg.psm.linear.psm_r_crit = 0.0
 print 'Loading proxies...'
 proxy_database = cfg.proxies.use_from[0]
@@ -43,6 +44,7 @@ proxy_ids_by_grp, proxy_objects = proxy_class.load_all(cfg,
 
 X.read_prior()
 
+# For each state variable required for the psm, create a precalc_ye file
 for state_var in cfg.prior.psm_required_variables:
     print 'Working on prior variable {}'.format(state_var)
     annual_data = X.prior_dict[state_var]['value']
@@ -58,8 +60,11 @@ for state_var in cfg.prior.psm_required_variables:
                                                          lat)
         ye_out[i] = pobj.psm_obj.basic_psm(tmp_dat)
 
+    # Create an id -> index in pobj list mapping to use when randomly sampling
     pid_map = {pobj.id: idx
                for pobj, idx in izip(proxy_objects, xrange(len(proxy_objects)))}
+
+    # Write out precalc ye file
     out_fname = '{}_{}_{}_{}.npz'.format(cfg.prior.prior_source,
                                          cfg.psm.linear.datatag_calib,
                                          proxy_database,

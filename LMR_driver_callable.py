@@ -268,7 +268,7 @@ def LMR_driver_callable(cfg=None):
     # Augment state vector with the Ye's
     # ----------------------------------
 
-    # Extract all the Ye's from master list of proxy objects into numpy array
+    # Load or generate Ye Values for assimilation
     if not online:
         # Load pre calculated ye values if desired or possible
         try:
@@ -277,13 +277,13 @@ def LMR_driver_callable(cfg=None):
                                 'ated ye values.')
 
             print 'Loading precalculated Ye values.'
-            Ye_all = \
-                LMR_utils.load_precalculated_ye_vals(cfg,
-                                                     prox_manager,
-                                                     X.prior_sample_indices)
+            Ye_all = LMR_utils.load_precalculated_ye_vals(cfg, prox_manager,
+                                                          X.prior_sample_indices)
         except (IOError, FlagError) as e:
             print e
 
+            # Check to see if we have necessary variables in our state to
+            # calculate the Ye values manually.
             for psm_required_var in cfg.prior.psm_required_variables:
                 if psm_required_var not in cfg.prior.state_variables:
                     print ('Could not calculate required ye_values from prior.'

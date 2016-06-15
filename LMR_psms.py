@@ -222,7 +222,7 @@ class LinearPSM(BasePSM):
 
     def basic_psm(self, data):
         """
-        PSM that doesn't need to do the state unpacking steps...
+        A PSM that doesn't need to do the state unpacking steps...
 
         Parameters
         ----------
