@@ -12,7 +12,6 @@ import LMR_proxy_pandas_rework as proxy2
 import LMR_config as cfg
 from itertools import izip
 
-
 @pytest.fixture()
 def psm_dat(request):
 
@@ -185,11 +184,13 @@ def test_pages_load_site_non_consectutive(meta, pdata, psm_dat):
 def test_pages_load_all(meta, pdata, psm_dat):
     psm_kwargs = {'psm_data': psm_dat}
     drange = [1970, 2000]
+    cfg.proxies.use_from = ['pages']
+    cfg.psm._linear.psm_r_crit = 0.2
     cfg_obj = cfg.Config()
 
     # Everything here depends upon default configuration
     bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, meta, pdata,
-                                             **psm_kwargs)
+                                              **psm_kwargs)
 
     assert len(allp) == 4
     assert bytype['Tree ring_Width'] == ['Aus_04']
