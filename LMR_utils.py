@@ -247,7 +247,8 @@ def ensemble_stats(workdir, y_assim):
     # loop over assimilated proxies
     for i, pobj in enumerate(y_assim):
         # build boolean of indices to pull from HXa
-        yr_idxs = [year in years for year in pobj.time]
+        yr_idxs = np.array([year in pobj.time for year in years],
+                           dtype=np.bool)
         YeDict[(pobj.type, pobj.id)] = {}
         YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
         YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
