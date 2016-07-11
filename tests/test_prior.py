@@ -16,6 +16,7 @@ def test_prior_seed():
     datadir_prior = 'data'
     datafile_prior = '[vardef_template]_gridded_dat.nc'
     state_variables = ['air']
+    state_kind = 'anom'
 
     X = LMR_prior.prior_assignment(prior_source)
 
@@ -24,6 +25,7 @@ def test_prior_seed():
     X.statevars = state_variables
     X.Nens = 1
     X.detrend = False
+    X.kind = state_kind
 
     X.populate_ensemble(prior_source, prior_cfg)
 
@@ -34,6 +36,7 @@ def test_prior_seed():
     X2.statevars = state_variables
     X2.Nens = 1
     X2.detrend = False
+    X2.kind = state_kind
 
     X2.populate_ensemble(prior_source, prior_cfg)
 
