@@ -353,6 +353,10 @@ class ProxyPages(BaseProxyObject):
         values = values[values.notnull()]
         times = values.index.values
 
+        # transform in "anomalies" (time-mean removed) if option activated
+        if config.proxies.pages.proxy_timeseries_kind == 'anom':
+            values = values - values.mean()
+        
         if len(values) == 0:
             raise ValueError('No observations in specified time range.')
 
@@ -486,6 +490,10 @@ class ProxyNCDC(BaseProxyObject):
         # Might need to remove following line
         values = values[values.notnull()]
         times = values.index.values
+
+        # transform in "anomalies" (time-mean removed) if option activated
+        if config.proxies.ncdc.proxy_timeseries_kind == 'anom':
+            values = values - values.mean() 
 
         if len(values) == 0:
             raise ValueError('No observations in specified time range.')

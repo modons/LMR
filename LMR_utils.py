@@ -292,7 +292,11 @@ def ensemble_stats(workdir, y_assim):
     # loop over assimilated proxies
     for i, pobj in enumerate(y_assim):
         # build boolean of indices to pull from HXa
-        yr_idxs = [year in years for year in pobj.time]
+        # bug fix (contributed by M. Erb - USC June 2016)
+        #yr_idxs = [year in years for year in pobj.time] # buggy
+        yr_idxs = [year in pobj.time for years in year]
+        yr_idxs = np.array(yr_idxs,dtype=bool)
+
         YeDict[(pobj.type, pobj.id)] = {}
         YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
         YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
@@ -628,17 +632,44 @@ def augment_docstr(func):
 
 
 def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
-    # TODO: think about removing this extra mapping in the psm
-
-    sensitivity_map = {'precipitation': 'pr_sfc_Amon',
-                       'temperature': 'tas_sfc_Amon'}
 
     proxy_database = config.proxies.use_from[0]
+    psm_type = config.psm.use_psm[proxy_database]
+
+    calib_source = None
+    calib_source_T = None
+    calib_source_P = None
+    moisture_var = None
+        
+    if psm_type == 'linear':
+        calib_source = config.psm.linear.datatag_calib
+    elif psm_type == 'linear_TorP':
+        calib_source_T = config.psm.linear_TorP.datatag_calib_T
+        calib_source_P = config.psm.linear_TorP.datatag_calib_P
+    elif psm_type == 'bilinear':
+        calib_source_T = config.psm.bilinear.datatag_calib_T
+        calib_source_P = config.psm.bilinear.datatag_calib_P
+        calib_source = calib_source_T + '_' + calib_source_P
+    else:
+        print 'ERROR: Unknown psm type. Exiting!'
+        exit(1)
+
+    if calib_source_P:
+        if calib_source_P == 'GPCC':
+            moisture_var = 'pr_sfc_Amon'
+        elif calib_source_P == 'DaiPDSI':
+            moisture_var = 'scpdsi_sfc_Amon'
+
+    # TODO: think about removing this extra mapping in the psm
+    sensitivity_map = {'moisture': moisture_var,
+                       'temperature': 'tas_sfc_Amon'}
+
     precalc_pid_index_map = {}
     precalc_ye_vals = {}
     for state_var in config.prior.psm_required_variables:
+        if state_var == moisture_var and calib_source_P: calib_source = calib_source_P
         load_fname = '{}_{}_{}_{}.npz'.format(config.prior.prior_source,
-                                              config.psm.linear.datatag_calib,
+                                              calib_source,
                                               proxy_database,
                                               state_var)
 

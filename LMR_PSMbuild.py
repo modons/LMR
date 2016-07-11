@@ -24,56 +24,53 @@ import cPickle
 import datetime
 from time import time
 from os.path import join
+from copy import deepcopy
 
 import LMR_proxy_pandas_rework
 
 psm_info = \
 """
-Forward model built using a linear PSM calibrated against 2m air temperature.
+Forward model built using a linear PSM calibrated against historical observation-based product(s) of 2m air temperature and/or precipitation/moisture.
 """
 
 # =========================================================================================
 # START:  set user parameters here
 # =========================================================================================
 
-class v_core:
+class v_core(object):
     """
-    High-level parameters of reconstruction experiment
+    High-level parameters for the PSM builder
 
     Attributes
     ----------
-    nexp: str
-        Name of reconstruction experiment
     lmr_path: str
-        Absolute path for the experiment
-    clean_start: bool
-        Delete existing files in output directory (otherwise they will be used
-        as the prior!)
-    recon_period: list(int)
-        Time period for reconstruction
-    nens: int
-        Ensemble size
-    iter_range: list(int)
-        Number of Monte-Carlo iterations to perform
-    loc_rad: float
-        Localization radius for DA (in km)
+        Absolute path to central directory where the data (analyses (GISTEMP, HadCRUT...) and proxies) 
+        are located
+    calib_period: tuple(int)
+        Time period considered for the calibration
     datadir_output: str
-        Absolute path to working directory output for LMR
-    archive_dir: str
-        Absolute path to LMR reconstruction archive directory
+        Absolute path to working directory output where the PSM data
+        will be stored.
+
     """
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HadCRUT...) and proxies.
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
 
-    calib_period = [1850, 2010]
+    calib_period = (1850, 2010)
 
     # Output directory, where the PSM calibration results & figs will be dumped.
     #datadir_output = datadir_input # if want to keep things tidy
     datadir_output = '/home/disk/kalman3/rtardif/LMR/PSM/NCDC'
 
-class v_proxies:
+    def __init__(self):
+        self.lmr_path = self.lmr_path
+        self.calib_period = self.calib_period
+        self.datadir_output = self.datadir_output
+        
+    
+class v_proxies(object):
     """
     Parameters for proxy data
 
@@ -89,16 +86,15 @@ class v_proxies:
     # =============================
     # Which proxy database to use ?
     # =============================
-    #use_from = ['pages']
-    use_from = ['NCDC']
+    use_from = ['pages']
+    #use_from = ['NCDC']
 
-    proxy_frac = 1.0
-
+    proxy_frac = 1.0 # this needs to remain = 1.0 if all possible proxies are to be considered for calibration
 
     # -------------------
     # for PAGES2k proxies
     # -------------------
-    class pages:
+    class _pages(object):
         """
         Parameters for PagesProxy class
 
@@ -131,20 +127,17 @@ class v_proxies:
             to filter by.
         """
 
-        datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
-        datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata.df.pckl')
+        datadir_proxy = None
+        datafile_proxy = 'Pages2k_Proxies.df.pckl'
+        metafile_proxy = 'Pages2k_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
         proxy_resolution = [1.0]
+        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
 
-        # Limit proxies to those included in the following databases
-        database_filter = []
-
+        
         # DO NOT CHANGE FORMAT BELOW
 
         proxy_order = ['Tree ring_Width',
@@ -183,26 +176,49 @@ class v_proxies:
             'Speleothem_All': ['Lamina thickness'],
             }
 
-        # Create mapping for Proxy Type/Measurement Type to type names above
-        proxy_type_mapping = {}
-        for type, measurements in proxy_assim2.iteritems():
-            # Fetch proxy type name that occurs before underscore
-            type_name = type.split('_', 1)[0]
-            for measure in measurements:
-                proxy_type_mapping[(type_name, measure)] = type
-
-        simple_filters = {'PAGES 2k Region': regions,
-                          'Resolution (yr)': proxy_resolution}
-
-        # A blacklist on proxy records, to prevent assimilation of chronologies known to be duplicates.
+        # A blacklist on proxy records, to prevent assimilation of chronologies
+        # known to be duplicates.
         proxy_blacklist = []
+
+
+        def __init__(self):
+            if self.datadir_proxy is None:
+                self.datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = self.datadir_proxy
+                
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)
+
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = list(self.regions)
+            self.proxy_resolution = self.proxy_resolution
+            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.proxy_blacklist = list(self.proxy_blacklist)
+
+            # Create mapping for Proxy Type/Measurement Type to type names above
+            self.proxy_type_mapping = {}
+            for ptype, measurements in self.proxy_assim2.iteritems():
+                # Fetch proxy type name that occurs before underscore
+                type_name = ptype.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = ptype
+
+            self.simple_filters = {'PAGES 2k Region': self.regions,
+                                   'Resolution (yr)': self.proxy_resolution}
+
+
 
     # ----------------
     # for NCDC proxies
     # ----------------
-    class NCDC:
+    class _ncdc(object):
         """
-        Parameters for NCDCProxy class
+        Parameters for NCDC proxy class
 
         Attributes
         ----------
@@ -233,11 +249,9 @@ class v_proxies:
             to filter by.
         """
 
-        datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
-        datafile_proxy = join(datadir_proxy,
-                              'NCDC_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'NCDC_Metadata.df.pckl')
+        datadir_proxy = None
+        datafile_proxy = 'NCDC_Proxies.df.pckl'
+        metafile_proxy = 'NCDC_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
@@ -245,6 +259,8 @@ class v_proxies:
 
         proxy_resolution = [1.0]
 
+        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
+        
         # Limit proxies to those included in the following databases
         database_filter = []
 
@@ -307,21 +323,48 @@ class v_proxies:
                                               'MXD'],
             }
 
-        # Create mapping for Proxy Type/Measurement Type to type names above
-        proxy_type_mapping = {}
-        for type, measurements in proxy_assim2.iteritems():
-            # Fetch proxy type name that occurs before underscore
-            type_name = type.split('_', 1)[0]
-            for measure in measurements:
-                proxy_type_mapping[(type_name, measure)] = type
 
-#        simple_filters = {'NCDC Region': regions,
-#                          'Resolution (yr)': proxy_resolution}
-        simple_filters = {'Resolution (yr)': proxy_resolution}
+        def __init__(self):
+            if self.datadir_proxy is None:
+                self.datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = self.datadir_proxy
+
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)
+
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = list(self.regions)
+            self.proxy_resolution = self.proxy_resolution
+            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.database_filter = list(self.database_filter)
+            self.proxy_blacklist = list(self.proxy_blacklist)
+
+            self.proxy_type_mapping = {}
+            for ptype, measurements in self.proxy_assim2.iteritems():
+                # Fetch proxy type name that occurs before underscore
+                type_name = ptype.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = ptype
+
+            self.simple_filters = {'Resolution (yr)': self.proxy_resolution}
+
+    
+    # Initialize subclasses with all attributes
+    def __init__(self, **kwargs):
+        self.use_from = self.use_from
+        self.proxy_frac = self.proxy_frac
+        self.pages = self._pages(**kwargs)
+        self.ncdc = self._ncdc(**kwargs)
 
 
 
-class v_psm:
+        
+class v_psm(object):
     """
     Parameters for PSM classes
 
@@ -333,8 +376,10 @@ class v_psm:
     """
 
     use_psm = {'pages': 'linear', 'NCDC': 'linear'}
+    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
 
-    class linear:
+    
+    class _linear(object):
         """
         Parameters for the linear fit PSM.
 
@@ -353,12 +398,14 @@ class v_psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+        datadir_calib = None
 
-        datatag_calib = 'MLOST'
-        datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+        # Choice between:
+        #datatag_calib = 'MLOST'
+        #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
         # or
-        #datatag_calib = 'GISTEMP'
-        #datafile_calib = 'gistemp1200_ERSST.nc'
+        datatag_calib = 'GISTEMP'
+        datafile_calib = 'gistemp1200_ERSST.nc'
         # or
         #datatag_calib = 'HadCRUT'
         #datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
@@ -372,25 +419,132 @@ class v_psm:
         #datatag_calib = 'GPCC'
         #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
 
-
-        datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
-        dataformat_calib = 'NCD'
-        #pre_calib_datafile = join(v_core.lmr_path,
-        #                          'PSM',
-        #                          'PSMs_'+'-'.join(v_proxies.use_from)+'_' + datatag_calib + '.pckl')
-        pre_calib_datafile = join(v_core.datadir_output,
-                                  'PSMs_'+'-'.join(v_proxies.use_from)+'_' + datatag_calib + '.pckl')
+        
+        pre_calib_datafile = None
 
         psm_r_crit = 0.0
+        
+
+        def __init__(self):
+            self.datatag_calib = self.datatag_calib
+            self.datafile_calib = self.datafile_calib
+            self.psm_r_crit = self.psm_r_crit
+
+            if self.datadir_calib is None:
+                self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = self.datadir_calib
+
+            if self.pre_calib_datafile is None:
+                filename = 'PSMs_'+'-'.join(v_proxies.use_from)+'_'+self.datatag_calib+'.pckl'
+                self.pre_calib_datafile = join(v_core.lmr_path,
+                                               'PSM',
+                                               filename)
+            else:
+                self.pre_calib_datafile = self.pre_calib_datafile
+        
+
+    class _bilinear(object):
+        """
+        Parameters for the bilinear fit PSM.
+
+        Attributes
+        ----------
+        datatag_calib_T: str
+            Source of calibration temperature data for PSM
+        datadir_calib_T: str
+            Absolute path to calibration temperature data
+        datafile_calib_T: str
+            Filename for calibration temperature data
+        dataformat_calib_T: str
+            Data storage type for calibration temperature data
+        datatag_calib_P: str
+            Source of calibration precipitation/moisture data for PSM
+        datadir_calib_P: str
+            Absolute path to calibration precipitation/moisture data
+        datafile_calib_P: str
+            Filename for calibration precipitation/moisture data
+        dataformat_calib_P: str
+            Data storage type for calibration precipitation/moisture data
+        pre_calib_datafile: str
+            Absolute path to precalibrated Linear PSM data
+        psm_r_crit: float
+            Usage threshold for correlation of linear PSM
+        """
+
+        datadir_calib = None
+
+        # calibration w.r.t. temperature
+        # -----------------------------
+        # Choice between:
+        #
+        datatag_calib_T = 'GISTEMP'
+        datafile_calib_T = 'gistemp1200_ERSST.nc'
+        # or
+        #datatag_calib_T = 'MLOST'
+        #datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
+        # or 
+        #datatag_calib_T = 'HadCRUT'
+        #datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
+        # or 
+        #datatag_calib_T = 'BerkeleyEarth'
+        #datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
+
+        # calibration w.r.t. precipitation/moisture
+        # ----------------------------------------
+        #datatag_calib_P = 'GPCC'
+        #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
+        # or 
+        datatag_calib_P = 'GPCC'
+        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+
+
+        pre_calib_datafile = None
+
+        psm_r_crit = 0.0
+         
+
+        def __init__(self):
+            self.datatag_calib_T = self.datatag_calib_T
+            self.datafile_calib_T = self.datafile_calib_T
+            self.datatag_calib_P = self.datatag_calib_P
+            self.datafile_calib_P = self.datafile_calib_P
+            self.psm_r_crit = self.psm_r_crit
+
+            if self.datadir_calib is None:
+                self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = self.datadir_calib
+
+
+            if self.pre_calib_datafile is None:
+                filename = 'PSMs_'+'-'.join(v_proxies.use_from)+'_'+self.datatag_calib_T+'_'+self.datatag_calib_P+'.pckl'
+                self.pre_calib_datafile = join(v_core.lmr_path,
+                                               'PSM',
+                                               filename)
+            else:
+                self.pre_calib_datafile = self.pre_calib_datafile
+    
+
+    
+    # Initialize subclasses with all attributes
+    def __init__(self, **kwargs):
+        self.use_psm = self.use_psm
+        self.linear = self._linear(**kwargs)
+        self.bilinear = self._bilinear(**kwargs)
 
 # =========================================================================================
 # END:  set user parameters here
 # =========================================================================================
-class config:
+
+class config(object):
     def __init__(self,core,proxies,psm):
-        self.core = core
-        self.proxies = proxies
-        self.psm = psm
+        self.core = core()
+        self.proxies = proxies()
+        self.psm = psm()
 
 Cfg = config(v_core,v_proxies,v_psm)
 
@@ -402,14 +556,38 @@ def main():
 
     begin_time = time()
 
-    #print Cfg.proxies.pages.datadir_proxy
-    print Cfg.proxies.NCDC.datadir_proxy
-    print Cfg.psm.linear.datatag_calib
-    print Cfg.core.calib_period
+    proxy_database = Cfg.proxies.use_from[0]
+    psm_type = Cfg.psm.use_psm[proxy_database]
 
-    datatag_calib = Cfg.psm.linear.datatag_calib
-    psm_file = Cfg.psm.linear.pre_calib_datafile
+    print 'Proxies             :', proxy_database
+    print 'PSM type            :', psm_type
+    print 'Calib. period       :', Cfg.core.calib_period
 
+    if proxy_database == 'pages':
+        print 'Proxy data location :', Cfg.proxies.pages.datadir_proxy
+    elif proxy_database == 'NCDC':
+        print 'Proxy data location :', Cfg.proxies.ncdc.datadir_proxy
+    else:
+        print 'ERROR in specification of proxy database. Exiting!'
+        exit(1)
+        
+    # psm type
+    if psm_type == 'linear':
+        print 'Calibration source  :', Cfg.psm.linear.datatag_calib
+        datatag_calib = Cfg.psm.linear.datatag_calib
+        psm_file = Cfg.psm.linear.pre_calib_datafile
+    elif psm_type == 'bilinear':
+        print 'Calibration sources :', Cfg.psm.bilinear.datatag_calib_T, '+', Cfg.psm.bilinear.datatag_calib_P
+        datatag_calib_T = Cfg.psm.bilinear.datatag_calib_T
+        datatag_calib_P = Cfg.psm.bilinear.datatag_calib_P
+        psm_file = Cfg.psm.bilinear.pre_calib_datafile
+    else:
+        print 'ERROR: problem with the type of psm!'
+        exit(1)
+    
+    print 'PSM calibration file:', psm_file
+
+    
     # Check if psm_file already exists, archive it with current date/time if it exists
     # and replace by new file
     if os.path.isfile(psm_file):        
@@ -429,27 +607,39 @@ def main():
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
     print '--------------------------------------------------------------------'
 
-
+    
     psm_dict = {}
     for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
         sitetag = (Y.type,Y.id)
 
-        #print sitetag, Y.psm_obj.lat, Y.psm_obj.lon, Y.psm_obj.corr
-
         # Load proxy object in proxy dictionary
+
+        # Site info
         psm_dict[sitetag] = {}
-        psm_dict[sitetag]['calib'] = datatag_calib
         psm_dict[sitetag]['lat']   = Y.psm_obj.lat
         psm_dict[sitetag]['lon']   = Y.psm_obj.lon
         psm_dict[sitetag]['elev']  = Y.psm_obj.elev
 
         # PSM info
-        psm_dict[sitetag]['PSMslope']     = Y.psm_obj.slope
-        psm_dict[sitetag]['PSMintercept'] = Y.psm_obj.intercept
-        psm_dict[sitetag]['PSMcorrel']    = Y.psm_obj.corr
-        psm_dict[sitetag]['PSMmse']       = Y.psm_obj.R
-        psm_dict[sitetag]['NbCalPts']     = Y.psm_obj.NbPts
-
+        if psm_type == 'linear':
+            psm_dict[sitetag]['calib']        = datatag_calib
+            psm_dict[sitetag]['NbCalPts']     = Y.psm_obj.NbPts
+            psm_dict[sitetag]['PSMslope']     = Y.psm_obj.slope
+            psm_dict[sitetag]['PSMintercept'] = Y.psm_obj.intercept
+            psm_dict[sitetag]['PSMcorrel']    = Y.psm_obj.corr
+            psm_dict[sitetag]['PSMmse']       = Y.psm_obj.R
+        elif psm_type == 'bilinear':
+            psm_dict[sitetag]['calib_temperature']    = datatag_calib_T
+            psm_dict[sitetag]['calib_moisture']       = datatag_calib_P
+            psm_dict[sitetag]['NbCalPts']             = Y.psm_obj.NbPts
+            psm_dict[sitetag]['PSMintercept']         = Y.psm_obj.intercept
+            psm_dict[sitetag]['PSMslope_temperature'] = Y.psm_obj.slope_temperature
+            psm_dict[sitetag]['PSMslope_moisture']    = Y.psm_obj.slope_moisture
+            psm_dict[sitetag]['PSMcorrel']            = Y.psm_obj.corr
+            psm_dict[sitetag]['PSMmse']               = Y.psm_obj.R
+        else:
+            print 'ERROR: problem with the type of psm!'
+            exit(1)
 
     # Dump dictionary to pickle file
     outfile = open('%s' % (psm_file),'w')
@@ -458,9 +648,9 @@ def main():
     outfile.close()
 
     end_time = time() - begin_time
-    print '====================================================='
-    print 'PSMs completed in '+ str(end_time/60.0)+' mins'
-    print '====================================================='
+    print '========================================================='
+    print 'PSM calibration completed in '+ str(end_time/60.0)+' mins'
+    print '========================================================='
 
 # =============================================================================
 

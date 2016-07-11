@@ -5,23 +5,32 @@ paleoclimate reconstruction experiments.
 Adapted from LMR_exp_NAMELIST by AndreP
 
 Revisions:
- - Introduction of definitions related to use of newly developed NCDC proxy
-   database.
+ - Introduction of definitions related to use of newly developed NCDC proxy database.
+   [ R. Tardif, Univ. of Washington, January 2016 ]
  - Added functionality restricting assimilated proxy records to those belonging
    to specific databases (e.g. PAGES1, PAGES2, LMR) (only for NCDC proxies).
- - Introduction of "blacklist" to prevent the assimilation of specific proxy
-   records as defined (through a python list) by the user. Applicable for both
-   NCDC and Pages proxy sets.
- - Added boolean allowing the user to indicate whether the prior is to be
-   detrended or not.
- - Added definitions associated with a new psm class (linear_TorP) allowing the
-   use of temperature-calibrated OR precipitation-calibrated linear PSMs.
-   [ R. Tardif, Univ. of Washington, Spring 2016 ]
+   [ R. Tardif, Univ. of Washington, February 2016 ]
+ - Introduction of "blacklist" to prevent the assimilation of specific proxy records as defined 
+   (through a python list) by the user. Applicable for both NCDC and Pages proxy sets.
+   [ R. Tardif, Univ. of Washington, February 2016 ]
+ - Added boolean allowing the user to indicate whether the prior is to be detrended or not.
+   [ R. Tardif, Univ. of Washington, February 2016 ]
+ - Added definitions associated with a new psm class (linear_TorP) allowing the use of
+   temperature-calibrated OR precipitation-calibrated linear PSMs.
+   [ R. Tardif, Univ. of Washington, March 2016 ]
+ - Added definitions associated with a new psm class (h_interp) for use of isotope-enabled GCM data
+   as prior: Ye values are taken as the prior isotope field either at the nearest grid pt. or as the
+   weighted-average of values at grid points surrounding the isotope proxy site assimilated.
+   [ R. Tardif, Univ. of Washington, June 2016 ]
+-  Added definitions associated with a new psm class (bilinear) for bivariate linear regressions
+   w/ temperature AND precipitation/PSDI as independent variables.
+   [ R. Tardif, Univ. of Washington, June 2016 ]
  - Added initialization features to all configuration classes and sub_classes
    The new usage should now grab an instance of Config and use that object.
    This instance variable copies most values and generates some intermediate
    values used by the reconstruction process.  This helps the configuration
    stay consistent if one is altering values on the fly.
+   [ A. Perkins, Univ. of Washington, June 2016 ]
 
 """
 
@@ -86,26 +95,29 @@ class core(object):
         Absolute path to LMR reconstruction archive directory
     """
 
-    nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
+    #nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
+    nexp = 'test'
 
-    lmr_path = '/home/chaos2/wperkins/data/LMR'
-    # lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    #lmr_path = '/home/chaos2/wperkins/data/LMR'
+    lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
     use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = (1900, 1960)
-    nens = 10
+    recon_period = (1800, 2000)
+    nens = 100
     seed = 0
     loc_rad = None
 
-    datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    # datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
-    #datadir_output  = '/home/disk/ekman/rtardif/nobackup/LMR/output'
+    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    
 
-    archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
-    # archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
-    # archive_dir = '/home/disk/kalman3/hakim/LMR/'
+    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
+    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
+    #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
     def __init__(self, curr_iter=None):
         self.nexp = self.nexp
@@ -141,11 +153,11 @@ class proxies(object):
     # =============================
     # Which proxy database to use ?
     # =============================
-    # use_from = ['pages']
-    use_from = ['NCDC']
+    use_from = ['pages']
+    #use_from = ['NCDC']
 
-    # proxy_frac = 1.0
-    proxy_frac = 0.75
+    proxy_frac = 1.0
+    #proxy_frac = 0.75
 
     # ---------------
     # PAGES2k proxies
@@ -196,7 +208,8 @@ class proxies(object):
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
         proxy_resolution = [1.0]
-
+        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
+        
         # DO NOT CHANGE FORMAT BELOW
 
         proxy_order = [
@@ -255,6 +268,7 @@ class proxies(object):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = self.proxy_resolution
+            self.proxy_timeseries_kind = self.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.proxy_blacklist = list(self.proxy_blacklist)
@@ -275,7 +289,7 @@ class proxies(object):
     # ---------------
     class _ncdc(object):
         """
-        Parameters for NCDCProxy class
+        Parameters for NCDC proxy class
 
         Notes
         -----
@@ -326,6 +340,8 @@ class proxies(object):
 
         proxy_resolution = [1.0]
 
+        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
+        
         # Limit proxies to those included in the following databases
         #database_filter = ['PAGES1']
         database_filter = []
@@ -415,6 +431,7 @@ class proxies(object):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = self.proxy_resolution
+            self.proxy_timeseries_kind = self.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.database_filter = list(self.database_filter)
@@ -450,9 +467,12 @@ class psm(object):
         make more intricate proxy - psm relationships.
     """
 
-    # use_psm = {'pages': 'linear', 'NCDC': 'linear'}
-    use_psm = {'pages': 'linear', 'NCDC': 'linear_TorP'}
+    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
+    #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
+    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
+    #use_psm = {'pages': 'h_interp', 'NCDC': 'h_interp'}
 
+    
     class _linear(object):
         """
         Parameters for the linear fit PSM.
@@ -476,6 +496,7 @@ class psm(object):
         """
 
         datadir_calib = None
+        # Choice between:
         datatag_calib = 'GISTEMP'
         datafile_calib = 'gistemp1200_ERSST.nc'
         # or
@@ -493,7 +514,11 @@ class psm(object):
         # or
         # datatag_calib = 'GPCC'
         # datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
+        
         dataformat_calib = 'NCD'
         pre_calib_datafile = None
 
@@ -511,14 +536,14 @@ class psm(object):
                 self.datadir_calib = self.datadir_calib
 
             if self.pre_calib_datafile is None:
-                filename = 'PSMs_'+self.datatag_calib+'.pckl'
+                filename = 'PSMs_'+'-'.join(proxies.use_from)+'_'+self.datatag_calib+'.pckl'
                 self.pre_calib_datafile = join(core.lmr_path,
                                                'PSM',
                                                filename)
             else:
                 self.pre_calib_datafile = self.pre_calib_datafile
 
-    class _linear_TorP(_linear):
+    class _linear_TorP(_linear):                
         """
         Parameters for the linear fit PSM.
 
@@ -548,9 +573,12 @@ class psm(object):
             Usage threshold for correlation of linear PSM
         """
 
+        datadir_calib = None
+        
         # linear PSM w.r.t. temperature
         # -----------------------------
-        datadir_calib_T = None
+        # Choice between:
+        # ---------------
         datatag_calib_T = 'GISTEMP'
         datafile_calib_T = 'gistemp1200_ERSST.nc'
         # or
@@ -563,15 +591,19 @@ class psm(object):
         # datatag_calib_T = 'BerkeleyEarth'
         # datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
         #
-        # linear PSM w.r.t. precipitation
-        # ------------------------------
+        # linear PSM w.r.t. precipitation/moisture
+        # ----------------------------------------
+        # Choice between:
+        # ---------------
         # datatag_calib_P = 'GPCC'
         # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
         # or
-        datadir_calib_P = None
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
-
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+        
         dataformat_calib = 'NCD'
 
         pre_calib_datafile_T = None
@@ -610,10 +642,141 @@ class psm(object):
             else:
                 self.pre_calib_datafile_P = self.pre_calib_datafile_P
 
+    class _bilinear(object):
+        """
+        Parameters for the bilinear fit PSM.
+
+        Attributes
+        ----------
+        datatag_calib_T: str
+            Source of calibration temperature data for PSM
+        datadir_calib_T: str
+            Absolute path to calibration temperature data
+        datafile_calib_T: str
+            Filename for calibration temperature data
+        dataformat_calib_T: str
+            Data storage type for calibration temperature data
+        datatag_calib_P: str
+            Source of calibration precipitation/moisture data for PSM
+        datadir_calib_P: str
+            Absolute path to calibration precipitation/moisture data
+        datafile_calib_P: str
+            Filename for calibration precipitation/moisture data
+        dataformat_calib_P: str
+            Data storage type for calibration precipitation/moisture data
+        pre_calib_datafile: str
+            Absolute path to precalibrated Linear PSM data
+        psm_r_crit: float
+            Usage threshold for correlation of linear PSM
+        """
+        # linear PSM w.r.t. temperature
+        # -----------------------------        
+        datatag_calib_T = 'GISTEMP'
+        datafile_calib_T = 'gistemp1200_ERSST.nc'
+        # or
+        #datatag_calib_T = 'MLOST'
+        #datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
+        # or 
+        #datatag_calib_T = 'HadCRUT'
+        #datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
+        # or 
+        #datatag_calib_T = 'BerkeleyEarth'
+        #datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
+
+        dataformat_calib_T = 'NCD'
+        
+        # linear PSM w.r.t. precipitation/moisture
+        # ----------------------------------------
+        #datatag_calib_P = 'GPCC'
+        #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
+        # or 
+        datatag_calib_P = 'GPCC'
+        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+
+        dataformat_calib_P = 'NCD'
+
+        datadir_calib = None
+        pre_calib_datafile = None
+
+        psm_r_crit = 0.0
+
+        def __init__(self):
+            self.datatag_calib_T = self.datatag_calib_T
+            self.datafile_calib_T = self.datafile_calib_T
+            self.dataformat_calib_T = self.dataformat_calib_T
+            self.datatag_calib_P = self.datatag_calib_P
+            self.datafile_calib_P = self.datafile_calib_P
+            self.dataformat_calib_P = self.dataformat_calib_P
+            self.psm_r_crit = self.psm_r_crit
+
+            if self.datadir_calib is None:
+                self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = self.datadir_calib
+
+            if self.pre_calib_datafile is None:
+                filename = 'PSMs_'+'-'.join(proxies.use_from)+'_' + \
+                           self.datatag_calib_T +'_'+self.datatag_calib_P + '.pckl'
+                self.pre_calib_datafile = join(core.lmr_path,
+                                                 'PSM',
+                                                 filename)
+            else:
+                self.pre_calib_datafile = self.pre_calib_datafile
+
+        
+    class _h_interp(object):
+        """
+        Parameters for the horizontal interpolator PSM.
+
+        Attributes
+        ----------
+        radius_influence : real
+            Distance-scale used the calculation of exponentially-decaying weights in interpolator (in km)
+        datadir_obsError: str
+            Absolute path to obs. error variance data
+        filename_obsError: str
+            Filename for obs. error variance data
+        dataformat_obsError: str
+            String indicating the format of the file containing obs. error variance data
+            Note: note currently used by code. For info purpose only.
+        datafile_obsError: str
+            Absolute path/filename of obs. error variance data
+        """
+
+        # Interpolation parameter:
+        # Set to 'None' if want Ye = value at nearest grid point to proxy location
+        # Set to a non-zero float if want Ye = weighted-average of surrounding gridpoints
+        #radius_influence = None
+        radius_influence = 50. # distance-scale in km
+        
+        datadir_obsError = './'
+        filename_obsError = 'R.txt'
+        dataformat_obsError = 'TXT'
+
+        datafile_obsError = None
+
+        def __init__(self):
+            self.radius_influence = self.radius_influence
+            self.datadir_obsError = self.datadir_obsError
+            self.filename_obsError = self.filename_obsError
+            self.dataformat_obsError = self.dataformat_obsError 
+
+            if self.datafile_obsError is None:
+                self.datafile_obsError = join(self.datadir_obsError, self.filename_obsError)
+            else:
+                self.datafile_obsError = self.datafile_obsError
+
+    
+    # Initialize subclasses with all attributes 
     def __init__(self, **kwargs):
         self.use_psm = self.use_psm
         self.linear = self._linear(**kwargs)
         self.linear_TorP = self._linear_TorP(**kwargs)
+        self.bilinear = self._bilinear(**kwargs)
+        self.h_interp = self._h_interp(**kwargs)
 
 
 class prior(object):
@@ -635,35 +798,45 @@ class prior(object):
     state_variables: list(str)
         List of variables to use in the state vector for the prior.
     """
+
+    datadir_prior = None
+
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
-    datadir_prior = None
     datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
-
-    # prior_source     = 'ccsm4_preindustrial_control'
-    # datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
-    #
-    # prior_source     = 'gfdl-cm3_preindustrial_control'
-    # datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
-    #
-    # prior_source     = 'mpi-esm-p_last_millenium'
-    # datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
-    #
-    # prior_source     = '20cr'
-    # datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
-    #
-    # prior_source     = 'era20c'
-    # datafile_prior   = '[vardef_template]_ERA20C_190001-201012.nc'
-    #
-    # prior_source     = 'era20cm'
-    # datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
+    # or
+    #prior_source     = 'ccsm4_preindustrial_control'
+    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
+    # or
+    #prior_source     = 'ccsm4_isotope_controlrun'
+    #datafile_prior   = '[vardef_template]_CCSM4_isotope_controlrun.nc'
+    # or
+    #prior_source     = 'gfdl-cm3_preindustrial_control'
+    #datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
+    # or
+    #prior_source     = 'mpi-esm-p_last_millenium'
+    #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
+    # or
+    #prior_source     = '20cr'
+    #datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
+    # or
+    #prior_source     = 'era20c'
+    #datafile_prior   = '[vardef_template]_ERA20C_190001-201012.nc'
+    # or
+    #prior_source     = 'era20cm'
+    #datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
 
     dataformat_prior = 'NCD'
+
+    #psm_required_variables = ['tas_sfc_Amon']
     psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
-    state_variables = ['tas_sfc_Amon']
-    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
-    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
-    # state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon',
+    #psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
+    #psm_required_variables = ['d18O_sfc_Amon']
+
+    #state_variables = ['tas_sfc_Amon']
+    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
+    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
+    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon',
     #                    'AMOCindex_Omon', 'AMOC26Nmax_Omon',
     #                    'AMOC26N1000m_Omon', 'AMOC45N1000m_Omon',
     #                    'ohcAtlanticNH_0-700m_Omon',
@@ -671,12 +844,19 @@ class prior(object):
     #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
     #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon',
     #                    'ohcArctic_0-700m_Omon']
-    # state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
-
+    state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    #state_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
+    #state_variables = ['tas_sfc_Amon', 'd18O_sfc_Amon']
+    
     # boolean : detrend prior?
     # by default, considers the entire length of the simulation
     detrend = False
 
+    # Full field or anomalies? Allowed values : 'full' or 'anom'
+    #state_kind = 'full'
+    state_kind = 'anom'
+
+    
     def __init__(self):
         self.prior_source = self.prior_source
         self.datafile_prior = self.datafile_prior
@@ -684,6 +864,7 @@ class prior(object):
         self.state_variables = list(self.state_variables)
         self.psm_required_variables = self.psm_required_variables
         self.detrend = self.detrend
+        self.state_kinf = self.state_kind
         self.seed = core.seed
 
         if self.datadir_prior is None:
