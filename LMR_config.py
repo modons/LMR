@@ -2,6 +2,15 @@
 Class based config module to help with passing information to LMR modules for
 paleoclimate reconstruction experiments.
 
+NOTE:  All general user parameters that should be edited are displayed
+       between the following sections:
+
+       ##** BEGIN User Parameters **##
+
+       parameters, etc.
+
+       ##** END User Parameters **##
+
 Adapted from LMR_exp_NAMELIST by AndreP
 
 Revisions:
@@ -55,8 +64,12 @@ class wrapper(object):
         Range of Monte-Carlo iterations to perform
     """
 
+    ##** BEGIN User Parameters **##
+
     multi_seed = None
     iter_range = (0, 0)
+
+    ##** END User Parameters **##
 
     def __init__(self):
         self.multi_seed = self.multi_seed
@@ -100,6 +113,8 @@ class core(object):
         Absolute path to LMR reconstruction archive directory
     """
 
+    ##** BEGIN User Parameters **##
+
     #nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
     nexp = 'test'
 
@@ -123,6 +138,8 @@ class core(object):
     archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
+
+    ##** END User Parameters **##
 
     def __init__(self, curr_iter=None):
         self.nexp = self.nexp
@@ -155,6 +172,8 @@ class proxies(object):
         Fraction of available proxy data (sites) to assimilate
     """
 
+    ##** BEGIN User Parameters **##
+
     # =============================
     # Which proxy database to use ?
     # =============================
@@ -163,6 +182,8 @@ class proxies(object):
 
     proxy_frac = 1.0
     #proxy_frac = 0.75
+
+    ##** END User Parameters **##
 
     # ---------------
     # PAGES2k proxies
@@ -204,6 +225,8 @@ class proxies(object):
             List mapping Pages2k metadata sheet columns to a list of values
             to filter by.
         """
+
+        ##** BEGIN User Parameters **##
 
         datadir_proxy = None
         datafile_proxy = 'Pages2k_Proxies.df.pckl'
@@ -260,6 +283,8 @@ class proxies(object):
         # A blacklist on proxy records, to prevent assimilation of chronologies
         # known to be duplicates
         proxy_blacklist = []
+
+        ##** END User Parameters **##
 
         def __init__(self):
             if self.datadir_proxy is None:
@@ -336,6 +361,8 @@ class proxies(object):
             List mapping proxy metadata sheet columns to a list of values
             to filter by.
         """
+
+        ##** BEGIN User Parameters **##
 
         datadir_proxy = None
         datafile_proxy = 'NCDC_Proxies.df.pckl'
@@ -425,6 +452,8 @@ class proxies(object):
         proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
                            '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
 
+        ##** END User Parameters **##
+
         def __init__(self):
             if self.datadir_proxy is None:
                 self.datadir_proxy = join(core.lmr_path, 'data', 'proxies')
@@ -475,10 +504,14 @@ class psm(object):
         make more intricate proxy - psm relationships.
     """
 
+    ##** BEGIN User Parameters **##
+
     use_psm = {'pages': 'linear', 'NCDC': 'linear'}
     #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
     #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
     #use_psm = {'pages': 'h_interp', 'NCDC': 'h_interp'}
+
+    ##** END User Parameters **##
 
     
     class _linear(object):
@@ -502,6 +535,8 @@ class psm(object):
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
+        ##** BEGIN User Parameters **##
 
         datadir_calib = None
         # Choice between:
@@ -531,6 +566,8 @@ class psm(object):
         pre_calib_datafile = None
 
         psm_r_crit = 0.0
+
+        ##** END User Parameters **##
 
         def __init__(self):
             self.datatag_calib = self.datatag_calib
@@ -582,6 +619,8 @@ class psm(object):
             Usage threshold for correlation of linear PSM
         """
 
+        ##** BEGIN User Parameters **##
+
         datadir_calib = None
         
         # linear PSM w.r.t. temperature
@@ -619,6 +658,8 @@ class psm(object):
         pre_calib_datafile_P = None
 
         psm_r_crit = 0.0
+
+        ##** END User Parameters **##
 
         def __init__(self):
             self.datatag_calib_T = self.datatag_calib_T
@@ -678,6 +719,9 @@ class psm(object):
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
+        ##** BEGIN User Parameters **##
+
         # linear PSM w.r.t. temperature
         # -----------------------------        
         datatag_calib_T = 'GISTEMP'
@@ -711,6 +755,8 @@ class psm(object):
         pre_calib_datafile = None
 
         psm_r_crit = 0.0
+
+        ##** END User Parameters **##
 
         def __init__(self):
             self.datatag_calib_T = self.datatag_calib_T
@@ -758,6 +804,8 @@ class psm(object):
             Absolute path/filename of obs. error variance data
         """
 
+        ##** BEGIN User Parameters **##
+
         # Interpolation parameter:
         # Set to 'None' if want Ye = value at nearest grid point to proxy
         # location
@@ -771,6 +819,8 @@ class psm(object):
         dataformat_obsError = 'TXT'
 
         datafile_obsError = None
+
+        ##** END User Parameters **##
 
         def __init__(self):
             self.radius_influence = self.radius_influence
@@ -813,6 +863,8 @@ class prior(object):
     state_variables: list(str)
         List of variables to use in the state vector for the prior.
     """
+
+    ##** BEGIN User Parameters **##
 
     datadir_prior = None
 
@@ -870,6 +922,8 @@ class prior(object):
     # Full field or anomalies? Allowed values : 'full' or 'anom'
     #state_kind = 'full'
     state_kind = 'anom'
+
+    ##** END User Parameters **##
 
     
     def __init__(self):
