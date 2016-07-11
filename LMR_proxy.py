@@ -1,5 +1,16 @@
+"""
+Module: LMR_proxy.py
 
+Purpose: Contains class definitions for the various proxy types assimilated by the LMR. 
+         *** THIS CODE IS OBSOLETE *** 
+         Has since replaced by LMR_proxy_pandas_rework.py
 
+Originators: Greg Hakim & Robert Tardif | University of Washington
+                                        | January 2015
+
+Revisions: 
+
+"""
 
 # -------------------------------------------------------------------------------
 # *** Proxy type assignment  ----------------------------------------------------

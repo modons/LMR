@@ -11,6 +11,8 @@ Revisions:
             [R. Tardif, U of Washington, December 2015]
           - Added function for uploading the ERA20CM *ensemble* to be used as prior.
             [R. Tardif, U of Washington, February 2016]
+          - Added function for the upload of the Dai historical PDSI dataset.
+            [R. Tardif, U of Washington, May 2016]
 
 """
 from netCDF4 import Dataset, date2num, num2date
@@ -624,7 +626,120 @@ def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies):
 
 #==========================================================================================
 
-def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,detrend=None):
+def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies):
+#==========================================================================================
+#
+# Reads the monthly data of Palmer Drought Severity Index (PDSI) anomalies from the
+# "Dai" PDSI gridded product obtained from NOAA/ESRL at: 
+# http://www.esrl.noaa.gov/psd/data/gridded/data.pdsi.html
+#
+# Input: 
+#      - data_dir     : Full name of directory containing gridded 
+#                       data. (string)
+#      - data_file    : Name of file containing gridded data. (string)
+#
+#      - data_vars    : List of variable names to read. (string list)
+#                       Here should simply be ['pdsi'], as only PDSI
+#                       data are contained in the file.
+#
+#      - out_anomalies: Boolean indicating whether anomalies w.r.t. a referenced period
+#                       are to be calculated and provided as output
+#
+# Output: (numpy arrays)
+#      - time_yrs     : Array with years over which data is available.
+#                       dims: [nb_years]
+#      - lat          : Array containing the latitudes of gridded  data. 
+#                       dims: [lat]
+#      - lon          : Array containing the longitudes of gridded  data. 
+#                       dims: [lon]
+#      - value        : Array with the annually-averaged data calculated from monthly data 
+#                       dims: [time,lat,lon]
+# 
+#========================================================================================== 
+
+    nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
+
+    # Check if file exists
+    infile = data_dir+'/DaiPDSI/'+data_file
+    if not os.path.isfile(infile):
+        print 'Error in specification of gridded dataset'
+        print 'File ', infile, ' does not exist! - Exiting ...'
+        exit(1)
+
+    # Sanity check on number of variables to read
+    if len(data_vars) > 1:
+        print 'Too many variables to read!'
+        print 'This file only contains surface air temperature (anomalies)'
+        print 'Exiting!'
+        exit(1)
+
+    data = Dataset(infile,'r')
+
+    lat   = data.variables['lat'][:]
+    lon   = data.variables['lon'][:]
+
+    indneg = np.where(lon < 0)[0]
+    if len(indneg) > 0: # if non-empty
+        lon[indneg] = 360.0 + lon[indneg]
+
+    # -----------------------------------------------------------------
+    # Time is in "hours since 1800-1-1 0:0:0":convert to calendar years
+    # -----------------------------------------------------------------        
+    time_yrs = []
+    dateref = datetime(1800,1,1,0)
+    for i in xrange(0,len(data.variables['time'][:])):
+        time_yrs.append(dateref + timedelta(hours=int(data.variables['time'][i])))
+
+    # ------------------------------
+    # Convert monthly data to annual
+    # ------------------------------
+    # List years available in dataset and sort
+    years_all = []
+    for i in range(0,len(time_yrs)):
+        isotime = time_yrs[i].isoformat()
+        years_all.append(int(isotime.split("-")[0]))
+    years = list(set(years_all)) # 'set' is used to get unique values in list
+    years.sort # sort the list
+
+    time_yrs  = np.zeros(len(years), dtype=int)
+    value = np.zeros([len(years), len(lat), len(lon)], dtype=float)
+    value[:] = np.nan # initialize with nan's
+    
+    fillval = data.variables['pdsi'].missing_value
+    cpy = np.copy(data.variables['pdsi'])
+    cpy[cpy == fillval] = np.NAN
+    # Loop over years in dataset
+    for i in range(0,len(years)):        
+        # find indices in time array where "years[i]" appear
+        ind = [j for j, k in enumerate(years_all) if k == years[i]]
+        time_yrs[i] = years[i]
+        # -----------------------------------------------------
+        # Monthly data is precip. accumulation in mm. 
+        # Calculate annual accumulation (sum) from monthly data
+        # Note: data has dims [time,lat,lon]
+        # -----------------------------------------------------
+        tmp = np.nansum(cpy[ind],axis=0)
+        # apply check of max nb of nan values allowed
+        nancount = np.isnan(cpy[ind]).sum(axis=0)
+        tmp[nancount > nbmaxnan] = np.nan # put nan back if nb of nan's in current year above threshold
+        value[i,:,:] = tmp
+
+    # Calculate anomalies w.r.t. reference period, if out_anomalies is set to True in class calibration_precip_DaiPDSI()
+    # in LMR_calibrate.py
+    if out_anomalies:
+        ref_period = [1951,1980] # same as GISTEMP temperature anomalies
+        # array indices for elements within reference period 
+        inds = np.where( np.logical_and(time_yrs >= ref_period[0],time_yrs <= ref_period[1]) )
+        ref_mean = np.mean(value[inds], axis=0)
+        # calculate anomalies
+        value = value - ref_mean
+        
+    return time_yrs, lat, lon, value
+
+
+#==========================================================================================
+
+def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,detrend=None,kind=None):
 #==========================================================================================
 #
 # Reads the monthly data from a CMIP5 model and return yearly averaged values
@@ -637,6 +752,9 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,detrend=None):
 #      - data_vars    : List of variable names to read. (string list)
 #
 #      - detrend      : Boolean to indicate if detrending is to be applied to the prior
+#
+#      - kind         : String indicating whether the prior is to be returned as
+#                       a full field or as anomalies (w.r.t. to the gridpt temporal mean)
 #
 # Output: 
 #      - datadict     : Master dictionary containing dictionaries, one for each state 
@@ -847,11 +965,21 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,detrend=None):
         #print 'mean=', np.nanmean(value), ' std-dev=', np.nanstd(value)
         #value = (value - np.nanmean(value))/np.nanstd(value)
 
-        print 'Removing the temporal mean (for every gridpoint) from the prior...'
-        climo = np.nanmean(value,axis=0)
-        value = (value - climo)
-        print var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+        if not kind or kind == 'anom':
+            print 'Removing the temporal mean (for every gridpoint) from the prior...'
+            climo = np.nanmean(value,axis=0)
+            value = (value - climo)
+        elif kind == 'full':
+            print 'Full field provided as the prior'
+            # Calculating climo nevertheless. Needed as output.
+            climo = np.nanmean(value,axis=0) 
+            # do nothing else...
+        else:
+            print 'ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...'
+            exit(1)
 
+        print var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+        
         # Possibly detrend the prior
         if detrend:
             print 'Detrending the prior for variable: '+var_to_extract

@@ -16,18 +16,32 @@ Revisions:
             (i.e. T vs P) is perfomed on the basis of the smallest MSE of
             regression residuals.
             [R. Tardif, U. of Washington, April 2016]
+          - Added the "h_interpPSM" psm class for use of isotope-enabled GCM 
+            data as prior: Ye values are taken as the prior isotope field either 
+            at the nearest grid pt. or as the weighted-average of values at grid 
+            points surrounding the assimilated isotope proxy site.
+            [ R. Tardif, U. of Washington, June 2016 ]
+          - Added the "BilinearPSM" class for PSMs based on bivariate linear 
+            regressions w/ temperature AND precipitation/PSDI as independent 
+            variables.
+            [ R. Tardif, Univ. of Washington, June 2016 ]
 
 """
-
-import matplotlib.pyplot as pylab
 import numpy as np
 import logging
+import os.path
 import LMR_calibrate
 from LMR_utils import haversine, get_distance, smooth2D, class_docs_fixer
 
+import pandas as pd
 from scipy.stats import linregress
+import statsmodels.formula.api as sm
+
 from abc import ABCMeta, abstractmethod
 from load_data import load_cpickle
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 # Logging output utility, configuration controlled by driver
 logger = logging.getLogger(__name__)
@@ -142,8 +156,8 @@ class LinearPSM(BasePSM):
 
         # Very crude assignment of sensitivity
         # TODO (RT): more inclusive & flexible way of doing this
-        if config.psm.linear.datatag_calib == 'GPCC':
-            self.sensitivity = 'precipitation'
+        if config.psm.linear.datatag_calib == 'GPCC' or config.psm.linear.datatag_calib == 'DaiPDSI':
+            self.sensitivity = 'moisture'
         else:
             self.sensitivity = 'temperature'
             
@@ -161,8 +175,8 @@ class LinearPSM(BasePSM):
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
             print ('No pre-calibration found for'
-                   ' {} ... calibrating ...'.format(proxy_obj.id))
-
+                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,proxy_obj.type))
+            
             # TODO: Fix call and Calib Module
             datag_calib = config.psm.linear.datatag_calib
             C = LMR_calibrate.calibration_assignment(datag_calib)
@@ -311,166 +325,194 @@ class LinearPSM(BasePSM):
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
 
+        #print 'Calibrating: ', '{:25}'.format(proxy.id), '{:35}'.format(proxy.type)
+        
         # --------------------------------------------
         # Use linear model (regression) as default PSM
         # --------------------------------------------
 
-        # TODO: Distance calculation should probably be a function
         # Look for indices of calibration grid point closest in space (in 2D)
         # to proxy site
-        #dist = np.empty([C.lat.shape[0], C.lon.shape[0]])
-        #tmp = np.array(
-        #    [haversine(proxy.lon, proxy.lat, C.lon[k], C.lat[j]) for j
-        #     in xrange(len(C.lat)) for k in xrange(len(C.lon))])
-        #dist = np.reshape(tmp, [len(C.lat), len(C.lon)])
         dist = get_distance(proxy.lon, proxy.lat, C.lon, C.lat)
         # indices of nearest grid pt.
         jind, kind = np.unravel_index(dist.argmin(), dist.shape)
 
-        # TODO: need to fix this to use proxy2 style time
-        # overlapping years
-        sc = set(C.time)
-        sp = set(proxy.time)
-
-        common_time = sorted(list(sc.intersection(sp)))
-        # respective indices in calib and proxy times
-        ind_c = [j for j, k in enumerate(C.time) if k in common_time]
-        #ind_p = [j for j, k in enumerate(proxy.time) if k in common_time]
-        ind_p = common_time
-
         if calib_spatial_avg:
             C2Dsmooth = np.zeros(
                 [C.time.shape[0], C.lat.shape[0], C.lon.shape[0]])
-            for m in ind_c:
+            for m in range(C.time.shape[0]):
                 C2Dsmooth[m, :, :] = smooth2D(C.temp_anomaly[m, :, :], n=Npts)
-            reg_x = [C2Dsmooth[m, jind, kind] for m in ind_c]
+            reg_x = C2Dsmooth[:, jind, kind]
         else:
-            reg_x = [C.temp_anomaly[m, jind, kind] for m in ind_c]
+            reg_x = C.temp_anomaly[:, jind, kind]
 
-        reg_y = [proxy.values[m] for m in ind_p]
-        # check for valid values
-        ind_c_ok = [j for j, k in enumerate(reg_x) if np.isfinite(k)]
-        ind_p_ok = [j for j, k in enumerate(reg_y) if np.isfinite(k)]
-        common_ok = sorted(list(set(ind_c_ok).intersection(set(ind_p_ok))))
-        # fill numpy arrays with values used in regression
-        reg_xa = np.array([reg_x[k] for k in common_ok])  # calib. values
-        reg_ya = np.array([reg_y[k] for k in common_ok])  # proxy values
 
         # -------------------------
         # Perform linear regression
         # -------------------------
-        nobs = reg_ya.shape[0]
+
+        # Use pandas DataFrame to store proxy & calibration data side-by-side
+        header = ['variable', 'y']
+        # Fill-in proxy data
+        df = pd.DataFrame({'time':proxy.time, 'y': proxy.values})
+        df.columns = header
+        # Add calibration data
+        frame = pd.DataFrame({'variable':C.time, 'Calibration':reg_x})
+        df = df.merge(frame, how='outer', on='variable')
+
+        col0 = df.columns[0]
+        df.set_index(col0, drop=True, inplace=True)
+        df.index.name = 'time'
+        df.sort_index(inplace=True)
+
+        # ensure all df entries are floats: if not, sm.ols gives garbage
+        df = df.astype(np.float)
+
+        # Perform the regression
+        try:
+            regress = sm.ols(formula="y ~ Calibration", data=df).fit()
+            # number of data points used in the regression
+            nobs = int(regress.nobs)
+            
+        except:
+            nobs = 0
+            
         if nobs < 10:  # skip rest if insufficient overlapping data
             raise(ValueError('Insufficent observation/calibration overlap'
                              ' to calibrate psm.'))
 
-        # START NEW (GH) 21 June 2015
+        
+        # START NEW (GH) 21 June 2015... RT edit June 2016
         # detrend both the proxy and the calibration data
         #
-        # save copies of the original data for residual estimates later
-        reg_xa_all = np.copy(reg_xa)
-        reg_ya_all = np.copy(reg_ya)
-        # proxy detrend: (1) linear regression, (2) fit, (3) detrend
-        xvar = range(len(reg_ya))
-        proxy_slope, proxy_intercept, r_value, p_value, std_err = \
-            linregress(xvar, reg_ya)
-        proxy_fit = proxy_slope*np.squeeze(xvar) + proxy_intercept
-        # reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy
-        # calibration detrend: (1) linear regression, (2) fit, (3) detrend
-        xvar = range(len(reg_xa))
-        calib_slope, calib_intercept, r_value, p_value, std_err = \
-            linregress(xvar, reg_xa)
-        calib_fit = calib_slope*np.squeeze(xvar) + calib_intercept
-        # reg_xa = reg_xa - calib_fit
-        # END NEW (GH) 21 June 2015
+        # RT: This code is old and not fully compatible with more recent modifications
+        # (use of pandas and sm.OLS for calculation of regression...)
+        # The following few lines of code ensures better management and compatibility
 
-        #print 'Calib stats (x)              [min, max, mean, std]:', np.nanmin(
-        #    reg_xa), np.nanmax(reg_xa), np.nanmean(reg_xa), np.nanstd(reg_xa)
-        #print 'Proxy stats (y:original)     [min, max, mean, std]:', np.nanmin(
-        #    reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
+        detrend_proxy = False
+        detrend_calib = False
+        standardize_proxy = False
+        
+        # This block is to ensure compatibility with GH's code below
+        y_ok =  df['y'][ df['y'].notnull()]
+        calib_ok =  df['Calibration'][ df['Calibration'].notnull()]
+        time_common = np.intersect1d(y_ok.index.values, calib_ok.index.values)
+        reg_ya = df['y'][time_common].values
+        reg_xa = df['Calibration'][time_common].values
 
-        # standardize proxy values over period of overlap with calibration data
-        # reg_ya = (reg_ya - np.nanmean(reg_ya))/np.nanstd(reg_ya)
-        # print 'Proxy stats (y:standardized) [min, max, mean, std]:', np.nanmin
-        # (reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
-        # GH: note that std_err pertains to the slope, not the residuals!!!
+        
+        # if any of the flags above are activated, run the following code. Otherwise, just ignore it all. 
+        if detrend_proxy or detrend_calib or standardize_proxy:
 
-        self.slope, self.intercept, r_value, p_value, std_err = linregress(
-            reg_xa, reg_ya)
+            # save copies of the original data for residual estimates later
+            reg_xa_all = np.copy(reg_xa)
+            reg_ya_all = np.copy(reg_ya)
 
-        # Calculate stats on regression residuals
-        # GH: residuals have to be computed "by hand"
-        fit = self.slope * np.squeeze(reg_xa) + self.intercept
-        residuals = fit - reg_ya
-        MSE = np.mean((residuals) ** 2)
+            if detrend_proxy:
+                # proxy detrend: (1) linear regression, (2) fit, (3) detrend
+                xvar = range(len(reg_ya))
+                proxy_slope, proxy_intercept, r_value, p_value, std_err = \
+                            linregress(xvar, reg_ya)
+                proxy_fit = proxy_slope*np.squeeze(xvar) + proxy_intercept
+                reg_ya = reg_ya - proxy_fit # detrend for proxy
+
+            if detrend_calib:
+                # calibration detrend: (1) linear regression, (2) fit, (3) detrend
+                xvar = range(len(reg_xa))
+                calib_slope, calib_intercept, r_value, p_value, std_err = \
+                            linregress(xvar, reg_xa)
+                calib_fit = calib_slope*np.squeeze(xvar) + calib_intercept
+                reg_xa = reg_xa - calib_fit
+
+            if standardize_proxy:
+                print 'Calib stats (x)              [min, max, mean, std]:', np.nanmin(
+                    reg_xa), np.nanmax(reg_xa), np.nanmean(reg_xa), np.nanstd(reg_xa)
+                print 'Proxy stats (y:original)     [min, max, mean, std]:', np.nanmin(
+                    reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
+
+                # standardize proxy values over period of overlap with calibration data
+                reg_ya = (reg_ya - np.nanmean(reg_ya))/np.nanstd(reg_ya)
+                print 'Proxy stats (y:standardized) [min, max, mean, std]:', np.nanmin(
+                    reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
+                # GH: note that std_err pertains to the slope, not the residuals!!!
+
+
+            # Build new pandas DataFrame that contains the modified data:
+            # Use pandas DataFrame to store proxy & calibration data side-by-side
+            header = ['variable', 'y']
+            # Fill-in proxy data
+            dfmod = pd.DataFrame({'time':common_time, 'y': reg_ya})
+            dfmod.columns = header
+            # Add calibration data
+            frame = pd.DataFrame({'variable':common_time, 'Calibration':reg_xa})
+            dfmod = dfmod.merge(frame, how='outer', on='variable')
+
+            col0 = dfmod.columns[0]
+            dfmod.set_index(col0, drop=True, inplace=True)
+            dfmod.index.name = 'time'
+            dfmod.sort_index(inplace=True)
+
+            # Perform the regression using updated arrays
+            regress = sm.ols(formula="y ~ Calibration", data=dfmod).fit()
+
+            
+        # END NEW (GH) 21 June 2015 ... RT edit June 2016
+
+        
+        # Assign PSM calibration attributes
+        # Extract the needed regression parameters
+        self.intercept         = regress.params[0]
+        self.slope             = regress.params[1]
+        self.NbPts             = nobs
+        self.corr              = np.sqrt(regress.rsquared)
+        if self.slope < 0: self.corr = -self.corr
+        
+        # Stats on fit residuals
+        MSE = np.mean((regress.resid) ** 2)
         self.R = MSE
-        self.corr = r_value
-        self.NbPts = nobs
-
-        print 'Calibrating: ', '{:25}'.format(proxy.id), '{:35}'.format(proxy.type)
 
         if diag_output:
-            # Some other diagnostics
-            varproxy = np.var(reg_ya)
-            varresiduals = np.var(residuals)
-            varratio = np.divide(varproxy, varresiduals)
-            snr = abs(r_value) / (np.sqrt(1.0 - r_value ** 2))
             # Diagnostic output
             print "***PSM stats:"
-            print "Nobs                 :", nobs
-            print "slope                :", self.slope
-            print "intercept            :", self.intercept
-            print "correl.              :", r_value
-            print "r-squared            :", r_value ** 2
-            print "p_value              :", p_value
-            print "std_err              :", std_err
-            print "resid MSE            :", MSE
-            print "var(proxy)/var(resid):", varratio
-            print "SNR                  :", snr
+            print regress.summary()
 
             if diag_output_figs:
                 # Figure (scatter plot w/ summary statistics)
                 line = self.slope * reg_xa + self.intercept
-                pylab.plot(reg_xa, line, 'r-', reg_xa, reg_ya, 'o',
+                plt.plot(reg_xa, line, 'r-', reg_xa, reg_ya, 'o',
                            markersize=7, markerfacecolor='#5CB8E6',
                            markeredgecolor='black', markeredgewidth=1)
                 # GH: I don't know how this ran in the first place; must exploit
-                #  some global namespace
-                pylab.title('%s: %s' % (proxy.type, proxy.id))
-                pylab.xlabel('Calibration data')
-                pylab.ylabel('Proxy data')
-                xmin, xmax, ymin, ymax = pylab.axis()
+                # some global namespace
+                plt.title('%s: %s' % (proxy.type, proxy.id))
+                plt.xlabel('Calibration data')
+                plt.ylabel('Proxy data')
+                xmin, xmax, ymin, ymax = plt.axis()
                 # Annotate with summary stats
                 ypos = ymax - 0.05 * (ymax - ymin)
                 xpos = xmin + 0.025 * (xmax - xmin)
-                pylab.text(xpos, ypos, 'Nobs = %s' % str(nobs), fontsize=12,
+                plt.text(xpos, ypos, 'Nobs = %s' % str(nobs), fontsize=12,
                            fontweight='bold')
                 ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos,
+                plt.text(xpos, ypos,
                            'Slope = %s' % "{:.4f}".format(self.slope),
                            fontsize=12, fontweight='bold')
                 ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos,
+                plt.text(xpos, ypos,
                            'Intcpt = %s' % "{:.4f}".format(self.intercept),
                            fontsize=12, fontweight='bold')
                 ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos, 'Corr = %s' % "{:.4f}".format(r_value),
+                plt.text(xpos, ypos, 'Corr = %s' % "{:.4f}".format(self.corr),
                            fontsize=12, fontweight='bold')
                 ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos,
-                           'p_value = %s' % "{:.4f}".format(p_value),
+                plt.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(MSE),
                            fontsize=12, fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos, 'StdErr = %s' % "{:.4f}".format(std_err),
-                           fontsize=12, fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(MSE),
-                           fontsize=12, fontweight='bold')
-                pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (
+
+                plt.savefig('proxy_%s_%s_LinearModel_calib.png' % (
                     proxy.type.replace(" ", "_"), proxy.id),
                               bbox_inches='tight')
-                pylab.close()
-
+                plt.close()
+                
     @staticmethod
     def get_kwargs(config):
         try:
@@ -498,13 +540,266 @@ class LinearPSM_TorP(LinearPSM):
                       No attempts at calibration are performed here! 
                       The following code only assigns PSM linear regression 
                       parameters to individual proxies from fits to temperature
-                      OR precipitation according to a measure of
+                      OR precipitation/moisture according to a measure of
                       "goodness-of-fit" criteria (here, MSE of the resisduals).
 
     Attributes
     ----------
     sensitivity: string
         Indicates the sensitivity (temperature vs moisture) of the proxy record
+    lat: float
+        Latitude of associated proxy site
+    lon: float
+        Longitude of associated proxy site
+    elev: float
+        Elevation/depth of proxy site
+    corr: float
+        Correlation of proxy record against calibration data
+    slope: float
+        Linear regression slope of proxy/calibration fit
+    intercept: float
+        Linear regression y-intercept of proxy/calibration fit
+    R: float
+        Mean-squared error of proxy/calibration fit
+
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module used for current LMR run.
+    proxy_obj: BaseProxyObject like
+        Proxy object that this PSM is being attached to
+    psm_data: dict
+        Pre-calibrated PSM dictionary containing current associated
+        proxy site's calibration information
+
+    Raises
+    ------
+    ValueError
+        If PSM is below critical correlation threshold.
+    """
+
+    def __init__(self, config, proxy_obj, psm_data_T=None, psm_data_P=None):
+
+        # note RT: not a good idea to hard-code these here...
+        # TODO: Correspondance or assignment of specific PSM to proxy types should be done at higher level.
+        TorP_types = ['Tree ring_Width', 'Tree ring_Density',
+                      'Tree Rings_WidthBreit', 'Tree Rings_WidthPages',
+                      'Tree Rings_WoodDensity']
+
+        proxy = proxy_obj.type
+        site = proxy_obj.id
+        r_crit = config.psm.linear_TorP.psm_r_crit
+        self.lat  = proxy_obj.lat
+        self.lon  = proxy_obj.lon
+        self.elev = proxy_obj.elev
+
+        self.datatag_calib_T = config.psm.linear_TorP.datatag_calib_T
+        self.datatag_calib_P = config.psm.linear_TorP.datatag_calib_P
+        
+        # Try using pre-calibrated psm_data for **temperature**
+        try:
+            if psm_data_T is None:
+                psm_data_T = self._load_psm_data(config,'temperature')
+            psm_site_data_T = psm_data_T[(proxy, site)]
+        except (KeyError, IOError) as e:
+            # No precalibration found, have to do it for this proxy
+            # print 'PSM (temperature) not calibrated for:' + str((proxy, site))
+            logger.error(e)
+            logger.info('PSM (temperature) not calibrated for:' +
+                        str((proxy, site)))
+
+        # Try using pre-calibrated psm_data for **precipitation/moisture**
+        try:
+            if psm_data_P is None:
+                psm_data_P = self._load_psm_data(config,'moisture')
+            psm_site_data_P = psm_data_P[(proxy, site)]
+
+        except (KeyError, IOError) as e:
+            # No precalibration found, have to do it for this proxy
+            logger.error(e)
+            logger.info('PSM (moisture) not calibrated for:' +
+                        str((proxy, site)))
+
+        # Check if PSM is calibrated w.r.t. temperature and/or w.r.t.
+        # precipitation/moisture
+        # Assign proxy "sensitivity" based on PSM calibration
+
+        if proxy in TorP_types: # restrict this check to specific proxy types (e.g. tree rings)
+            
+            if (proxy, site) in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
+                # calibrated for temperature AND for precipitation, check relative goodness of fit 
+                # and assign "sensitivity" & corresponding PSM parameters according to best fit.
+                if psm_site_data_T['PSMmse'] < psm_site_data_P['PSMmse']:
+                    # smaller residual errors w.r.t. temperature
+                    self.sensitivity = 'temperature'
+                    self.corr = psm_site_data_T['PSMcorrel']
+                    self.slope = psm_site_data_T['PSMslope']
+                    self.intercept = psm_site_data_T['PSMintercept']
+                    self.R = psm_site_data_T['PSMmse']
+                else:
+                    # smaller residual errors w.r.t. precipitation/moisture
+                    self.sensitivity = 'moisture'
+                    self.corr = psm_site_data_P['PSMcorrel']
+                    self.slope = psm_site_data_P['PSMslope']
+                    self.intercept = psm_site_data_P['PSMintercept']
+                    self.R = psm_site_data_P['PSMmse']
+
+            elif (proxy, site) in psm_data_T.keys() and (proxy, site) not in psm_data_P.keys():
+                # calibrated for temperature and NOT for precipitation, assign as "temperature" sensitive
+                self.sensitivity = 'temperature'
+                self.corr = psm_site_data_T['PSMcorrel']
+                self.slope = psm_site_data_T['PSMslope']
+                self.intercept = psm_site_data_T['PSMintercept']
+                self.R = psm_site_data_T['PSMmse']
+            elif (proxy, site) not in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
+                # calibrated for precipitation/moisture and NOT for temperature, assign as "moisture" sensitive
+                self.sensitivity = 'moisture'
+                self.corr = psm_site_data_P['PSMcorrel']
+                self.slope = psm_site_data_P['PSMslope']
+                self.intercept = psm_site_data_P['PSMintercept']
+                self.R = psm_site_data_P['PSMmse']
+            else:
+                raise(ValueError('Unknown pre-calibration status!'))
+
+        else: # if proxy not in TorP_types, revert to temperature sensitivity as default
+            if (proxy, site) in psm_data_T.keys():
+                self.sensitivity = 'temperature'
+                self.corr = psm_site_data_T['PSMcorrel']
+                self.slope = psm_site_data_T['PSMslope']
+                self.intercept = psm_site_data_T['PSMintercept']
+                self.R = psm_site_data_T['PSMmse']
+            else:
+                raise(ValueError('Unknown pre-calibration status!'))
+            
+        # Raise exception if critical correlation value not met
+        if abs(self.corr) < r_crit:
+            raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
+                              'critical threshold ({:.2f}).'
+                              ).format(self.corr, r_crit))
+
+
+    # TODO: Ideally prior state info and coordinates should all be in single obj
+    def psm(self, Xb, X_state_info, X_coords):
+        """
+        Maps a given state to observations for the given proxy
+
+        Parameters
+        ----------
+        Xb: ndarray
+            State vector to be mapped into observation space (stateDim x ensDim)
+        X_state_info: dict
+            Information pertaining to variables in the state vector
+        X_coords: ndarray
+            Coordinates for the state vector (stateDim x 2)
+
+        Returns
+        -------
+        Ye:
+            Equivalent observation from prior
+        """
+        
+        # ----------------------
+        # Calculate the Ye's ...
+        # ----------------------
+        if self.sensitivity:
+            # "sensitivity" defined for this proxy
+            if self.sensitivity == 'temperature':
+                state_var = 'tas_sfc_Amon'
+            elif self.sensitivity == 'moisture':
+                # To consider different moisture variables
+                if self.datatag_calib_P == 'GPCC':
+                    state_var = 'pr_sfc_Amon'
+                elif self.datatag_calib_P == 'DaiPDSI':
+                    state_var = 'scpdsi_sfc_Amon'
+                else:
+                    raise KeyError('Unrecognized calibration-state variable association. State variable not identified for Ye'
+                                   ' calculation.') 
+            else:
+                raise KeyError('Unkown PSM sensitivity. PSM not identified for Ye'
+                           ' calculation.')
+        else:
+            # "sensitivity" not defined for this proxy: simply revert to the default (temperature)
+            state_var = 'tas_sfc_Amon'
+
+        if state_var not in X_state_info.keys():
+            raise KeyError('Needed variable not in state vector for Ye'
+                           ' calculation.')
+        
+        # TODO: end index should already be +1, more pythonic
+        calibvar_startidx, calibvar_endidx = X_state_info[state_var]['pos']
+        ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
+        ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
+        X_lons = X_coords[calibvar_startidx:(calibvar_endidx+1), ind_lon]
+        X_lats = X_coords[calibvar_startidx:(calibvar_endidx+1), ind_lat]
+        
+        # Extract data from closest grid point to location of proxy site
+        # [self.lat,self.lon]
+        calibvar_data = Xb[calibvar_startidx:(calibvar_endidx+1), :]
+        # get_close_grid_point_data is inherited from the LinearPSM class
+        # on which this one is based.
+        gridpoint_data = self.get_close_grid_point_data(calibvar_data.T,
+                                                        X_lons,
+                                                        X_lats)
+
+        Ye = self.slope * gridpoint_data + self.intercept
+        
+        return Ye
+
+    # Define the error model for this proxy
+    @staticmethod
+    def error():
+        return 0.1
+
+    # TODO: Simplify a lot of the actions in the calibration
+    def calibrate(self, C, proxy, diag_output=False, diag_output_figs=False):
+        """
+        Calibrate given proxy record against observation data and set relevant
+        PSM attributes.
+
+        Parameters
+        ----------
+        C: calibration_master like
+            Calibration object containing data, time, lat, lon info
+        proxy: BaseProxyObject like
+            Proxy object to fit to the calibration data
+        diag_output, diag_output_figs: bool, optional
+            Diagnostic output flags for calibration method
+        """
+
+        print 'Calibration not performed in this psm class!'
+        pass
+
+    @staticmethod
+    def get_kwargs(config):
+        try:
+            psm_data_T = LinearPSM_TorP._load_psm_data(config,calib_var='temperature')
+            psm_data_P = LinearPSM_TorP._load_psm_data(config,calib_var='moisture')
+            return {'psm_data_T': psm_data_T, 'psm_data_P': psm_data_P}
+        except IOError as e:
+            print e
+            return {}
+
+    @staticmethod
+    def _load_psm_data(config,calib_var):
+        """Helper method for loading from dataframe"""
+        if calib_var == 'temperature':
+            pre_calib_file = config.psm.linear_TorP.pre_calib_datafile_T
+        elif calib_var == 'moisture':
+            pre_calib_file = config.psm.linear_TorP.pre_calib_datafile_P
+        else:
+            raise(ValueError('Unrecognized calibration variable'
+                             ' to calibrate psm.'))
+
+        return load_cpickle(pre_calib_file)
+
+
+class BilinearPSM(BasePSM):
+    """
+    PSM based on bivariate linear regression w.r.t. temperature AND precipitation/moisture
+    
+
+    Attributes
+    ----------
     lat: float
         Latitude of associated proxy site
     lon: float
@@ -536,94 +831,53 @@ class LinearPSM_TorP(LinearPSM):
         If PSM is below critical correlation threshold.
     """
 
-    def __init__(self, config, proxy_obj, psm_data_T=None, psm_data_P=None):
-
-        TorP_types = ['Tree Rings_WidthBreit', 'Tree Rings_WidthPages',
-                      'Tree Rings_WoodDensity']
+    def __init__(self, config, proxy_obj, psm_data=None):
 
         proxy = proxy_obj.type
         site = proxy_obj.id
-        r_crit = config.psm.linear.psm_r_crit
+        r_crit = config.psm.bilinear.psm_r_crit
         self.lat  = proxy_obj.lat
         self.lon  = proxy_obj.lon
         self.elev = proxy_obj.elev
 
-        # Try using pre-calibrated psm_data for **temperature**
+        # Assign sensitivity as temperature_moisture
+        self.sensitivity = 'temperature_moisture'
+
+        # Try using pre-calibrated psm_data
         try:
-            if psm_data_T is None:
-                psm_data_T = self._load_psm_data(config,'temperature')
-            psm_site_data_T = psm_data_T[(proxy, site)]
-        except (KeyError, IOError) as e:
-            # No precalibration found, have to do it for this proxy
-            # print 'PSM (temperature) not calibrated for:' + str((proxy, site))
-            logger.error(e)
-            logger.info('PSM (temperature) not calibrated for:' +
-                        str((proxy, site)))
-
-        # Try using pre-calibrated psm_data for **precipitation**
-        try:
-            if psm_data_P is None:
-                psm_data_P = self._load_psm_data(config,'precipitation')
-            psm_site_data_P = psm_data_P[(proxy, site)]
-
-        except (KeyError, IOError) as e:
-            # No precalibration found, have to do it for this proxy
-            logger.error(e)
-            logger.info('PSM (precipitation) not calibrated for:' +
-                        str((proxy, site)))
-
-        # Check if PSM is calibrated w.r.t. temperature and/or w.r.t.
-        # precipitation
-        # Assign proxy "sensitivity" based on PSM calibration
-
-        if proxy in TorP_types: # restrict this check to specific proxy types (e.g. tree rings)
+            if psm_data is None:
+                psm_data = self._load_psm_data(config)
+            psm_site_data = psm_data[(proxy, site)]
             
-            if (proxy, site) in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
-                # calibrated for temperature AND for precipitation, check relative goodness of fit 
-                # and assign "sensitivity" & corresponding PSM parameters according to best fit.
-                if psm_site_data_T['PSMmse'] < psm_site_data_P['PSMmse']:
-                    # smaller residual errors w.r.t. temperature
-                    self.sensitivity = 'temperature'
-                    self.corr = psm_site_data_T['PSMcorrel']
-                    self.slope = psm_site_data_T['PSMslope']
-                    self.intercept = psm_site_data_T['PSMintercept']
-                    self.R = psm_site_data_T['PSMmse']
-                else:
-                    # smaller residual errors w.r.t. precipitation
-                    self.sensitivity = 'precipitation'
-                    self.corr = psm_site_data_P['PSMcorrel']
-                    self.slope = psm_site_data_P['PSMslope']
-                    self.intercept = psm_site_data_P['PSMintercept']
-                    self.R = psm_site_data_P['PSMmse']
+            self.corr = psm_site_data['PSMcorrel']
+            self.slope_temperature = psm_site_data['PSMslope_temperature']
+            self.slope_moisture = psm_site_data['PSMslope_moisture']
+            self.intercept = psm_site_data['PSMintercept']
+            self.R = psm_site_data['PSMmse']
 
-            elif (proxy, site) in psm_data_T.keys() and (proxy, site) not in psm_data_P.keys():
-                # calibrated for temperature and NOT for precipitation, assign as "temperature" sensitive
-                self.sensitivity = 'temperature'
-                self.corr = psm_site_data_T['PSMcorrel']
-                self.slope = psm_site_data_T['PSMslope']
-                self.intercept = psm_site_data_T['PSMintercept']
-                self.R = psm_site_data_T['PSMmse']
-            elif (proxy, site) not in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
-                # calibrated for precipitation and NOT for temperature, assign as "precipitation" sensitive
-                self.sensitivity = 'precipitation'
-                self.corr = psm_site_data_P['PSMcorrel']
-                self.slope = psm_site_data_P['PSMslope']
-                self.intercept = psm_site_data_P['PSMintercept']
-                self.R = psm_site_data_P['PSMmse']
-            else:
-                raise(ValueError('Unknown pre-calibration status!'))
+            self.calib_temperature = psm_site_data['calib_temperature']
+            self.calib_moisture = psm_site_data['calib_moisture']
+            
+        except (KeyError, IOError) as e:
+            # No precalibration found, have to do it for this proxy
+            print ('No pre-calibration found for'
+                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,proxy_obj.type))
+            
+            # TODO: Fix call and Calib Module
+            # Two calibration sources to consider
+            datag_calib_T = config.psm.bilinear.datatag_calib_T
+            datag_calib_P = config.psm.bilinear.datatag_calib_P
 
-        else:
-            if (proxy, site) in psm_data_T.keys():
-                self.sensitivity = 'temperature'
-                self.corr = psm_site_data_T['PSMcorrel']
-                self.slope = psm_site_data_T['PSMslope']
-                self.intercept = psm_site_data_T['PSMintercept']
-                self.R = psm_site_data_T['PSMmse']
-            else:
-                raise(ValueError('Unknown pre-calibration status!'))
-
-
+            # Two calibration objects, temperature and precipitation/moisture
+            C_T = LMR_calibrate.calibration_assignment(datag_calib_T)
+            C_T.datadir_calib = config.psm.bilinear.datadir_calib
+            C_T.read_calibration()
+            C_P = LMR_calibrate.calibration_assignment(datag_calib_P)
+            C_P.datadir_calib = config.psm.bilinear.datadir_calib
+            C_P.read_calibration()
+        
+            self.calibrate(C_T, C_P, proxy_obj)                        
+            
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
@@ -654,46 +908,61 @@ class LinearPSM_TorP(LinearPSM):
         # ----------------------
         # Calculate the Ye's ...
         # ----------------------
-        try:
-            if self.sensitivity == 'temperature':
-                state_var = 'tas_sfc_Amon'
-            elif self.sensitivity == 'precipitation':
-                state_var = 'pr_sfc_Amon'
-            else:
-                raise KeyError('Unkown PSM sensitivity. PSM not identified for Ye'
-                           ' calculation.')
-        except:
-            # if "sensitivity" not defined for this proxy, simply revert to the default (temperature)
-            state_var = 'tas_sfc_Amon'
 
-        if state_var not in X_state_info.keys():
-            raise KeyError('Needed variable not in state vector for Ye'
+        # Defining state variables to consider in the calculation of Ye's
+        state_var_T = 'tas_sfc_Amon'
+        if self.calib_moisture == 'GPCC':
+            state_var_P = 'pr_sfc_Amon'
+        elif self.calib_moisture == 'DaiPDSI':
+            state_var_P = 'scpdsi_sfc_Amon'
+        else:
+            raise KeyError('Unrecognized calibration-state variable association. State variable not identified for Ye'
                            ' calculation.')
 
+        if state_var_T not in X_state_info.keys() or state_var_P not in X_state_info.keys():
+            raise KeyError('One or more needed variable not in state vector for Ye'
+                           ' calculation.')
+
+        # Do not assume that temperature and precipitation/moisture variables are on same grid (for generality)
+        # So need to make distinct distance calculations for both state variables
+        # Temperature ---
         # TODO: end index should already be +1, more pythonic
-        calibvar_startidx, calibvar_endidx = X_state_info[state_var]['pos']
-        ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
-        ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
-
+        calibvar_startidx, calibvar_endidx = X_state_info[state_var_T]['pos']
+        ind_lon = X_state_info[state_var_T]['spacecoords'].index('lon')
+        ind_lat = X_state_info[state_var_T]['spacecoords'].index('lat')
         # Find row index of X for which [X_lat,X_lon] corresponds to closest
-        # grid point to
-        # location of proxy site [self.lat,self.lon]
+        # grid point to location of proxy site [self.lat,self.lon]
         # Calclulate distances from proxy site.
         stateDim = calibvar_endidx - calibvar_startidx + 1
         ensDim = Xb.shape[1]
         dist = np.empty(stateDim)
-        # dist = np.array(
-        #     [haversine(self.lon, self.lat, X_coords[k, ind_lon],
-        #                X_coords[k, ind_lat])
-        #      for k in xrange(calibvar_startidx, calibvar_endidx + 1)])
         dist = haversine(self.lon, self.lat,
                           X_coords[calibvar_startidx:(calibvar_endidx+1), ind_lon],
                           X_coords[calibvar_startidx:(calibvar_endidx+1), ind_lat])
 
         # row index of nearest grid pt. in prior (minimum distance)
-        kind = np.unravel_index(dist.argmin(), dist.shape)[0] + calibvar_startidx
+        kind_T = np.unravel_index(dist.argmin(), dist.shape)[0] + calibvar_startidx
 
-        Ye = self.slope * np.squeeze(Xb[kind, :]) + self.intercept
+        # Precipitation/Moisture ---
+        # TODO: end index should already be +1, more pythonic
+        calibvar_startidx, calibvar_endidx = X_state_info[state_var_P]['pos']
+        ind_lon = X_state_info[state_var_P]['spacecoords'].index('lon')
+        ind_lat = X_state_info[state_var_P]['spacecoords'].index('lat')
+        # Find row index of X for which [X_lat,X_lon] corresponds to closest
+        # grid point to location of proxy site [self.lat,self.lon]
+        # Calclulate distances from proxy site.
+        stateDim = calibvar_endidx - calibvar_startidx + 1
+        ensDim = Xb.shape[1]
+        dist = np.empty(stateDim)
+        dist = haversine(self.lon, self.lat,
+                          X_coords[calibvar_startidx:(calibvar_endidx+1), ind_lon],
+                          X_coords[calibvar_startidx:(calibvar_endidx+1), ind_lat])
+
+        # row index of nearest grid pt. in prior (minimum distance)
+        kind_P = np.unravel_index(dist.argmin(), dist.shape)[0] + calibvar_startidx
+
+        # Now calculate the Ye's
+        Ye = self.slope_temperature * np.squeeze(Xb[kind_T, :]) + self.slope_moisture * np.squeeze(Xb[kind_P, :]) + self.intercept
 
         return Ye
 
@@ -703,212 +972,365 @@ class LinearPSM_TorP(LinearPSM):
         return 0.1
 
     # TODO: Simplify a lot of the actions in the calibration
-    def calibrate(self, C, proxy, diag_output=False, diag_output_figs=False):
+    def calibrate(self, C_T, C_P, proxy, diag_output=False, diag_output_figs=False):
         """
         Calibrate given proxy record against observation data and set relevant
         PSM attributes.
 
         Parameters
         ----------
-        C: calibration_master like
-            Calibration object containing data, time, lat, lon info
+        C_T: calibration_master like
+            Calibration object containing temperature data, time, lat, lon info
+        C_P: calibration_master like
+            Calibration object containing precipitation/moisture data, time, lat, lon info
         proxy: BaseProxyObject like
             Proxy object to fit to the calibration data
         diag_output, diag_output_figs: bool, optional
             Diagnostic output flags for calibration method
         """
-
+        
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
 
-        # --------------------------------------------
-        # Use linear model (regression) as default PSM
-        # --------------------------------------------
 
-        # TODO: Distance calculation should probably be a function
+        #print 'Calibrating: ', '{:25}'.format(proxy.id), '{:35}'.format(proxy.type)
+        
+        # ----------------------------------------------
+        # Use bilinear model (regression) as default PSM
+        # ----------------------------------------------
+
         # Look for indices of calibration grid point closest in space (in 2D)
         # to proxy site
-        #dist = np.empty([C.lat.shape[0], C.lon.shape[0]])
-        #tmp = np.array(
-        #    [haversine(proxy.lon, proxy.lat, C.lon[k], C.lat[j]) for j
-        #     in xrange(len(C.lat)) for k in xrange(len(C.lon))])
-        #dist = np.reshape(tmp, [len(C.lat), len(C.lon)])
-        dist = get_distance(proxy.lon, proxy.lat, C.lon, C.lat)
+        # For temperature calibration dataset
+        dist_T = get_distance(proxy.lon, proxy.lat, C_T.lon, C_T.lat)
         # indices of nearest grid pt.
-        jind, kind = np.unravel_index(dist.argmin(), dist.shape)
+        jind_T, kind_T = np.unravel_index(dist_T.argmin(), dist_T.shape)
+        # For precipitation/moisture calibration dataset
+        dist_P = get_distance(proxy.lon, proxy.lat, C_P.lon, C_P.lat)
+        # indices of nearest grid pt.
+        jind_P, kind_P = np.unravel_index(dist_P.argmin(), dist_P.shape)
 
-        # TODO: need to fix this to use proxy2 style time
-        # overlapping years
-        sc = set(C.time)
-        sp = set(proxy.time)
-
-        common_time = sorted(list(sc.intersection(sp)))
-        # respective indices in calib and proxy times
-        ind_c = [j for j, k in enumerate(C.time) if k in common_time]
-        #ind_p = [j for j, k in enumerate(proxy.time) if k in common_time]
-        ind_p = common_time
-
+        # Apply spatial smoother to calibration gridded data, if option is activated
         if calib_spatial_avg:
-            C2Dsmooth = np.zeros(
-                [C.time.shape[0], C.lat.shape[0], C.lon.shape[0]])
-            for m in ind_c:
-                C2Dsmooth[m, :, :] = smooth2D(C.temp_anomaly[m, :, :], n=Npts)
-            reg_x = [C2Dsmooth[m, jind, kind] for m in ind_c]
+            # temperature
+            C2Dsmooth = np.zeros([C_T.time.shape[0], C_T.lat.shape[0], C_T.lon.shape[0]])
+            for m in range(C_T.time.shape[0]):
+                C2Dsmooth[m, :, :] = smooth2D(C_T.temp_anomaly[m, :, :], n=Npts)            
+            reg_x_T = C2Dsmooth[:, jind_T, kind_T]
+
+            # precipitation/moisture
+            C2Dsmooth = np.zeros([C_P.time.shape[0], C_P.lat.shape[0], C_P.lon.shape[0]])
+            for m in range(C_P.time.shape[0]):
+                C2Dsmooth[m, :, :] = smooth2D(C_P.temp_anomaly[m, :, :], n=Npts)            
+            reg_x_P = C2Dsmooth[:, jind_P, kind_P]
+            
         else:
-            reg_x = [C.temp_anomaly[m, jind, kind] for m in ind_c]
+            reg_x_T = C_T.temp_anomaly[:, jind_T, kind_T]
+            reg_x_P = C_P.temp_anomaly[:, jind_P, kind_P]
 
-        reg_y = [proxy.values[m] for m in ind_p]
-        # check for valid values
-        ind_c_ok = [j for j, k in enumerate(reg_x) if np.isfinite(k)]
-        ind_p_ok = [j for j, k in enumerate(reg_y) if np.isfinite(k)]
-        common_ok = sorted(list(set(ind_c_ok).intersection(set(ind_p_ok))))
-        # fill numpy arrays with values used in regression
-        reg_xa = np.array([reg_x[k] for k in common_ok])  # calib. values
-        reg_ya = np.array([reg_y[k] for k in common_ok])  # proxy values
 
-        # -------------------------
-        # Perform linear regression
-        # -------------------------
-        nobs = reg_ya.shape[0]
+        # ---------------------------
+        # Perform bilinear regression
+        # ---------------------------
+
+        # Use panda DataFrame to store proxy & calibration data side-by-side
+        header = ['variable', 'y']
+        # Fill-in proxy data
+        df = pd.DataFrame({'time':proxy.time, 'y': proxy.values})
+        df.columns = header
+        # Add temperature calibration data
+        frameT = pd.DataFrame({'variable':C_T.time, 'Temperature':reg_x_T})
+        df = df.merge(frameT, how='outer', on='variable')
+        # Add precipitation/moisture calibration data
+        frameP = pd.DataFrame({'variable':C_P.time, 'Moisture':reg_x_P})
+        df = df.merge(frameP, how='outer', on='variable')
+        col0 = df.columns[0]
+        df.set_index(col0, drop=True, inplace=True)
+        df.index.name = 'Time'
+        df.sort_index(inplace=True)
+
+        # ensure all df entries are floats: if not, sm.ols gives garbage
+        df = df.astype(np.float)
+        
+        # Perform the regression
+        try:
+            regress = sm.ols(formula="y ~ Temperature + Moisture", data=df).fit()
+            # number of data points used in the regression
+            nobs = int(regress.nobs)
+        except:
+            nobs = 0
+            
         if nobs < 10:  # skip rest if insufficient overlapping data
             raise(ValueError('Insufficent observation/calibration overlap'
                              ' to calibrate psm.'))
 
-        # START NEW (GH) 21 June 2015
-        # detrend both the proxy and the calibration data
-        #
-        # save copies of the original data for residual estimates later
-        reg_xa_all = np.copy(reg_xa)
-        reg_ya_all = np.copy(reg_ya)
-        # proxy detrend: (1) linear regression, (2) fit, (3) detrend
-        xvar = range(len(reg_ya))
-        proxy_slope, proxy_intercept, r_value, p_value, std_err = \
-            linregress(xvar, reg_ya)
-        proxy_fit = proxy_slope*np.squeeze(xvar) + proxy_intercept
-        # reg_ya = reg_ya - proxy_fit # expt 4: no detrend for proxy
-        # calibration detrend: (1) linear regression, (2) fit, (3) detrend
-        xvar = range(len(reg_xa))
-        calib_slope, calib_intercept, r_value, p_value, std_err = \
-            linregress(xvar, reg_xa)
-        calib_fit = calib_slope*np.squeeze(xvar) + calib_intercept
-        # reg_xa = reg_xa - calib_fit
-        # END NEW (GH) 21 June 2015
 
-        #print 'Calib stats (x)              [min, max, mean, std]:', np.nanmin(
-        #    reg_xa), np.nanmax(reg_xa), np.nanmean(reg_xa), np.nanstd(reg_xa)
-        #print 'Proxy stats (y:original)     [min, max, mean, std]:', np.nanmin(
-        #    reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
+        # extract the needed regression parameters
+        self.intercept         = regress.params[0]
+        self.slope_temperature = regress.params[1]
+        self.slope_moisture    = regress.params[2]
 
-        # standardize proxy values over period of overlap with calibration data
-        # reg_ya = (reg_ya - np.nanmean(reg_ya))/np.nanstd(reg_ya)
-        # print 'Proxy stats (y:standardized) [min, max, mean, std]:', np.nanmin
-        # (reg_ya), np.nanmax(reg_ya), np.nanmean(reg_ya), np.nanstd(reg_ya)
-        # GH: note that std_err pertains to the slope, not the residuals!!!
-
-        self.slope, self.intercept, r_value, p_value, std_err = linregress(
-            reg_xa, reg_ya)
-
-        # Calculate stats on regression residuals
-        # GH: residuals have to be computed "by hand"
-        fit = self.slope * np.squeeze(reg_xa) + self.intercept
-        residuals = fit - reg_ya
-        MSE = np.mean((residuals) ** 2)
-        self.R = MSE
-        self.corr = r_value
         self.NbPts = nobs
+        self.corr  = np.sqrt(regress.rsquared)
 
-        print 'Calibrating: ', '{:25}'.format(proxy.id), '{:35}'.format(proxy.type)
+        # Stats on fit residuals
+        MSE = np.mean((regress.resid) ** 2)
+        self.R = MSE
 
+
+        diag_output = False
+        diag_output_figs = False
+        
         if diag_output:
-            # Some other diagnostics
-            varproxy = np.var(reg_ya)
-            varresiduals = np.var(residuals)
-            varratio = np.divide(varproxy, varresiduals)
-            snr = abs(r_value) / (np.sqrt(1.0 - r_value ** 2))
             # Diagnostic output
             print "***PSM stats:"
-            print "Nobs                 :", nobs
-            print "slope                :", self.slope
-            print "intercept            :", self.intercept
-            print "correl.              :", r_value
-            print "r-squared            :", r_value ** 2
-            print "p_value              :", p_value
-            print "std_err              :", std_err
-            print "resid MSE            :", MSE
-            print "var(proxy)/var(resid):", varratio
-            print "SNR                  :", snr
-
+            print regress.summary()
+            print ' '
+            print 'Pairwise correlations:'
+            print '----------------------'
+            print df.corr()
+            print ' '
+            print ' '
+            
             if diag_output_figs:
                 # Figure (scatter plot w/ summary statistics)
-                line = self.slope * reg_xa + self.intercept
-                pylab.plot(reg_xa, line, 'r-', reg_xa, reg_ya, 'o',
-                           markersize=7, markerfacecolor='#5CB8E6',
-                           markeredgecolor='black', markeredgewidth=1)
-                # GH: I don't know how this ran in the first place; must exploit
-                #  some global namespace
-                pylab.title('%s: %s' % (proxy.type, proxy.id))
-                pylab.xlabel('Calibration data')
-                pylab.ylabel('Proxy data')
-                xmin, xmax, ymin, ymax = pylab.axis()
-                # Annotate with summary stats
-                ypos = ymax - 0.05 * (ymax - ymin)
-                xpos = xmin + 0.025 * (xmax - xmin)
-                pylab.text(xpos, ypos, 'Nobs = %s' % str(nobs), fontsize=12,
-                           fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos,
-                           'Slope = %s' % "{:.4f}".format(self.slope),
-                           fontsize=12, fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos,
-                           'Intcpt = %s' % "{:.4f}".format(self.intercept),
-                           fontsize=12, fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos, 'Corr = %s' % "{:.4f}".format(r_value),
-                           fontsize=12, fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos,
-                           'p_value = %s' % "{:.4f}".format(p_value),
-                           fontsize=12, fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos, 'StdErr = %s' % "{:.4f}".format(std_err),
-                           fontsize=12, fontweight='bold')
-                ypos = ypos - 0.05 * (ymax - ymin)
-                pylab.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(MSE),
-                           fontsize=12, fontweight='bold')
-                pylab.savefig('proxy_%s_%s_LinearModel_calib.png' % (
+
+                y = df['y']
+                X = df[['Temperature','Moisture']]
+                
+                xx1, xx2 = np.meshgrid(np.linspace(X.Temperature.min(),X.Temperature.max(),200),
+                                       np.linspace(X.Moisture.min(),X.Moisture.max(),200))
+                Model = self.intercept + self.slope_temperature*xx1 + self.slope_moisture*xx2
+                
+                fig = plt.figure(figsize=(10,7))
+                ax = Axes3D(fig,azim=-130,elev=15)
+
+                # plot hyperplane
+                surf = ax.plot_surface(xx1,xx2,Model,cmap=plt.cm.RdBu_r,alpha=0.6,linewidth=0)
+
+                # plot data points                
+                resid = y - (self.intercept + self.slope_temperature*X['Temperature'] + self.slope_temperature*X['Moisture'])
+                ax.scatter(X[resid>=0.].Temperature,X[resid>=0.].Moisture,y[resid>=0.], color='black', alpha=1.0,facecolor='white')
+                ax.scatter(X[resid<0.].Temperature,X[resid<0.].Moisture,y[resid<0.], color='black', alpha=1.0)
+                
+                # axis labels
+                plt.suptitle('%s: %s' % (proxy.type, proxy.id),fontsize=16,fontweight='bold')
+
+                ax.set_xlabel('Calibration temperature')
+                ax.set_ylabel('Calibration moisture')
+                ax.set_zlabel('Proxy data')
+
+                xmin, xmax = ax.get_xlim()
+                ymin, ymax = ax.get_ylim()
+                zmin, zmax = ax.get_zlim()
+
+                ax.text2D(0.05,0.92, 'Nobs=%s  Correlation=%s  MSE=%s' %(self.NbPts, "{:.4f}".format(self.corr),"{:.4f}".format(self.R)), transform=ax.transAxes, fontsize=14)
+                ax.text2D(0.05,0.89, 'proxy = %s + (%s x Temperature) + (%s x Moisture)' %("{:.4f}".format(self.intercept),
+                                                                                                 "{:.4f}".format(self.slope_temperature),
+                                                                                                 "{:.4f}".format(self.slope_moisture)), transform=ax.transAxes, fontsize=14)
+                
+                plt.savefig('proxy_%s_%s_BilinearModel_calib.png' % (
                     proxy.type.replace(" ", "_"), proxy.id),
                               bbox_inches='tight')
-                pylab.close()
+                plt.close()
 
+    
     @staticmethod
     def get_kwargs(config):
         try:
-            psm_data_T = LinearPSM_TorP._load_psm_data(config,calib_var='temperature')
-            psm_data_P = LinearPSM_TorP._load_psm_data(config,calib_var='precipitation')
-            return {'psm_data_T': psm_data_T, 'psm_data_P': psm_data_P}
+            psm_data = BilinearPSM._load_psm_data(config)
+            return {'psm_data': psm_data}
         except IOError as e:
             print e
             return {}
 
     @staticmethod
-    def _load_psm_data(config,calib_var):
+    def _load_psm_data(config):
         """Helper method for loading from dataframe"""
-        if calib_var == 'temperature':
-            pre_calib_file = config.psm.linear_TorP.pre_calib_datafile_T
-        elif calib_var == 'precipitation':
-            pre_calib_file = config.psm.linear_TorP.pre_calib_datafile_P
-        else:
-            raise(ValueError('Unrecognized calibration variable'
-                             ' to calibrate psm.'))
 
+        pre_calib_file = config.psm.bilinear.pre_calib_datafile
+        
         return load_cpickle(pre_calib_file)
 
+    
+
+class h_interpPSM(BasePSM):
+    """
+    Horizontal interpolator as a PSM.
+    Interpolator is a distance-weighted average of surrounding gridpoint values, 
+    with weights determined by exponentially-decaying function calculated using
+    a user-defined influence radius.
+
+    Attributes
+    ----------
+    RadiusInfluence: float
+        Distance-scale used the calculation of exponentially-decaying weights in interpolator (in km)
+    sensitivity: string
+        Indicates the sensitivity (temperature vs moisture) of the proxy record
+        Here set to "None" as this information is irrelevant, but given for 
+        compatibility with other PSM classes
+    lat: float
+        Latitude of associated proxy site
+    lon: float
+        Longitude of associated proxy site
+    elev: float
+        Elevation/depth of proxy site
+    R: float
+        Obs. error variance associated to proxy site
+
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module used for current LMR run.
+    proxy_obj: BaseProxyObject like
+        Proxy object that this PSM is being attached to
+
+    Raises
+    ------
+    ValueError
+        ...
+    """
+
+    def __init__(self, config, proxy_obj, R_data=None):
+
+        self.proxy = proxy_obj.type
+        self.site = proxy_obj.id
+        self.lat  = proxy_obj.lat
+        self.lon  = proxy_obj.lon
+        try:
+            self.elev = proxy_obj.elev
+        except:
+            self.elev = None        
+        self.sensitivity = None
+        self.RadiusInfluence = config.psm.h_interp.radius_influence
+        
+        # Try finding file containing obs. error variance info for **d18O** ??
+        # and assign the R value to proxy psm object
+        try:
+            if R_data is None:
+                R_data = self._load_psm_data(config)
+            self.R = R_data[(self.proxy, self.site)]
+        except (KeyError, IOError) as e:
+            # No obs. error variance file found
+            logger.error(e)
+            logger.info('Cannot find obs. error variance data for:' + str((proxy, site)))
+
+
+    # TODO: Ideally prior state info and coordinates should all be in single obj
+    def psm(self, Xb, X_state_info, X_coords):
+        """
+        Maps a given state to observations for the given proxy
+
+        Parameters
+        ----------
+        Xb: ndarray
+            State vector to be mapped into observation space (stateDim x ensDim)
+        X_state_info: dict
+            Information pertaining to variables in the state vector
+        X_coords: ndarray
+            Coordinates for the state vector (stateDim x 2)
+
+        Returns
+        -------
+        Ye:
+            Equivalent observation from prior
+        """
+
+        # ----------------------
+        # Calculate the Ye's ...
+        # ----------------------
+        
+        # define state variable (which isotope) that should be interpolated to proxy site
+        # (TODO: more flexible way to do this...)
+        try:
+            if 'd18O' in self.proxy:
+                state_var = 'd18O_sfc_Amon'
+            else:
+                raise KeyError('Proxy type not consistent with PSM as simple interpolation. Ye calculation'
+                           ' not possible.')
+        except:
+            raise KeyError('Needed state variable is not defined. Ye calculation'
+                           ' not possible.')
+
+        if state_var not in X_state_info.keys():
+            raise KeyError('Needed variable not in state vector for Ye'
+                           ' calculation.')
+
+        # TODO: end index should already be +1, more pythonic
+        statevar_startidx, statevar_endidx = X_state_info[state_var]['pos']
+        ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
+        ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
+
+        # Find row index of X for which [X_lat,X_lon] corresponds to closest
+        # grid point to location of proxy site [self.lat,self.lon]
+
+        # Calclulate distances from proxy site.
+        stateDim = statevar_endidx - statevar_startidx + 1
+        ensDim = Xb.shape[1]
+        dist = np.empty(stateDim)
+        dist = haversine(self.lon, self.lat,
+                          X_coords[statevar_startidx:(statevar_endidx+1), ind_lon],
+                          X_coords[statevar_startidx:(statevar_endidx+1), ind_lat])
+
+        # Check if RadiusInfluence is defined (not None). Use weighted-averaging as interpolator if it is.
+        # Otherwise, seek value at nearest gridpoint to proxy location
+        if self.RadiusInfluence:
+            # Calculate weighted-average
+            #  exponential decay
+            L =  self.RadiusInfluence
+            weights = np.exp(-np.square(dist)/np.square(L))
+            # make the weights sum to one
+            weights /=weights.sum(axis=0)
+        
+            Ye = np.dot(weights.T,Xb[statevar_startidx:(statevar_endidx+1), :])
+        else:
+            # Pick value at nearest grid point
+            # row index of nearest grid pt. in prior (minimum distance)
+            kind = np.unravel_index(dist.argmin(), dist.shape)[0] + statevar_startidx
+            
+            Ye = np.squeeze(Xb[kind, :])
+
+            
+        return Ye
+
+    # Define a default error model for this proxy
+    @staticmethod
+    def error():
+        return 0.1
+
+    @staticmethod
+    def get_kwargs(config):
+        try:
+            # obs. error variabce data
+            R_data = h_interpPSM._load_psm_data(config)
+            return {'R_data': R_data}
+        except IOError as e:
+            print e
+            exit(1) # force an exit
+
+    @staticmethod
+    def _load_psm_data(config):
+        """Helper method for loading from dataframe"""
+        
+        R_data_file = config.psm.h_interp.datafile_obsError
+        # check if file exists
+        if not os.path.isfile(R_data_file):
+            raise(IOError('In "h_interpPSM" class: Cannot find file containing obs. error info.: %s. Exiting!' % R_data_file))
+        else:
+            # this returns an array of tuples (proxy type of type string, proxy site name of type string, R value of type float)
+            # transformed into a list
+            Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None).tolist()
+
+            # transform into a dictionary with (proxy type, proxy site) tuples as keys and R as the paired values
+            Rdata_dict = dict([((item[0],item[1]),item[2]) for item in Rdata_list])            
+            
+        return Rdata_dict
 
 
 # Mapping dict to PSM object type, this is where proxy_type/psm relations
 # should be specified (I think.) - AP
-_psm_classes = {'linear': LinearPSM, 'linear_TorP': LinearPSM_TorP}
+_psm_classes = {'linear': LinearPSM, 'linear_TorP': LinearPSM_TorP,
+                'bilinear': BilinearPSM,'h_interp': h_interpPSM}
 
 def get_psm_class(psm_type):
     """

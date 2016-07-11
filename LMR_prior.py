@@ -14,6 +14,11 @@ Revisions:
           - Added the ERA20CM (ECMWF 20th century ensemble simulation) as a 
             possible source of prior data to be used by the LMR.
             [R. Tardif, U. of Washington, December 2015]
+          - Added the option of detrending the prior
+            [R. Tardif, U. of Washington, March 2016]
+          - Added the 'ccsm4_isotope_controlrun' as a possible prior source.
+            Contains simulated isotope (d18O) field. 
+            [R. Tardif, U. of Washington, May 2016]
 
 """
 # -------------------------------------------------------------------------------
@@ -29,6 +34,8 @@ def prior_assignment(iprior):
         prior_object = prior_ccsm4_last_millenium()
     elif iprior == 'ccsm4_preindustrial_control':
         prior_object = prior_ccsm4_preindustrial_control()
+    elif iprior == 'ccsm4_isotope_controlrun':
+        prior_object = prior_ccsm4_isotope_controlrun()
     elif iprior == 'mpi-esm-p_last_millenium':
         prior_object = prior_mpi_esm_p_last_millenium()
     elif iprior == 'gfdl-cm3_preindustrial_control':
@@ -203,7 +210,8 @@ class prior_ccsm4_last_millenium(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
+                                                        self.detrend,self.kind)
         return
 
 # class for the CCSM4 Pre-Industrial Control simulation
@@ -211,15 +219,26 @@ class prior_ccsm4_preindustrial_control(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
+                                                        self.detrend,self.kind)
         return
 
+# class for the CCSM4 isotope-enabled control simulation (from D. Noone)
+class prior_ccsm4_isotope_controlrun(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
+                                                        self.detrend,self.kind)
+        return
+    
 # class for the MPI-ESM-P Last Millenniun simulation
 class prior_mpi_esm_p_last_millenium(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
+                                                        self.detrend,self.kind)
         return
 
 # class for the GFDL-CM3 Pre-Industrial Control simulation
@@ -227,7 +246,8 @@ class prior_gfdl_cm3_preindustrial_control(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
+                                                        self.detrend,self.kind)
         return
 
 # class for NOAA's 20th century reanalysis (20CR)
@@ -235,7 +255,8 @@ class prior_20cr(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
+                                                        self.detrend,self.kind)
         return
 
 # class for ECMWF's 20th century reanalysis (ERA20C)
@@ -243,7 +264,8 @@ class prior_era20c(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,self.detrend)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
+                                                        self.detrend,self.kind)
         return
 
 # class for ECMWF's 20th century model ensemble (ERA20CM)

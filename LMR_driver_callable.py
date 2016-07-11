@@ -60,7 +60,7 @@ def LMR_driver_callable(cfg=None):
 
     # verbose controls print comments (0 = none; 1 = most important;
     #  2 = many; >=3 = all)
-    verbose = 1
+    verbose = 3
 
     nexp = core.nexp
     workdir = core.datadir_output
@@ -115,7 +115,9 @@ def LMR_driver_callable(cfg=None):
     # new option: detrending the prior
     X.detrend = prior.detrend
     print 'detrend:', X.detrend
-
+    # new option: prior as full field or anomalies?
+    X.kind =  prior.state_kind
+    print 'prior kind:', X.kind
 
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source, prior)
