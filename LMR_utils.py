@@ -148,6 +148,9 @@ def ensemble_stats(workdir, y_assim):
     #             revised 15 July 2015 (R Tardif, UW)
     #               : extracts Ye's from augmented state vector (Ye=HXa), match with corresponding
     #                 proxy sites from master list of proxies and output to analysis_Ye.pckl file
+    #             revised June 2016 (Michael Erb, USC)
+    #               : Fixed a bug wehre the analysis Ye values were not being
+    #                 indexed by year properly  in forming analysis_Ye.pckl
 
     prior_filn = workdir + '/Xb_one.npz'
     
