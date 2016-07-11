@@ -5,25 +5,30 @@ paleoclimate reconstruction experiments.
 Adapted from LMR_exp_NAMELIST by AndreP
 
 Revisions:
- - Introduction of definitions related to use of newly developed NCDC proxy database.
+ - Introduction of definitions related to use of newly developed NCDC proxy
+   database.
    [ R. Tardif, Univ. of Washington, January 2016 ]
  - Added functionality restricting assimilated proxy records to those belonging
    to specific databases (e.g. PAGES1, PAGES2, LMR) (only for NCDC proxies).
    [ R. Tardif, Univ. of Washington, February 2016 ]
- - Introduction of "blacklist" to prevent the assimilation of specific proxy records as defined 
-   (through a python list) by the user. Applicable for both NCDC and Pages proxy sets.
+ - Introduction of "blacklist" to prevent the assimilation of specific proxy
+   records as defined (through a python list) by the user. Applicable for both
+   NCDC and Pages proxy sets.
    [ R. Tardif, Univ. of Washington, February 2016 ]
- - Added boolean allowing the user to indicate whether the prior is to be detrended or not.
+ - Added boolean allowing the user to indicate whether the prior is to be
+   detrended or not.
    [ R. Tardif, Univ. of Washington, February 2016 ]
- - Added definitions associated with a new psm class (linear_TorP) allowing the use of
-   temperature-calibrated OR precipitation-calibrated linear PSMs.
+ - Added definitions associated with a new psm class (linear_TorP) allowing the
+   use of temperature-calibrated OR precipitation-calibrated linear PSMs.
    [ R. Tardif, Univ. of Washington, March 2016 ]
- - Added definitions associated with a new psm class (h_interp) for use of isotope-enabled GCM data
-   as prior: Ye values are taken as the prior isotope field either at the nearest grid pt. or as the
-   weighted-average of values at grid points surrounding the isotope proxy site assimilated.
+ - Added definitions associated with a new psm class (h_interp) for use of
+   isotope-enabled GCM data as prior: Ye values are taken as the prior isotope
+   field either at the nearest grid pt. or as the weighted-average of values at
+   grid points surrounding the isotope proxy site assimilated.
    [ R. Tardif, Univ. of Washington, June 2016 ]
--  Added definitions associated with a new psm class (bilinear) for bivariate linear regressions
-   w/ temperature AND precipitation/PSDI as independent variables.
+-  Added definitions associated with a new psm class (bilinear) for bivariate
+   linear regressions w/ temperature AND precipitation/PSDI as independent
+   variables.
    [ R. Tardif, Univ. of Washington, June 2016 ]
  - Added initialization features to all configuration classes and sub_classes
    The new usage should now grab an instance of Config and use that object.
@@ -208,8 +213,10 @@ class proxies(object):
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
         proxy_resolution = [1.0]
-        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
-        
+
+        # 'anom' for anomalies (temporal mean removed) or 'asis' to keep
+        # unchanged
+        proxy_timeseries_kind = 'asis'
         # DO NOT CHANGE FORMAT BELOW
 
         proxy_order = [
@@ -339,9 +346,10 @@ class proxies(object):
                    'North America', 'South America']
 
         proxy_resolution = [1.0]
+        # 'anom' for anomalies (temporal mean removed) or 'asis' to keep
+        # unchanged
+        proxy_timeseries_kind = 'asis'
 
-        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
-        
         # Limit proxies to those included in the following databases
         #database_filter = ['PAGES1']
         database_filter = []
@@ -536,7 +544,8 @@ class psm(object):
                 self.datadir_calib = self.datadir_calib
 
             if self.pre_calib_datafile is None:
-                filename = 'PSMs_'+'-'.join(proxies.use_from)+'_'+self.datatag_calib+'.pckl'
+                filename = ('PSMs_' + '-'.join(proxies.use_from) +
+                            '_' + self.datatag_calib+'.pckl')
                 self.pre_calib_datafile = join(core.lmr_path,
                                                'PSM',
                                                filename)
@@ -719,7 +728,8 @@ class psm(object):
 
             if self.pre_calib_datafile is None:
                 filename = 'PSMs_'+'-'.join(proxies.use_from)+'_' + \
-                           self.datatag_calib_T +'_'+self.datatag_calib_P + '.pckl'
+                           self.datatag_calib_T +'_'+self.datatag_calib_P +\
+                           '.pckl'
                 self.pre_calib_datafile = join(core.lmr_path,
                                                  'PSM',
                                                  filename)
@@ -734,22 +744,26 @@ class psm(object):
         Attributes
         ----------
         radius_influence : real
-            Distance-scale used the calculation of exponentially-decaying weights in interpolator (in km)
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
         datadir_obsError: str
             Absolute path to obs. error variance data
         filename_obsError: str
             Filename for obs. error variance data
         dataformat_obsError: str
-            String indicating the format of the file containing obs. error variance data
+            String indicating the format of the file containing obs. error
+            variance data
             Note: note currently used by code. For info purpose only.
         datafile_obsError: str
             Absolute path/filename of obs. error variance data
         """
 
         # Interpolation parameter:
-        # Set to 'None' if want Ye = value at nearest grid point to proxy location
-        # Set to a non-zero float if want Ye = weighted-average of surrounding gridpoints
-        #radius_influence = None
+        # Set to 'None' if want Ye = value at nearest grid point to proxy
+        # location
+        # Set to a non-zero float if want Ye = weighted-average of surrounding
+        # gridpoints
+        # radius_influence = None
         radius_influence = 50. # distance-scale in km
         
         datadir_obsError = './'
@@ -765,7 +779,8 @@ class psm(object):
             self.dataformat_obsError = self.dataformat_obsError 
 
             if self.datafile_obsError is None:
-                self.datafile_obsError = join(self.datadir_obsError, self.filename_obsError)
+                self.datafile_obsError = join(self.datadir_obsError,
+                                              self.filename_obsError)
             else:
                 self.datafile_obsError = self.datafile_obsError
 

@@ -175,7 +175,8 @@ class LinearPSM(BasePSM):
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
             print ('No pre-calibration found for'
-                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,proxy_obj.type))
+                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
+                                                         proxy_obj.type))
             
             # TODO: Fix call and Calib Module
             datag_calib = config.psm.linear.datatag_calib
