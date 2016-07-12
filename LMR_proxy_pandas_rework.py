@@ -238,7 +238,8 @@ class BaseProxyObject:
 
     @classmethod
     @abstractmethod
-    def load_site(cls,  config, site, data_range, meta_src=None, data_src=None,
+    def load_site(cls,  config, site, data_range=None, meta_src=None,
+                  data_src=None,
                   **psm_kwargs):
         """
         Load proxy object from single site.
@@ -321,7 +322,8 @@ class ProxyPages(BaseProxyObject):
 
     @classmethod
     @augment_docstr
-    def load_site(cls, config, site, data_range, meta_src=None, data_src=None,
+    def load_site(cls, config, site, data_range=None, meta_src=None,
+                  data_src=None,
                   **psm_kwargs):
         """%%aug%%
 
@@ -333,7 +335,6 @@ class ProxyPages(BaseProxyObject):
             meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(config.proxies.pages.datafile_proxy)
-        start, finish = data_range
 
         site_meta = meta_src[meta_src['PAGES ID'] == site]
         pid = site_meta['PAGES ID'].iloc[0]
@@ -347,8 +348,14 @@ class ProxyPages(BaseProxyObject):
         lon = site_meta['Lon (E)'].iloc[0]
         elev = 0.0 # elev not info available in PAGES2kS1 data
         site_data = data_src[site]
-        values = site_data[(site_data.index >= start) &
-                           (site_data.index <= finish)]
+
+        if data_range is not None:
+            start, finish = data_range
+            values = site_data[(site_data.index >= start) &
+                               (site_data.index <= finish)]
+        else:
+            values = site_data
+
         # Might need to remove following line
         values = values[values.notnull()]
         times = values.index.values
@@ -444,6 +451,45 @@ class ProxyPages(BaseProxyObject):
                         break  # Should only be one instance
 
         return proxy_id_by_type, all_proxies
+
+
+    @classmethod
+    def load_all_annual_no_filtering(cls, config, meta_src=None,
+                                     data_src=None, **psm_kwargs):
+        """
+        Method created to facilitate the loading of all possible proxy records
+        that can be calibrated with annual resolution.
+
+        Note: This is still subject to constraints from the PSM calibration (
+        i.e. if there is an r_crit or not enough calibration data the proxy
+        will not be loaded)
+
+        Returns
+        -------
+        proxy_objs: list(BaseProxyObject like)
+        """
+
+        # Load source data files
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.pages.datafile_proxy)
+
+        useable = meta_src['Resolution (yr)'] == 1.0
+
+        proxy_ids = meta_src['PAGES ID'][useable].values
+
+        proxy_objs = []
+        for site in proxy_ids:
+            try:
+                pobj = cls.load_site(config, site,
+                                     meta_src=meta_src, data_src=data_src,
+                                     **psm_kwargs)
+                proxy_objs.append(pobj)
+            except ValueError as e:
+                print e
+
+        return proxy_objs
 
     def error(self):
         # Constant error for now
@@ -611,6 +657,45 @@ class ProxyNCDC(BaseProxyObject):
                         break  # Should only be one instance
 
         return proxy_id_by_type, all_proxies
+
+    @classmethod
+    def load_all_annual_no_filtering(cls, config, meta_src=None,
+                                     data_src=None, **psm_kwargs):
+        """
+        Method created to facilitate the loading of all possible proxy records
+        that can be calibrated with annual resolution.
+
+        Note: This is still subject to constraints from the PSM calibration (
+        i.e. if there is an r_crit or not enough calibration data the proxy
+        will not be loaded)
+
+        Returns
+        -------
+        proxy_objs: list(BaseProxyObject like)
+        """
+
+        # Load source data files
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.ncdc.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.ncdc.datafile_proxy)
+
+        # TODO: For now hard coded to annual resolution - AP
+        useable = meta_src['Resolution (yr)'] == 1.0
+
+        proxy_ids = meta_src['NCDC ID'][useable].values
+
+        proxy_objs = []
+        for site in proxy_ids:
+            try:
+                pobj = cls.load_site(config, site,
+                                     meta_src=meta_src, data_src=data_src,
+                                     **psm_kwargs)
+                proxy_objs.append(pobj)
+            except ValueError as e:
+                print e
+
+        return proxy_objs
 
     def error(self):
         # Constant error for now

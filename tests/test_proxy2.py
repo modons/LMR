@@ -260,6 +260,27 @@ def test_pages_load_all_specific_type(meta, pdata, psm_dat):
         bytype['Tree ring_Density']
 
 
+def test_pages_load_all_annual_no_filtering(meta, pdata, psm_dat):
+
+    psm_kwargs = {'psm_data': psm_dat}
+    cfg_obj = cfg.Config()
+    cfg_obj.proxies.use_from = ['pages']
+    cfg_obj.psm.use_psm = {'pages': 'linear'}
+    cfg_obj.psm.linear.psm_r_crit = 0.0
+
+    # Erase Filter parameters
+    cfg_obj.proxies.pages.proxy_assim2 = {}
+    cfg_obj.proxies.pages.proxy_blacklist = []
+    cfg_obj.proxies.pages.proxy_order = []
+    cfg_obj.proxies.pages.regions = []
+
+    pobjs = proxy2.ProxyPages.load_all_annual_no_filtering(cfg_obj, meta, pdata,
+                                                           **psm_kwargs)
+
+    # There are six proxy records, one of them has no values
+    assert len(pobjs) == 5
+
+
 def test_pages_proxy_manager_all(psm_dat):
     psm_kwargs = {'psm_data': psm_dat}
     drange = [1970, 2000]
