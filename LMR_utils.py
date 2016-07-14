@@ -631,61 +631,42 @@ def augment_docstr(func):
     return func
 
 
-def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
-
+def create_precalc_ye_filename(config):
     proxy_database = config.proxies.use_from[0]
-    psm_type = config.psm.use_psm[proxy_database]
+    psm_key = config.psm.use_psm[proxy_database]
+    prior_str = '-'.join([config.prior.prior_source] +
+                         config.prior.psm_required_variables.sorted())
 
-    calib_source = None
-    calib_source_T = None
-    calib_source_P = None
-    moisture_var = None
-
-    if psm_type == 'linear':
-        calib_source = config.psm.linear.datatag_calib
-    elif psm_type == 'linear_TorP':
-        calib_source_T = config.psm.linear_TorP.datatag_calib_T
-        calib_source_P = config.psm.linear_TorP.datatag_calib_P
-    elif psm_type == 'bilinear':
-        calib_source_T = config.psm.bilinear.datatag_calib_T
-        calib_source_P = config.psm.bilinear.datatag_calib_P
-        calib_source = calib_source_T + '_' + calib_source_P
+    if psm_key == 'linear':
+        calib_str = config.psm.linear.datatag_calib
+    elif psm_key == 'linear_TorP' or psm_key == 'biliniear':
+        calib_str = 'T:{}-PR:{}'.format(config.psm.linear_TorP.datatag_calib_T,
+                                        config.psm.linear_TorP.datatag_calib_P)
+    elif psm_key == 'h_interp':
+        calib_str = ''
     else:
-        print 'ERROR: Unknown psm type. Exiting!'
-        exit(1)
+        raise ValueError('Unrecognezed PSM key for use_psm.')
 
-    if calib_source_P:
-        if calib_source_P == 'GPCC':
-            moisture_var = 'pr_sfc_Amon'
-        elif calib_source_P == 'DaiPDSI':
-            moisture_var = 'scpdsi_sfc_Amon'
+    psm_str = psm_key + '-' + calib_str
+    proxy_str = str(proxy_database)
+    return '{}_{}_{}.npz'.format(prior_str, psm_str, proxy_str)
 
-    # TODO: think about removing this extra mapping in the psm
-    sensitivity_map = {'moisture': moisture_var,
-                       'temperature': 'tas_sfc_Amon'}
 
-    precalc_pid_index_map = {}
-    precalc_ye_vals = {}
-    for state_var in config.prior.psm_required_variables:
-        if state_var == moisture_var and calib_source_P: calib_source = calib_source_P
-        load_fname = '{}_{}_{}_{}.npz'.format(config.prior.prior_source,
-                                              calib_source,
-                                              proxy_database,
-                                              state_var)
+def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
+    load_dir = os.path.join(config.core.lmr_path, 'precalc_ye_files')
+    load_fname = create_precalc_ye_filename(config)
+    precalc_file = np.load(os.path.join(load_dir, load_fname))
 
-        load_dir = os.path.join(config.prior.datadir_prior, 'precalc_ye_files')
-        load_abs_path = os.path.join(load_dir, load_fname)
+    pid_idx_map = precalc_file['pid_index_map'][()]
+    precalc_vals = precalc_file['ye_vals']
 
-        precalc_file = np.load(load_abs_path)
-        precalc_pid_index_map[state_var] = precalc_file['pid_index_map'][()]
-        precalc_ye_vals[state_var] = precalc_file['ye_vals']
+    num_proxies_assim = len(proxy_manager.ind_assim)
+    num_samples = len(sample_idxs)
+    ye_all = np.zeros((num_proxies_assim, num_samples))
 
-    # TODO: if this is slow, could also create ye_all by state_var
-    ye_all = np.zeros((len(proxy_manager.ind_assim), len(sample_idxs)))
-    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
-        state_var = sensitivity_map[pobj.psm_obj.sensitivity]
-        pidx = precalc_pid_index_map[state_var][pobj.id]
-        ye_all[i] = precalc_ye_vals[state_var][pidx, sample_idxs]
+    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs):
+        pidx = pid_idx_map[pobj.id]
+        ye_all[i] = precalc_vals[pidx, sample_idxs]
 
     return ye_all
 
