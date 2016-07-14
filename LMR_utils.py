@@ -635,7 +635,7 @@ def create_precalc_ye_filename(config):
     proxy_database = config.proxies.use_from[0]
     psm_key = config.psm.use_psm[proxy_database]
     prior_str = '-'.join([config.prior.prior_source] +
-                         config.prior.psm_required_variables.sorted())
+                         sorted(config.prior.psm_required_variables))
 
     if psm_key == 'linear':
         calib_str = config.psm.linear.datatag_calib
@@ -653,7 +653,7 @@ def create_precalc_ye_filename(config):
 
 
 def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
-    load_dir = os.path.join(config.core.lmr_path, 'precalc_ye_files')
+    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
     load_fname = create_precalc_ye_filename(config)
     precalc_file = np.load(os.path.join(load_dir, load_fname))
 
@@ -664,7 +664,7 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     num_samples = len(sample_idxs)
     ye_all = np.zeros((num_proxies_assim, num_samples))
 
-    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs):
+    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
         pidx = pid_idx_map[pobj.id]
         ye_all[i] = precalc_vals[pidx, sample_idxs]
 

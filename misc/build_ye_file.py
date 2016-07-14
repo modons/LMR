@@ -49,7 +49,7 @@ X.populate_ensemble(cfg.prior.prior_source, cfg.prior)
 
 # Calculate the Ye values
 num_proxy = len(proxy_objects)
-len_prior_dat = X.prior_dict[X.statevars[0]]['values'].shape[1]
+len_prior_dat = X.prior_dict[X.statevars[0]]['value'].shape[0]
 print 'Calculating ye values for {:d} proxies'.format(num_proxy)
 ye_out = np.zeros((num_proxy, len_prior_dat))
 
