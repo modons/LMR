@@ -330,18 +330,21 @@ class ProxyPages(BaseProxyObject):
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
         """
 
-        #
+        pages_cfg = config.proxies.pages
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
+            meta_src = load_data_frame(pages_cfg.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(config.proxies.pages.datafile_proxy)
+            data_src = load_data_frame(pages_cfg.datafile_proxy)
 
         site_meta = meta_src[meta_src['PAGES ID'] == site]
         pid = site_meta['PAGES ID'].iloc[0]
         pmeasure = site_meta['Proxy measurement'].iloc[0]
         pages_type = site_meta['Archive type'].iloc[0]
-        proxy_type = config.proxies.pages.proxy_type_mapping[(pages_type,
-                                                              pmeasure)]
+        try:
+            proxy_type = pages_cfg.proxy_type_mapping[(pages_type, pmeasure)]
+        except KeyError as e:
+            print 'Proxy type/measurement not found in mapping: {}'.format(e)
+            proxy_type = None
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
