@@ -172,12 +172,15 @@ class LinearPSM(BasePSM):
             self.intercept = psm_site_data['PSMintercept']
             self.R = psm_site_data['PSMmse']
 
-        except (KeyError, IOError) as e:
+        except KeyError as e:
+            raise ValueError('Could not find proxy in pre-calibration file... '
+                             'Skipping: {}'.format(proxy_obj.id))
+        except IOError as e:
             # No precalibration found, have to do it for this proxy
-            print ('No pre-calibration found for'
+            print ('No pre-calibration file found for'
                    ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
                                                          proxy_obj.type))
-            
+
             # TODO: Fix call and Calib Module
             datag_calib = config.psm.linear.datatag_calib
             C = LMR_calibrate.calibration_assignment(datag_calib)
