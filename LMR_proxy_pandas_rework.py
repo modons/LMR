@@ -508,7 +508,8 @@ class ProxyNCDC(BaseProxyObject):
 
     @classmethod
     @augment_docstr
-    def load_site(cls, config, site, data_range, meta_src=None, data_src=None,
+    def load_site(cls, config, site, data_range=None, meta_src=None,
+                  data_src=None,
                   **psm_kwargs):
         """%%aug%%
 
@@ -520,7 +521,6 @@ class ProxyNCDC(BaseProxyObject):
             meta_src = load_data_frame(config.proxies.ncdc.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(config.proxies.ncdc.datafile_proxy)
-        start, finish = data_range
 
         site_meta = meta_src[meta_src['NCDC ID'] == site]
         pid = site_meta['NCDC ID'].iloc[0]
@@ -534,8 +534,14 @@ class ProxyNCDC(BaseProxyObject):
         lon = site_meta['Lon (E)'].iloc[0]
         elev = site_meta['Elev'].iloc[0]
         site_data = data_src[site]
-        values = site_data[(site_data.index >= start) &
-                           (site_data.index <= finish)]
+
+        if data_range is not None:
+            start, finish = data_range
+            values = site_data[(site_data.index >= start) &
+                               (site_data.index <= finish)]
+        else:
+            values = site_data
+
         # Might need to remove following line
         values = values[values.notnull()]
         times = values.index.values
