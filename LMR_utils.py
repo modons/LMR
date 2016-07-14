@@ -632,11 +632,27 @@ def augment_docstr(func):
 
 
 def create_precalc_ye_filename(config):
+    """
+    Create the filename to use for the precalculated Ye file from the provided
+    configuration.  Uses the prior, psm, and proxy configuration to determine a
+    unique name for the current experiment.
+
+    Parameters
+    ----------
+    config: Config
+        Instance of an LMR_config.Config object.
+
+    Returns
+    -------
+    str:
+        Filename string based on current configuration
+    """
     proxy_database = config.proxies.use_from[0]
     psm_key = config.psm.use_psm[proxy_database]
     prior_str = '-'.join([config.prior.prior_source] +
                          sorted(config.prior.psm_required_variables))
 
+    # Generate PSM calibration string
     if psm_key == 'linear':
         calib_str = config.psm.linear.datatag_calib
     elif psm_key == 'linear_TorP' or psm_key == 'biliniear':
@@ -653,6 +669,24 @@ def create_precalc_ye_filename(config):
 
 
 def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
+    """
+    Convenience function to load a precalculated Ye file for the current
+    experiment.
+
+    Parameters
+    ----------
+    config: LMR_config.Config
+        Current experiment instance of the configuration object.
+    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+        Current experiment proxy manager
+    sample_idxs: list(int)
+        A list of the current sample indices used to create the prior ensemble.
+
+    Returns
+    -------
+    ye_all: ndarray
+        The array of Ye values for the current ensemble and all proxy records
+    """
     load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
     load_fname = create_precalc_ye_filename(config)
     precalc_file = np.load(os.path.join(load_dir, load_fname))
