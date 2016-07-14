@@ -64,7 +64,7 @@ class prior_master(object):
 
         import numpy as np
         from random import sample, seed
-        
+
 
         # Load prior **annually averaged** data from file(s) - multiple state variables
         self.read_prior()
@@ -105,35 +105,44 @@ class prior_master(object):
 
             # assign to master dictionary
             state_vect_info[var] = dct
-            
-            # determining length of state vector
-            Nx = Nx + (ndimtot)               
 
-        # Looped through all state variables, now a summary:
+            # determining length of state vector
+            Nx = Nx + (ndimtot)
+
+            # Looped through all state variables, now a summary:
         print ' '
         print 'State vector information:'
         print 'Nx =', Nx
         print 'state_vect_info=', state_vect_info
 
-        # Array that will contain the prior ensemble
-        Xb = np.zeros(shape=[Nx,self.Nens]) # no time dimension now...
-
-
-        # TODO: AP sorting might help read faster
         # time dimension consistent across variables?
         if all(x == timedim[0] for x in timedim):
             ntime = timedim[0]
-        else: 
+        else:
             print 'ERROR: time dimension not consistent across all state variables. Exiting!'
             exit(1)
 
-        # ***NOTE: Following code assumes that data for a given year are located at same array time index across all state variables
-        print 'Random selection of', str(self.Nens), 'ensemble members'
-        # Populate prior ensemble from randomly sampled states
-        seed(prior_cfg.seed)
-        ind_ens = sample(range(ntime), self.Nens)
-        self.prior_sample_indices = ind_ens
+        # If Nens is None, use all of prior with no random sampling
+        if self.Nens is None:
+            take_sample = False
+            self.Nens = ntime
+        else:
+            take_sample = True
 
+        # Array that will contain the prior ensemble
+        Xb = np.zeros(shape=[Nx,self.Nens]) # no time dimension now...
+        # ***NOTE: Following code assumes that data for a given year are located at same array time index across all state variables
+
+        if take_sample:
+            print 'Random selection of', str(self.Nens), 'ensemble members'
+            # Populate prior ensemble from randomly sampled states
+            seed(prior_cfg.seed)
+            ind_ens = sample(range(ntime), self.Nens)
+        else:
+            print 'Using entire consecutive prior source values.'
+            ind_ens = range(ntime)
+
+        self.prior_sample_indices = ind_ens
 
         # To keep spatial coords of gridpoints (needed geo. information)
         Xb_coords = np.empty(shape=[Nx,2]) # 2 is max nb of spatial dim a variable can take
@@ -154,7 +163,7 @@ class prior_master(object):
                     coordname1, coordname2 = state_vect_info[var]['spacecoords']
                     # load in the coord values from data dictionary 
                     coord1 = self.prior_dict[var][coordname1]
-                    coord2 = self.prior_dict[var][coordname2]                    
+                    coord2 = self.prior_dict[var][coordname2]
                     ndim1 = coord1.shape[0]
                     ndim2 = coord2.shape[0]
 
@@ -182,7 +191,7 @@ class prior_master(object):
 
         # Assign return variables
         self.ens    = Xb
-        self.coords = Xb_coords        
+        self.coords = Xb_coords
         self.full_state_info = state_vect_info
 
         return
