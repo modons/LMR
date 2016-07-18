@@ -28,6 +28,8 @@ X.prior_datadir = cfg.prior.datadir_prior
 X.prior_datafile = cfg.prior.datafile_prior
 X.statevars = cfg.prior.psm_required_variables
 X.detrend = cfg.prior.detrend
+X.kind = cfg.prior.state_kind
+
 
 #  Load the proxy data
 cfg.psm.linear.psm_r_crit = 0.0

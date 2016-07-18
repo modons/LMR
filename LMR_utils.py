@@ -472,6 +472,14 @@ def coefficient_efficiency(ref,test,valid=None):
     return CE
 
 
+def rmsef(predictions, targets):
+    """
+    """
+    val = np.sqrt(((predictions - targets) ** 2).mean())
+    
+    return val
+
+
 def rank_histogram(ensemble, value):
 
     """

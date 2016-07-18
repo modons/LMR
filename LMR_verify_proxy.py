@@ -15,19 +15,26 @@ Revisions:
              [R. Tardif, U. of Washington, July 2015]
            - Adapted to the Pandas DataFrames version of the proxy database.
              [R. Tardif, U. of Washington, December 2015]
-           - Addded the use of NCDC proxy database as proxy data input.
+           - Addded the use of NCDC proxy database as possible proxy data input.
              [R. Tardif, U. of Washington, March 2016]
+           - Adjustments made to code to reflect recent changes to how config classes
+             are defined and instanciated + general code re-org. for improving speed.
+             [R. Tardif, U. of Washington, July 2016]
 """
 import os
 import numpy as np
 import cPickle    
+import pandas as pd
 from time import time
 from os.path import join
+from copy import deepcopy
+
 # LMR specific imports
 import LMR_proxy_pandas_rework
+import LMR_psms
 import LMR_calibrate
 import LMR_prior
-from LMR_utils import haversine, coefficient_efficiency
+from LMR_utils import coefficient_efficiency, rmsef
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -35,7 +42,7 @@ import matplotlib.colors as colors
 from matplotlib.colors import from_levels_and_colors
 from mpl_toolkits.basemap import Basemap
 
-# =========================================================================================
+# =============================================================================
 def roundup(x):
     if x <=100:
         n = 1
@@ -47,9 +54,11 @@ def roundup(x):
         n = 4      
     return int(round(x,-n))
 
-# =========================================================================================
+
+
+# =============================================================================
 # START:  set user parameters here
-# =========================================================================================
+# =============================================================================
 
 # ------------------------------
 # Section 1: Plotting parameters
@@ -79,7 +88,7 @@ proxy_verif = {\
     'Speleothem_All'        :'h',\
     }
 
-class v_core:
+class v_core(object):
     """
     High-level parameters of reconstruction experiment
 
@@ -89,22 +98,18 @@ class v_core:
         Name of reconstruction experiment
     lmr_path: str
         Absolute path for the experiment
-    clean_start: bool
-        Delete existing files in output directory (otherwise they will be used
-        as the prior!)
-    recon_period: list(int)
-        Time period for reconstruction
-    nens: int
-        Ensemble size
+    verif_period: list(int)
+        Time period over which verification is applied
     iter_range: list(int)
-        Number of Monte-Carlo iterations to perform
-    loc_rad: float
-        Localization radius for DA (in km)
-    datadir_output: str
+        Number of Monte-Carlo iterations to consider
+    datadir_input: str
         Absolute path to working directory output for LMR
-    archive_dir: str
-        Absolute path to LMR reconstruction archive directory
+    datadir_output: str
+        Absolute path to directory where verification results are written
+    write_full_verif_dict: boolean
+        Whether to write the full eval python dictionary to output directory
     """
+
     #nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
     #nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
     #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
@@ -126,25 +131,30 @@ class v_core:
     #
     # -- test recons with NCDC proxy data
     #nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
-    nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
+    #nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
     #nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
-
+    nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
+    
+    
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HAdCRUT...) and proxies.
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
+
     #verif_period = [0, 2000]
     #verif_period = [0, 1849]
     #verif_period = [1700,1849]
     verif_period = [0, 1879]
     #verif_period = [1880, 2000]
 
+    #iter_range = [0, 0]
     iter_range = [0, 100]
 
     # Input directory, where to find the reconstruction data
-    datadir_input  = '/home/disk/kalman3/rtardif/LMR/output'
     #datadir_input  = '/home/disk/kalman3/hakim/LMR/'
     #datadir_input  = '/home/disk/kalman2/wperkins/LMR_output/archive' # production recons
-
+    #datadir_input  = '/home/disk/kalman3/rtardif/LMR/output'
+    datadir_input  = '/home/disk/ekman4/rtardif/LMR/output'
+    
     # Output directory, where the verification results & figs will be dumped.
     datadir_output = datadir_input # if want to keep things tidy
     #datadir_output = '/home/disk/ekman/rtardif/kalman3/LMR/output/verification_production_runs'
@@ -152,7 +162,18 @@ class v_core:
     # Whether to write the full eval python dictionary to output directory ("summary" dict. has most of what we want)
     write_full_verif_dict = False
 
-class v_proxies:
+
+    def __init__(self):
+        self.nexp = self.nexp
+        self.lmr_path = self.lmr_path
+        self.verif_period = self.verif_period
+        self.iter_range = self.iter_range
+        self.datadir_input = self.datadir_input
+        self.datadir_output = self.datadir_output
+        self.write_full_verif_dict = self.write_full_verif_dict
+
+        
+class v_proxies(object):
     """
     Parameters for proxy data
 
@@ -172,7 +193,7 @@ class v_proxies:
     # ---------------
     # PAGES2k proxies
     # ---------------
-    class pages:
+    class _pages(object):
         """
         Parameters for PagesProxy class
 
@@ -190,6 +211,9 @@ class v_proxies:
             List of proxy data regions (data keys) to use.
         proxy_resolution: list(float)
             List of proxy time resolutions to use
+        proxy_blacklist : list
+            A blacklist on proxy records, to eliminate specific records from
+            processing
         proxy_order: list(str):
             Order of assimilation by proxy type key
         proxy_assim2: dict{ str: list(str)}
@@ -205,17 +229,16 @@ class v_proxies:
             to filter by.
         """
 
-        datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
-        datafile_proxy = join(datadir_proxy,
-                              'Pages2k_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'Pages2k_Metadata.df.pckl')
+        datadir_proxy = None
+        datafile_proxy = 'Pages2k_Proxies.df.pckl'
+        metafile_proxy = 'Pages2k_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
         proxy_resolution = [1.0]
-
+        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
+        
 
         # DO NOT CHANGE FORMAT BELOW
 
@@ -255,26 +278,47 @@ class v_proxies:
             'Speleothem_All': ['Lamina thickness'],
             }
 
-        # Create mapping for Proxy Type/Measurement Type to type names above
-        proxy_type_mapping = {}
-        for type, measurements in proxy_assim2.iteritems():
-            # Fetch proxy type name that occurs before underscore
-            type_name = type.split('_', 1)[0]
-            for measure in measurements:
-                proxy_type_mapping[(type_name, measure)] = type
-
-        simple_filters = {'PAGES 2k Region': regions,
-                          'Resolution (yr)': proxy_resolution}
-
         # A blacklist on proxy records, to prevent assimilation of chronologies known to be duplicates
         proxy_blacklist = []
+
+
+        def __init__(self):
+            if self.datadir_proxy is None:
+                self.datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = self.datadir_proxy
+                
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)
+
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = list(self.regions)
+            self.proxy_resolution = self.proxy_resolution
+            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.proxy_blacklist = list(self.proxy_blacklist)
+            
+            # Create mapping for Proxy Type/Measurement Type to type names above
+            self.proxy_type_mapping = {}
+            for type, measurements in self.proxy_assim2.iteritems():
+                # Fetch proxy type name that occurs before underscore
+                type_name = type.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = type
+
+            self.simple_filters = {'PAGES 2k Region': self.regions,
+                                   'Resolution (yr)': self.proxy_resolution}
+
 
     # ---------------
     # NCDC proxies
     # ---------------
-    class NCDC:
+    class _ncdc(object):
         """
-        Parameters for NCDCProxy class
+        Parameters for NCDC proxy class
 
         Attributes
         ----------
@@ -290,6 +334,9 @@ class v_proxies:
             List of proxy data regions (data keys) to use.
         proxy_resolution: list(float)
             List of proxy time resolutions to use
+        proxy_blacklist : list
+            A blacklist on proxy records, to eliminate specific records from
+            processing
         database_filter: list(str)
             List of databases from which to limit the selection of proxies.
             Use [] (empty list) if no restriction, or ['db_name1', db_name2'] to limit to 
@@ -310,22 +357,26 @@ class v_proxies:
             to filter by.
         """
 
-        datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
-        datafile_proxy = join(datadir_proxy,
-                              'NCDC_Proxies.df.pckl')
-        metafile_proxy = join(datadir_proxy,
-                              'NCDC_Metadata.df.pckl')
+        datadir_proxy = None
+        datafile_proxy = 'NCDC_Proxies.df.pckl'
+        metafile_proxy = 'NCDC_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
 
         proxy_resolution = [1.0]
-
+        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
+        
         # Limit proxies to those included in the following databases
         #database_filter = ['PAGES1']
         database_filter = []
 
+        # A blacklist on proxy records, to prevent processing of chronologies known to be duplicates.
+        proxy_blacklist = []
+        #proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
+
+        
         # DO NOT CHANGE FORMAT BELOW
         proxy_order = [
 #            'Tree Rings_All',
@@ -354,24 +405,24 @@ class v_proxies:
         proxy_assim2 = {
             'Corals and Sclerosponges_d18O': ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm',
                                               'd18o_avg','d18o_ave','dO18','d18O_4'],
-#            'Corals and Sclerosponges_d14C': ['d14C','d14c','ac_d14c'],
-#            'Corals and Sclerosponges_d13C': ['d13C','d13c','d13c_ave','d13c_ann_ave','d13C_int'],
+            'Corals and Sclerosponges_d14C': ['d14C','d14c','ac_d14c'],
+            'Corals and Sclerosponges_d13C': ['d13C','d13c','d13c_ave','d13c_ann_ave','d13C_int'],
             'Corals and Sclerosponges_SrCa': ['Sr/Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
-#            'Corals and Sclerosponges_Sr'  : ['Sr'],
-#            'Corals and Sclerosponges_BaCa': ['Ba/Ca'],
-#            'Corals and Sclerosponges_CdCa': ['Cd/Ca'],
-#            'Corals and Sclerosponges_MgCa': ['Mg/Ca'],
-#            'Corals and Sclerosponges_UCa' : ['U/Ca','U/Ca_anom'],
-#            'Corals and Sclerosponges_Pb'  : ['Pb'],
+            'Corals and Sclerosponges_Sr'  : ['Sr'],
+            'Corals and Sclerosponges_BaCa': ['Ba/Ca'],
+            'Corals and Sclerosponges_CdCa': ['Cd/Ca'],
+            'Corals and Sclerosponges_MgCa': ['Mg/Ca'],
+            'Corals and Sclerosponges_UCa' : ['U/Ca','U/Ca_anom'],
+            'Corals and Sclerosponges_Pb'  : ['Pb'],
             'Ice Cores_d18O'               : ['d18O','delta18O','delta18o','d18o','d18o_int','d18O_int','d18O_norm',
                                               'd18o_norm','dO18','d18O_anom'],
             'Ice Cores_dD'                 : ['deltaD','delD'],
             'Ice Cores_Accumulation'       : ['accum','accumu'],
             'Ice Cores_MeltFeature'        : ['MFP'],
             'Lake Cores_Varve'             : ['varve', 'varve_thickness', 'varve thickness'],
-#            'Speleothems_d18O'             : ['d18O'],
-#            'Speleothems_d13C'             : ['d13C'],
-#            'Tree Rings_All'               : ['clim_signal'],
+            'Speleothems_d18O'             : ['d18O'],
+            'Speleothems_d13C'             : ['d13C'],
+            'Tree Rings_All'               : ['clim_signal'],
             'Tree Rings_WidthBreit'        : ['trsgi'],
             'Tree Rings_WidthPages'        : ['TRW',
                                               'ERW',
@@ -383,25 +434,47 @@ class v_proxies:
                                               'MXD'],
             }
 
-        # Create mapping for Proxy Type/Measurement Type to type names above
-        proxy_type_mapping = {}
-        for type, measurements in proxy_assim2.iteritems():
-            # Fetch proxy type name that occurs before underscore
-            type_name = type.split('_', 1)[0]
-            for measure in measurements:
-                proxy_type_mapping[(type_name, measure)] = type
 
-        #simple_filters = {'NCDC Region': regions,
-        #                  'Resolution (yr)': proxy_resolution}
-        simple_filters = {'Resolution (yr)': proxy_resolution}
+        def __init__(self):
+            if self.datadir_proxy is None:
+                self.datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = self.datadir_proxy
 
-        # A blacklist on proxy records, to prevent assimilation of chronologies known to be duplicates.
-        # An empty list will 
-        proxy_blacklist = []
-        #proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)
+
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = list(self.regions)
+            self.proxy_resolution = self.proxy_resolution
+            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.database_filter = list(self.database_filter)
+            self.proxy_blacklist = list(self.proxy_blacklist)
+
+            self.proxy_type_mapping = {}
+            for ptype, measurements in self.proxy_assim2.iteritems():
+                # Fetch proxy type name that occurs before underscore
+                type_name = ptype.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = ptype
+
+            self.simple_filters = {'Resolution (yr)': self.proxy_resolution}
 
 
-class v_psm:
+    # Initialize subclasses with all attributes
+    def __init__(self, **kwargs):
+        self.use_from = self.use_from
+        self.proxy_frac = self.proxy_frac
+        self.pages = self._pages(**kwargs)
+        self.ncdc = self._ncdc(**kwargs)
+
+
+
+class v_psm(object):
     """
     Parameters for PSM classes
 
@@ -413,8 +486,11 @@ class v_psm:
     """
 
     use_psm = {'pages': 'linear', 'NCDC': 'linear'}
+    #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
+    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
 
-    class linear:
+    
+    class _linear(object):
         """
         Parameters for the linear fit PSM.
 
@@ -433,6 +509,11 @@ class v_psm:
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
+        datadir_calib = None
+
+        # Choice between:
+        # --------------
         datatag_calib = 'GISTEMP'
         datafile_calib = 'gistemp1200_ERSST.nc'
         # or
@@ -447,215 +528,244 @@ class v_psm:
         # or 
         #datatag_calib = 'GPCC'
         #datafile_calib = 'GPCC_precip.mon.total.1x1.v6.nc'
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
-        datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
-        dataformat_calib = 'NCD'
-        pre_calib_datafile = join(v_core.lmr_path,
-                                  'PSM',
-                                  'PSMs_'+'-'.join(v_proxies.use_from)+'_' + datatag_calib + '.pckl')
+        
+        pre_calib_datafile = None
 
         psm_r_crit = 0.0
 
 
-# =========================================================================================
+        def __init__(self):
+            self.datatag_calib = self.datatag_calib
+            self.datafile_calib = self.datafile_calib
+            self.psm_r_crit = self.psm_r_crit
+
+            if self.datadir_calib is None:
+                self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = self.datadir_calib
+
+            if self.pre_calib_datafile is None:
+                filename = 'PSMs_'+'-'.join(v_proxies.use_from)+'_'+self.datatag_calib+'.pckl'
+                self.pre_calib_datafile = join(v_core.lmr_path,
+                                               'PSM',
+                                               filename)
+            else:
+                self.pre_calib_datafile = self.pre_calib_datafile
+
+
+    class _linear_TorP(_linear):
+        """
+        Parameters for the linear fit PSM.
+
+        Attributes
+        ----------
+        datatag_calib_T: str
+            Source of temperature calibration data for linear PSM
+        datadir_calib_T: str
+            Absolute path to temperature calibration data *or* None if using
+            default lmr_path
+        datafile_calib_T: str
+            Filename for temperature calibration data
+        datatag_calib_P: str
+            Source of precipitation calibration data for linear PSM
+        datadir_calib_P: str
+            Absolute path to precipitation calibration data *or* None if using
+            default lmr_path
+        datafile_calib_P: str
+            Filename for precipitation calibration data
+        dataformat_calib: str
+            Data storage type for calibration data
+        pre_calib_datafile_T: str
+            Absolute path to precalibrated Linear temperature PSM data
+        pre_calib_datafile_P: str
+            Absolute path to precalibrated Linear precipitation PSM data
+        psm_r_crit: float
+            Usage threshold for correlation of linear PSM
+
+        """
+
+        datadir_calib = None
+        
+        # linear PSM w.r.t. temperature
+        # -----------------------------
+        # Choice between:
+        # ---------------
+        datatag_calib_T = 'GISTEMP'
+        datafile_calib_T = 'gistemp1200_ERSST.nc'
+        # or
+        # datatag_calib_T = 'MLOST'
+        # datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
+        # or
+        # datatag_calib_T = 'HadCRUT'
+        # datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
+        # or
+        # datatag_calib_T = 'BerkeleyEarth'
+        # datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
+        #
+        # linear PSM w.r.t. precipitation/moisture
+        # ----------------------------------------
+        # Choice between:
+        # ---------------
+        # datatag_calib_P = 'GPCC'
+        # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
+        # or
+        datatag_calib_P = 'GPCC'
+        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+        
+        dataformat_calib = 'NCD'
+
+        pre_calib_datafile_T = None
+        pre_calib_datafile_P = None
+
+        psm_r_crit = 0.0
+
+        def __init__(self):
+            self.datatag_calib_T = self.datatag_calib_T
+            self.datafile_calib_T = self.datafile_calib_T
+            self.datatag_calib_P = self.datatag_calib_P
+            self.datafile_calib_P = self.datafile_calib_P
+            self.dataformat_calib = self.dataformat_calib
+            self.psm_r_crit = self.psm_r_crit
+
+            if self.datadir_calib is None:
+                self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = self.datadir_calib
+
+            if self.pre_calib_datafile_T is None:
+                filename_t = 'PSMs_' + '-'.join(v_proxies.use_from) + '_' + \
+                             self.datatag_calib_T + '.pckl'
+                self.pre_calib_datafile_T = join(v_core.lmr_path,
+                                                 'PSM',
+                                                 filename_t)
+            else:
+                self.pre_calib_datafile_T = self.pre_calib_datafile_T
+
+            if self.pre_calib_datafile_P is None:
+                filename_p = 'PSMs_' + '-'.join(v_proxies.use_from) + '_' + \
+                             self.datatag_calib_P + '.pckl'
+                self.pre_calib_datafile_P = join(v_core.lmr_path,
+                                                 'PSM',
+                                                 filename_p)
+            else:
+                self.pre_calib_datafile_P = self.pre_calib_datafile_P
+
+
+    class _bilinear(object):
+        """
+        Parameters for the bilinear fit PSM.
+
+        Attributes
+        ----------
+        datatag_calib_T: str
+            Source of calibration temperature data for PSM
+        datadir_calib_T: str
+            Absolute path to calibration temperature data
+        datafile_calib_T: str
+            Filename for calibration temperature data
+        dataformat_calib_T: str
+            Data storage type for calibration temperature data
+        datatag_calib_P: str
+            Source of calibration precipitation/moisture data for PSM
+        datadir_calib_P: str
+            Absolute path to calibration precipitation/moisture data
+        datafile_calib_P: str
+            Filename for calibration precipitation/moisture data
+        dataformat_calib_P: str
+            Data storage type for calibration precipitation/moisture data
+        pre_calib_datafile: str
+            Absolute path to precalibrated Linear PSM data
+        psm_r_crit: float
+            Usage threshold for correlation of linear PSM
+        """
+
+        datadir_calib = None
+
+        # calibration w.r.t. temperature
+        # -----------------------------
+        # Choice between:
+        #
+        datatag_calib_T = 'GISTEMP'
+        datafile_calib_T = 'gistemp1200_ERSST.nc'
+        # or
+        #datatag_calib_T = 'MLOST'
+        #datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
+        # or 
+        #datatag_calib_T = 'HadCRUT'
+        #datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
+        # or 
+        #datatag_calib_T = 'BerkeleyEarth'
+        #datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
+
+        # calibration w.r.t. precipitation/moisture
+        # ----------------------------------------
+        #datatag_calib_P = 'GPCC'
+        #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
+        # or 
+        datatag_calib_P = 'GPCC'
+        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+
+
+        pre_calib_datafile = None
+
+        psm_r_crit = 0.0
+         
+
+        def __init__(self):
+            self.datatag_calib_T = self.datatag_calib_T
+            self.datafile_calib_T = self.datafile_calib_T
+            self.datatag_calib_P = self.datatag_calib_P
+            self.datafile_calib_P = self.datafile_calib_P
+            self.psm_r_crit = self.psm_r_crit
+
+            if self.datadir_calib is None:
+                self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
+            else:
+                self.datadir_calib = self.datadir_calib
+
+
+            if self.pre_calib_datafile is None:
+                filename = 'PSMs_'+'-'.join(v_proxies.use_from)+'_'+self.datatag_calib_T+'_'+self.datatag_calib_P+'.pckl'
+                self.pre_calib_datafile = join(v_core.lmr_path,
+                                               'PSM',
+                                               filename)
+            else:
+                self.pre_calib_datafile = self.pre_calib_datafile
+    
+
+
+                
+    
+    # Initialize subclasses with all attributes
+    def __init__(self, **kwargs):
+        self.use_psm = self.use_psm
+        self.linear = self._linear(**kwargs)
+        self.linear_TorP = self._linear_TorP(**kwargs)
+        self.bilinear = self._bilinear(**kwargs)
+                
+
+# =============================================================================
 # END:  set user parameters here
-# =========================================================================================
-class config:
+# =============================================================================
+class config(object):
     def __init__(self,core,proxies,psm):
-        self.core = core
-        self.proxies = proxies
-        self.psm = psm
+        self.core = core()
+        self.proxies = proxies()
+        self.psm = psm()
 
 Cfg = config(v_core, v_proxies,v_psm)
 
-
-#==========================================================================================
-def rmse(predictions, targets):
-    return np.sqrt(((predictions - targets) ** 2).mean())
-
-def recon_proxy_eval_stats(sites_eval,mode,proxy_dict,Xrecon,Xprior,recondir,verif_period):
-#==========================================================================================
-# 
-# 
-#   Input : 
-#         - sites_eval    : Dictionary containing list of sites (proxy chronologies) per
-#                           proxy type
-#         - mode          : "assim" or "verif" to distinguish if we are working with
-#                           assimilated or withheld proxies
-#         - proxy_dict    : Dictionary containing proxy objects (proxy & PSM data)
-#         - Xrecon        : Info/data of reconstruction (ensemble-mean)
-#         - Xprior        : Prior data array (full ensemble)
-#         - recondir      : Directory where the reconstruction data is located
-#         - verif_period  : Period over which verification is performed. Format: [start,end]
-#
-#   Output: ... list of dictionaries ...
-# 
-#==========================================================================================
-    
-    # Output dictionary
-    evald = {}
-
-    # Build list of proxy types in verification set
-    proxy_types = []
-    for k in range(len(sites_eval)):
-        key = sites_eval[k].keys()
-        proxy_types.append(key[0])
-    proxy_types_eval = list(set(proxy_types))
-
-    proxy_list = [item for item in sites_eval] # a list of dictionaries
-
-    # For information only
-    print '-----------------------------------------------------------------------'
-    print 'Sites to be processed: '
-    totalsites = 0
-    for proxy_key in proxy_types_eval:
-        tmplist = [d.keys()[0] for d in proxy_list]
-        nbsites = len([item for item in tmplist if item == proxy_key])
-        print('%45s : %5d' % (proxy_key,nbsites))
-        totalsites = totalsites + nbsites
-    print('%45s : %5d' %('TOTAL', totalsites))
-    print '-----------------------------------------------------------------------'
-    print ' '
-
-    # Reconstruction
-    recon_times = Xrecon['years']
-    recon_times = map(float,recon_times)
-    recon_lat = Xrecon['lat']
-    recon_lon = Xrecon['lon']
-    recon_tas =  Xrecon['xam']
-
-    # if "assim" mode, load full ensemble of Ye's corresponding to assimilated proxies
-    if mode == 'assim':
-        fnameYe = recondir+'/'+'analysis_Ye.pckl'
-        infile  = open(fnameYe,'r')
-        assimYe = cPickle.load(infile)
-        infile.close()
-
-    # Loop over proxy sites in eval. set
-    sitecount = 0
-    for proxy in proxy_list:
-
-        sitecount = sitecount + 1
-
-        ptype = proxy.keys()[0]
-        psite = proxy[ptype][0]
-        sitetag = (ptype, psite)
-        Yeval = proxy_dict[sitetag]
-        
-        print 'Site:', Yeval.type, ':', psite, '=> nb', sitecount, 'out of', totalsites, '(',(np.float(sitecount)/np.float(totalsites))*100,'% )'
-        print ' latitude, longitude: ' + str(Yeval.lat), str(Yeval.lon)
-
-        Ntime = len(Yeval.time)
-        if Ntime < 10: # if no significant nb of obs uploaded/retained, move to next proxy site
-            continue
-
-        evald[sitetag] = {}
-        evald[sitetag]['lat'] = Yeval.lat
-        evald[sitetag]['lon'] = Yeval.lon
-        evald[sitetag]['alt'] = 0.0 # unknown variable in PAGES2k set
-        
-        # Set up arrays
-        Xrecon_error       = np.zeros(shape=[Ntime])
-        truth              = np.zeros(shape=[Ntime]) 
-        Ye_recon_EnsMean   = np.zeros(shape=[Ntime]) 
-        Ye_recon_EnsSpread = np.zeros(shape=[Ntime]) 
-
-        Ye_prior_EnsMean   = np.zeros(shape=[Ntime]) 
-        [_,_,Nens] = Xprior.shape
-        Ye_prior_FullEns   = np.zeros(shape=[Ntime,Nens]) 
-
-        # closest lat/lon in recon grid to proxy site
-        a = abs( recon_lat-Yeval.lat ) + abs( recon_lon-Yeval.lon )
-        i,j = np.unravel_index(a.argmin(), a.shape)
-        dist = haversine(Yeval.lon,Yeval.lat,recon_lon[i,j],recon_lat[i,j])
-        #print Yeval.lat, Yeval.lon, i, j, recon_lat[i,j], recon_lon[i,j], dist
-
-        # Loop over time in proxy record ----
-        obcount = 0
-        for t in Yeval.time:
-            truth[obcount] = Yeval.values[t]
-
-            # array time index for recon_values
-            indt_recon = recon_times.index(t)
-
-            # calculate Ye (reconstruction & prior)
-            Ye_recon_EnsMean[obcount] = Yeval.psm_obj.slope*recon_tas[indt_recon,i,j] + Yeval.psm_obj.intercept
-            #print obcount, t, truth[obcount], Ye_recon_EnsMean[obcount]
-
-            Xprior_EnsMean = np.mean(Xprior, axis=2) # Prior ensemble mean
-            Ye_prior_EnsMean[obcount] = Yeval.psm_obj.slope*Xprior_EnsMean[i,j] + Yeval.psm_obj.intercept
-            Ye_prior_FullEns[obcount,:] = Yeval.psm_obj.slope*Xprior[i,j,:] + Yeval.psm_obj.intercept
-
-            # Ensemble-mean reconstruction error
-            Xrecon_error[obcount] = (Ye_recon_EnsMean[obcount] - truth[obcount])
-
-            obcount = obcount + 1
-
-
-        # -----------------------------------
-
-        if obcount > 0:
-            print '================================================'
-            print 'Site:', Yeval.type, ':', psite
-            print 'Number of verification points:', obcount            
-            print 'Mean of proxy values         :', np.mean(truth)
-            print 'Mean ensemble-mean           :', np.mean(Ye_recon_EnsMean)
-            print 'Mean ensemble-mean error     :', np.mean(Ye_recon_EnsMean-truth)
-            print 'Ensemble-mean RMSE           :', rmse(Ye_recon_EnsMean,truth)
-            print 'Correlation                  :', np.corrcoef(truth,Ye_recon_EnsMean)[0,1]
-            print 'CE                           :', coefficient_efficiency(truth,Ye_recon_EnsMean)
-            print 'Correlation (prior)          :', np.corrcoef(truth,Ye_prior_EnsMean)[0,1]
-            print 'CE (prior)                   :', coefficient_efficiency(truth,Ye_prior_EnsMean)
-            print '================================================'            
-
-            # Fill dictionary with data generated for evaluation of reconstruction
-            # PSM info
-            evald[sitetag]['PSMslope']          = Yeval.psm_obj.slope
-            evald[sitetag]['PSMintercept']      = Yeval.psm_obj.intercept
-            evald[sitetag]['PSMcorrel']         = Yeval.psm_obj.corr
-            evald[sitetag]['PSMmse']            = Yeval.psm_obj.R
-            # Verif. data
-            evald[sitetag]['NbEvalPts']         = obcount
-            evald[sitetag]['EnsMean_MeanError'] = np.mean(Ye_recon_EnsMean-truth)
-            evald[sitetag]['EnsMean_RMSE']      = rmse(Ye_recon_EnsMean,truth)
-            evald[sitetag]['EnsMean_Corr']      = np.corrcoef(truth,Ye_recon_EnsMean)[0,1]
-            evald[sitetag]['EnsMean_CE']        = coefficient_efficiency(truth,Ye_recon_EnsMean)
-            evald[sitetag]['PriorEnsMean_Corr'] = np.corrcoef(truth,Ye_prior_EnsMean)[0,1]
-            evald[sitetag]['PriorEnsMean_CE']   = coefficient_efficiency(truth,Ye_prior_EnsMean)
-            evald[sitetag]['ts_years']          = list(Yeval.time)
-            evald[sitetag]['ts_ProxyValues']    = truth
-            evald[sitetag]['ts_EnsMean']        = Ye_recon_EnsMean
-
-            if mode == 'assim':
-                R = assimYe[sitetag]['R']
-                [_,Nens] = assimYe[sitetag]['HXa'].shape
-                YeFullEns = np.zeros(shape=[Ntime,Nens])
-                YeFullEns_error = np.zeros(shape=[Ntime,Nens])
-                YePriorFullEns_error = np.zeros(shape=[Ntime,Nens])
-
-                Ye_time = assimYe[sitetag]['years']
-                obcount = 0
-                for t in Yeval.time:
-                    truth[obcount] = Yeval.values[t]
-                    # array time index for recon_values
-                    indt_recon = np.where(Ye_time==t)
-                    YeFullEns[obcount,:] = assimYe[sitetag]['HXa'][indt_recon]
-                    YeFullEns_error[obcount,:] = YeFullEns[obcount,:]-truth[obcount,None] # i.e. full ensemble innovations
-                    YePriorFullEns_error[obcount,:] = Ye_prior_FullEns[obcount,:]-truth[obcount,None]
-                    obcount = obcount + 1
-                mse = np.mean(np.square(YeFullEns_error),axis=1)
-                varYe = np.var(YeFullEns,axis=1,ddof=1)
-                # time series of DA ensemble calibration ratio
-                evald[sitetag]['ts_DAensCalib']   =  mse/(varYe+R)
-
-                # Prior
-                mse = np.mean(np.square(YePriorFullEns_error),axis=1)
-                varYe = np.var(Ye_prior_FullEns,axis=1,ddof=1)
-                # time series of prior ensemble calibration ratio
-                evald[sitetag]['ts_PriorEnsCalib']   =  mse/(varYe+R)
-
-
-    return evald
+#==============================================================================
 
 
 # =============================================================================
@@ -663,127 +773,142 @@ def recon_proxy_eval_stats(sites_eval,mode,proxy_dict,Xrecon,Xprior,recondir,ver
 # =============================================================================
 def main():
 
+
+    #
+    # TODO: re-define "verif" proxies as those in the database (all proxy objects given by "load_all") that are NOT in the assimilated set
+    # 
+
+
+    
+    verbose = 1
+
+    complement_set = True
+    
     begin_time = time()
 
-    print Cfg.proxies.pages.datadir_proxy
-    print Cfg.core.verif_period
-    #verif_times = list(range(Cfg.core.verif_period[0],Cfg.core.verif_period[1]+1))
+    proxy_database = Cfg.proxies.use_from[0]
+    # get psm type (linear, linear_torP, bilinear, h_interp)
+    psm_type = Cfg.psm.use_psm[proxy_database]
+    # import related psm class
+    psm_class =  LMR_psms.get_psm_class(psm_type)
+    psm_kwargs = psm_class.get_kwargs(Cfg)
 
-    # Make sure proxy_frac is set to 1.0 to read in all proxies
-    Cfg.proxies.proxy_frac = 1.0
+    verif_period = Cfg.core.verif_period
+    
+    print 'Proxies             :', proxy_database
+    print 'PSM type            :', psm_type
+    print 'Verif. period       :', verif_period
 
+    if proxy_database == 'pages':
+        print 'Proxy data location :', Cfg.proxies.pages.datadir_proxy
+    elif proxy_database == 'NCDC':
+        print 'Proxy data location :', Cfg.proxies.ncdc.datadir_proxy
+    else:
+        print 'ERROR in specification of proxy database. Exiting!'
+        exit(1)
 
-    prox_manager = LMR_proxy_pandas_rework.ProxyManager(Cfg, Cfg.core.verif_period)
-    type_site_assim = prox_manager.assim_ids_by_group
+    # get proxy class
+    proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
+    # load proxy data
+    proxy_ids_by_grp, proxy_objects = proxy_class.load_all(Cfg,
+                                                       verif_period,
+                                                       **psm_kwargs)
 
+    master_proxy_list = []
+    for proxy_idx, Y in enumerate(proxy_objects): master_proxy_list.append((Y.type,Y.id))
+    
     print '--------------------------------------------------------------------'
     print 'Uploaded proxies : counts per proxy type:'
     # count the total number of proxies
-    total_proxy_count = len(prox_manager.ind_assim)
-    for pkey, plist in type_site_assim.iteritems():
+    total_proxy_count = len(proxy_objects)
+    for pkey, plist in proxy_ids_by_grp.iteritems():
         print('%45s : %5d' % (pkey, len(plist)))
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
     print '--------------------------------------------------------------------'
-    master_proxy_list = []
-    proxy_dict = {}
-    for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
-        sitetag = (Y.type,Y.id)
-        master_proxy_list.append(sitetag)
-        # Load proxy object in proxy dictionary
-        proxy_dict[sitetag] = Y
+    print ' '
+
+    """
+    print psm_kwargs.keys()
+    print ' '
+    print psm_kwargs['psm_data']
+    print ' '
+    """
+    #print psm_kwargs['psm_data'][('Tree Rings_WidthBreit', 'europe_pola017B:trsgi')]
+    #print psm_kwargs['psm_data_T'][('Tree Rings_WidthBreit', 'europe_pola017B:trsgi')]
+    #print psm_kwargs['psm_data_P'][('Tree Rings_WidthBreit', 'europe_pola017B:trsgi')]
+        
+
+    # psm type
+    if psm_type == 'linear':
+        print 'Calibration source  :', Cfg.psm.linear.datatag_calib
+        datatag_calib = 'linear_'+Cfg.psm.linear.datatag_calib
+        psm_file = Cfg.psm.linear.pre_calib_datafile
+        required_state_variables = ['tas_sfc_Amon']
+    elif psm_type == 'linear_TorP':
+        print 'Calibration sources :', Cfg.psm.linear_TorP.datatag_calib_T, '+', Cfg.psm.linear_TorP.datatag_calib_P
+        datatag_calib_T = Cfg.psm.linear_TorP.datatag_calib_T
+        datatag_calib_P = Cfg.psm.linear_TorP.datatag_calib_P
+        datatag_calib = 'linear_'+datatag_calib_T+'or'+datatag_calib_P
+        #psm_file = Cfg.psm.bilinear.pre_calib_datafile
+        if datatag_calib_P == 'GPCC':
+            required_state_variables = ['tas_sfc_Amon','pr_sfc_Amon']
+        elif datatag_calib_P == 'DaiPDSI':
+            required_state_variables = ['tas_sfc_Amon','scpdsi_sfc_Amon']
+        else:
+            print 'Unrecognized value for datatag_calib_P. Exiting!'
+            exit(1)
+    elif psm_type == 'bilinear':
+        print 'Calibration sources :', Cfg.psm.bilinear.datatag_calib_T, '+', Cfg.psm.bilinear.datatag_calib_P
+        datatag_calib_T = Cfg.psm.bilinear.datatag_calib_T
+        datatag_calib_P = Cfg.psm.bilinear.datatag_calib_P
+        datatag_calib = 'bilinear_'+datatag_calib_T+'and'+datatag_calib_P
+        psm_file = Cfg.psm.bilinear.pre_calib_datafile
+        if datatag_calib_P == 'GPCC':
+            required_state_variables = ['tas_sfc_Amon','pr_sfc_Amon']
+        elif datatag_calib_P == 'DaiPDSI':
+            required_state_variables = ['tas_sfc_Amon','scpdsi_sfc_Amon']
+        else:
+            print 'Unrecognized value for datatag_calib_P. Exiting!'
+            exit(1)
+    elif psm_type == 'h_interp':
+        datatag_calib = 'interp'
+        required_state_variables = ['d18O_sfc_Amon']
+    else:
+        print 'ERROR: problem with the type of psm!'
+        exit(1)
 
     load_time = time() - begin_time
     print '======================================================='
     print 'Loading completed in '+ str(load_time/60.0)+' mins'
     print '======================================================='
 
-
+    
     # ==========================================================================
     # Loop over the Monte-Carlo reconstructions
     # ==========================================================================
     nexp = Cfg.core.nexp
+
     datadir_input = Cfg.core.datadir_input
-    verif_period = Cfg.core.verif_period
-    datatag_calib = Cfg.psm.linear.datatag_calib
-    Nbiter = Cfg.core.iter_range[1]
     datadir_output = Cfg.core.datadir_output
 
     verif_dict = []
     assim_dict = []
 
+    Nbiter = Cfg.core.iter_range[1]
     MCiters = np.arange(Cfg.core.iter_range[0], Cfg.core.iter_range[1]+1)
     for iter in MCiters:
 
         # Experiment data directory
         workdir = datadir_input+'/'+nexp+'/r'+str(iter)
-        print workdir
 
-        print '============================================================'
-        print 'Working on: ' + nexp + ' : ' + '/r' + str(iter)
-        print '============================================================'
+        print '==> Working on: ' + workdir
 
-        # Check for presence of file containing reconstruction of **surface temperature**
-        filein = workdir+'/ensemble_mean_tas_sfc_Amon.npz'
-        if not os.path.isfile(filein):
-            print 'ERROR in specification of reconstruction data'
-            print 'File ', filein, ' does not exist! - Exiting!'
-            exit(1)
-
-        # =============================================
-        # Load in the ensemble-mean reconstruction data
-        # =============================================
-        Xrecon = np.load(filein)
-
-        # ======================
-        # Load in the prior data
-        # ======================
-        file_prior = workdir+'/Xb_one.npz'
-        Xprior_statevector = np.load(file_prior)
-        # extract sfc temperature from state vector
-        state_info = Xprior_statevector['state_info'].item()  
-        posbeg = state_info['tas_sfc_Amon']['pos'][0]
-        posend = state_info['tas_sfc_Amon']['pos'][1]
-        Xb_one = Xprior_statevector['Xb_one']
         
-        nlat = state_info['tas_sfc_Amon']['spacedims'][0]
-        nlon = state_info['tas_sfc_Amon']['spacedims'][1]
-        tas_prior = Xb_one[posbeg:posend+1,:]
-        [_,Nens] = tas_prior.shape
-        Xprior = tas_prior.reshape(nlat,nlon,Nens)
-        
-        # ============================================================================
-        # Proxy site-based statistics on reconstruction fit to non-assimilated proxies 
-        # ============================================================================
-
-        # List of non-assimilated proxies
-        loaded_proxies = np.load(workdir+'/'+'nonassimilated_proxies.npy')
-        nb_loaded_proxies = len(loaded_proxies)
-        
-        # Filter to match proxy sites in set of calibrated PSMs
-        indp = [k for k in range(nb_loaded_proxies) if (loaded_proxies[k].keys()[0],loaded_proxies[k][loaded_proxies[k].keys()[0]][0]) in master_proxy_list]
-        verif_proxies = loaded_proxies[indp]
-        nb_verif_proxies = len(verif_proxies)
-
-        print '------------------------------------------------'
-        print 'Number of proxy sites in verification set:',  nb_verif_proxies
-        print '------------------------------------------------'
-
-        # Build list of proxy types in verification set
-        verif_types = []
-        for k in range(nb_verif_proxies):
-            key = verif_proxies[k].keys()
-            verif_types.append(key[0])
-        verif_types_list = list(set(verif_types))
-
-        # Calculate reconstruction error statistics & output in "verif_dict" dictionary
-        out_dict = recon_proxy_eval_stats(verif_proxies,'verif',proxy_dict,Xrecon,Xprior,workdir,verif_period)
-        verif_dict.append(out_dict)
-
-        # ==========================================================================
-        # Proxy site-based statistics on reconstruction fit to assimilated proxies 
-        # ==========================================================================
+        # Information on assimilated and non-assimilated proxies
+        # ------------------------------------------------------
 
         # List of assimilated proxies
+        # ---------------------------
         loaded_proxies = np.load(workdir+'/'+'assimilated_proxies.npy')
         nb_loaded_proxies = len(loaded_proxies)
 
@@ -792,19 +917,299 @@ def main():
         assim_proxies = loaded_proxies[indp]
         nb_assim_proxies = len(assim_proxies)
 
+        # in list form
+        assim_proxies_list = [(assim_proxies[k].keys()[0],assim_proxies[k][assim_proxies[k].keys()[0]][0]) for k in range(nb_assim_proxies)]
+
         print '------------------------------------------------'
-        print 'Number of proxy sites in assimilated set:',  nb_assim_proxies
+        print 'Number of proxy sites in assimilated set :',  nb_assim_proxies
+
+
+        # List of non-assimilated proxies
+        # -------------------------------
+        # complement_set: option to use proxies in master_proxy_list that are NOT in assimilated set as the verification set,
+        #                 rather than those found in the recon "nonassimilated_proxies.npy" file ... ... ...
+
+        if complement_set:
+            verif_proxies_list = list(set(master_proxy_list) - set(assim_proxies_list))
+            nb_verif_proxies = len(verif_proxies_list)
+        else:            
+            loaded_proxies = np.load(workdir+'/'+'nonassimilated_proxies.npy')
+            nb_loaded_proxies = len(loaded_proxies)
+
+            # Filter to match proxy sites in set of calibrated PSMs
+            indp = [k for k in range(nb_loaded_proxies) if (loaded_proxies[k].keys()[0],loaded_proxies[k][loaded_proxies[k].keys()[0]][0]) in master_proxy_list]
+            verif_proxies = loaded_proxies[indp]
+            nb_verif_proxies = len(verif_proxies)
+            
+            # in list form
+            verif_proxies_list = [(verif_proxies[k].keys()[0],verif_proxies[k][verif_proxies[k].keys()[0]][0]) for k in range(nb_verif_proxies)]
+        
+        print 'Number of proxy sites in verification set:',  nb_verif_proxies
         print '------------------------------------------------'
 
-        # Calculate reconstruction error statistics & output in "assim_dict" dictionary
-        out_dict = recon_proxy_eval_stats(assim_proxies,'assim',proxy_dict,Xrecon,Xprior,workdir,verif_period)
-        assim_dict.append(out_dict)
+        # ------------------------------------------------------
+        # Load in the prior data
+        # ------------------------------------------------------
+        file_prior = workdir+'/Xb_one.npz'
+        Xprior_statevector = np.load(file_prior)
+        state_info = Xprior_statevector['state_info'].item()
+        available_state_variables = state_info.keys()
 
+        
+        # -------------------------------------------------------
+        # Load in the ensemble-mean reconstruction data
+        # -------------------------------------------------------
+
+        # extract required data from state vector
+        nb_state_var = len(required_state_variables)
+        
+        for state_var in required_state_variables:
+            # Check for presence of file containing reconstruction of state variable
+            filein = workdir+'/ensemble_mean_'+state_var+'.npz'
+            if not os.path.isfile(filein):
+                print 'ERROR in specification of reconstruction data'
+                print 'File ', filein, ' does not exist! - Exiting!'
+                exit(1)
+
+            Xrecon = np.load(filein)
+            recon_times = np.asarray(Xrecon['years'],dtype='int32')          
+            recon_lat = Xrecon['lat']
+            recon_lon = Xrecon['lon']
+            recon_val = Xrecon['xam']
+
+            lat =  recon_lat[:,0]
+            lon =  recon_lon[0,:]
+            annual_data = recon_val
+
+
+            # prior
+            posbeg = state_info[state_var]['pos'][0]
+            posend = state_info[state_var]['pos'][1]
+            Xb_one = Xprior_statevector['Xb_one']
+        
+            nlat = state_info[state_var]['spacedims'][0]
+            nlon = state_info[state_var]['spacedims'][1]
+            var_prior = Xb_one[posbeg:posend+1,:]
+            [_,Nens] = var_prior.shape
+            Xprior = var_prior.reshape(nlat,nlon,Nens)
+            # Broadcast prior ensemble state over time dimension
+            ntime = annual_data.shape[0]
+            tmp = np.repeat(Xprior[None,:,:,:],ntime,axis=0)
+            Xprior_ens = np.rollaxis(tmp,3,0)
+            
+            print state_var, Xprior.shape, annual_data.shape, Xprior_ens.shape
+
+
+        # -------------------------------------------------------
+        # Load the full ensemble Ye's updated during assimilation
+        # (appended state vector)
+        # -------------------------------------------------------
+        fnameYe = workdir+'/'+'analysis_Ye.pckl'
+        try:
+            assimYe.clear()
+        except:
+            pass
+        if os.path.isfile(fnameYe):
+            infile  = open(fnameYe,'r')
+            assimYe = cPickle.load(infile)
+            infile.close()
+
+
+        # ----------------------------------------------------------
+        # loop over proxy objects and calculate proxy estimates (Ye)
+        # from reconstruction and from prior
+        # ----------------------------------------------------------
+        pcount_tot   = 0
+        pcount_verif = 0
+        pcount_assim = 0
+        evald_verif = {}
+        evald_assim = {}
+        for i, pobj in enumerate(proxy_objects):
+            sitetag = (pobj.type,pobj.id)
+            pstatus = None            
+            
+            if (sitetag in verif_proxies_list) or (sitetag in assim_proxies_list):
+
+                # reconstruction (ensemble mean) Ye
+                recon_dat = pobj.psm_obj.get_close_grid_point_data(annual_data,
+                                                                   lon,lat)
+                ye_recon = pobj.psm_obj.basic_psm(recon_dat)
+                
+                # prior (ensemble mean) Ye 
+                xp = np.mean(Xprior,axis=2)
+                Xprior_ensmean = np.repeat(xp[None,:,:],ntime,axis=0)
+                prior_dat = pobj.psm_obj.get_close_grid_point_data(Xprior_ensmean,
+                                                                   lon,lat)
+                ye_prior = pobj.psm_obj.basic_psm(prior_dat)
+
+                # Ye from prior full ensemble ...
+                prior_dat_ens = pobj.psm_obj.get_close_grid_point_data(Xprior_ens[0:,:,:,:],
+                                                                       lon,lat)
+                prior_dat_ens = np.rollaxis(prior_dat_ens,1,0)
+                ye_prior_ens = pobj.psm_obj.basic_psm(prior_dat_ens[:,0:])
+
+                
+                # assign 'verif' or 'assim' status to proxy record
+                if sitetag in verif_proxies_list:
+                    pcount_verif += 1
+                    pstatus = 'verif'
+                if sitetag in assim_proxies_list:
+                    pcount_assim += 1
+                    pstatus = 'assim'
+
+            if pstatus:
+                # Use pandas DataFrame to store proxy & Ye data side-by-side
+                headers = ['time', 'Ye_recon', 'Ye_prior'] + ['Ye_prior_%s' %str(k+1) for k in range(Nens)]
+                
+                # Merge Ye values from recon (ensemble-mean), prior(ensemble-mean) and prior (full sensemble)
+                # in single array & convert to dataframe
+                ye_data = np.c_[recon_times.T,ye_recon.T,ye_prior.T,ye_prior_ens]
+                df = pd.DataFrame(ye_data)
+                df.columns = headers
+
+                # Add proxy data
+                frame = pd.DataFrame({'time':pobj.time, 'y': pobj.values})
+                df = df.merge(frame, how='outer', on='time')
+
+                # define dataframe indexing
+                col0 = df.columns[0]
+                df.set_index(col0, drop=True, inplace=True)
+                df.index.name = 'time'
+                df.sort_index(inplace=True)
+                
+                # Reconstruction (ensemble-mean) error
+                df['Ye_recon_error'] = df['Ye_recon'] - df['y']
+                # Prior  (ensemble-mean) error
+                df['Ye_prior_error'] = df['Ye_prior'] - df['y']
+            
+                obcount = df['Ye_recon_error'].count()
+                if obcount < 10:
+                    continue
+
+                pcount_tot += 1
+                indok = df['y'].notnull()
+
+                if verbose > 0:
+                    print '================================================'
+                    print 'Site:', sitetag
+                    print 'status:', pstatus
+                    print 'Number of verification points  :', obcount            
+                    print 'Mean of proxy values           :', np.mean(df['y'][indok])
+                    print 'Mean ensemble-mean             :', np.mean(df['Ye_recon'][indok])
+                    print 'Mean ensemble-mean error       :', np.mean(df['Ye_recon_error'][indok])
+                    print 'Ensemble-mean RMSE             :', rmsef(df['Ye_recon'][indok],df['y'][indok])
+                    print 'Correlation                    :', np.corrcoef(df['y'][indok],df['Ye_recon'][indok])[0,1]
+                    print 'CE                             :', coefficient_efficiency(df['y'][indok],df['Ye_recon'][indok])
+                    print 'Mean ensemble-mean(prior)      :', np.mean(df['Ye_prior'][indok])
+                    print 'Mean ensemble-mean error(prior):', np.mean(df['Ye_prior_error'][indok])
+                    print 'Ensemble-mean RMSE(prior)      :', rmsef(df['Ye_prior'][indok],df['y'][indok])
+                    corr = np.corrcoef(df['y'][indok],df['Ye_prior'][indok])[0,1]
+                    if not np.isfinite(corr): corr = 0.0
+                    print 'Correlation (prior)            :', corr
+                    print 'CE (prior)                     :', coefficient_efficiency(df['y'][indok],df['Ye_prior'][indok])
+                    print '================================================'            
+
+                
+                # Fill "verif" and "assim" dictionaries with data generated above
+                if pstatus == 'assim':
+                    evald_assim[sitetag] = {}
+
+                    evald_assim[sitetag]['MCiter'] = iter
+                    # Site info
+                    evald_assim[sitetag]['lat'] = pobj.lat
+                    evald_assim[sitetag]['lon'] = pobj.lon
+                    evald_assim[sitetag]['alt'] = pobj.elev
+                    # PSM info
+                    evald_assim[sitetag]['PSMinfo'] = pobj.psm_obj.__dict__
+                    # Stats data
+                    evald_assim[sitetag]['NbEvalPts']         = obcount
+                    evald_assim[sitetag]['EnsMean_MeanError'] = np.mean(df['Ye_recon_error'][indok])
+                    evald_assim[sitetag]['EnsMean_RMSE']      = rmsef(df['Ye_recon'][indok],df['y'][indok])
+                    evald_assim[sitetag]['EnsMean_Corr']      = np.corrcoef(df['y'][indok],df['Ye_recon'][indok])[0,1]
+                    evald_assim[sitetag]['EnsMean_CE']        = coefficient_efficiency(df['y'][indok],df['Ye_recon'][indok])
+                    corr = np.corrcoef(df['y'][indok],df['Ye_prior'][indok])[0,1]
+                    if not np.isfinite(corr): corr = 0.0
+                    evald_assim[sitetag]['PriorEnsMean_Corr'] = corr
+                    evald_assim[sitetag]['PriorEnsMean_CE']   = coefficient_efficiency(df['y'][indok],df['Ye_prior'][indok])
+                    evald_assim[sitetag]['ts_years']          = df.index[indok].values
+                    evald_assim[sitetag]['ts_ProxyValues']    = df['y'][indok].values
+                    evald_assim[sitetag]['ts_EnsMean']        = df['Ye_recon'][indok].values
+
+                    # ... assim_Ye info ...
+                    Ntime = len(pobj.time)
+                    truth = np.zeros(shape=[Ntime]) 
+                    R = assimYe[sitetag]['R']
+                    [_,Nens] = assimYe[sitetag]['HXa'].shape
+                    YeFullEns = np.zeros(shape=[Ntime,Nens])
+                    YeFullEns_error = np.zeros(shape=[Ntime,Nens])
+                    Ye_prior_FullEns = np.zeros(shape=[Ntime,Nens])
+                    YePriorFullEns_error = np.zeros(shape=[Ntime,Nens])
+
+                    # extract prior full ensemble from dataframe
+                    Ye_prior_FullEns = df.ix[indok,2:Nens+2].values
+                    
+                    Ye_time = assimYe[sitetag]['years']
+                    obcount = 0
+                    for t in pobj.time:
+                        truth[obcount] = pobj.values[t]
+                        # array time index for recon_values
+                        indt_recon = np.where(Ye_time==t)
+                        YeFullEns[obcount,:] = assimYe[sitetag]['HXa'][indt_recon]
+                        YeFullEns_error[obcount,:] = YeFullEns[obcount,:]-truth[obcount,None] # i.e. full ensemble innovations
+                        YePriorFullEns_error[obcount,:] = Ye_prior_FullEns[obcount,:]-truth[obcount,None]
+                        obcount = obcount + 1
+
+                    # Reconstruction
+                    mse = np.mean(np.square(YeFullEns_error),axis=1)
+                    varYe = np.var(YeFullEns,axis=1,ddof=1)
+                    # time series of DA ensemble calibration ratio
+                    evald_assim[sitetag]['ts_DAensCalib']   =  mse/(varYe+R)
+
+                    # Prior
+                    mse = np.mean(np.square(YePriorFullEns_error),axis=1)
+                    varYe = np.var(Ye_prior_FullEns,axis=1,ddof=1)
+                    # time series of prior ensemble calibration ratio
+                    evald_assim[sitetag]['ts_PriorEnsCalib']   =  mse/(varYe+R)
+
+                    
+                elif pstatus == 'verif':
+                    evald_verif[sitetag] = {}
+
+                    evald_verif[sitetag]['MCiter'] = iter
+                    # Site info
+                    evald_verif[sitetag]['lat'] = pobj.lat
+                    evald_verif[sitetag]['lon'] = pobj.lon
+                    evald_verif[sitetag]['alt'] = pobj.elev
+                    # PSM info
+                    evald_verif[sitetag]['PSMinfo'] = pobj.psm_obj.__dict__
+                    # Stats data
+                    evald_verif[sitetag]['NbEvalPts']         = obcount
+                    evald_verif[sitetag]['EnsMean_MeanError'] = np.mean(df['Ye_recon_error'][indok])
+                    evald_verif[sitetag]['EnsMean_RMSE']      = rmsef(df['Ye_recon'][indok],df['y'][indok])
+                    evald_verif[sitetag]['EnsMean_Corr']      = np.corrcoef(df['y'][indok],df['Ye_recon'][indok])[0,1]
+                    evald_verif[sitetag]['EnsMean_CE']        = coefficient_efficiency(df['y'][indok],df['Ye_recon'][indok])
+                    corr = np.corrcoef(df['y'][indok],df['Ye_prior'][indok])[0,1]
+                    if not np.isfinite(corr): corr = 0.0
+                    evald_verif[sitetag]['PriorEnsMean_Corr'] = corr
+                    evald_verif[sitetag]['PriorEnsMean_CE']   = coefficient_efficiency(df['y'][indok],df['Ye_prior'][indok])
+                    evald_verif[sitetag]['ts_years']          = df.index[indok].values
+                    evald_verif[sitetag]['ts_ProxyValues']    = df['y'][indok].values
+                    evald_verif[sitetag]['ts_EnsMean']        = df['Ye_recon'][indok].values
+
+                else:
+                    print 'pstatus undefined...'
+
+        
+
+        verif_dict.append(evald_verif)
+        assim_dict.append(evald_assim)
+
+    
     # ==========================================================================
-    # End of loop on iterations => Now calculate summary statistics ------------
+    # End of loop on MC iterations => Now calculate summary statistics ---------
     # ==========================================================================
 
-    outdir = datadir_output+'/'+nexp+'/verifProxy_PSMcalib'+datatag_calib+'_'+str(verif_period[0])+'to'+str(verif_period[1])
+    outdir = datadir_output+'/'+nexp+'/verifProxy_PSM_'+datatag_calib+'_'+str(verif_period[0])+'to'+str(verif_period[1])
     if not os.path.isdir(outdir):
         os.system('mkdir %s' % outdir)
     
@@ -824,20 +1229,24 @@ def main():
         for j in range(len(verif_dict[i].keys())):
             list_tmp.append(verif_dict[i].keys()[j])
     list_sites = list(set(list_tmp)) # filter to unique elements
-
+    
     summary_stats_verif = {}
     for k in range(len(list_sites)):
         # indices in verif_dict where this site is present
         inds  = [j for j in range(len(verif_dict)) if list_sites[k] in verif_dict[j].keys()]
 
+        
         summary_stats_verif[list_sites[k]] = {}
         summary_stats_verif[list_sites[k]]['lat']            = verif_dict[inds[0]][list_sites[k]]['lat']
         summary_stats_verif[list_sites[k]]['lon']            = verif_dict[inds[0]][list_sites[k]]['lon']
         summary_stats_verif[list_sites[k]]['alt']            = verif_dict[inds[0]][list_sites[k]]['alt']
-        summary_stats_verif[list_sites[k]]['PSMslope']       = verif_dict[inds[0]][list_sites[k]]['PSMslope']
-        summary_stats_verif[list_sites[k]]['PSMintercept']   = verif_dict[inds[0]][list_sites[k]]['PSMintercept']
-        summary_stats_verif[list_sites[k]]['PSMcorrel']      = verif_dict[inds[0]][list_sites[k]]['PSMcorrel']
         summary_stats_verif[list_sites[k]]['NbPts']          = len(inds)
+        
+        #summary_stats_verif[list_sites[k]]['PSMslope']       = verif_dict[inds[0]][list_sites[k]]['PSMslope']
+        #summary_stats_verif[list_sites[k]]['PSMintercept']   = verif_dict[inds[0]][list_sites[k]]['PSMintercept']
+        #summary_stats_verif[list_sites[k]]['PSMcorrel']      = verif_dict[inds[0]][list_sites[k]]['PSMcorrel']
+        summary_stats_verif[list_sites[k]]['PSMinfo']      = verif_dict[inds[0]][list_sites[k]]['PSMinfo']
+        
         
         # These contain data for the "grand ensemble" (i.e. ensemble of realizations) for "kth" site
         nbpts = [verif_dict[j][list_sites[k]]['NbEvalPts'] for j in inds]
@@ -872,7 +1281,6 @@ def main():
         summary_stats_verif[list_sites[k]]['PriorMeanCE']     = np.mean(ce_prior)
         summary_stats_verif[list_sites[k]]['PriorSpreadCE']   = np.std(ce_prior)
 
-
         # for time series
         summary_stats_verif[list_sites[k]]['ts_years']       = verif_dict[inds[0]][list_sites[k]]['ts_years']
         summary_stats_verif[list_sites[k]]['ts_ProxyValues'] = verif_dict[inds[0]][list_sites[k]]['ts_ProxyValues']
@@ -880,7 +1288,7 @@ def main():
         summary_stats_verif[list_sites[k]]['ts_MeanRecon']   = np.mean(ts_recon,axis=0)
         summary_stats_verif[list_sites[k]]['ts_SpreadRecon'] = np.std(ts_recon,axis=0)
         # ens. calibration
-        R = [verif_dict[inds[0]][list_sites[k]]['PSMmse']]
+        R = [verif_dict[inds[0]][list_sites[k]]['PSMinfo']['R']]
         ensVar = np.mean(np.var(ts_recon,axis=0,ddof=1)) # !!! variance in grand ensemble (realizations, not DA ensemble) !!! 
         mse = np.mean(np.square(rmse))
         calib = mse/(ensVar+R)
@@ -920,10 +1328,12 @@ def main():
         summary_stats_assim[list_sites[k]]['lat']            = assim_dict[inds[0]][list_sites[k]]['lat']
         summary_stats_assim[list_sites[k]]['lon']            = assim_dict[inds[0]][list_sites[k]]['lon']
         summary_stats_assim[list_sites[k]]['alt']            = assim_dict[inds[0]][list_sites[k]]['alt']
-        summary_stats_assim[list_sites[k]]['PSMslope']       = assim_dict[inds[0]][list_sites[k]]['PSMslope']
-        summary_stats_assim[list_sites[k]]['PSMintercept']   = assim_dict[inds[0]][list_sites[k]]['PSMintercept']
-        summary_stats_assim[list_sites[k]]['PSMcorrel']      = assim_dict[inds[0]][list_sites[k]]['PSMcorrel']
         summary_stats_assim[list_sites[k]]['NbPts']          = len(inds)
+        
+        #summary_stats_assim[list_sites[k]]['PSMslope']       = assim_dict[inds[0]][list_sites[k]]['PSMslope']
+        #summary_stats_assim[list_sites[k]]['PSMintercept']   = assim_dict[inds[0]][list_sites[k]]['PSMintercept']
+        #summary_stats_assim[list_sites[k]]['PSMcorrel']      = assim_dict[inds[0]][list_sites[k]]['PSMcorrel']
+        summary_stats_assim[list_sites[k]]['PSMinfo']      = assim_dict[inds[0]][list_sites[k]]['PSMinfo']
 
         # These contain data for the "grand ensemble" (i.e. ensemble of realizations) for "kth" site
         nbpts      = [assim_dict[j][list_sites[k]]['NbEvalPts'] for j in inds]
@@ -970,7 +1380,7 @@ def main():
         summary_stats_assim[list_sites[k]]['ts_MeanRecon']   = np.mean(ts_recon,axis=0)
         summary_stats_assim[list_sites[k]]['ts_SpreadRecon'] = np.std(ts_recon,axis=0)        
         # ens. calibration
-        R = [assim_dict[inds[0]][list_sites[k]]['PSMmse']]
+        R = [assim_dict[inds[0]][list_sites[k]]['PSMinfo']['R']]
         ensVar = np.mean(np.var(ts_recon,axis=0,ddof=1)) # !!! variance of ens. means in grand ensemble (realizations, not DA ensemble) !!!
         mse = np.mean(np.square(rmse))
         calib = mse/(ensVar+R)
@@ -984,7 +1394,7 @@ def main():
 
     verif_time = time() - begin_time
     print '======================================================='
-    print 'Verification completed in '+ str(verif_time/60.0)+' mins'
+    print 'Verification completed in '+ str(verif_time/3600.0)+' hours'
     print '======================================================='
 
 
@@ -997,12 +1407,7 @@ def main():
 
 
 
-
-
-
-
-
-
+    
 
     # ============================================
     # Plotting the verification summary stats data
@@ -1609,7 +2014,7 @@ def main():
 
     end_time = time() - begin_time
     print '======================================================='
-    print 'All completed in '+ str(end_time/60.0)+' mins'
+    print 'All completed in '+ str(end_time/3600.0)+' hours'
     print '======================================================='
 
 

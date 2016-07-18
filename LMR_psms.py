@@ -774,6 +774,7 @@ class LinearPSM_TorP(LinearPSM):
         try:
             psm_data_T = LinearPSM_TorP._load_psm_data(config,calib_var='temperature')
             psm_data_P = LinearPSM_TorP._load_psm_data(config,calib_var='moisture')
+
             return {'psm_data_T': psm_data_T, 'psm_data_P': psm_data_P}
         except IOError as e:
             print e

@@ -112,6 +112,9 @@ class v_proxies(object):
             List of proxy data regions (data keys) to use.
         proxy_resolution: list(float)
             List of proxy time resolutions to use
+        proxy_blacklist : list
+            A blacklist on proxy records, to eliminate specific records from
+            processing
         proxy_order: list(str):
             Order of assimilation by proxy type key
         proxy_assim2: dict{ str: list(str)}
@@ -418,6 +421,9 @@ class v_psm(object):
         # or 
         #datatag_calib = 'GPCC'
         #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
+        # or
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
         
         pre_calib_datafile = None
@@ -585,7 +591,7 @@ def main():
         print 'ERROR: problem with the type of psm!'
         exit(1)
     
-    print 'PSM calibration file:', psm_file
+    print 'PSM calibration/parameters file:', psm_file
 
     
     # Check if psm_file already exists, archive it with current date/time if it exists

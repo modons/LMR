@@ -550,14 +550,14 @@ class psm(object):
         Attributes
         ----------
         datatag_calib_T: str
-            Source of temperature calibration data for PSM
+            Source of temperature calibration data for linear PSM
         datadir_calib_T: str
             Absolute path to temperature calibration data *or* None if using
             default lmr_path
         datafile_calib_T: str
             Filename for temperature calibration data
         datatag_calib_P: str
-            Source of precipitation calibration data for PSM
+            Source of precipitation calibration data for linear PSM
         datadir_calib_P: str
             Absolute path to precipitation calibration data *or* None if using
             default lmr_path
@@ -828,8 +828,8 @@ class prior(object):
 
     dataformat_prior = 'NCD'
 
-    #psm_required_variables = ['tas_sfc_Amon']
-    psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    psm_required_variables = ['tas_sfc_Amon']
+    #psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
     #psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
     #psm_required_variables = ['d18O_sfc_Amon']
 
@@ -864,7 +864,7 @@ class prior(object):
         self.state_variables = list(self.state_variables)
         self.psm_required_variables = self.psm_required_variables
         self.detrend = self.detrend
-        self.state_kinf = self.state_kind
+        self.state_kind = self.state_kind
         self.seed = core.seed
 
         if self.datadir_prior is None:
