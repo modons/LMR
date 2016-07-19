@@ -172,11 +172,15 @@ class LinearPSM(BasePSM):
             self.intercept = psm_site_data['PSMintercept']
             self.R = psm_site_data['PSMmse']
 
-        except (KeyError, IOError) as e:
+        except KeyError as e:
+            raise ValueError('Could not find proxy in pre-calibration file... '
+                             'Skipping: {}'.format(proxy_obj.id))
+        except IOError as e:
             # No precalibration found, have to do it for this proxy
-            print ('No pre-calibration found for'
-                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,proxy_obj.type))
-            
+            print ('No pre-calibration file found for'
+                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
+                                                         proxy_obj.type))
+
             # TODO: Fix call and Calib Module
             datag_calib = config.psm.linear.datatag_calib
             C = LMR_calibrate.calibration_assignment(datag_calib)
@@ -858,11 +862,15 @@ class BilinearPSM(BasePSM):
 
             self.calib_temperature = psm_site_data['calib_temperature']
             self.calib_moisture = psm_site_data['calib_moisture']
-            
-        except (KeyError, IOError) as e:
+
+        except KeyError as e:
+            raise ValueError('Could not find proxy in pre-calibration file... '
+                             'Skipping: {}'.format(proxy_obj.id))
+        except IOError as e:
             # No precalibration found, have to do it for this proxy
             print ('No pre-calibration found for'
-                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,proxy_obj.type))
+                   ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
+                                                         proxy_obj.type))
             
             # TODO: Fix call and Calib Module
             # Two calibration sources to consider

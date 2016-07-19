@@ -9,6 +9,7 @@ import LMR_prior
 import LMR_psms
 import LMR_proxy_pandas_rework
 import LMR_config
+from LMR_utils import create_precalc_ye_filename
 
 # This script gives a method for pre-calculating ye values for our linear psm.
 # It outputs this file in a subdirectory of the prior source directory which
@@ -29,6 +30,7 @@ X.prior_datafile = cfg.prior.datafile_prior
 X.statevars = cfg.prior.psm_required_variables
 X.detrend = cfg.prior.detrend
 X.kind = cfg.prior.state_kind
+X.Nens = None  # Load entire prior
 
 
 #  Load the proxy data
@@ -40,53 +42,36 @@ psm_class = LMR_psms.get_psm_class(psm_key)
 psm_kwargs = psm_class.get_kwargs(cfg)
 
 proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
-proxy_ids_by_grp, proxy_objects = proxy_class.load_all(cfg,
-                                                       [0, 2000],
-                                                       **psm_kwargs)
+proxy_objects = proxy_class.load_all_annual_no_filtering(cfg,
+                                                         **psm_kwargs)
 
-X.read_prior()
+# Load the prior data
+X.populate_ensemble(cfg.prior.prior_source, cfg.prior)
 
-# For each state variable required for the psm, create a precalc_ye file
-for state_var in cfg.prior.psm_required_variables:
-    print 'Working on prior variable {}'.format(state_var)
-    annual_data = X.prior_dict[state_var]['value']
+# Calculate the Ye values
+num_proxy = len(proxy_objects)
+len_prior_dat = X.prior_dict[X.statevars[0]]['value'].shape[0]
+print 'Calculating ye values for {:d} proxies'.format(num_proxy)
+ye_out = np.zeros((num_proxy, len_prior_dat))
 
-    ye_out = np.zeros((len(proxy_objects), annual_data.shape[0]))
-    lon = X.prior_dict[state_var]['lon']
-    lat = X.prior_dict[state_var]['lat']
+for i, pobj in enumerate(proxy_objects):
+    ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
 
-    print ('Calculating ye values for {:d} proxies.'.format(len(proxy_objects)))
-    for i, pobj in enumerate(proxy_objects):
-        tmp_dat = pobj.psm_obj.get_close_grid_point_data(annual_data,
-                                                         lon,
-                                                         lat)
-        ye_out[i] = pobj.psm_obj.basic_psm(tmp_dat)
+# Create a mapping for each proxy id to an index of the array
+pid_map = {pobj.id: idx for idx, pobj in enumerate(proxy_objects)}
 
-    # Create an id -> index in pobj list mapping to use when randomly sampling
-    pid_map = {pobj.id: idx
-               for pobj, idx in izip(proxy_objects, xrange(len(proxy_objects)))}
+# Create filename for current experiment
+out_dir = os.path.join(cfg.core.lmr_path, 'ye_precalc_files')
+out_fname = create_precalc_ye_filename(cfg)
 
-    # Write out precalc ye file
-    out_fname = '{}_{}_{}_{}.npz'.format(cfg.prior.prior_source,
-                                         cfg.psm.linear.datatag_calib,
-                                         proxy_database,
-                                         state_var)
+assert len(out_fname) <= 255, 'Filename is too long...'
 
-    precalc_ye_dir = 'precalc_ye_files'
-    out_dir = os.path.join(cfg.prior.datadir_prior, precalc_ye_dir)
+if not os.path.exists(out_dir):
+    os.mkdir(out_dir)
 
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-
-    out_full = os.path.join(out_dir, out_fname)
-    print 'Writing precalculated ye file: {}'.format(out_full)
-    np.savez(out_full,
-             pid_index_map=pid_map,
-             ye_vals=ye_out)
-
-
-
-
-
-
-
+# Write precalculated ye file
+out_full = os.path.join(out_dir, out_fname)
+print 'Writing precalculated ye file: {}'.format(out_full)
+np.savez(out_full,
+         pid_index_map=pid_map,
+         ye_vals=ye_out)

@@ -86,8 +86,8 @@ class v_proxies(object):
     # =============================
     # Which proxy database to use ?
     # =============================
-    use_from = ['pages']
-    #use_from = ['NCDC']
+    #use_from = ['pages']
+    use_from = ['NCDC']
 
     proxy_frac = 1.0 # this needs to remain = 1.0 if all possible proxies are to be considered for calibration
 

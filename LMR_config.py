@@ -2,28 +2,42 @@
 Class based config module to help with passing information to LMR modules for
 paleoclimate reconstruction experiments.
 
+NOTE:  All general user parameters that should be edited are displayed
+       between the following sections:
+
+       ##** BEGIN User Parameters **##
+
+       parameters, etc.
+
+       ##** END User Parameters **##
+
 Adapted from LMR_exp_NAMELIST by AndreP
 
 Revisions:
- - Introduction of definitions related to use of newly developed NCDC proxy database.
+ - Introduction of definitions related to use of newly developed NCDC proxy
+   database.
    [ R. Tardif, Univ. of Washington, January 2016 ]
  - Added functionality restricting assimilated proxy records to those belonging
    to specific databases (e.g. PAGES1, PAGES2, LMR) (only for NCDC proxies).
    [ R. Tardif, Univ. of Washington, February 2016 ]
- - Introduction of "blacklist" to prevent the assimilation of specific proxy records as defined 
-   (through a python list) by the user. Applicable for both NCDC and Pages proxy sets.
+ - Introduction of "blacklist" to prevent the assimilation of specific proxy
+   records as defined (through a python list) by the user. Applicable for both
+   NCDC and Pages proxy sets.
    [ R. Tardif, Univ. of Washington, February 2016 ]
- - Added boolean allowing the user to indicate whether the prior is to be detrended or not.
+ - Added boolean allowing the user to indicate whether the prior is to be
+   detrended or not.
    [ R. Tardif, Univ. of Washington, February 2016 ]
- - Added definitions associated with a new psm class (linear_TorP) allowing the use of
-   temperature-calibrated OR precipitation-calibrated linear PSMs.
+ - Added definitions associated with a new psm class (linear_TorP) allowing the
+   use of temperature-calibrated OR precipitation-calibrated linear PSMs.
    [ R. Tardif, Univ. of Washington, March 2016 ]
- - Added definitions associated with a new psm class (h_interp) for use of isotope-enabled GCM data
-   as prior: Ye values are taken as the prior isotope field either at the nearest grid pt. or as the
-   weighted-average of values at grid points surrounding the isotope proxy site assimilated.
+ - Added definitions associated with a new psm class (h_interp) for use of
+   isotope-enabled GCM data as prior: Ye values are taken as the prior isotope
+   field either at the nearest grid pt. or as the weighted-average of values at
+   grid points surrounding the isotope proxy site assimilated.
    [ R. Tardif, Univ. of Washington, June 2016 ]
--  Added definitions associated with a new psm class (bilinear) for bivariate linear regressions
-   w/ temperature AND precipitation/PSDI as independent variables.
+-  Added definitions associated with a new psm class (bilinear) for bivariate
+   linear regressions w/ temperature AND precipitation/PSDI as independent
+   variables.
    [ R. Tardif, Univ. of Washington, June 2016 ]
  - Added initialization features to all configuration classes and sub_classes
    The new usage should now grab an instance of Config and use that object.
@@ -50,8 +64,12 @@ class wrapper(object):
         Range of Monte-Carlo iterations to perform
     """
 
+    ##** BEGIN User Parameters **##
+
     multi_seed = None
     iter_range = (0, 0)
+
+    ##** END User Parameters **##
 
     def __init__(self):
         self.multi_seed = self.multi_seed
@@ -95,8 +113,10 @@ class core(object):
         Absolute path to LMR reconstruction archive directory
     """
 
+    ##** BEGIN User Parameters **##
+
     #nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
-    nexp = 'test'
+    nexp = 'test_ncdc_bilinear_precalc_t'
 
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
@@ -118,6 +138,8 @@ class core(object):
     archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
+
+    ##** END User Parameters **##
 
     def __init__(self, curr_iter=None):
         self.nexp = self.nexp
@@ -150,14 +172,18 @@ class proxies(object):
         Fraction of available proxy data (sites) to assimilate
     """
 
+    ##** BEGIN User Parameters **##
+
     # =============================
     # Which proxy database to use ?
     # =============================
-    use_from = ['pages']
-    #use_from = ['NCDC']
+    #use_from = ['pages']
+    use_from = ['NCDC']
 
     proxy_frac = 1.0
     #proxy_frac = 0.75
+
+    ##** END User Parameters **##
 
     # ---------------
     # PAGES2k proxies
@@ -200,6 +226,8 @@ class proxies(object):
             to filter by.
         """
 
+        ##** BEGIN User Parameters **##
+
         datadir_proxy = None
         datafile_proxy = 'Pages2k_Proxies.df.pckl'
         metafile_proxy = 'Pages2k_Metadata.df.pckl'
@@ -208,8 +236,10 @@ class proxies(object):
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
         proxy_resolution = [1.0]
-        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
-        
+
+        # 'anom' for anomalies (temporal mean removed) or 'asis' to keep
+        # unchanged
+        proxy_timeseries_kind = 'asis'
         # DO NOT CHANGE FORMAT BELOW
 
         proxy_order = [
@@ -253,6 +283,8 @@ class proxies(object):
         # A blacklist on proxy records, to prevent assimilation of chronologies
         # known to be duplicates
         proxy_blacklist = []
+
+        ##** END User Parameters **##
 
         def __init__(self):
             if self.datadir_proxy is None:
@@ -330,6 +362,8 @@ class proxies(object):
             to filter by.
         """
 
+        ##** BEGIN User Parameters **##
+
         datadir_proxy = None
         datafile_proxy = 'NCDC_Proxies.df.pckl'
         metafile_proxy = 'NCDC_Metadata.df.pckl'
@@ -339,9 +373,10 @@ class proxies(object):
                    'North America', 'South America']
 
         proxy_resolution = [1.0]
+        # 'anom' for anomalies (temporal mean removed) or 'asis' to keep
+        # unchanged
+        proxy_timeseries_kind = 'asis'
 
-        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
-        
         # Limit proxies to those included in the following databases
         #database_filter = ['PAGES1']
         database_filter = []
@@ -367,7 +402,7 @@ class proxies(object):
             'Ice Cores_Accumulation',
             'Ice Cores_MeltFeature',
             'Lake Cores_Varve',
-            'Speleothems_d18O',
+#            'Speleothems_d18O',
 #            'Speleothems_d13C'
             ]
 
@@ -416,6 +451,8 @@ class proxies(object):
         # proxy_blacklist = []
         proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
                            '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
+
+        ##** END User Parameters **##
 
         def __init__(self):
             if self.datadir_proxy is None:
@@ -467,10 +504,14 @@ class psm(object):
         make more intricate proxy - psm relationships.
     """
 
-    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
+    ##** BEGIN User Parameters **##
+
+    #use_psm = {'pages': 'linear', 'NCDC': 'linear'}
     #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
-    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
+    use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
     #use_psm = {'pages': 'h_interp', 'NCDC': 'h_interp'}
+
+    ##** END User Parameters **##
 
     
     class _linear(object):
@@ -494,6 +535,8 @@ class psm(object):
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
+        ##** BEGIN User Parameters **##
 
         datadir_calib = None
         # Choice between:
@@ -524,6 +567,8 @@ class psm(object):
 
         psm_r_crit = 0.0
 
+        ##** END User Parameters **##
+
         def __init__(self):
             self.datatag_calib = self.datatag_calib
             self.datafile_calib = self.datafile_calib
@@ -536,7 +581,8 @@ class psm(object):
                 self.datadir_calib = self.datadir_calib
 
             if self.pre_calib_datafile is None:
-                filename = 'PSMs_'+'-'.join(proxies.use_from)+'_'+self.datatag_calib+'.pckl'
+                filename = ('PSMs_' + '-'.join(proxies.use_from) +
+                            '_' + self.datatag_calib+'.pckl')
                 self.pre_calib_datafile = join(core.lmr_path,
                                                'PSM',
                                                filename)
@@ -572,6 +618,8 @@ class psm(object):
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
+        ##** BEGIN User Parameters **##
 
         datadir_calib = None
         
@@ -610,6 +658,8 @@ class psm(object):
         pre_calib_datafile_P = None
 
         psm_r_crit = 0.0
+
+        ##** END User Parameters **##
 
         def __init__(self):
             self.datatag_calib_T = self.datatag_calib_T
@@ -669,6 +719,9 @@ class psm(object):
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
+
+        ##** BEGIN User Parameters **##
+
         # linear PSM w.r.t. temperature
         # -----------------------------        
         datatag_calib_T = 'GISTEMP'
@@ -690,11 +743,11 @@ class psm(object):
         #datatag_calib_P = 'GPCC'
         #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
         # or 
-        datatag_calib_P = 'GPCC'
-        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        #datatag_calib_P = 'GPCC'
+        #datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
-        #datatag_calib_P = 'DaiPDSI'
-        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+        datatag_calib_P = 'DaiPDSI'
+        datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
         dataformat_calib_P = 'NCD'
 
@@ -702,6 +755,8 @@ class psm(object):
         pre_calib_datafile = None
 
         psm_r_crit = 0.0
+
+        ##** END User Parameters **##
 
         def __init__(self):
             self.datatag_calib_T = self.datatag_calib_T
@@ -719,7 +774,8 @@ class psm(object):
 
             if self.pre_calib_datafile is None:
                 filename = 'PSMs_'+'-'.join(proxies.use_from)+'_' + \
-                           self.datatag_calib_T +'_'+self.datatag_calib_P + '.pckl'
+                           self.datatag_calib_T +'_'+self.datatag_calib_P +\
+                           '.pckl'
                 self.pre_calib_datafile = join(core.lmr_path,
                                                  'PSM',
                                                  filename)
@@ -734,22 +790,28 @@ class psm(object):
         Attributes
         ----------
         radius_influence : real
-            Distance-scale used the calculation of exponentially-decaying weights in interpolator (in km)
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
         datadir_obsError: str
             Absolute path to obs. error variance data
         filename_obsError: str
             Filename for obs. error variance data
         dataformat_obsError: str
-            String indicating the format of the file containing obs. error variance data
+            String indicating the format of the file containing obs. error
+            variance data
             Note: note currently used by code. For info purpose only.
         datafile_obsError: str
             Absolute path/filename of obs. error variance data
         """
 
+        ##** BEGIN User Parameters **##
+
         # Interpolation parameter:
-        # Set to 'None' if want Ye = value at nearest grid point to proxy location
-        # Set to a non-zero float if want Ye = weighted-average of surrounding gridpoints
-        #radius_influence = None
+        # Set to 'None' if want Ye = value at nearest grid point to proxy
+        # location
+        # Set to a non-zero float if want Ye = weighted-average of surrounding
+        # gridpoints
+        # radius_influence = None
         radius_influence = 50. # distance-scale in km
         
         datadir_obsError = './'
@@ -758,6 +820,8 @@ class psm(object):
 
         datafile_obsError = None
 
+        ##** END User Parameters **##
+
         def __init__(self):
             self.radius_influence = self.radius_influence
             self.datadir_obsError = self.datadir_obsError
@@ -765,7 +829,8 @@ class psm(object):
             self.dataformat_obsError = self.dataformat_obsError 
 
             if self.datafile_obsError is None:
-                self.datafile_obsError = join(self.datadir_obsError, self.filename_obsError)
+                self.datafile_obsError = join(self.datadir_obsError,
+                                              self.filename_obsError)
             else:
                 self.datafile_obsError = self.datafile_obsError
 
@@ -799,6 +864,8 @@ class prior(object):
         List of variables to use in the state vector for the prior.
     """
 
+    ##** BEGIN User Parameters **##
+
     datadir_prior = None
 
     # Prior data directory & model source
@@ -828,12 +895,14 @@ class prior(object):
 
     dataformat_prior = 'NCD'
 
-    psm_required_variables = ['tas_sfc_Amon']
+    #psm_required_variables = ['tas_sfc_Amon']
     #psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
-    #psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
+    psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
     #psm_required_variables = ['d18O_sfc_Amon']
 
-    #state_variables = ['tas_sfc_Amon']
+    state_variables = ['tas_sfc_Amon']
+    #state_variables = ['pr_sfc_Amon']
+    #state_variables = ['scpdsi_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon',
@@ -844,7 +913,7 @@ class prior(object):
     #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
     #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon',
     #                    'ohcArctic_0-700m_Omon']
-    state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    #state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'd18O_sfc_Amon']
     
@@ -855,6 +924,8 @@ class prior(object):
     # Full field or anomalies? Allowed values : 'full' or 'anom'
     #state_kind = 'full'
     state_kind = 'anom'
+
+    ##** END User Parameters **##
 
     
     def __init__(self):
