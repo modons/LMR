@@ -596,19 +596,24 @@ class ProxyNCDC(BaseProxyObject):
 
         # Find indices matching **database filter** specifications
         database_col = 'Databases'
-        # define boolean array with right dimension & set all to True
-        dbase_mask = meta_src[database_col] != 0
-
-        # dbase_filters not "None" or empty list
+        
+        # dbase_filters not "None" or empty list (some selection on db has been activated)
         if dbase_filters:
-            for i in range(len(meta_src[database_col])):                
+            # define boolean array with right dimension & set all to False
+            dbase_mask = meta_src[database_col] == 0            
+            # set mask to True for proxies matching all databases found in dbase_filters
+            for i in range(len(meta_src[database_col])):      
                 if meta_src[database_col][i]:
-                    tmp_mask = set(meta_src[database_col][i])
-                    tmp_disjoint = tmp_mask.isdisjoint(dbase_filters)
-                    dbase_mask[i] = tmp_disjoint
+                    #dbase_mask[i] = set(meta_src[database_col][i]).isdisjoint(dbase_filters) # old code
+                    dbase_mask[i] = set(dbase_filters).issubset(meta_src[database_col][i])
                 else:
                     dbase_mask[i] = False
+        else:
+            # selection on db has NOT been activated: 
+            # define boolean array with right dimension & set all to True
+            dbase_mask = meta_src[database_col] != 0
 
+                    
         # Define mask of proxies listed in a user-defined "blacklist"
         # (see LMR_config).
         # boolean array set with right dimension & all set to True

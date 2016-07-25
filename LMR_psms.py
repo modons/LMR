@@ -588,7 +588,7 @@ class LinearPSM_TorP(LinearPSM):
         # TODO: Correspondance or assignment of specific PSM to proxy types should be done at higher level.
         TorP_types = ['Tree ring_Width', 'Tree ring_Density',
                       'Tree Rings_WidthBreit', 'Tree Rings_WidthPages',
-                      'Tree Rings_WoodDensity']
+                      'Tree Rings_WidthPages2', 'Tree Rings_WoodDensity']
 
         proxy = proxy_obj.type
         site = proxy_obj.id

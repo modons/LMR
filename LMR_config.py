@@ -116,13 +116,13 @@ class core(object):
     ##** BEGIN User Parameters **##
 
     #nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
-    nexp = 'test_ncdc_bilinear_precalc_t'
+    nexp = 'test_ncdc_v0.1.0'
 
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = True
+    use_precalc_ye = False
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = (1800, 2000)
     nens = 100
@@ -364,9 +364,12 @@ class proxies(object):
 
         ##** BEGIN User Parameters **##
 
+        #dbversion = 'v0.0.0'
+        dbversion = 'v0.1.0'
+        
         datadir_proxy = None
-        datafile_proxy = 'NCDC_Proxies.df.pckl'
-        metafile_proxy = 'NCDC_Metadata.df.pckl'
+        datafile_proxy = 'NCDC_%s_Proxies.df.pckl' %(dbversion)
+        metafile_proxy = 'NCDC_%s_Metadata.df.pckl' % (dbversion)
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
@@ -377,16 +380,21 @@ class proxies(object):
         # unchanged
         proxy_timeseries_kind = 'asis'
 
-        # Limit proxies to those included in the following databases
-        #database_filter = ['PAGES1']
+        # Limit proxies to those included in the following list of databases
+        # Note: Empty list = no restriction
+        #       If list has more than one element, only records contained in ALL
+        #       databases listed will be retained.
         database_filter = []
+        #database_filter = ['PAGES2']
+        #database_filter = ['LMR','PAGES2']
 
         # DO NOT CHANGE FORMAT BELOW
         proxy_order = [
-#            'Tree Rings_All',
             'Tree Rings_WoodDensity',
             'Tree Rings_WidthPages',
+            'Tree Rings_WidthPages2',            
 #            'Tree Rings_WidthBreit',
+            'Tree Rings_Isotopes',
             'Corals and Sclerosponges_d18O',
 #            'Corals and Sclerosponges_d13C',
 #            'Corals and Sclerosponges_d14C',
@@ -397,57 +405,68 @@ class proxies(object):
 #            'Corals and Sclerosponges_UCa',
 #            'Corals and Sclerosponges_Sr',
 #            'Corals and Sclerosponges_Pb',
+            'Corals and Sclerosponges_Rates',
             'Ice Cores_d18O',
             'Ice Cores_dD',
             'Ice Cores_Accumulation',
             'Ice Cores_MeltFeature',
             'Lake Cores_Varve',
+            'Lake Cores_BioMarkers',
+            'Lake Cores_GeoChem',
+            'Marine Cores_d18O',
 #            'Speleothems_d18O',
 #            'Speleothems_d13C'
             ]
 
         proxy_assim2 = {
-            'Corals and Sclerosponges_d18O': ['d18O', 'delta18O', 'd18o',
-                                              'd18O_stk', 'd18O_int',
-                                              'd18O_norm', 'd18o_avg',
-                                              'd18o_ave', 'dO18',
-                                              'd18O_4'],
-            'Corals and Sclerosponges_d14C': ['d14C', 'd14c', 'ac_d14c'],
-            'Corals and Sclerosponges_d13C': ['d13C', 'd13c', 'd13c_ave',
-                                              'd13c_ann_ave', 'd13C_int'],
-            'Corals and Sclerosponges_SrCa': ['Sr/Ca', 'Sr/Ca_norm',
-                                              'Sr/Ca_anom', 'Sr/Ca_int'],
-            'Corals and Sclerosponges_Sr'  : ['Sr'],
-            'Corals and Sclerosponges_BaCa': ['Ba/Ca'],
-            'Corals and Sclerosponges_CdCa': ['Cd/Ca'],
-            'Corals and Sclerosponges_MgCa': ['Mg/Ca'],
-            'Corals and Sclerosponges_UCa' : ['U/Ca', 'U/Ca_anom'],
-            'Corals and Sclerosponges_Pb'  : ['Pb'],
-            'Ice Cores_d18O'               : ['d18O', 'delta18O', 'delta18o',
-                                              'd18o', 'd18o_int', 'd18O_int',
-                                              'd18O_norm', 'd18o_norm', 'dO18',
-                                              'd18O_anom'],
-            'Ice Cores_dD'                 : ['deltaD', 'delD'],
-            'Ice Cores_Accumulation'       : ['accum', 'accumu'],
-            'Ice Cores_MeltFeature'        : ['MFP'],
-            'Lake Cores_Varve'             : ['varve', 'varve_thickness',
-                                              'varve thickness'],
-            'Speleothems_d18O'             : ['d18O'],
-            'Speleothems_d13C'             : ['d13C'],
-            'Tree Rings_All'               : ['clim_signal'],
-            'Tree Rings_WidthBreit'        : ['trsgi'],
-            'Tree Rings_WidthPages'        : ['TRW',
+            'Corals and Sclerosponges_d18O' : ['d18O', 'delta18O', 'd18o',
+                                               'd18O_stk', 'd18O_int',
+                                               'd18O_norm', 'd18o_avg',
+                                               'd18o_ave', 'dO18',
+                                               'd18O_4'],
+            'Corals and Sclerosponges_d14C' : ['d14C', 'd14c', 'ac_d14c'],
+            'Corals and Sclerosponges_d13C' : ['d13C', 'd13c', 'd13c_ave',
+                                               'd13c_ann_ave', 'd13C_int'],
+            'Corals and Sclerosponges_SrCa' : ['Sr/Ca', 'Sr/Ca_norm',
+                                               'Sr/Ca_anom', 'Sr/Ca_int'],
+            'Corals and Sclerosponges_Sr'   : ['Sr'],
+            'Corals and Sclerosponges_BaCa' : ['Ba/Ca'],
+            'Corals and Sclerosponges_CdCa' : ['Cd/Ca'],
+            'Corals and Sclerosponges_MgCa' : ['Mg/Ca'],
+            'Corals and Sclerosponges_UCa'  : ['U/Ca', 'U/Ca_anom'],
+            'Corals and Sclerosponges_Pb'   : ['Pb'],
+            'Corals and Sclerosponges_Rates': ['ext','calc'],
+            'Ice Cores_d18O'                : ['d18O', 'delta18O', 'delta18o',
+                                               'd18o', 'd18o_int', 'd18O_int',
+                                               'd18O_norm', 'd18o_norm', 'dO18',
+                                               'd18O_anom'],
+            'Ice Cores_dD'                  : ['deltaD', 'delD'],
+            'Ice Cores_Accumulation'        : ['accum', 'accumu'],
+            'Ice Cores_MeltFeature'         : ['MFP'],
+            'Lake Cores_Varve'              : ['varve', 'varve_thickness',
+                                               'varve thickness'],
+            'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'],
+            'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca', 'Cl_cont'],
+            'Marine Cores_d18O'             : ['d18O'],
+            'Speleothems_d18O'              : ['d18O'],
+            'Speleothems_d13C'              : ['d13C'],
+            'Tree Rings_WidthBreit'         : ['trsgi_breit'],
+            'Tree Rings_WidthPages2'        : ['trsgi'],
+            'Tree Rings_WidthPages'         : ['TRW',
                                               'ERW',
                                               'LRW'],
-            'Tree Rings_WoodDensity'       : ['max_d',
-                                              'min_d',
-                                              'early_d',
-                                              'late_d',
-                                              'MXD'],
+            'Tree Rings_WoodDensity'        : ['max_d',
+                                               'min_d',
+                                               'early_d',
+                                               'earl_d',
+                                               'density',
+                                               'late_d',
+                                               'MXD'],
+            'Tree Rings_Isotopes'           : ['d18O'],
             }
 
-        # A blacklist on proxy records, to prevent assimilation of chronologies
-        # known to be duplicates.
+        # A blacklist on proxy records, to prevent assimilation of specific
+        # chronologies known to be duplicates.
         # proxy_blacklist = []
         proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
                            '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
@@ -506,9 +525,9 @@ class psm(object):
 
     ##** BEGIN User Parameters **##
 
-    #use_psm = {'pages': 'linear', 'NCDC': 'linear'}
+    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
     #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
-    use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
+    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
     #use_psm = {'pages': 'h_interp', 'NCDC': 'h_interp'}
 
     ##** END User Parameters **##
@@ -581,8 +600,14 @@ class psm(object):
                 self.datadir_calib = self.datadir_calib
 
             if self.pre_calib_datafile is None:
-                filename = ('PSMs_' + '-'.join(proxies.use_from) +
-                            '_' + self.datatag_calib+'.pckl')
+                if '-'.join(proxies.use_from) == 'NCDC':
+                    dbversion = proxies._ncdc.dbversion
+                    filename = ('PSMs_' + '-'.join(proxies.use_from) +
+                                '_' + dbversion +
+                                '_' + self.datatag_calib+'.pckl')
+                else:
+                    filename = ('PSMs_' + '-'.join(proxies.use_from) +
+                                '_' + self.datatag_calib+'.pckl')
                 self.pre_calib_datafile = join(core.lmr_path,
                                                'PSM',
                                                filename)
@@ -675,8 +700,14 @@ class psm(object):
                 self.datadir_calib = self.datadir_calib
 
             if self.pre_calib_datafile_T is None:
-                filename_t = 'PSMs_' + '-'.join(proxies.use_from) + '_' + \
-                             self.datatag_calib_T + '.pckl'
+                if '-'.join(proxies.use_from) == 'NCDC':
+                    dbversion = proxies._ncdc.dbversion
+                    filename_t = ('PSMs_' + '-'.join(proxies.use_from) +
+                                  '_' + dbversion +
+                                  '_' + self.datatag_calib_T + '.pckl')
+                else:
+                    filename_t = ('PSMs_' + '-'.join(proxies.use_from) +
+                                  '_' + self.datatag_calib_T + '.pckl')
                 self.pre_calib_datafile_T = join(core.lmr_path,
                                                  'PSM',
                                                  filename_t)
@@ -684,8 +715,14 @@ class psm(object):
                 self.pre_calib_datafile_T = self.pre_calib_datafile_T
 
             if self.pre_calib_datafile_P is None:
-                filename_p = 'PSMs_' + '-'.join(proxies.use_from) + '_' + \
-                             self.datatag_calib_P + '.pckl'
+                if '-'.join(proxies.use_from) == 'NCDC':
+                    dbversion = proxies._ncdc.dbversion
+                    filename_p = ('PSMs_' + '-'.join(proxies.use_from) +
+                                  '_' + dbversion +
+                                  '_' + self.datatag_calib_P + '.pckl')
+                else:
+                    filename_p = ('PSMs_' + '-'.join(proxies.use_from) +
+                              '_' + self.datatag_calib_P + '.pckl')
                 self.pre_calib_datafile_P = join(core.lmr_path,
                                                  'PSM',
                                                  filename_p)
@@ -773,9 +810,16 @@ class psm(object):
                 self.datadir_calib = self.datadir_calib
 
             if self.pre_calib_datafile is None:
-                filename = 'PSMs_'+'-'.join(proxies.use_from)+'_' + \
-                           self.datatag_calib_T +'_'+self.datatag_calib_P +\
-                           '.pckl'
+                if '-'.join(proxies.use_from) == 'NCDC':
+                    dbversion = proxies._ncdc.dbversion
+                    filename = ('PSMs_'+'-'.join(proxies.use_from) +
+                                '_' + dbversion +
+                                '_' + self.datatag_calib_T +
+                                '_' + self.datatag_calib_P + '.pckl')
+                else:
+                    filename = ('PSMs_'+'-'.join(proxies.use_from) +
+                                '_' + self.datatag_calib_T +
+                                '_' + self.datatag_calib_P + '.pckl')
                 self.pre_calib_datafile = join(core.lmr_path,
                                                  'PSM',
                                                  filename)
@@ -896,11 +940,11 @@ class prior(object):
     dataformat_prior = 'NCD'
 
     #psm_required_variables = ['tas_sfc_Amon']
-    #psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
-    psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
+    psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    #psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
     #psm_required_variables = ['d18O_sfc_Amon']
 
-    state_variables = ['tas_sfc_Amon']
+    #state_variables = ['tas_sfc_Amon']
     #state_variables = ['pr_sfc_Amon']
     #state_variables = ['scpdsi_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
@@ -913,7 +957,7 @@ class prior(object):
     #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
     #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon',
     #                    'ohcArctic_0-700m_Omon']
-    #state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'd18O_sfc_Amon']
     
