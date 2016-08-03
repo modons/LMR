@@ -139,7 +139,7 @@ class prior_master(object):
             seed(prior_cfg.seed)
             ind_ens = sample(range(ntime), self.Nens)
         else:
-            print 'Using entire consecutive prior source values.'
+            print 'Using entire consecutive years in prior dataset.'
             ind_ens = range(ntime)
 
         self.prior_sample_indices = ind_ens
@@ -218,9 +218,15 @@ class prior_BerkeleyEarth(prior_master):
 class prior_ccsm4_last_millenium(prior_master):
 
     def read_prior(self):
+    
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
-                                                        self.detrend,self.kind)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.kind)
+
         return
 
 # class for the CCSM4 Pre-Industrial Control simulation
@@ -228,8 +234,12 @@ class prior_ccsm4_preindustrial_control(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
-                                                        self.detrend,self.kind)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.kind)
         return
 
 # class for the CCSM4 isotope-enabled control simulation (from D. Noone)
@@ -237,8 +247,12 @@ class prior_ccsm4_isotope_controlrun(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
-                                                        self.detrend,self.kind)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.kind)
         return
     
 # class for the MPI-ESM-P Last Millenniun simulation
@@ -246,8 +260,12 @@ class prior_mpi_esm_p_last_millenium(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
-                                                        self.detrend,self.kind)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.kind)
         return
 
 # class for the GFDL-CM3 Pre-Industrial Control simulation
@@ -255,8 +273,12 @@ class prior_gfdl_cm3_preindustrial_control(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
-                                                        self.detrend,self.kind)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.kind)
         return
 
 # class for NOAA's 20th century reanalysis (20CR)
@@ -264,8 +286,12 @@ class prior_20cr(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
-                                                        self.detrend,self.kind)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.kind)
         return
 
 # class for ECMWF's 20th century reanalysis (ERA20C)
@@ -273,8 +299,12 @@ class prior_era20c(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model
-        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,self.prior_datafile,self.statevars,
-                                                        self.detrend,self.kind)
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.kind)
         return
 
 # class for ECMWF's 20th century model ensemble (ERA20CM)
@@ -282,6 +312,8 @@ class prior_era20cm(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_CMIP5_model_ensemble
-        self.prior_dict = read_gridded_data_CMIP5_model_ensemble(self.prior_datadir,self.prior_datafile,self.statevars)
+        self.prior_dict = read_gridded_data_CMIP5_model_ensemble(self.prior_datadir,
+                                                                 self.prior_datafile,
+                                                                 self.statevars)
         return
 

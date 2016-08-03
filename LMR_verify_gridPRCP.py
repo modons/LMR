@@ -296,16 +296,17 @@ for var in verif_vars:
     datadir  = datadir_reanl +'/20cr'
     datafile = vardef +'_20CR_185101-201112.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef])
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
 
-    TCR_time = dd[vardef]['years']
+    rtime = dd[vardef]['years']
+    TCR_time = np.array([d.year for d in rtime])
     lat_TCR = dd[vardef]['lat']
     lon_TCR = dd[vardef]['lon']
     nlat_TCR = len(lat_TCR)
     nlon_TCR = len(lon_TCR)
     lon2_TCR, lat2_TCR = np.meshgrid(lon_TCR, lat_TCR)
-    TCRfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field (long-term mean NOT REMOVED)
-    TCR = dd[vardef]['value']                           # Anomalies (long-term mean REMOVED)
+    TCRfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+    TCR = dd[vardef]['value']                           # Anomalies
 
     # Conversion from kg m-2 s-1
     rho = 1000.0
@@ -325,16 +326,17 @@ for var in verif_vars:
     datadir  = datadir_reanl +'/era20c'
     datafile = vardef +'_ERA20C_190001-201012.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef])
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
 
-    ERA_time = dd[vardef]['years']
+    rtime = dd[vardef]['years']
+    ERA_time = np.array([d.year for d in rtime])
     lat_ERA = dd[vardef]['lat']
     lon_ERA = dd[vardef]['lon']
     nlat_ERA = len(lat_ERA)
     nlon_ERA = len(lon_ERA)
     lon2_ERA, lat2_ERA = np.meshgrid(lon_ERA, lat_ERA)
-    ERAfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field (long-term mean NOT REMOVED)
-    ERA = dd[vardef]['value']                           # Anomalies (long-term mean REMOVED)
+    ERAfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+    ERA = dd[vardef]['value']                           # Anomalies
 
     # Conversion from kg m-2 s-1
     rho = 1000.0

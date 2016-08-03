@@ -3,6 +3,8 @@ import numpy as np
 import os
 from itertools import izip
 
+import timeit
+
 sys.path.append('../')
 
 import LMR_prior
@@ -30,7 +32,7 @@ X.prior_datafile = cfg.prior.datafile_prior
 X.statevars = cfg.prior.psm_required_variables
 X.detrend = cfg.prior.detrend
 X.kind = cfg.prior.state_kind
-X.Nens = None  # Load entire prior
+X.Nens = None  # None => Load entire prior
 
 
 #  Load the proxy data
@@ -45,17 +47,116 @@ proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
 proxy_objects = proxy_class.load_all_annual_no_filtering(cfg,
                                                          **psm_kwargs)
 
+if psm_key == 'linear':
+    if cfg.psm.linear.avgPeriod == 'annual':
+        X.avgInterval = cfg.psm.linear.avgPeriod
+        psm_avg = 'annual'
+    elif cfg.psm.linear.avgPeriod == 'season':
+        X.avgInterval = 'monthly'
+        psm_avg = 'season'
+    else:
+        print 'ERROR in specification of averaging period.'
+        raise SystemExit()        
+elif psm_key == 'linear_TorP':
+    if cfg.psm.linear_TorP.avgPeriod == 'annual':
+        X.avgInterval = cfg.psm.linear_TorP.avgPeriod
+        psm_avg = 'annual'
+    elif cfg.psm.linear_TorP.avgPeriod == 'season':
+        X.avgInterval = 'monthly'
+        psm_avg = 'season'
+    else:
+        print 'ERROR in specification of averaging period.'
+        raise SystemExit()
+elif psm_key == 'bilinear':
+    if cfg.psm.bilinear.avgPeriod == 'annual':
+        X.avgInterval = cfg.psm.bilinear.avgPeriod
+        psm_avg = 'annual'
+    elif cfg.psm.linear_TorP.avgPeriod == 'season':
+        X.avgInterval = 'monthly'
+        psm_avg = 'season'
+    else:
+        print 'ERROR in specification of averaging period.'
+        raise SystemExit()
+else:
+    X.avgInterval = 'annual'
+
+
+masterstarttime = timeit.default_timer()
+
 # Load the prior data
 X.populate_ensemble(cfg.prior.prior_source, cfg.prior)
 
+statedim = X.ens.shape[0]
+ntottime = X.ens.shape[1]
+
+dates = X.prior_dict[X.statevars[0]]['years']
+# How many years in prior data?
+years = list(set([d.year for d in X.prior_dict[X.statevars[0]]['years']]))
+len_prior_dat = len(years)
+
+
 # Calculate the Ye values
 num_proxy = len(proxy_objects)
-len_prior_dat = X.prior_dict[X.statevars[0]]['value'].shape[0]
 print 'Calculating ye values for {:d} proxies'.format(num_proxy)
 ye_out = np.zeros((num_proxy, len_prior_dat))
 
-for i, pobj in enumerate(proxy_objects):
-    ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
+if psm_avg == 'season':
+    # Ye calculation on the basis of seasonally-averaged prior data
+
+    # map out all possible seasonality vectors that will have to be considered
+    season_vects = []
+    for pobj in proxy_objects: season_vects.append(pobj.seasonality)
+    season_unique = list(set(map(tuple, season_vects)))
+
+    # Loop over seasonality definitions found in the proxy set
+    for season in season_unique:
+
+        print 'Processing proxies with seasonality metadata:', season
+
+        nbmonths = len(season)
+        year_current = [m for m in season if m>0 and m<=12]
+        year_before  = [abs(m) for m in season if m < 0]        
+        year_follow  = [m-12 for m in season if m > 12]
+
+        # Identify prior array indices corresponding to months in proxy seasonality
+        maskind = np.zeros((nbmonths,len_prior_dat),dtype='int64')
+        # define for year 1
+        yr1 = years[1]
+        tindsyr   = [k for k,d in enumerate(dates) if d.year == yr1    and d.month in year_current]
+        tindsyrm1 = [k for k,d in enumerate(dates) if d.year == yr1-1. and d.month in year_before]
+        tindsyrp1 = [k for k,d in enumerate(dates) if d.year == yr1+1. and d.month in year_follow]
+        indsyr1 = tindsyrm1+tindsyr+tindsyrp1
+        # repeat pattern for other years over entire time dimension
+        maskind[:,0] = [x-12 for x in indsyr1]
+        for kyr in range(1,len_prior_dat):
+            cyr = kyr-1
+            maskind[:,kyr] = [x+(cyr*12) for x in indsyr1]
+        maskind[maskind < 0] = 0
+        maskind[maskind > ntottime-1] = 0
+        
+        # Extract the slice of prior data corresponding to proxy seasonality
+        prior_seasonSlice = np.take(X.ens, maskind, axis=1)
+        # mean over appropriate season
+        prior_state = np.mean(prior_seasonSlice, axis=1)
+        
+        # loop over proxies
+        for i, pobj in enumerate(proxy_objects):
+            # restrict to proxy records with seasonality corresponding to
+            # current "season" loop variable
+            if pobj.seasonality == list(season):
+                print '{:10d} (...of {:d})'.format(i, num_proxy), pobj.id
+                ye_out[i] = pobj.psm(prior_state, X.full_state_info, X.coords)
+
+else:
+    # Ye calculation on the basis of annual (calendar) prior data
+    for i, pobj in enumerate(proxy_objects):
+        print '{:10d} (...of {:d})'.format(i, num_proxy), pobj.id
+        ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
+
+
+elapsedtot = timeit.default_timer() - masterstarttime
+print 'Total elapsed time:', elapsedtot
+
 
 # Create a mapping for each proxy id to an index of the array
 pid_map = {pobj.id: idx for idx, pobj in enumerate(proxy_objects)}

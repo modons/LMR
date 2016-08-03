@@ -116,13 +116,13 @@ class core(object):
     ##** BEGIN User Parameters **##
 
     #nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
-    nexp = 'test_ncdc_v0.1.0'
-
+    nexp = 'test'
+    
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = False
+    use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = (1800, 2000)
     nens = 100
@@ -391,20 +391,12 @@ class proxies(object):
         # DO NOT CHANGE FORMAT BELOW
         proxy_order = [
             'Tree Rings_WoodDensity',
-            'Tree Rings_WidthPages',
+#            'Tree Rings_WidthPages',
             'Tree Rings_WidthPages2',            
 #            'Tree Rings_WidthBreit',
             'Tree Rings_Isotopes',
             'Corals and Sclerosponges_d18O',
-#            'Corals and Sclerosponges_d13C',
-#            'Corals and Sclerosponges_d14C',
             'Corals and Sclerosponges_SrCa',
-#            'Corals and Sclerosponges_BaCa',
-#            'Corals and Sclerosponges_CdCa',
-#            'Corals and Sclerosponges_MgCa',
-#            'Corals and Sclerosponges_UCa',
-#            'Corals and Sclerosponges_Sr',
-#            'Corals and Sclerosponges_Pb',
             'Corals and Sclerosponges_Rates',
             'Ice Cores_d18O',
             'Ice Cores_dD',
@@ -414,8 +406,6 @@ class proxies(object):
             'Lake Cores_BioMarkers',
             'Lake Cores_GeoChem',
             'Marine Cores_d18O',
-#            'Speleothems_d18O',
-#            'Speleothems_d13C'
             ]
 
         proxy_assim2 = {
@@ -427,7 +417,7 @@ class proxies(object):
             'Corals and Sclerosponges_d14C' : ['d14C', 'd14c', 'ac_d14c'],
             'Corals and Sclerosponges_d13C' : ['d13C', 'd13c', 'd13c_ave',
                                                'd13c_ann_ave', 'd13C_int'],
-            'Corals and Sclerosponges_SrCa' : ['Sr/Ca', 'Sr/Ca_norm',
+            'Corals and Sclerosponges_SrCa' : ['Sr/Ca', 'Sr_Ca', 'Sr/Ca_norm',
                                                'Sr/Ca_anom', 'Sr/Ca_int'],
             'Corals and Sclerosponges_Sr'   : ['Sr'],
             'Corals and Sclerosponges_BaCa' : ['Ba/Ca'],
@@ -440,7 +430,7 @@ class proxies(object):
                                                'd18o', 'd18o_int', 'd18O_int',
                                                'd18O_norm', 'd18o_norm', 'dO18',
                                                'd18O_anom'],
-            'Ice Cores_dD'                  : ['deltaD', 'delD'],
+            'Ice Cores_dD'                  : ['deltaD', 'delD', 'dD'],
             'Ice Cores_Accumulation'        : ['accum', 'accumu'],
             'Ice Cores_MeltFeature'         : ['MFP'],
             'Lake Cores_Varve'              : ['varve', 'varve_thickness',
@@ -529,7 +519,11 @@ class psm(object):
     #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
     #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
     #use_psm = {'pages': 'h_interp', 'NCDC': 'h_interp'}
-
+    
+    # Use PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
+    avgPeriod = 'annual'
+    #avgPeriod = 'season'
+    
     ##** END User Parameters **##
 
     
@@ -571,11 +565,8 @@ class psm(object):
         # datatag_calib = 'BerkeleyEarth'
         # datafile_calib = 'Land_and_Ocean_LatLong1.nc'
         # or
-        # datatag_calib = 'GPCC'
-        # datafile_calib = 'GPCC_precip.mon.total.1x1.v6.nc'
-        # or
-        # datatag_calib = 'GPCC'
-        # datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        #datatag_calib = 'GPCC'
+        #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
         #datatag_calib_P = 'DaiPDSI'
         #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
@@ -586,6 +577,7 @@ class psm(object):
 
         psm_r_crit = 0.0
 
+
         ##** END User Parameters **##
 
         def __init__(self):
@@ -593,7 +585,14 @@ class psm(object):
             self.datafile_calib = self.datafile_calib
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
+            self.avgPeriod = psm.avgPeriod
 
+            if '-'.join(proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+                print '       No seasonality metadata provided in that dataset. Exiting!'
+                print '       Change avgPeriod to "annual" in your configuration.'
+                raise SystemExit()
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
             else:
@@ -604,6 +603,7 @@ class psm(object):
                     dbversion = proxies._ncdc.dbversion
                     filename = ('PSMs_' + '-'.join(proxies.use_from) +
                                 '_' + dbversion +
+                                '_' + self.avgPeriod +
                                 '_' + self.datatag_calib+'.pckl')
                 else:
                     filename = ('PSMs_' + '-'.join(proxies.use_from) +
@@ -668,9 +668,6 @@ class psm(object):
         # ----------------------------------------
         # Choice between:
         # ---------------
-        # datatag_calib_P = 'GPCC'
-        # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
-        # or
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
@@ -684,6 +681,7 @@ class psm(object):
 
         psm_r_crit = 0.0
 
+        
         ##** END User Parameters **##
 
         def __init__(self):
@@ -693,7 +691,14 @@ class psm(object):
             self.datafile_calib_P = self.datafile_calib_P
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
+            self.avgPeriod = psm.avgPeriod
 
+            if '-'.join(proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+                print '       No seasonality metadata provided in that dataset. Exiting!'
+                print '       Change avgPeriod to "annual" in your configuration.'
+                raise SystemExit()
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
             else:
@@ -704,6 +709,7 @@ class psm(object):
                     dbversion = proxies._ncdc.dbversion
                     filename_t = ('PSMs_' + '-'.join(proxies.use_from) +
                                   '_' + dbversion +
+                                  '_' + self.avgPeriod +
                                   '_' + self.datatag_calib_T + '.pckl')
                 else:
                     filename_t = ('PSMs_' + '-'.join(proxies.use_from) +
@@ -719,6 +725,7 @@ class psm(object):
                     dbversion = proxies._ncdc.dbversion
                     filename_p = ('PSMs_' + '-'.join(proxies.use_from) +
                                   '_' + dbversion +
+                                  '_' + self.avgPeriod +
                                   '_' + self.datatag_calib_P + '.pckl')
                 else:
                     filename_p = ('PSMs_' + '-'.join(proxies.use_from) +
@@ -777,14 +784,11 @@ class psm(object):
         
         # linear PSM w.r.t. precipitation/moisture
         # ----------------------------------------
-        #datatag_calib_P = 'GPCC'
-        #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
-        # or 
-        #datatag_calib_P = 'GPCC'
-        #datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        datatag_calib_P = 'GPCC'
+        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
-        datatag_calib_P = 'DaiPDSI'
-        datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
         dataformat_calib_P = 'NCD'
 
@@ -793,6 +797,7 @@ class psm(object):
 
         psm_r_crit = 0.0
 
+        
         ##** END User Parameters **##
 
         def __init__(self):
@@ -803,7 +808,14 @@ class psm(object):
             self.datafile_calib_P = self.datafile_calib_P
             self.dataformat_calib_P = self.dataformat_calib_P
             self.psm_r_crit = self.psm_r_crit
+            self.avgPeriod = psm.avgPeriod
 
+            if '-'.join(proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+                print '       No seasonality metadata provided in that dataset. Exiting!'
+                print '       Change avgPeriod to "annual" in your configuration.'
+                raise SystemExit()
+                        
             if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
             else:
@@ -814,6 +826,7 @@ class psm(object):
                     dbversion = proxies._ncdc.dbversion
                     filename = ('PSMs_'+'-'.join(proxies.use_from) +
                                 '_' + dbversion +
+                                '_' + self.avgPeriod +
                                 '_' + self.datatag_calib_T +
                                 '_' + self.datatag_calib_P + '.pckl')
                 else:
@@ -939,12 +952,13 @@ class prior(object):
 
     dataformat_prior = 'NCD'
 
-    #psm_required_variables = ['tas_sfc_Amon']
-    psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    psm_required_variables = ['tas_sfc_Amon']
+    #psm_required_variables = ['pr_sfc_Amon']
+    #psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
     #psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
     #psm_required_variables = ['d18O_sfc_Amon']
 
-    #state_variables = ['tas_sfc_Amon']
+    state_variables = ['tas_sfc_Amon']
     #state_variables = ['pr_sfc_Amon']
     #state_variables = ['scpdsi_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
@@ -957,7 +971,7 @@ class prior(object):
     #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
     #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon',
     #                    'ohcArctic_0-700m_Omon']
-    state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
+    #state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
     #state_variables = ['tas_sfc_Amon', 'd18O_sfc_Amon']
     
@@ -969,6 +983,8 @@ class prior(object):
     #state_kind = 'full'
     state_kind = 'anom'
 
+    avgInterval = None
+    
     ##** END User Parameters **##
 
     
@@ -980,6 +996,7 @@ class prior(object):
         self.psm_required_variables = self.psm_required_variables
         self.detrend = self.detrend
         self.state_kind = self.state_kind
+        self.avgInterval = self.avgInterval
         self.seed = core.seed
 
         if self.datadir_prior is None:
@@ -987,6 +1004,9 @@ class prior(object):
                                       self.prior_source)
         else:
             self.datadir_prior = self.datadir_prior
+
+        if self.avgInterval is None:
+            self.avgInterval = 'annual'
 
 
 class Config(object):

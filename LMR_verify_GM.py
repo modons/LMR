@@ -34,6 +34,7 @@ from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
+from load_gridded_data import read_gridded_data_MLOST
 from load_gridded_data import read_gridded_data_CMIP5_model
 from LMR_plot_support import *
 
@@ -94,14 +95,14 @@ fsave = True
 #nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
-
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+nexp = 'test_ncdc_v0.1.0'
 
 # specify directories for LMR and calibration data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
 
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
@@ -161,14 +162,17 @@ print '--------------------------------------------------'
 # load GISTEMP
 datafile_calib   = 'gistemp1200_ERSST.nc'
 calib_vars = ['Tsfc']
-[GIS_time,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars)
+[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+GIS_time = np.array([d.year for d in gtime])
 nlat_GIS = len(GIS_lat)
 nlon_GIS = len(GIS_lon)
+
 
 # load HadCRU
 datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
 calib_vars = ['Tsfc']
-[CRU_time,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars)
+[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+CRU_time = np.array([d.year for d in ctime])
 
 ## use GMT time series computed by Hadley Centre instead !!!!!!!!!!!!
 #datafile_calib = '/home/disk/ekman/rtardif/kalman3/LMR/data/analyses/HadCRUT/HadCRUT.4.4.0.0.annual_ns_avg.txt'
@@ -179,7 +183,8 @@ calib_vars = ['Tsfc']
 # load BerkeleyEarth
 datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
 calib_vars = ['Tsfc']
-[BE_time,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars)
+[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+BE_time = np.array([d.year for d in btime])
 
 # load NOAA MLOST
 path = datadir_calib + '/NOAA/'
@@ -208,15 +213,16 @@ datadir = '/home/disk/kalman3/rtardif/LMR/data/model/era20c'
 datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardef = 'tas_sfc_Amon'
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef])
+dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
 
-ERA20C_time = dd[vardef]['years']
+rtime = dd[vardef]['years']
+ERA20C_time = np.array([d.year for d in rtime])
 lat_ERA20C = dd[vardef]['lat']
 lon_ERA20C = dd[vardef]['lon']
 nlat_ERA20C = len(lat_ERA20C)
 nlon_ERA20C = len(lon_ERA20C)
-ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field (long-term mean NOT REMOVED)
-#ERA20C = dd[vardef]['value']                      # Anomalies (long-term mean REMOVED)
+ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+#ERA20C = dd[vardef]['value']                      # Anomalies
 
 # compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
 smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
@@ -237,15 +243,16 @@ datadir = '/home/disk/kalman3/rtardif/LMR/data/model/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
 vardef = 'tas_sfc_Amon'
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef])
+dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
 
-TCR_time = dd[vardef]['years']
+rtime = dd[vardef]['years']
+TCR_time = np.array([d.year for d in rtime])
 lat_TCR = dd[vardef]['lat']
 lon_TCR = dd[vardef]['lon']
 nlat_TCR = len(lat_TCR)
 nlon_TCR = len(lon_TCR)
-TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field (long-term mean NOT REMOVED)
-#TCR = dd[vardef]['value']                      # Anomalies (long-term mean REMOVED)
+TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+#TCR = dd[vardef]['value']                      # Anomalies
 
 # compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
 smatch, ematch = find_date_indices(TCR_time,1951,1980)

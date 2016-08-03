@@ -154,9 +154,13 @@ class LinearPSM(BasePSM):
         self.lon  = proxy_obj.lon
         self.elev = proxy_obj.elev
 
+        self.datatag_calib = config.psm.linear.datatag_calib
+        self.avgPeriod = config.psm.linear.avgPeriod
+
+        
         # Very crude assignment of sensitivity
-        # TODO (RT): more inclusive & flexible way of doing this
-        if config.psm.linear.datatag_calib == 'GPCC' or config.psm.linear.datatag_calib == 'DaiPDSI':
+        # TODO: more inclusive & flexible way of doing this
+        if self.datatag_calib in ['GPCC', 'DaiPDSI']:
             self.sensitivity = 'moisture'
         else:
             self.sensitivity = 'temperature'
@@ -217,8 +221,25 @@ class LinearPSM(BasePSM):
         # ----------------------
         # Calculate the Ye's ...
         # ----------------------
-        # TODO: state variable is hard coded for now...
-        state_var = 'tas_sfc_Amon'
+
+        # Associate state variable with PSM calibration dataset
+        # TODO: possible calibration sources hard coded for now... should define associations at config level
+        if self.datatag_calib in ['GISTEMP', 'MLOST', 'HadCRUT', 'BerkeleyEarth']:
+            # temperature
+            state_var = 'tas_sfc_Amon'
+        elif self.datatag_calib in ['GPCC','DaiPDSI']:
+            # moisture 
+            if self.datatag_calib == 'GPCC':
+                state_var = 'pr_sfc_Amon'
+            elif self.datatag_calib == 'DaiPDSI':
+                state_var = 'scpdsi_sfc_Amon'
+            else:
+                raise KeyError('Unrecognized moisture calibration source.'
+                               ' State variable not identified for Ye calculation.')
+        else:
+            raise KeyError('Unrecognized calibration-state variable association.'
+                           ' State variable not identified for Ye calculation.')
+
         if state_var not in X_state_info.keys():
             raise KeyError('Needed variable not in state vector for Ye'
                            ' calculation.')
@@ -300,9 +321,8 @@ class LinearPSM(BasePSM):
             # TODO: This is not general lat/lon being swapped, OK for now...
             min_dist_lat_idx, \
             min_dist_lon_idx = np.unravel_index(dist.argmin(), data.shape[-2:])
-
             tmp_dat = data[..., min_dist_lat_idx, min_dist_lon_idx]
-
+            
         return tmp_dat
 
     # Define the error model for this proxy
@@ -334,7 +354,9 @@ class LinearPSM(BasePSM):
         # --------------------------------------------
         # Use linear model (regression) as default PSM
         # --------------------------------------------
-
+        
+        nbmaxnan = 0
+        
         # Look for indices of calibration grid point closest in space (in 2D)
         # to proxy site
         dist = get_distance(proxy.lon, proxy.lat, C.lon, C.lat)
@@ -346,22 +368,65 @@ class LinearPSM(BasePSM):
                 [C.time.shape[0], C.lat.shape[0], C.lon.shape[0]])
             for m in range(C.time.shape[0]):
                 C2Dsmooth[m, :, :] = smooth2D(C.temp_anomaly[m, :, :], n=Npts)
-            reg_x = C2Dsmooth[:, jind, kind]
+            calvals = C2Dsmooth[:, jind, kind]
         else:
-            reg_x = C.temp_anomaly[:, jind, kind]
+            calvals = C.temp_anomaly[:, jind, kind]
 
+
+        # -------------------------------------------------------
+        # Calculate averages of calibration data over appropriate
+        # intervals (annual or according to proxy seasonality)
+        # -------------------------------------------------------
+        if self.avgPeriod == 'annual':
+            # Simply use annual averages
+            avgMonths = [1,2,3,4,5,6,7,8,9,10,11,12]
+        elif self.avgPeriod == 'season':
+            # Consider the seasonality of the proxy record
+            avgMonths =  proxy.seasonality
+        else:
+            print 'ERROR: Unrecognized value for avgPeriod! Exiting!' 
+            exit(1)
+        
+        nbmonths = len(avgMonths)
+        cyears = list(set([C.time[k].year for k in range(len(C.time))])) # 'set' is used to get unique values in list
+        nbcyears = len(cyears)
+        reg_x = np.zeros(shape=[nbcyears])
+        reg_x[:] = np.nan # initialize with nan's
+
+        for i in range(nbcyears):
+            # monthly data from current year
+            indsyr = [j for j,v in enumerate(C.time) if v.year == cyears[i] and v.month in avgMonths]
+            # check if data from previous year is to be included
+            indsyrm1 = []
+            if any(m < 0 for m in avgMonths):
+                year_before = [abs(m) for m in avgMonths if m < 0]
+                indsyrm1 = [j for j,v in enumerate(C.time) if v.year == cyears[i]-1. and v.month in year_before]
+            # check if data from following year is to be included
+            indsyrp1 = []
+            if any(m > 12 for m in avgMonths):
+                year_follow = [m-12 for m in avgMonths if m > 12]
+                indsyrp1 = [j for j,v in enumerate(C.time) if v.year == cyears[i]+1. and v.month in year_follow]
+
+            inds = indsyrm1 + indsyr + indsyrp1
+            if len(inds) == nbmonths: # all months are in the data
+                tmp = np.nanmean(calvals[inds],axis=0)
+                nancount = np.isnan(calvals[inds]).sum(axis=0)
+                if nancount > nbmaxnan: tmp = np.nan
+            else:
+                tmp = np.nan
+            reg_x[i] = tmp
+            
 
         # -------------------------
         # Perform linear regression
         # -------------------------
-
         # Use pandas DataFrame to store proxy & calibration data side-by-side
         header = ['variable', 'y']
         # Fill-in proxy data
         df = pd.DataFrame({'time':proxy.time, 'y': proxy.values})
         df.columns = header
         # Add calibration data
-        frame = pd.DataFrame({'variable':C.time, 'Calibration':reg_x})
+        frame = pd.DataFrame({'variable':cyears, 'Calibration':reg_x})
         df = df.merge(frame, how='outer', on='variable')
 
         col0 = df.columns[0]
@@ -372,6 +437,7 @@ class LinearPSM(BasePSM):
         # ensure all df entries are floats: if not, sm.ols gives garbage
         df = df.astype(np.float)
 
+        
         # Perform the regression
         try:
             regress = sm.ols(formula="y ~ Calibration", data=df).fit()
@@ -380,6 +446,7 @@ class LinearPSM(BasePSM):
             
         except:
             nobs = 0
+
             
         if nobs < 10:  # skip rest if insufficient overlapping data
             raise(ValueError('Insufficent observation/calibration overlap'
@@ -599,6 +666,9 @@ class LinearPSM_TorP(LinearPSM):
 
         self.datatag_calib_T = config.psm.linear_TorP.datatag_calib_T
         self.datatag_calib_P = config.psm.linear_TorP.datatag_calib_P
+
+        self.avgPeriod = config.psm.linear_TorP.avgPeriod
+
         
         # Try using pre-calibrated psm_data for **temperature**
         try:
@@ -716,11 +786,11 @@ class LinearPSM_TorP(LinearPSM):
                 elif self.datatag_calib_P == 'DaiPDSI':
                     state_var = 'scpdsi_sfc_Amon'
                 else:
-                    raise KeyError('Unrecognized calibration-state variable association. State variable not identified for Ye'
-                                   ' calculation.') 
+                    raise KeyError('Unrecognized calibration-state variable association.'
+                                   ' State variable not identified for Ye calculation.')
             else:
                 raise KeyError('Unkown PSM sensitivity. PSM not identified for Ye'
-                           ' calculation.')
+                               ' calculation.')
         else:
             # "sensitivity" not defined for this proxy: simply revert to the default (temperature)
             state_var = 'tas_sfc_Amon'
@@ -845,6 +915,8 @@ class BilinearPSM(BasePSM):
         self.lon  = proxy_obj.lon
         self.elev = proxy_obj.elev
 
+        self.avgPeriod = config.psm.bilinear.avgPeriod
+        
         # Assign sensitivity as temperature_moisture
         self.sensitivity = 'temperature_moisture'
 
@@ -1001,13 +1073,14 @@ class BilinearPSM(BasePSM):
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
 
-
         #print 'Calibrating: ', '{:25}'.format(proxy.id), '{:35}'.format(proxy.type)
         
         # ----------------------------------------------
         # Use bilinear model (regression) as default PSM
         # ----------------------------------------------
 
+        nbmaxnan = 0
+        
         # Look for indices of calibration grid point closest in space (in 2D)
         # to proxy site
         # For temperature calibration dataset
@@ -1025,17 +1098,93 @@ class BilinearPSM(BasePSM):
             C2Dsmooth = np.zeros([C_T.time.shape[0], C_T.lat.shape[0], C_T.lon.shape[0]])
             for m in range(C_T.time.shape[0]):
                 C2Dsmooth[m, :, :] = smooth2D(C_T.temp_anomaly[m, :, :], n=Npts)            
-            reg_x_T = C2Dsmooth[:, jind_T, kind_T]
+            calvals_T = C2Dsmooth[:, jind_T, kind_T]
 
             # precipitation/moisture
             C2Dsmooth = np.zeros([C_P.time.shape[0], C_P.lat.shape[0], C_P.lon.shape[0]])
             for m in range(C_P.time.shape[0]):
                 C2Dsmooth[m, :, :] = smooth2D(C_P.temp_anomaly[m, :, :], n=Npts)            
-            reg_x_P = C2Dsmooth[:, jind_P, kind_P]
+            calvals_P = C2Dsmooth[:, jind_P, kind_P]
             
         else:
-            reg_x_T = C_T.temp_anomaly[:, jind_T, kind_T]
-            reg_x_P = C_P.temp_anomaly[:, jind_P, kind_P]
+            calvals_T = C_T.temp_anomaly[:, jind_T, kind_T]
+            calvals_P = C_P.temp_anomaly[:, jind_P, kind_P]
+
+
+        # -------------------------------------------------------
+        # Calculate averages of calibration data over appropriate
+        # intervals (annual or according to proxy seasonality
+        # -------------------------------------------------------
+        if self.avgPeriod == 'annual':
+            # Simply use annual averages
+            avgMonths = [1,2,3,4,5,6,7,8,9,10,11,12]
+        elif self.avgPeriod == 'season':
+            # Consider the seasonality of the proxy record
+            avgMonths =  proxy.seasonality
+        else:
+            print 'ERROR: Unrecognized value for avgPeriod! Exiting!' 
+            exit(1)
+
+        nbmonths = len(avgMonths)
+            
+        # Temperature data
+        cyears_T = list(set([C_T.time[k].year for k in range(len(C_T.time))])) # 'set' is used to get unique values in list
+        nbcyears_T = len(cyears_T)
+        reg_x_T = np.zeros(shape=[nbcyears_T])
+        reg_x_T[:] = np.nan # initialize with nan's
+
+        for i in range(nbcyears_T):
+            # monthly data from current year
+            indsyr = [j for j,v in enumerate(C_T.time) if v.year == cyears_T[i] and v.month in avgMonths]
+            # check if data from previous year is to be included
+            indsyrm1 = []
+            if any(m < 0 for m in avgMonths):
+                year_before = [abs(m) for m in avgMonths if m < 0]
+                indsyrm1 = [j for j,v in enumerate(C_T.time) if v.year == cyears_T[i]-1. and v.month in year_before]
+            # check if data from following year is to be included
+            indsyrp1 = []
+            if any(m > 12 for m in avgMonths):
+                year_follow = [m-12 for m in avgMonths if m > 12]
+                indsyrp1 = [j for j,v in enumerate(C_T.time) if v.year == cyears_T[i]+1. and v.month in year_follow]
+
+            inds = indsyrm1 + indsyr + indsyrp1
+            if len(inds) == nbmonths: # all months are in the data
+                tmp = np.nanmean(calvals_T[inds],axis=0)
+                nancount = np.isnan(calvals_T[inds]).sum(axis=0)
+                if nancount > nbmaxnan: tmp = np.nan
+            else:
+                tmp = np.nan
+            reg_x_T[i] = tmp
+
+        
+        # Moisture data
+        cyears_P = list(set([C_P.time[k].year for k in range(len(C_P.time))])) # 'set' is used to get unique values in list
+        nbcyears_P = len(cyears_P)
+        reg_x_P = np.zeros(shape=[nbcyears_P])
+        reg_x_P[:] = np.nan # initialize with nan's
+
+        for i in range(nbcyears_P):
+            # monthly data from current year
+            indsyr = [j for j,v in enumerate(C_P.time) if v.year == cyears_P[i] and v.month in avgMonths]
+            # check if data from previous year is to be included
+            indsyrm1 = []
+            if any(m < 0 for m in avgMonths):
+                year_before = [abs(m) for m in avgMonths if m < 0]
+                indsyrm1 = [j for j,v in enumerate(C_P.time) if v.year == cyears_P[i]-1. and v.month in year_before]
+            # check if data from following year is to be included
+            indsyrp1 = []
+            if any(m > 12 for m in avgMonths):
+                year_follow = [m-12 for m in avgMonths if m > 12]
+                indsyrp1 = [j for j,v in enumerate(C_P.time) if v.year == cyears_P[i]+1. and v.month in year_follow]
+
+            inds = indsyrm1 + indsyr + indsyrp1
+            if len(inds) == nbmonths: # all months are in the data
+                tmp = np.nanmean(calvals_P[inds],axis=0)
+                nancount = np.isnan(calvals_P[inds]).sum(axis=0)
+                if nancount > nbmaxnan: tmp = np.nan
+            else:
+                tmp = np.nan
+            reg_x_P[i] = tmp
 
 
         # ---------------------------
@@ -1048,10 +1197,10 @@ class BilinearPSM(BasePSM):
         df = pd.DataFrame({'time':proxy.time, 'y': proxy.values})
         df.columns = header
         # Add temperature calibration data
-        frameT = pd.DataFrame({'variable':C_T.time, 'Temperature':reg_x_T})
+        frameT = pd.DataFrame({'variable':cyears_T, 'Temperature':reg_x_T})
         df = df.merge(frameT, how='outer', on='variable')
         # Add precipitation/moisture calibration data
-        frameP = pd.DataFrame({'variable':C_P.time, 'Moisture':reg_x_P})
+        frameP = pd.DataFrame({'variable':cyears_P, 'Moisture':reg_x_P})
         df = df.merge(frameP, how='outer', on='variable')
         col0 = df.columns[0]
         df.set_index(col0, drop=True, inplace=True)

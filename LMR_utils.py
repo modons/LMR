@@ -662,20 +662,31 @@ def create_precalc_ye_filename(config):
 
     # Generate PSM calibration string
     if psm_key == 'linear':
+        calib_avgPeriod = config.psm.linear.avgPeriod
         calib_str = config.psm.linear.datatag_calib
     elif psm_key == 'linear_TorP':
+        calib_avgPeriod = config.psm.linear_TorP.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.linear_TorP.datatag_calib_T,
                                         config.psm.linear_TorP.datatag_calib_P)
     elif psm_key == 'bilinear':
+        calib_avgPeriod = config.psm.bilinear.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.bilinear.datatag_calib_T,
                                         config.psm.bilinear.datatag_calib_P)
     elif psm_key == 'h_interp':
+        calib_avgPeriod = None
         calib_str = ''
     else:
         raise ValueError('Unrecognized PSM key for use_psm.')
 
-    psm_str = psm_key + '-' + calib_str
+    if calib_avgPeriod:
+        psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str
+    else:
+        psm_str = psm_key + '-' + calib_str
+
     proxy_str = str(proxy_database)
+    if proxy_str == 'NCDC':
+        proxy_str = proxy_str + str(config.proxies.ncdc.dbversion)
+    
     return '{}_{}_{}.npz'.format(prior_str, psm_str, proxy_str)
 
 

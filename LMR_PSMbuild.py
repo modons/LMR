@@ -53,6 +53,8 @@ class v_core(object):
         will be stored.
 
     """
+
+    ##** BEGIN User Parameters **##
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HadCRUT...) and proxies.
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
@@ -60,14 +62,12 @@ class v_core(object):
 
     calib_period = (1850, 2010)
 
-    # Output directory, where the PSM calibration results & figs will be dumped.
-    #datadir_output = datadir_input # if want to keep things tidy
-    datadir_output = '/home/disk/kalman3/rtardif/LMR/PSM/NCDC'
-
+    
+    ##** END User Parameters **##
+        
     def __init__(self):
         self.lmr_path = self.lmr_path
         self.calib_period = self.calib_period
-        self.datadir_output = self.datadir_output
         
     
 class v_proxies(object):
@@ -86,9 +86,14 @@ class v_proxies(object):
     # =============================
     # Which proxy database to use ?
     # =============================
+
+    ##** BEGIN User Parameters **##
+
     #use_from = ['pages']
     use_from = ['NCDC']
 
+    ##** END User Parameters **##
+    
     proxy_frac = 1.0 # this needs to remain = 1.0 if all possible proxies are to be considered for calibration
 
     # -------------------
@@ -252,6 +257,8 @@ class v_proxies(object):
             to filter by.
         """
 
+        ##** BEGIN User Parameters **##
+        
         #dbversion = 'v0.0.0'
         dbversion = 'v0.1.0'
         
@@ -266,6 +273,9 @@ class v_proxies(object):
         proxy_resolution = [1.0]
 
         proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
+
+        ##** END User Parameters **##
+
         
         # Limit proxies to those included in the following databases
         database_filter = []
@@ -281,15 +291,7 @@ class v_proxies(object):
             'Tree Rings_WoodDensity',
             'Tree Rings_Isotopes',
             'Corals and Sclerosponges_d18O',
-            'Corals and Sclerosponges_d13C',
-            'Corals and Sclerosponges_d14C',
             'Corals and Sclerosponges_SrCa',
-            'Corals and Sclerosponges_BaCa',
-            'Corals and Sclerosponges_CdCa',
-            'Corals and Sclerosponges_MgCa',
-            'Corals and Sclerosponges_UCa',
-            'Corals and Sclerosponges_Sr',
-            'Corals and Sclerosponges_Pb',
             'Corals and Sclerosponges_Rates',
             'Ice Cores_d18O',
             'Ice Cores_dD',
@@ -299,8 +301,6 @@ class v_proxies(object):
             'Lake Cores_BioMarkers',
             'Lake Cores_GeoChem',
             'Marine Cores_d18O',
-            'Speleothems_d18O',
-            'Speleothems_d13C'
             ]
 
         proxy_assim2 = {
@@ -397,8 +397,17 @@ class v_psm(object):
         is associated with what Proxy type.
     """
 
-    #use_psm = {'pages': 'linear', 'NCDC': 'linear'}
-    use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
+    ##** BEGIN User Parameters **##
+
+    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
+    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
+
+
+    # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
+    avgPeriod = 'annual'
+    #avgPeriod = 'season'
+    
+    ##** BEGIN User Parameters **##
 
     
     class _linear(object):
@@ -422,6 +431,8 @@ class v_psm(object):
         """
         datadir_calib = None
 
+        ##** BEGIN User Parameters **##
+        
         # Choice between:
         #datatag_calib = 'MLOST'
         #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
@@ -436,9 +447,6 @@ class v_psm(object):
         #datafile_calib = 'Land_and_Ocean_LatLong1.nc'
         # or 
         #datatag_calib = 'GPCC'
-        #datafile_calib = 'GPCC_precip.mon.total.1x1.v6.nc' # Total accumulation (mm)
-        # or 
-        #datatag_calib = 'GPCC'
         #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
         # or
         #datatag_calib_P = 'DaiPDSI'
@@ -448,13 +456,22 @@ class v_psm(object):
         pre_calib_datafile = None
 
         psm_r_crit = 0.0
-        
 
+        ##** END User Parameters **##
+        
+        
         def __init__(self):
             self.datatag_calib = self.datatag_calib
             self.datafile_calib = self.datafile_calib
             self.psm_r_crit = self.psm_r_crit
-
+            self.avgPeriod = v_psm.avgPeriod
+            
+            if '-'.join(v_proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+                print '       No seasonality metadata provided in that dataset. Exiting!'
+                print '       Change avgPeriod to "annual" in your configuration.'
+                raise SystemExit()
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
             else:
@@ -465,9 +482,10 @@ class v_psm(object):
                     dbversion = v_proxies._ncdc.dbversion
                     filename = ('PSMs_'+'-'.join(v_proxies.use_from) +
                                 '_' + dbversion +
+                                '_' + self.avgPeriod +
                                 '_' + self.datatag_calib+'.pckl')
                 else:
-                    filename = ('PSMs_' + '-'.join(proxies.use_from) +
+                    filename = ('PSMs_' + '-'.join(v_proxies.use_from) +
                             '_' + self.datatag_calib+'.pckl')
                 
                 self.pre_calib_datafile = join(v_core.lmr_path,
@@ -505,6 +523,8 @@ class v_psm(object):
             Usage threshold for correlation of linear PSM
         """
 
+        ##** BEGIN User Parameters **##
+        
         datadir_calib = None
 
         # calibration w.r.t. temperature
@@ -525,9 +545,6 @@ class v_psm(object):
 
         # calibration w.r.t. precipitation/moisture
         # ----------------------------------------
-        #datatag_calib_P = 'GPCC'
-        #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
-        # or 
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
@@ -538,15 +555,23 @@ class v_psm(object):
         pre_calib_datafile = None
 
         psm_r_crit = 0.0
-         
 
+        ##** END User Parameters **##
+        
         def __init__(self):
             self.datatag_calib_T = self.datatag_calib_T
             self.datafile_calib_T = self.datafile_calib_T
             self.datatag_calib_P = self.datatag_calib_P
             self.datafile_calib_P = self.datafile_calib_P
             self.psm_r_crit = self.psm_r_crit
+            self.avgPeriod = v_psm.avgPeriod
 
+            if '-'.join(v_proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+                print '       No seasonality metadata provided in that dataset. Exiting!'
+                print '       Change avgPeriod to "annual" in your configuration.'
+                raise SystemExit()
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
             else:
@@ -558,6 +583,7 @@ class v_psm(object):
                     dbversion = v_proxies._ncdc.dbversion
                     filename = ('PSMs_' + '-'.join(v_proxies.use_from) +
                                 '_' + dbversion +
+                                '_' + self.avgPeriod +
                                 '_'+self.datatag_calib_T +
                                 '_'+self.datatag_calib_P +'.pckl')
                 else:
@@ -612,24 +638,25 @@ def main():
         print 'Proxy data location :', Cfg.proxies.ncdc.datadir_proxy
     else:
         print 'ERROR in specification of proxy database. Exiting!'
-        exit(1)
+        raise SystemExit()
         
     # psm type
     if psm_type == 'linear':
         print 'Calibration source  :', Cfg.psm.linear.datatag_calib
         datatag_calib = Cfg.psm.linear.datatag_calib
         psm_file = Cfg.psm.linear.pre_calib_datafile
+        calib_avgPeriod = Cfg.psm.linear.avgPeriod
     elif psm_type == 'bilinear':
         print 'Calibration sources :', Cfg.psm.bilinear.datatag_calib_T, '+', Cfg.psm.bilinear.datatag_calib_P
         datatag_calib_T = Cfg.psm.bilinear.datatag_calib_T
         datatag_calib_P = Cfg.psm.bilinear.datatag_calib_P
         psm_file = Cfg.psm.bilinear.pre_calib_datafile
+        calib_avgPeriod = Cfg.psm.bilinear.avgPeriod
     else:
         print 'ERROR: problem with the type of psm!'
         exit(1)
     
     print 'PSM calibration/parameters file:', psm_file
-
     
     # Check if psm_file already exists, archive it with current date/time if it exists
     # and replace by new file
@@ -649,37 +676,37 @@ def main():
     print '--------------------------------------------------------------------'
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
     print '--------------------------------------------------------------------'
-
     
     psm_dict = {}
     for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
         sitetag = (Y.type,Y.id)
 
         # Load proxy object in proxy dictionary
-
+        # -------------------------------------
         # Site info
         psm_dict[sitetag] = {}
         psm_dict[sitetag]['lat']   = Y.psm_obj.lat
         psm_dict[sitetag]['lon']   = Y.psm_obj.lon
-        psm_dict[sitetag]['elev']  = Y.psm_obj.elev
-
+        psm_dict[sitetag]['elev']  = Y.psm_obj.elev        
         # PSM info
+        if calib_avgPeriod == 'annual':
+            # override proxy record metadata of seasonality w/ annual tag
+            psm_dict[sitetag]['Seasonality'] = [1,2,3,4,5,6,7,8,9,10,11,12]
+        else:
+            psm_dict[sitetag]['Seasonality']  = Y.seasonality
+        psm_dict[sitetag]['NbCalPts']     = Y.psm_obj.NbPts
+        psm_dict[sitetag]['PSMintercept'] = Y.psm_obj.intercept
+        psm_dict[sitetag]['PSMcorrel']    = Y.psm_obj.corr
+        psm_dict[sitetag]['PSMmse']       = Y.psm_obj.R
         if psm_type == 'linear':
             psm_dict[sitetag]['calib']        = datatag_calib
-            psm_dict[sitetag]['NbCalPts']     = Y.psm_obj.NbPts
             psm_dict[sitetag]['PSMslope']     = Y.psm_obj.slope
             psm_dict[sitetag]['PSMintercept'] = Y.psm_obj.intercept
-            psm_dict[sitetag]['PSMcorrel']    = Y.psm_obj.corr
-            psm_dict[sitetag]['PSMmse']       = Y.psm_obj.R
         elif psm_type == 'bilinear':
             psm_dict[sitetag]['calib_temperature']    = datatag_calib_T
             psm_dict[sitetag]['calib_moisture']       = datatag_calib_P
-            psm_dict[sitetag]['NbCalPts']             = Y.psm_obj.NbPts
-            psm_dict[sitetag]['PSMintercept']         = Y.psm_obj.intercept
             psm_dict[sitetag]['PSMslope_temperature'] = Y.psm_obj.slope_temperature
             psm_dict[sitetag]['PSMslope_moisture']    = Y.psm_obj.slope_moisture
-            psm_dict[sitetag]['PSMcorrel']            = Y.psm_obj.corr
-            psm_dict[sitetag]['PSMmse']               = Y.psm_obj.R
         else:
             print 'ERROR: problem with the type of psm!'
             exit(1)

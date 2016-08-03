@@ -19,6 +19,8 @@ import pandas as pd
 from scipy import stats
 import string
 import re
+import six
+import ast
 from os.path import join
 
 # =========================================================================================
@@ -39,8 +41,8 @@ def main():
 
     proxy_data_source = 'NCDC'
     # version of the NCDC proxy db to process
-    #version = 'v0.0.0' 
-    version = 'v0.1.0' 
+    #dbversion = 'v0.0.0' 
+    dbversion = 'v0.1.0' 
 
     eliminate_duplicates = True
         
@@ -68,11 +70,11 @@ def main():
         # NCDC proxy data ------------------------------------------------------------
         # ============================================================================
         
-        datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_'+version+'/'
+        datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_'+dbversion+'/'
         outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
 
-        meta_outfile = outdir + 'NCDC_'+version+'_Metadata.df.pckl'
-        data_outfile = outdir + 'NCDC_'+version+'_Proxies.df.pckl'
+        meta_outfile = outdir + 'NCDC_'+dbversion+'_Metadata.df.pckl'
+        data_outfile = outdir + 'NCDC_'+dbversion+'_Proxies.df.pckl'
 
         # Specify all proxy types & associated proxy measurements to look for & extract from the data files
         # This is to take into account all the possible different names found in the NCDC data files.
@@ -81,24 +83,24 @@ def main():
                 'Corals and Sclerosponges_d18O'   : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm','d18o_avg','d18o_ave','dO18','d18O_4'],\
                 'Corals and Sclerosponges_SrCa'   : ['Sr/Ca','Sr_Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],\
                 'Corals and Sclerosponges_Rates'  : ['ext','calc'],\
-                'Corals and Sclerosponges_d14C'   : ['d14C','d14c','ac_d14c'],\
-                'Corals and Sclerosponges_d13C'   : ['d13C','d13c','d13c_ave','d13c_ann_ave','d13C_int'],\
-                'Corals and Sclerosponges_Sr'     : ['Sr'],\
-                'Corals and Sclerosponges_BaCa'   : ['Ba/Ca'],\
-                'Corals and Sclerosponges_CdCa'   : ['Cd/Ca'],\
-                'Corals and Sclerosponges_MgCa'   : ['Mg/Ca'],\
-                'Corals and Sclerosponges_UCa'    : ['U/Ca','U/Ca_anom'],\
-                'Corals and Sclerosponges_Pb'     : ['Pb'],\
+#                'Corals and Sclerosponges_d14C'   : ['d14C','d14c','ac_d14c'],\
+#                'Corals and Sclerosponges_d13C'   : ['d13C','d13c','d13c_ave','d13c_ann_ave','d13C_int'],\
+#                'Corals and Sclerosponges_Sr'     : ['Sr'],\
+#                'Corals and Sclerosponges_BaCa'   : ['Ba/Ca'],\
+#                'Corals and Sclerosponges_CdCa'   : ['Cd/Ca'],\
+#                'Corals and Sclerosponges_MgCa'   : ['Mg/Ca'],\
+#                'Corals and Sclerosponges_UCa'    : ['U/Ca','U/Ca_anom'],\
+#                'Corals and Sclerosponges_Pb'     : ['Pb'],\
                 'Ice Cores_d18O'                  : ['d18O','delta18O','delta18o','d18o','d18o_int','d18O_int','d18O_norm','d18o_norm','dO18','d18O_anom'],\
                 'Ice Cores_dD'                    : ['deltaD','delD','dD'],\
                 'Ice Cores_Accumulation'          : ['accum','accumu'],\
                 'Ice Cores_MeltFeature'           : ['MFP'],\
                 'Lake Cores_Varve'                : ['varve', 'varve_thickness', 'varve thickness'],\
                 'Lake Cores_BioMarkers'           : ['Uk37', 'TEX86'],\
-                'Lake Cores_Geochem'              : ['Sr/Ca', 'Mg/Ca','Cl_cont'],\
+                'Lake Cores_GeoChem'              : ['Sr/Ca', 'Mg/Ca','Cl_cont'],\
                 'Marine Cores_d18O'               : ['d18O'],\
-                'Speleothems_d18O'                : ['d18O'],\
-                'Speleothems_d13C'                : ['d13C'],\
+#                'Speleothems_d18O'                : ['d18O'],\
+#                'Speleothems_d13C'                : ['d13C'],\
                 'Tree Rings_WidthBreit'           : ['trsgi'],\
                 'Tree Rings_WidthPages2'          : ['trsgi'],\
                 'Tree Rings_WidthPages'           : ['TRW','ERW','LRW'],\
@@ -492,7 +494,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
                     climateVariable      = [item.split(':')[1] for item in clim_elements if 'climateVariable:' in item][0]
                     climateVariableRealm = [item.split(':')[1] for item in clim_elements if 'climateVariableDetail:' in item][0]
                     climateVariableDirec = [item.split(':')[1] for item in clim_elements if 'interpDirection:' in item][0]
-
+                    
                     if len(seasonality) == 0: seasonality = [1,2,3,4,5,6,7,8,9,10,11,12]
                     if len(climateVariable) == 0: climateVariable = None
                     if len(climateVariableRealm) == 0: climateVariableRealm = None
@@ -501,7 +503,16 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
                     # Some translation...
                     if climateVariable == 'T': climateVariable = 'temperature'
                     if climateVariable == 'M': climateVariable = 'moisture'
-                    
+
+                # test whether seasonality is a string or already a list
+                # if a string, convert to list                
+                if type(seasonality) is not list: 
+                    if isinstance(seasonality,six.string_types):
+                        seasonality = ast.literal_eval(seasonality)
+                    else:
+                        print 'Problem with seasonality metadata! Exiting!'
+                        exit(1)
+                
                 d['Seasonality'] = seasonality
                 d['climateVariable'] =  climateVariable
                 d['climateVariableRealm'] = climateVariableRealm
@@ -1070,7 +1081,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     # Build the proxy **data** DataFrame and output to file
     # -----------------------------------------------------
     print ' '
-    print 'Now creating the pandas DataFrame & loading the data in...'
+    print 'Now creating & loading the data in the pandas DataFrame...'
     print ' '
 
     counter = 0

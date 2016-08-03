@@ -32,7 +32,7 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from random import sample, seed
 from copy import deepcopy
-
+import ast
 
 class ProxyManager:
     """
@@ -208,7 +208,7 @@ class BaseProxyObject:
     __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
-                 lat, lon, elev, values, time, **psm_kwargs):
+                 lat, lon, elev, seasonality, values, time, **psm_kwargs):
 
         if (values is None) or len(values) == 0:
             raise ValueError('No proxy data given for object initialization')
@@ -224,7 +224,8 @@ class BaseProxyObject:
         self.lon = fix_lon(lon)
         self.elev = elev
         self.time = time
-
+        self.seasonality = seasonality
+        
         # Retrieve appropriate PSM function
         psm_obj = self.get_psm_obj(config)
         self.psm_obj = psm_obj(config, self, **psm_kwargs)
@@ -350,6 +351,7 @@ class ProxyPages(BaseProxyObject):
         lat = site_meta['Lat (N)'].iloc[0]
         lon = site_meta['Lon (E)'].iloc[0]
         elev = 0.0 # elev not info available in PAGES2kS1 data
+        seasonality = None # not defined in PAGES2kS1 metadata
         site_data = data_src[site]
 
         if data_range is not None:
@@ -371,7 +373,7 @@ class ProxyPages(BaseProxyObject):
             raise ValueError('No observations in specified time range.')
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
-                   values, times, **psm_kwargs)
+                   seasonality, values, times, **psm_kwargs)
 
     @classmethod
     @augment_docstr
@@ -537,7 +539,10 @@ class ProxyNCDC(BaseProxyObject):
         lon = site_meta['Lon (E)'].iloc[0]
         elev = site_meta['Elev'].iloc[0]
         site_data = data_src[site]
-
+        seasonality = site_meta['Seasonality'].iloc[0]
+        # make sure a list is returned
+        if type(seasonality) is not list: seasonality = ast.literal_eval(seasonality)
+        
         if data_range is not None:
             start, finish = data_range
             values = site_data[(site_data.index >= start) &
@@ -557,7 +562,7 @@ class ProxyNCDC(BaseProxyObject):
             raise ValueError('No observations in specified time range.')
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
-                   values, times, **psm_kwargs)
+                   seasonality, values, times, **psm_kwargs)
 
     @classmethod
     @augment_docstr
@@ -664,7 +669,7 @@ class ProxyNCDC(BaseProxyObject):
             try:
                 pobj = cls.load_site(config, site, data_range,
                                      meta_src=meta_src, data_src=data_src,
-                                     **psm_kwargs)
+                                     **psm_kwargs)                
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit

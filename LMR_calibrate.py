@@ -51,11 +51,15 @@ class calibration_GISTEMP(calibration_master):
     datafile_calib   = 'gistemp1200_ERSST.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
-
+    outfreq = 'monthly'
+    
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_GISTEMP
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GISTEMP(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GISTEMP(self.datadir_calib,
+                                                                                    self.datafile_calib,
+                                                                                    self.calib_vars,
+                                                                                    self.outfreq)
 
 
 # -------------------------------------------------------------------------------
@@ -67,11 +71,15 @@ class calibration_HadCRUT(calibration_master):
     datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
+    outfreq = 'monthly'
 
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_HadCRUT
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_HadCRUT(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_HadCRUT(self.datadir_calib,
+                                                                                    self.datafile_calib,
+                                                                                    self.calib_vars,
+                                                                                    self.outfreq)
 
 
 # -------------------------------------------------------------------------------
@@ -83,12 +91,16 @@ class calibration_BerkeleyEarth(calibration_master):
     datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
-
+    outfreq = 'monthly'
+    
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_BerkeleyEarth
 
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,
+                                                                                          self.datafile_calib,
+                                                                                          self.calib_vars,
+                                                                                          self.outfreq)
 
 # -------------------------------------------------------------------------------
 # *** MLOST class --------------------------------------------------
@@ -99,29 +111,17 @@ class calibration_MLOST(calibration_master):
     datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
-
+    outfreq = 'monthly'
+    
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_MLOST
 
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_MLOST(self.datadir_calib,self.datafile_calib,self.calib_vars)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_MLOST(self.datadir_calib,
+                                                                                  self.datafile_calib,
+                                                                                  self.calib_vars,
+                                                                                  self.outfreq)
 
-
-# -------------------------------------------------------------------------------
-# *** NOAA class --------------------------------------------------
-# -------------------------------------------------------------------------------
-class calibration_NOAA(calibration_master):
-
-    source = 'NOAA'
-    datafile_calib   = 'er-ghcn-sst.nc'
-    dataformat_calib = 'NCD'
-    calib_vars = ['Tsfc']
-
-    # read the data
-    def read_calibration(self):
-        from load_gridded_data import read_gridded_data_NOAA
-
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_NOAA(self.datadir_calib,self.datafile_calib,self.calib_vars)
 
 # -------------------------------------------------------------------------------
 # *** GPCC class --------------------------------------------------
@@ -137,12 +137,17 @@ class calibration_precip_GPCC(calibration_master):
     dataformat_calib = 'NCD'
     calib_vars = ['precip']
     out_anomalies = True
+    outfreq = 'monthly'
     
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_GPCC
 
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GPCC(self.datadir_calib,self.datafile_calib,self.calib_vars,self.out_anomalies)
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GPCC(self.datadir_calib,
+                                                                                 self.datafile_calib,
+                                                                                 self.calib_vars,
+                                                                                 self.out_anomalies,
+                                                                                 self.outfreq)
 
 
 # -------------------------------------------------------------------------------
@@ -156,10 +161,14 @@ class calibration_precip_DaiPDSI(calibration_master):
     dataformat_calib = 'NCD'
     calib_vars = ['pdsi']
     out_anomalies = True
+    outfreq = 'monthly'
     
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_DaiPDSI
 
-        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_DaiPDSI(self.datadir_calib,self.datafile_calib,self.calib_vars,self.out_anomalies)
-
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_DaiPDSI(self.datadir_calib,
+                                                                                    self.datafile_calib,
+                                                                                    self.calib_vars,
+                                                                                    self.out_anomalies,
+                                                                                    self.outfreq)

@@ -118,7 +118,9 @@ def LMR_driver_callable(cfg=None):
     # new option: prior as full field or anomalies?
     X.kind =  prior.state_kind
     print 'prior kind:', X.kind
+    X.avgInterval = prior.avgInterval
 
+    
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source, prior)
     Xb_one_full = X.ens
@@ -151,10 +153,6 @@ def LMR_driver_callable(cfg=None):
 
     if verbose > 0:
         print 'Assimilating proxy types/sites:', type_site_assim
-
-    # ==========================================================================
-    # Calculate all Ye's (for all sites in sites_assim) ------------------------
-    # ==========================================================================
 
     print '--------------------------------------------------------------------'
     print 'Proxy counts for experiment:'
@@ -266,10 +264,11 @@ def LMR_driver_callable(cfg=None):
     # Keep dimension of pre-augmented version of state vector
     [state_dim, _] = Xb_one.shape
 
-    # ----------------------------------
-    # Augment state vector with the Ye's
-    # ----------------------------------
 
+    # ==========================================================================
+    # Calculate all Ye's (for all sites in sites_assim) ------------------------
+    # ==========================================================================
+    
     # Load or generate Ye Values for assimilation
     if not online:
         # Load pre calculated ye values if desired or possible
@@ -283,6 +282,16 @@ def LMR_driver_callable(cfg=None):
                                                           X.prior_sample_indices)
         except (IOError, FlagError) as e:
             print e
+
+            # Check if trying to use seasonally-calibrated psm here while 
+            # use_precalc_ye=False (combination of options not enabled). 
+            if cfg.psm.avgPeriod == 'season':
+                print ('ERROR: Conflicting options in configuration :'
+                       ' Trying to use seasonally-calibrated PSM'
+                       ' (avgPeriod=season in class psm) while'
+                       ' the use_precalc_ye option is set to False. '
+                       ' Combination of options not enabled!')
+                raise SystemExit()
 
             # Check to see if we have necessary variables in our state to
             # calculate the Ye values manually.
@@ -301,6 +310,10 @@ def LMR_driver_callable(cfg=None):
                 Ye_all[k, :] = proxy.psm(Xb_one_full,
                                          X.full_state_info,
                                          X.coords)
+
+        # ----------------------------------
+        # Augment state vector with the Ye's
+        # ----------------------------------
 
         # Append ensemble of Ye's to prior state vector
         Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
