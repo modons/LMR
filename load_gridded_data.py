@@ -286,11 +286,11 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq):
     ntime = len(data.dimensions['time'])
 
     time_yrs = []
-    base = datetime(year, 1, 1)
     for i in xrange(0,len(data.variables['time'][:])):
         yrAD = data.variables['time'][i]
         year = int(yrAD)
         rem = yrAD - year
+        base = datetime(year, 1, 1)
         time_yrs.append(base + timedelta(seconds=(base.replace(year=base.year + 1) - base).total_seconds() * rem))
 
     dates = np.array(time_yrs)

@@ -38,14 +38,21 @@ def main():
     # 
 
     #proxy_data_source = 'PAGES2K'
-
     proxy_data_source = 'NCDC'
     # version of the NCDC proxy db to process
     #dbversion = 'v0.0.0' 
     dbversion = 'v0.1.0' 
 
     eliminate_duplicates = True
-        
+
+    # datadir: directory where the original proxy datafiles are located
+    #datadir = '/home/chaos2/wperkins/data/LMR/proxies/'
+    datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    
+    # outdir: directory where the proxy database files will be created
+    #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py 
+    outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+
     # 
     # Section for User-defined options: end
     # ***************************************************************
@@ -57,11 +64,9 @@ def main():
 
         take_average_out = False
 
-        #datadir = '/home/chaos2/wperkins/data/LMR/proxies/'
-        datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
         fname = datadir + 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
-        meta_outfile = datadir + 'Pages2k_Metadata.df.pckl'
-        outfile = datadir + 'Pages2k_Proxies.df.pckl'
+        meta_outfile = outdir + 'Pages2k_Metadata.df.pckl'
+        outfile = outdir + 'Pages2k_Proxies.df.pckl'
         pages_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
 
         
@@ -70,8 +75,7 @@ def main():
         # NCDC proxy data ------------------------------------------------------------
         # ============================================================================
         
-        datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_'+dbversion+'/'
-        outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+        datadir = datadir+'NCDC/ToPandas_'+dbversion+'/'
 
         meta_outfile = outdir + 'NCDC_'+dbversion+'_Metadata.df.pckl'
         data_outfile = outdir + 'NCDC_'+dbversion+'_Proxies.df.pckl'
