@@ -471,6 +471,41 @@ def coefficient_efficiency(ref,test,valid=None):
 
     return CE
 
+def crps(forecasts, observations):
+    """
+    Function to calculate the continuous ranked probability score
+    of an ensemble of forecast timeseries against observations.
+
+    Based on _crps.py in the properscoring package from TheClimateCorporation
+    on Github
+
+    Parameters
+    ----------
+    forecasts: ndarray
+        Forecast timeseries with trailing dimensions of (..., nens, ntimes)
+    observations: ndarray
+        Observations for verification with a single dimension of length ntimes
+
+    Returns
+    -------
+    crps: ndarray
+        Continuous ranked probability score over nens and ntimes.  Has shape of
+        the dimensions preceding nens (if any).
+
+    """
+    # Calculate the mean absolute error of the ensemble-mean forecast
+    fcast_error = abs(forecasts - observations)
+    mean_error = fcast_error.mean(axis=-2)
+
+    # Calculate the mean forecast ensemble difference (spread)
+    fcast_diff = np.expand_dims(forecasts, -3) - np.expand_dims(forecasts, -2)
+    fcast_dist = abs(fcast_diff).mean(axis=(-3, -2))
+
+    # Calculate the CRPS (cumulative over all times)
+    crps = mean_error - 0.5 * fcast_dist
+    crps = crps.sum(axis=-1)
+
+    return crps
 
 def rmsef(predictions, targets):
     """
