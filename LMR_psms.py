@@ -25,6 +25,9 @@ Revisions:
             regressions w/ temperature AND precipitation/PSDI as independent 
             variables.
             [ R. Tardif, Univ. of Washington, June 2016 ]
+          - Added the capability of calibrating/using PSMs calibrated on the basis 
+            of a proxy record seasonality metadata.
+            [ R. Tardif, Univ. of Washington, July 2016 ]
 
 """
 import numpy as np
@@ -147,6 +150,8 @@ class LinearPSM(BasePSM):
 
     def __init__(self, config, proxy_obj, psm_data=None):
 
+        self.psm_key = 'linear'
+        
         proxy = proxy_obj.type
         site = proxy_obj.id
         r_crit = config.psm.linear.psm_r_crit
@@ -651,12 +656,8 @@ class LinearPSM_TorP(LinearPSM):
 
     def __init__(self, config, proxy_obj, psm_data_T=None, psm_data_P=None):
 
-        # note RT: not a good idea to hard-code these here...
-        # TODO: Correspondance or assignment of specific PSM to proxy types should be done at higher level.
-        TorP_types = ['Tree ring_Width', 'Tree ring_Density',
-                      'Tree Rings_WidthBreit', 'Tree Rings_WidthPages',
-                      'Tree Rings_WidthPages2', 'Tree Rings_WoodDensity']
-
+        self.psm_key = 'linear_TorP'
+        
         proxy = proxy_obj.type
         site = proxy_obj.id
         r_crit = config.psm.linear_TorP.psm_r_crit
@@ -697,54 +698,44 @@ class LinearPSM_TorP(LinearPSM):
         # Check if PSM is calibrated w.r.t. temperature and/or w.r.t.
         # precipitation/moisture
         # Assign proxy "sensitivity" based on PSM calibration
-
-        if proxy in TorP_types: # restrict this check to specific proxy types (e.g. tree rings)
             
-            if (proxy, site) in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
-                # calibrated for temperature AND for precipitation, check relative goodness of fit 
-                # and assign "sensitivity" & corresponding PSM parameters according to best fit.
-                if psm_site_data_T['PSMmse'] < psm_site_data_P['PSMmse']:
-                    # smaller residual errors w.r.t. temperature
-                    self.sensitivity = 'temperature'
-                    self.corr = psm_site_data_T['PSMcorrel']
-                    self.slope = psm_site_data_T['PSMslope']
-                    self.intercept = psm_site_data_T['PSMintercept']
-                    self.R = psm_site_data_T['PSMmse']
-                else:
-                    # smaller residual errors w.r.t. precipitation/moisture
-                    self.sensitivity = 'moisture'
-                    self.corr = psm_site_data_P['PSMcorrel']
-                    self.slope = psm_site_data_P['PSMslope']
-                    self.intercept = psm_site_data_P['PSMintercept']
-                    self.R = psm_site_data_P['PSMmse']
-
-            elif (proxy, site) in psm_data_T.keys() and (proxy, site) not in psm_data_P.keys():
-                # calibrated for temperature and NOT for precipitation, assign as "temperature" sensitive
+        if (proxy, site) in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
+            # calibrated for temperature AND for precipitation, check relative goodness of fit 
+            # and assign "sensitivity" & corresponding PSM parameters according to best fit.
+            if psm_site_data_T['PSMmse'] < psm_site_data_P['PSMmse']:
+                # smaller residual errors w.r.t. temperature
                 self.sensitivity = 'temperature'
                 self.corr = psm_site_data_T['PSMcorrel']
                 self.slope = psm_site_data_T['PSMslope']
                 self.intercept = psm_site_data_T['PSMintercept']
                 self.R = psm_site_data_T['PSMmse']
-            elif (proxy, site) not in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
-                # calibrated for precipitation/moisture and NOT for temperature, assign as "moisture" sensitive
+            else:
+                # smaller residual errors w.r.t. precipitation/moisture
                 self.sensitivity = 'moisture'
                 self.corr = psm_site_data_P['PSMcorrel']
                 self.slope = psm_site_data_P['PSMslope']
                 self.intercept = psm_site_data_P['PSMintercept']
                 self.R = psm_site_data_P['PSMmse']
-            else:
-                raise(ValueError('Unknown pre-calibration status!'))
 
-        else: # if proxy not in TorP_types, revert to temperature sensitivity as default
-            if (proxy, site) in psm_data_T.keys():
-                self.sensitivity = 'temperature'
-                self.corr = psm_site_data_T['PSMcorrel']
-                self.slope = psm_site_data_T['PSMslope']
-                self.intercept = psm_site_data_T['PSMintercept']
-                self.R = psm_site_data_T['PSMmse']
-            else:
-                raise(ValueError('Unknown pre-calibration status!'))
-            
+        elif (proxy, site) in psm_data_T.keys() and (proxy, site) not in psm_data_P.keys():
+            # calibrated for temperature and NOT for precipitation, assign as "temperature" sensitive
+            self.sensitivity = 'temperature'
+            self.corr = psm_site_data_T['PSMcorrel']
+            self.slope = psm_site_data_T['PSMslope']
+            self.intercept = psm_site_data_T['PSMintercept']
+            self.R = psm_site_data_T['PSMmse']
+        elif (proxy, site) not in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
+            # calibrated for precipitation/moisture and NOT for temperature, assign as "moisture" sensitive
+            self.sensitivity = 'moisture'
+            self.corr = psm_site_data_P['PSMcorrel']
+            self.slope = psm_site_data_P['PSMslope']
+            self.intercept = psm_site_data_P['PSMintercept']
+            self.R = psm_site_data_P['PSMmse']
+        else:
+            raise ValueError('Could not find proxy in pre-calibration file... '
+                             'Skipping: {}'.format(proxy_obj.id))
+
+
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
@@ -907,6 +898,8 @@ class BilinearPSM(BasePSM):
     """
 
     def __init__(self, config, proxy_obj, psm_data=None):
+
+        self.psm_key = 'bilinear'
 
         proxy = proxy_obj.type
         site = proxy_obj.id
@@ -1351,6 +1344,8 @@ class h_interpPSM(BasePSM):
 
     def __init__(self, config, proxy_obj, R_data=None):
 
+        self.psm_key = 'h_interp'
+        
         self.proxy = proxy_obj.type
         self.site = proxy_obj.id
         self.lat  = proxy_obj.lat
@@ -1371,7 +1366,7 @@ class h_interpPSM(BasePSM):
         except (KeyError, IOError) as e:
             # No obs. error variance file found
             logger.error(e)
-            logger.info('Cannot find obs. error variance data for:' + str((proxy, site)))
+            logger.info('Cannot find obs. error variance data for:' + str((self.proxy, self.site)))
 
 
     # TODO: Ideally prior state info and coordinates should all be in single obj
@@ -1399,16 +1394,9 @@ class h_interpPSM(BasePSM):
         # ----------------------
         
         # define state variable (which isotope) that should be interpolated to proxy site
-        # (TODO: more flexible way to do this...)
-        try:
-            if 'd18O' in self.proxy:
-                state_var = 'd18O_sfc_Amon'
-            else:
-                raise KeyError('Proxy type not consistent with PSM as simple interpolation. Ye calculation'
-                           ' not possible.')
-        except:
-            raise KeyError('Needed state variable is not defined. Ye calculation'
-                           ' not possible.')
+        # Now, d18O is the only isotope considered, irrespective of the proxy type to be assimilated.
+        # (TODO: more comprehensive & flexible way to do this...)
+        state_var = 'd18O_sfc_Amon'
 
         if state_var not in X_state_info.keys():
             raise KeyError('Needed variable not in state vector for Ye'

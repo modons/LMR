@@ -16,6 +16,7 @@ import glob
 import os
 import numpy as np
 import cPickle
+from time import time
 from math import radians, cos, sin, asin, sqrt
 from scipy import signal
 from spharm import Spharmt, getspecindx, regrid
@@ -639,7 +640,7 @@ def augment_docstr(func):
     return func
 
 
-def create_precalc_ye_filename(config):
+def create_precalc_ye_filename(config,psm_key,prior_kind):
     """
     Create the filename to use for the precalculated Ye file from the provided
     configuration.  Uses the prior, psm, and proxy configuration to determine a
@@ -649,34 +650,45 @@ def create_precalc_ye_filename(config):
     ----------
     config: Config
         Instance of an LMR_config.Config object.
+    psm_key: str
+        Indicates the psm type with which Ye values were calculated.
+    prior_kind: str
+        Indicates whether Ye values were calculated using 
+        anomalies ('anom') of full field ('full') as prior data
 
     Returns
     -------
     str:
         Filename string based on current configuration
     """
+
     proxy_database = config.proxies.use_from[0]
-    psm_key = config.psm.use_psm[proxy_database]
-    prior_str = '-'.join([config.prior.prior_source] +
-                         sorted(config.prior.psm_required_variables))
 
     # Generate PSM calibration string
     if psm_key == 'linear':
         calib_avgPeriod = config.psm.linear.avgPeriod
         calib_str = config.psm.linear.datatag_calib
+        state_vars_for_ye = config.psm.linear.psm_required_variables
+
     elif psm_key == 'linear_TorP':
         calib_avgPeriod = config.psm.linear_TorP.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.linear_TorP.datatag_calib_T,
                                         config.psm.linear_TorP.datatag_calib_P)
+        state_vars_for_ye = config.psm.linear_TorP.psm_required_variables
+
     elif psm_key == 'bilinear':
         calib_avgPeriod = config.psm.bilinear.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.bilinear.datatag_calib_T,
                                         config.psm.bilinear.datatag_calib_P)
+        state_vars_for_ye = config.psm.bilinear.psm_required_variables
+        
     elif psm_key == 'h_interp':
         calib_avgPeriod = None
         calib_str = ''
+        state_vars_for_ye = config.psm.h_interp.psm_required_variables
+        
     else:
-        raise ValueError('Unrecognized PSM key for use_psm.')
+        raise ValueError('Unrecognized PSM key.')
 
     if calib_avgPeriod:
         psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str
@@ -686,7 +698,11 @@ def create_precalc_ye_filename(config):
     proxy_str = str(proxy_database)
     if proxy_str == 'NCDC':
         proxy_str = proxy_str + str(config.proxies.ncdc.dbversion)
-    
+
+    # Generate appropriate prior string
+    prior_str = '-'.join([config.prior.prior_source] +
+                         sorted(state_vars_for_ye) + [prior_kind])
+        
     return '{}_{}_{}.npz'.format(prior_str, psm_str, proxy_str)
 
 
@@ -725,6 +741,177 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
         ye_all[i] = precalc_vals[pidx, sample_idxs]
 
     return ye_all
+
+
+def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs):
+    """
+    Convenience function to load a precalculated Ye file for the current
+    experiment.
+
+    Parameters
+    ----------
+    config: LMR_config.Config
+        Current experiment instance of the configuration object.
+    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+        Current experiment proxy manager
+    sample_idxs: list(int)
+        A list of the current sample indices used to create the prior ensemble.
+
+    Returns
+    -------
+    ye_all: ndarray
+        The array of Ye values for the current ensemble and all proxy records
+    """
+
+    begin_load = time()
+
+    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
+
+    num_proxies_assim = len(proxy_manager.ind_assim)
+    num_samples = len(sample_idxs)
+    ye_all = np.zeros((num_proxies_assim, num_samples))
+    
+    psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))    
+    precalc_files = {}
+    for psm_key in psm_keys:
+
+        pkind = None
+        if psm_key == 'linear':
+            pkind = config.psm.linear.psm_required_variables.values()[0]
+        elif psm_key == 'linear_TorP':
+            pkind = config.psm.linear_TorP.psm_required_variables.values()[0]
+        elif psm_key == 'bilinear':
+            pkind = config.psm.bilinear.psm_required_variables.values()[0]
+        elif psm_key == 'h_interp':
+            if config.proxies.proxy_timeseries_kind == 'asis':
+                pkind = 'full'
+            elif config.proxies.proxy_timeseries_kind == 'anom':
+                pkind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
+        else:
+            raise ValueError('Unrecognized PSM key.')
+
+        load_fname = create_precalc_ye_filename(config,psm_key,pkind)
+        print '  Loading file:', load_fname
+        # check if file exists
+        if not os.path.isfile(os.path.join(load_dir, load_fname)):
+            print ('  ERROR: File does not exist!'
+                   ' -- run the precalc file builder:'
+                   ' misc/build_ye_file.py'
+                   ' to generate the missing file')
+            raise SystemExit()
+        precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
+
+
+    print '  Now extracting proxy type-dependent Ye values...'
+    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
+        psm_key = pobj.psm_obj.psm_key
+        pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
+        precalc_vals = precalc_files[psm_key]['ye_vals']
+        
+        pidx = pid_idx_map[pobj.id]
+        ye_all[i] = precalc_vals[pidx, sample_idxs]
+
+    print '  Completed in ',  time() - begin_load, 'secs'
+        
+    return ye_all
+
+
+def validate_config(config):
+    """
+    Function to check for inconsistencies in the experiment 
+    configuration.
+
+    Parameters
+    ----------
+    config: LMR_config.Config
+        Current experiment instance of the configuration object.
+
+    Returns
+    -------
+    proceed_ok: bool
+        Boolean indicating if the configuration settings were validated or not.
+    """
+
+    proxy_database = config.proxies.use_from[0]    
+    if proxy_database == 'NCDC':
+        proxy_cfg = config.proxies.ncdc
+    elif proxy_database == 'pages':
+        proxy_cfg = config.proxies.pages
+    else:
+        print 'ERROR in specification of proxy database.'
+        raise SystemExit()
+
+    # proxy types activated in configuration
+    proxy_types = proxy_cfg.proxy_order 
+    # associated psm's
+    psm_keys = list(set([proxy_cfg.proxy_psm_type[p] for p in proxy_types]))
+
+    # Forming list of required state variables
+    psmclasses = dict([(name,cls)  for name, cls in config.psm.__dict__.items()])
+    psm_required_variables = []
+    for psm_type in psm_keys:
+        #print psm_type, ':', psmclasses[psm_type].psm_required_variables
+        psm_required_variables.extend(psmclasses[psm_type].psm_required_variables)
+    # keep unique values
+    psm_required_variables = list(set(psm_required_variables))
+
+    
+    proceed_ok = True
+
+    
+    # Begin checking configuration
+    print 'Checking configuration ... '
+
+    # Conditions when use_precalc_ye = False
+    if not config.core.use_precalc_ye:
+
+        # 1) Check whether all variables needed by PSMs are in prior.state_variables
+        
+        for psm_required_var in psm_required_variables:
+            if psm_required_var not in config.prior.state_variables.keys():
+                print ' ERROR: Missing state variable:', psm_required_var
+                print (' Could not calculate required ye_values from prior.'
+                       ' Add the required variable to the state variable'
+                       ' list -- OR -- run the precalc file builder:'
+                       ' misc/build_ye_file.py'
+                       ' and use precalculated Ye values')
+                proceed_ok = False
+
+        # 2) Check if psm_avg is set to 'season' when use_precalc_ye = False
+        #    This combination of optios is not currently no possible as management
+        #    of seasonal prior state variables is not enabled.
+
+        if config.psm.avgPeriod == 'season':
+            print (' ERROR: Conflicting options in configuration :'
+                   ' Trying to use seasonally-calibrated PSM'
+                   ' (avgPeriod=season in class psm) while'
+                   ' the use_precalc_ye option is set to False. '
+                   ' Combination of options not enabled!')
+            proceed_ok = False
+
+
+    # Constraints irrespective of value chosen for use_precalc_ye
+
+    # 3) Check compatibility between variable 'kind' ('anom' or 'full')
+    #    between prior state variables and requirements of chosen PSMs
+
+    # For every PSM class to be used
+    for psm_type in psm_keys:
+
+        required_variables = psmclasses[psm_type].psm_required_variables.keys()
+        for var in required_variables:
+            if var in config.prior.state_variables.keys():
+                if psmclasses[psm_type].psm_required_variables[var] != config.prior.state_variables[var]:
+                    print (' ERROR: Conflict detected in configuration :'
+                           ' Selected variable kind for var='+var+' ('+config.prior.state_variables[var]+')'
+                           ' is incompatible with requirements of '+ psm_type+' PSM ('
+                           + psmclasses[psm_type].psm_required_variables[var]+') using this variable as input')
+                    proceed_ok = False
+    
+    
+    return proceed_ok
 
 
 class FlagError(ValueError):

@@ -19,160 +19,188 @@ from LMR_utils import create_precalc_ye_filename
 # the prior, psm calibration source, proxy source, and state variable used to
 # calculate it. I'm choosing to forego on the fly creation of these files for
 # now.  If a user would like to create one for their current configuration  this
-#  script should just be an easy one-off run with no editing required.
+# script should just be an easy one-off run with no editing required.
+# [ A. Perkins, U. of Washington ]
+#
+# Modified:
+# - August 2016: Now calculates ye values consistent with all possible psm types
+#                (linear, linear_TorP, bilinear, h_interp) found in the
+#                LMR_config.py file as specified by the user. For a given psm type,
+#                ye values are calculatd for *all* proxy records in the database,
+#                for which a psm has been pre-calibrated (for statistical PSMs)
+#                [ R. Tardif, U. of Washington ]
+# -  Sept. 2016: Now performs Ye calculation on the basis of either annually or
+#                seasonally calibrated PSMs.
+#                [ R. Tardif, U. of Washington ]
+# -  Sept. 2016: Code now ensures that uploaded prior data is of the appropriate 
+#                t"kind" for he proxy-type dependent PSM to be used as specified
+#                in LMR_config. Statistical PSMs (linear, linear_TorP and bilinear)
+#                are typically calibrated on the basis of anomalies (temporal mean
+#                over reference period removed). Assimilation of isotope data using
+#                the h_interp forward operator should be performed on "full fields"
+#                if the proxy_timeseries_kind='asis' in class "proxies" in LMR_config,
+#                or as anomalies if proxy_timeseries_kind='anom'. The code here will
+#                override the setting of the prior "state_kind" in LMR_config.
+#                [ R. Tardif, U. of Washington ]
 
 cfg = LMR_config.Config()
 
-# Create prior source object
+masterstarttime = timeit.default_timer()
+
+
 print ('Starting Ye precalculation using prior data from '
        '{}'.format(cfg.prior.prior_source))
-X = LMR_prior.prior_assignment(cfg.prior.prior_source)
-X.prior_datadir = cfg.prior.datadir_prior
-X.prior_datafile = cfg.prior.datafile_prior
-X.statevars = cfg.prior.psm_required_variables
-X.detrend = cfg.prior.detrend
-X.kind = cfg.prior.state_kind
-X.Nens = None  # None => Load entire prior
 
 
-#  Load the proxy data
+#  Load the proxy information
 cfg.psm.linear.psm_r_crit = 0.0
-print 'Loading proxies...'
+
+# from LMR_config, figure out all the psm types the user wants to use
 proxy_database = cfg.proxies.use_from[0]
-psm_key = cfg.psm.use_psm[proxy_database]
-psm_class = LMR_psms.get_psm_class(psm_key)
-psm_kwargs = psm_class.get_kwargs(cfg)
-
 proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
-proxy_objects = proxy_class.load_all_annual_no_filtering(cfg,
-                                                         **psm_kwargs)
 
-if psm_key == 'linear':
-    if cfg.psm.linear.avgPeriod == 'annual':
-        X.avgInterval = cfg.psm.linear.avgPeriod
-        psm_avg = 'annual'
-    elif cfg.psm.linear.avgPeriod == 'season':
-        X.avgInterval = 'monthly'
-        psm_avg = 'season'
+if proxy_database == 'NCDC':
+    proxy_cfg = cfg.proxies.ncdc
+elif proxy_database == 'pages':
+    proxy_cfg = cfg.proxies.pages
+else:
+    print 'ERROR in specification of proxy database.'
+    raise SystemExit()
+
+
+proxy_types = proxy_cfg.proxy_psm_type.keys()
+psm_keys = [proxy_cfg.proxy_psm_type[p] for p in proxy_types]
+unique_psm_keys = list(set(psm_keys))
+
+# Loop over all psm types found in the configuration
+for psm_key in unique_psm_keys:
+
+    print 'Loading psm information for psm type:', psm_key, ' ...'
+    
+    # re-assign current psm type to all proxy records
+    # TODO: Could think of implementing filter to restrict to relevant proxy records only
+    for p in proxy_types: proxy_cfg.proxy_psm_type[p] = psm_key
+        
+    proxy_objects = proxy_class.load_all_annual_no_filtering(cfg)
+
+    # Number of proxy objects (will be a dim of ye_out array)
+    num_proxy = len(proxy_objects)
+    print 'Calculating ye values for {:d} proxies'.format(num_proxy)
+    
+        
+    # Define the psm-dependent required state variables
+    if psm_key == 'linear':
+        statevars = cfg.psm.linear.psm_required_variables
+        psm_avg = cfg.psm.avgPeriod
+    elif psm_key == 'linear_TorP':
+        statevars = cfg.psm.linear_TorP.psm_required_variables
+        psm_avg = cfg.psm.avgPeriod
+    elif psm_key == 'bilinear':
+        statevars = cfg.psm.bilinear.psm_required_variables
+        psm_avg = cfg.psm.avgPeriod
+    else: # h_interp psm class (interpolation of prior isotope data)
+
+        psm_avg = 'annual' # annual only for this psm
+
+        # Define the psm-dependent required state variables
+        #  check compatibility of options between prior and proxies for this psm class
+        #  - proxies as 'anom' vs. 'asis' VS. prior as 'anom' vs. 'full'
+        #  - possibly override definition in config.
+        if proxy_cfg.proxy_timeseries_kind == 'anom':
+            vkind = 'anom'
+        elif proxy_cfg.proxy_timeseries_kind == 'asis':
+            vkind = 'full'
+        else:
+            print 'ERROR: Unrecognized value of *proxy_timeseries_kind* attribute'
+            print '       in proxies configuration.'
+            raise SystemExit()
+        statevars = cfg.psm.h_interp.psm_required_variables
+        for item in statevars.keys(): statevars[item] = vkind
+
+
+    if psm_avg == 'annual':
+        # calendar year as the only seasonality vector
+        season_vects = []
+        season_vects.append([1,2,3,4,5,6,7,8,9,10,11,12])
+        season_unique = list(set(map(tuple, season_vects)))
+        # assign annual seasonality attribute to all proxy objects
+        # (override metadata of the proxy record)
+        for pobj in proxy_objects: pobj.seasonality = [1,2,3,4,5,6,7,8,9,10,11,12]
+    elif psm_avg == 'season':
+        # map out all possible seasonality vectors that will have to be considered
+        season_vects = []
+        for pobj in proxy_objects: season_vects.append(pobj.seasonality)
+        season_unique = list(set(map(tuple, season_vects)))
     else:
         print 'ERROR in specification of averaging period.'
         raise SystemExit()        
-elif psm_key == 'linear_TorP':
-    if cfg.psm.linear_TorP.avgPeriod == 'annual':
-        X.avgInterval = cfg.psm.linear_TorP.avgPeriod
-        psm_avg = 'annual'
-    elif cfg.psm.linear_TorP.avgPeriod == 'season':
-        X.avgInterval = 'monthly'
-        psm_avg = 'season'
-    else:
-        print 'ERROR in specification of averaging period.'
-        raise SystemExit()
-elif psm_key == 'bilinear':
-    if cfg.psm.bilinear.avgPeriod == 'annual':
-        X.avgInterval = cfg.psm.bilinear.avgPeriod
-        psm_avg = 'annual'
-    elif cfg.psm.linear_TorP.avgPeriod == 'season':
-        X.avgInterval = 'monthly'
-        psm_avg = 'season'
-    else:
-        print 'ERROR in specification of averaging period.'
-        raise SystemExit()
-else:
-    X.avgInterval = 'annual'
 
-
-masterstarttime = timeit.default_timer()
-
-# Load the prior data
-X.populate_ensemble(cfg.prior.prior_source, cfg.prior)
-
-statedim = X.ens.shape[0]
-ntottime = X.ens.shape[1]
-
-dates = X.prior_dict[X.statevars[0]]['years']
-# How many years in prior data?
-years = list(set([d.year for d in X.prior_dict[X.statevars[0]]['years']]))
-len_prior_dat = len(years)
-
-
-# Calculate the Ye values
-num_proxy = len(proxy_objects)
-print 'Calculating ye values for {:d} proxies'.format(num_proxy)
-ye_out = np.zeros((num_proxy, len_prior_dat))
-
-if psm_avg == 'season':
-    # Ye calculation on the basis of seasonally-averaged prior data
-
-    # map out all possible seasonality vectors that will have to be considered
-    season_vects = []
-    for pobj in proxy_objects: season_vects.append(pobj.seasonality)
-    season_unique = list(set(map(tuple, season_vects)))
-
+    
     # Loop over seasonality definitions found in the proxy set
+    firstloop = True
     for season in season_unique:
 
-        print 'Processing proxies with seasonality metadata:', season
+        print 'Calculating estimates for proxies with seasonality metadata:', season
 
-        nbmonths = len(season)
-        year_current = [m for m in season if m>0 and m<=12]
-        year_before  = [abs(m) for m in season if m < 0]        
-        year_follow  = [m-12 for m in season if m > 12]
-
-        # Identify prior array indices corresponding to months in proxy seasonality
-        maskind = np.zeros((nbmonths,len_prior_dat),dtype='int64')
-        # define for year 1
-        yr1 = years[1]
-        tindsyr   = [k for k,d in enumerate(dates) if d.year == yr1    and d.month in year_current]
-        tindsyrm1 = [k for k,d in enumerate(dates) if d.year == yr1-1. and d.month in year_before]
-        tindsyrp1 = [k for k,d in enumerate(dates) if d.year == yr1+1. and d.month in year_follow]
-        indsyr1 = tindsyrm1+tindsyr+tindsyrp1
-        # repeat pattern for other years over entire time dimension
-        maskind[:,0] = [x-12 for x in indsyr1]
-        for kyr in range(1,len_prior_dat):
-            cyr = kyr-1
-            maskind[:,kyr] = [x+(cyr*12) for x in indsyr1]
-        maskind[maskind < 0] = 0
-        maskind[maskind > ntottime-1] = 0
+        # Create prior source object
+        X = LMR_prior.prior_assignment(cfg.prior.prior_source)
+        X.prior_datadir = cfg.prior.datadir_prior
+        X.prior_datafile = cfg.prior.datafile_prior
+        X.detrend = cfg.prior.detrend
+        X.avgInterval = cfg.prior.avgInterval
+        X.Nens = None  # None => Load entire prior
+        X.statevars = statevars
         
-        # Extract the slice of prior data corresponding to proxy seasonality
-        prior_seasonSlice = np.take(X.ens, maskind, axis=1)
-        # mean over appropriate season
-        prior_state = np.mean(prior_seasonSlice, axis=1)
+        # Load the prior data, averaged over interval corresponding
+        # to current "season" (i.e. proxy seasonality)
+        X.avgInterval = season
+        X.populate_ensemble(cfg.prior.prior_source, cfg.prior)
+        
+        statedim = X.ens.shape[0]
+        ntottime = X.ens.shape[1]
+        
+        # Calculate the Ye values
+        # -----------------------
+        if firstloop:
+            # Declare array of ye values if first time in loop
+            ye_out = np.zeros((num_proxy, ntottime))
+            firstloop = False
         
         # loop over proxies
         for i, pobj in enumerate(proxy_objects):
-            # restrict to proxy records with seasonality corresponding to
-            # current "season" loop variable
+            # Restrict to proxy records with seasonality
+            # corresponding to current "season" loop variable
             if pobj.seasonality == list(season):
                 print '{:10d} (...of {:d})'.format(i, num_proxy), pobj.id
-                ye_out[i] = pobj.psm(prior_state, X.full_state_info, X.coords)
+                ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
+    
 
-else:
-    # Ye calculation on the basis of annual (calendar) prior data
-    for i, pobj in enumerate(proxy_objects):
-        print '{:10d} (...of {:d})'.format(i, num_proxy), pobj.id
-        ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
+    elapsed = timeit.default_timer() - masterstarttime
+    print ' Elapsed time:', elapsed, ' secs'
+
+    # Create a mapping for each proxy id to an index of the array
+    pid_map = {pobj.id: idx for idx, pobj in enumerate(proxy_objects)} 
+
+    # Create filename for current experiment
+    out_dir = os.path.join(cfg.core.lmr_path, 'ye_precalc_files')
+
+    vkind = X.statevars[X.statevars.keys()[0]]
+    out_fname = create_precalc_ye_filename(cfg,psm_key,vkind)
+    
+    assert len(out_fname) <= 255, 'Filename is too long...'
+
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    # Write precalculated ye file
+    out_full = os.path.join(out_dir, out_fname)
+    print 'Writing precalculated ye file: {}'.format(out_full)
+    np.savez(out_full,
+             pid_index_map=pid_map,
+             ye_vals=ye_out)
 
 
 elapsedtot = timeit.default_timer() - masterstarttime
-print 'Total elapsed time:', elapsedtot
+print '------------------ '
+print 'Total elapsed time:', elapsedtot/60.0 , ' mins'
 
-
-# Create a mapping for each proxy id to an index of the array
-pid_map = {pobj.id: idx for idx, pobj in enumerate(proxy_objects)}
-
-# Create filename for current experiment
-out_dir = os.path.join(cfg.core.lmr_path, 'ye_precalc_files')
-out_fname = create_precalc_ye_filename(cfg)
-
-assert len(out_fname) <= 255, 'Filename is too long...'
-
-if not os.path.exists(out_dir):
-    os.mkdir(out_dir)
-
-# Write precalculated ye file
-out_full = os.path.join(out_dir, out_fname)
-print 'Writing precalculated ye file: {}'.format(out_full)
-np.savez(out_full,
-         pid_index_map=pid_map,
-         ye_vals=ye_out)

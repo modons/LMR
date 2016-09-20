@@ -21,7 +21,7 @@ Revisions:
              are defined and instanciated + general code re-org. for improving speed.
              [R. Tardif, U. of Washington, July 2016]
 """
-import os
+import os, sys
 import numpy as np
 import cPickle    
 import pandas as pd
@@ -30,6 +30,7 @@ from os.path import join
 from copy import deepcopy
 
 # LMR specific imports
+sys.path.append('../')
 import LMR_proxy_pandas_rework
 import LMR_psms
 import LMR_calibrate

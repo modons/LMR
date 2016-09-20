@@ -15,7 +15,7 @@ matplotlib.use('Agg')
 
 # generic imports
 import numpy as np
-import glob, os
+import glob, os, sys
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 # LMR specific imports
+sys.path.append('../')
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
 from load_gridded_data import read_gridded_data_CMIP5_model
 from LMR_plot_support import *
@@ -86,7 +87,14 @@ datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model/'
 #nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+# ---
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPannual_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPseason_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
+nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
 
 
 # -- hansi --
@@ -94,22 +102,22 @@ nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
 #nexp = 'hansi_winds'
 
 # Definition of variables to verify
-#                       name     variable long name        bounds   units   mult. factor
+#                        kind   name     variable long name        bounds   units   mult. factor
 verif_dict = \
     {
-    'psl_sfc_Amon'   : ('MSLP', 'Mean sea level pressure',-8.0,8.0,'(hPa)',0.01), \
-    'zg_500hPa_Amon' : ('Z500', '500hPa geopotential height',-60.0,60.0,'(m)',1.0), \
-    'wap_500hPa_Amon': ('W500', '500hPa vertical motion',-0.04,0.04,'(Pa/s)',1.0), \
-#    'ua_1000hPa_Amon' : ('U1000', '1000hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-#    'va_1000hPa_Amon' : ('V1000', '1000hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-#    'ua_850hPa_Amon' : ('U850', '850hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-#    'va_850hPa_Amon' : ('V850', '850hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-#    'ua_700hPa_Amon' : ('U700', '700hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-#    'va_700hPa_Amon' : ('V700', '700hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-#    'ua_600hPa_Amon' : ('U600', '600hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-#    'va_600hPa_Amon' : ('V600', '600hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-#    'ua_500hPa_Amon' : ('U500', '500hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-#    'ua_250hPa_Amon' : ('U250', '250Pa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    'psl_sfc_Amon'   : ('anom', 'MSLP', 'Mean sea level pressure',-8.0,8.0,'(hPa)',0.01), \
+    'zg_500hPa_Amon' : ('anom','Z500', '500hPa geopotential height',-60.0,60.0,'(m)',1.0), \
+    'wap_500hPa_Amon': ('anom','W500', '500hPa vertical motion',-0.04,0.04,'(Pa/s)',1.0), \
+    #'ua_1000hPa_Amon' : ('anom','U1000', '1000hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'va_1000hPa_Amon' : ('anom','V1000', '1000hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_850hPa_Amon' : ('anom','U850', '850hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'va_850hPa_Amon' : ('anom','V850', '850hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_700hPa_Amon' : ('anom','U700', '700hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'va_700hPa_Amon' : ('anom','V700', '700hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_600hPa_Amon' : ('anom','U600', '600hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'va_600hPa_Amon' : ('anom','V600', '600hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_500hPa_Amon' : ('anom','U500', '500hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_250hPa_Amon' : ('anom','U250', '250Pa zonal wind',-2.0,2.0,'(m/s)',1.0), \
     }
 
 # time range for verification (in years CE)
@@ -225,13 +233,17 @@ for var in verif_vars:
     #################################################################
     print '\nloading verification data...\n'
 
-    # load 20th century reanalysis (TCR) reanalysis --------------------------------
+    # Define month sequence for the calendar year 
+    # (argument needed in upload of reanalysis data)
+    annual = range(1,13)
 
+    # load 20th century reanalysis (TCR) reanalysis --------------------------------
+    vardict = {var: verif_dict[var][0]}
     vardef   = var
     datadir  = datadir_reanl +'20cr'
     datafile = vardef +'_20CR_185101-201112.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
     rtime = dd[vardef]['years']
     TCR_time = np.array([d.year for d in rtime])
@@ -245,12 +257,12 @@ for var in verif_vars:
 
 
     # load ERA20C reanalysis -------------------------------------------------------
-
+    vardict = {var: verif_dict[var][0]}
     vardef   = var
     datadir  = datadir_reanl+'era20c'
     datafile = var+'_ERA20C_190001-201012.nc'
 
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
     rtime = dd[vardef]['years']
     ERA20C_time = np.array([d.year for d in rtime])
@@ -390,41 +402,28 @@ for var in verif_vars:
 
         if iplot_individual_years:
 
-            """
-            # RT test ... ... ...
-            blank = np.zeros([nlat_TCR,nlon_TCR])
-            lat2_TCR = (lat_TCR + blank.T).T  
-            lon2_TCR = (lon_TCR + blank)  
-            blank = np.zeros([nlat_ERA20C,nlon_ERA20C])
-            lat2_ERA20C = (lat_ERA20C + blank.T).T  
-            lon2_ERA20C = (lon_ERA20C + blank)  
-            print pdata_tcr.shape, lat2_TCR.shape, lon2_TCR.shape
-            print pdata_era20c.shape, lat2_ERA20C.shape, lon2_ERA20C.shape
-            # RT test ... ... ...
-            """
-
             # Reanalysis comparison figures (annually-averaged anomaly fields)
             #fmin = -60.0; fmax = +60.0; nflevs=41
-            fmin = verif_dict[var][2]; fmax = verif_dict[var][3]; nflevs=41
+            fmin = verif_dict[var][3]; fmax = verif_dict[var][4]; nflevs=41
             fig = plt.figure()
             ax = fig.add_subplot(3,1,1)    
-            LMR_plotter(lmr_trunc*verif_dict[var][5],lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
-            plt.title('LMR '+'T'+str(nlat_new-ifix)+' '+verif_dict[var][0]+' anom. '+verif_dict[var][4]+' '+str(yr), fontweight='bold')
+            LMR_plotter(lmr_trunc*verif_dict[var][6],lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+            plt.title('LMR '+'T'+str(nlat_new-ifix)+' '+verif_dict[var][1]+' anom. '+verif_dict[var][5]+' '+str(yr), fontweight='bold')
             plt.clim(fmin,fmax)
             ax = fig.add_subplot(3,1,2)    
-            LMR_plotter(tcr_trunc*verif_dict[var][5],lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
-            plt.title('20CR-V2 '+'T'+str(nlat_new-ifix)+' '+verif_dict[var][0]+' anom. '+verif_dict[var][4]+' '+str(yr), fontweight='bold')
-            #LMR_plotter(pdata_tcr*verif_dict[var][5],lat2_TCR,lon2_TCR,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
-            #plt.title('20CR-V2 '+'orig. grid'+' '+verif_dict[var][0]+' anom. '+verif_dict[var][4]+' '+str(yr), fontweight='bold')
+            LMR_plotter(tcr_trunc*verif_dict[var][6],lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+            plt.title('20CR-V2 '+'T'+str(nlat_new-ifix)+' '+verif_dict[var][1]+' anom. '+verif_dict[var][5]+' '+str(yr), fontweight='bold')
+            #LMR_plotter(pdata_tcr*verif_dict[var][6],lat2_TCR,lon2_TCR,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+            #plt.title('20CR-V2 '+'orig. grid'+' '+verif_dict[var][1]+' anom. '+verif_dict[var][5]+' '+str(yr), fontweight='bold')
             plt.clim(fmin,fmax)
             ax = fig.add_subplot(3,1,3)    
-            LMR_plotter(era20c_trunc*verif_dict[var][5],lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
-            plt.title('ERA-20C '+'T'+str(nlat_new-ifix)+' '+verif_dict[var][0]+' anom. '+verif_dict[var][4]+' '+str(yr), fontweight='bold')
-            #LMR_plotter(pdata_era20c*verif_dict[var][5],lat2_ERA20C,lon2_ERA20C,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
-            #plt.title('ERA-20C '+'orig. grid'+' '+verif_dict[var][0]+' anom. '+verif_dict[var][4]+' '+str(yr), fontweight='bold')
+            LMR_plotter(era20c_trunc*verif_dict[var][6],lat2_new,lon2_new,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+            plt.title('ERA-20C '+'T'+str(nlat_new-ifix)+' '+verif_dict[var][1]+' anom. '+verif_dict[var][5]+' '+str(yr), fontweight='bold')
+            #LMR_plotter(pdata_era20c*verif_dict[var][6],lat2_ERA20C,lon2_ERA20C,'bwr',nflevs,vmin=fmin,vmax=fmax,extend='both')
+            #plt.title('ERA-20C '+'orig. grid'+' '+verif_dict[var][1]+' anom. '+verif_dict[var][5]+' '+str(yr), fontweight='bold')
             plt.clim(fmin,fmax)
             fig.tight_layout()
-            plt.savefig(nexp+'_LMR_TCR_ERA20C_'+verif_dict[var][0]+'anom_'+str(yr)+'.png')
+            plt.savefig(nexp+'_LMR_TCR_ERA20C_'+verif_dict[var][1]+'anom_'+str(yr)+'.png')
             plt.close()
         
         # save the full grids
@@ -482,7 +481,7 @@ for var in verif_vars:
             cb.locator = tick_locator
             cb.ax.yaxis.set_major_locator(matplotlib.ticker.AutoLocator())
             cb.update_ticks()
-            ax.set_title('LMR '+verif_dict[var][0]+' '+str(ntrunc_new) + ' ' + str(yr))
+            ax.set_title('LMR '+verif_dict[var][1]+' '+str(ntrunc_new) + ' ' + str(yr))
         
             ax = fig.add_subplot(2,2,2)
             m2 = bm.Basemap(projection='robin',lon_0=0)
@@ -494,7 +493,7 @@ for var in verif_vars:
             cb.locator = tick_locator
             cb.ax.yaxis.set_major_locator(matplotlib.ticker.AutoLocator())
             cb.update_ticks()
-            ax.set_title('20CR-V2 '+verif_dict[var][0]+' '+str(ntrunc_new) + ' ' + str(yr))
+            ax.set_title('20CR-V2 '+verif_dict[var][1]+' '+str(ntrunc_new) + ' ' + str(yr))
         
             ax = fig.add_subplot(2,2,3)
             m3 = bm.Basemap(projection='robin',lon_0=0)
@@ -506,14 +505,14 @@ for var in verif_vars:
             cb.locator = tick_locator
             cb.ax.yaxis.set_major_locator(matplotlib.ticker.AutoLocator())
             cb.update_ticks()
-            ax.set_title('ERA20C '+verif_dict[var][0]+' '+str(ntrunc_new) + ' ' + str(yr))
+            ax.set_title('ERA20C '+verif_dict[var][1]+' '+str(ntrunc_new) + ' ' + str(yr))
         
             plt.clim(-maxabs,maxabs)
         
             # get these numbers by adjusting the figure interactively!!!
             plt.subplots_adjust(left=0.05, bottom=0.45, right=0.95, top=0.95, wspace=0.1, hspace=0.0)
             # plt.tight_layout(pad=0.3)
-            fig.suptitle(verif_dict[var][0] + ' for ' +str(nya) +' year centered average')
+            fig.suptitle(verif_dict[var][1] + ' for ' +str(nya) +' year centered average')
     
 
         # anomaly correlation
@@ -621,11 +620,11 @@ for var in verif_vars:
     ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(te_csave)),fontsize=11,fontweight='bold')
     #fig.tight_layout()
     plt.subplots_adjust(left=0.1, bottom=0.45, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
-    fig.suptitle(verif_dict[var][1]+' anomaly correlation',fontweight='bold') 
+    fig.suptitle(verif_dict[var][2]+' anomaly correlation',fontweight='bold') 
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf', bbox_inches='tight', dpi=300, format='pdf')
+        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
+        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf', bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
 
         # =======================================================================================================
@@ -675,10 +674,10 @@ for var in verif_vars:
     
         fig.tight_layout()
         plt.subplots_adjust(left=0.1, bottom=0.45, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
-        fig.suptitle(verif_dict[var][1]+' anomaly correlation',fontweight='bold') 
+        fig.suptitle(verif_dict[var][2]+' anomaly correlation',fontweight='bold') 
 
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf', bbox_inches='tight', dpi=300, format='pdf')
+        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
+        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf', bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
     
         # =======================================================================================================
@@ -854,12 +853,12 @@ for var in verif_vars:
     plt.xlim([-1.5,1])
     plt.xlabel('Coefficient of efficiency',fontweight='bold')
     #plt.title('CE (TCR dashed; ERA20C solid)')
-    plt.suptitle('LMR zonal-mean verification - '+verif_dict[var][1],fontweight='bold')
+    plt.suptitle('LMR zonal-mean verification - '+verif_dict[var][2],fontweight='bold')
     fig.tight_layout(pad = 2.0)
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') 
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
+        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') 
+        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
 
 
@@ -873,45 +872,45 @@ for var in verif_vars:
         fig = plt.figure()
         ax = fig.add_subplot(4,2,1)    
         LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - 20CR-V2 '+verif_dict[var][0]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
+        plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,2)    
         LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - 20CR-V2 '+verif_dict[var][0]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
+        plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,3)    
         LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - ERA-20C '+verif_dict[var][0]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
+        plt.title('LMR - ERA-20C '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,4)    
         LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - ERA-20C '+verif_dict[var][0]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
+        plt.title('LMR - ERA-20C '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,5)    
         LMR_plotter(r_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('20CR-V2 - ERA-20C '+verif_dict[var][0]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_rmean_global))
+        plt.title('20CR-V2 - ERA-20C '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,6)    
         LMR_plotter(ce_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('20CR-V2 - ERA-20C '+verif_dict[var][0]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_cemean_global))
+        plt.title('20CR-V2 - ERA-20C '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
   
         fig.tight_layout()
         if fsave:
             print 'saving to .png'
-            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png')
-            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
+            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png')
+            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
             plt.close()
 
             # ================================================================================================================
@@ -920,32 +919,32 @@ for var in verif_vars:
             fig = plt.figure()
             ax = fig.add_subplot(4,2,1)    
             LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-            plt.title('LMR - 20CR-V2 '+verif_dict[var][0]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
+            plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
 
             ax = fig.add_subplot(4,2,2)    
             LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-            plt.title('LMR - 20CR-V2 '+verif_dict[var][0]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
+            plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
 
             ax = fig.add_subplot(4,2,3)    
             LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
-            plt.title('LMR - ERA-20C '+verif_dict[var][0]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
+            plt.title('LMR - ERA-20C '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
 
             ax = fig.add_subplot(4,2,4)    
             LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
-            plt.title('LMR - ERA-20C '+verif_dict[var][0]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
+            plt.title('LMR - ERA-20C '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
 
             fig.tight_layout()
             print 'saving to .png'
-            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
-            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf',bbox_inches='tight', dpi=300, format='pdf')
+            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
+            plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf',bbox_inches='tight', dpi=300, format='pdf')
             plt.close()
 
             # ================================================================================================================
@@ -974,10 +973,10 @@ for var in verif_vars:
     cb = LMR_plotter(calib,lat2_new,lon2_new,mapcolor_calib,11,0,10,extend='max',nticks=10)
     #cb.set_ticks(range(11))
     # overlay stations!
-    plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n '+verif_dict[var][1])
+    plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n '+verif_dict[var][2])
     if fsave:
         print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][0]+'_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')  
+        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')  
 
 
     # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def

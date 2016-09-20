@@ -36,6 +36,16 @@ Revisions:
               proxy psm objects that defines the climate variable to which
               each proxy record is deemed sensitive to.
               (R. Tardif - U. of Washington)
+   July 2016:
+            - Slight code adjustments for handling possible use of PSM calibrated 
+              on the basis of proxy records seasonality metadata.
+              (R. Tardif - U. of Washington)
+ August 2016:
+            - Introduced new function that loads pre-calculated Ye values 
+              generated using psm types assigned to individual proxy types
+              as defined in the experiment configuration. 
+              (R. Tardif - U. of Washington)
+
 """
 import numpy as np
 from os.path import join
@@ -44,6 +54,7 @@ from time import time
 import LMR_proxy_pandas_rework
 import LMR_prior
 import LMR_utils
+import LMR_psms
 import LMR_config as BaseCfg
 from LMR_DA import enkf_update_array, cov_localization
 from LMR_utils import FlagError
@@ -59,7 +70,7 @@ def LMR_driver_callable(cfg=None):
     prior = cfg.prior
 
     # verbose controls print comments (0 = none; 1 = most important;
-    #  2 = many; >=3 = all)
+    #  2 = many; 3 = a lot; >=4 = all)
     verbose = 3
 
     nexp = core.nexp
@@ -115,11 +126,7 @@ def LMR_driver_callable(cfg=None):
     # new option: detrending the prior
     X.detrend = prior.detrend
     print 'detrend:', X.detrend
-    # new option: prior as full field or anomalies?
-    X.kind =  prior.state_kind
-    print 'prior kind:', X.kind
     X.avgInterval = prior.avgInterval
-
     
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source, prior)
@@ -151,20 +158,21 @@ def LMR_driver_callable(cfg=None):
     prox_manager = LMR_proxy_pandas_rework.ProxyManager(cfg, recon_period)
     type_site_assim = prox_manager.assim_ids_by_group
 
-    if verbose > 0:
+    if verbose > 3:
         print 'Assimilating proxy types/sites:', type_site_assim
 
-    print '--------------------------------------------------------------------'
-    print 'Proxy counts for experiment:'
-    # count the total number of proxies
-    total_proxy_count = len(prox_manager.ind_assim)
-    for pkey, plist in type_site_assim.iteritems():
-        print('%45s : %5d' % (pkey, len(plist)))
-    print('%45s : %5d' % ('TOTAL', total_proxy_count))
-    print '--------------------------------------------------------------------'
+    if verbose > 0:
+        print '--------------------------------------------------------------------'
+        print 'Proxy counts for experiment:'
+        # count the total number of proxies
+        total_proxy_count = len(prox_manager.ind_assim)
+        for pkey, plist in type_site_assim.iteritems():
+            print('%45s : %5d' % (pkey, len(plist)))
+        print('%45s : %5d' % ('TOTAL', total_proxy_count))
+        print '--------------------------------------------------------------------'
 
-    proxy_load_time = time() - begin_time_proxy_load
     if verbose > 2:
+        proxy_load_time = time() - begin_time_proxy_load
         print '-----------------------------------------------------'
         print 'Loading completed in ' + str(proxy_load_time) + ' seconds'
         print '-----------------------------------------------------'
@@ -174,7 +182,7 @@ def LMR_driver_callable(cfg=None):
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
 
-        # Handle state vector with multiple state variables
+    # Handle state vector with multiple state variables
 
     # Declare dictionary w/ info on content of truncated state vector
     new_state_info = {}
@@ -209,12 +217,12 @@ def LMR_driver_callable(cfg=None):
             nlat_new = np.shape(lat_new)[0]
             nlon_new = np.shape(lat_new)[1]
 
-            print ('=> Full array:      ' + str(np.min(var_array_full)) +
-                   str(np.max(var_array_full)) + str(np.mean(var_array_full)) +
-                   str(np.std(var_array_full)))
-            print ('=> Truncated array: ' + str(np.min(var_array_new)) +
-                   str(np.max(var_array_new)) + str(np.mean(var_array_new)) +
-                   str(np.std(var_array_new)))
+            print ('=> Full array:      ' + str(np.min(var_array_full)) + ' ' +
+                   str(np.max(var_array_full)) + ' ' + str(np.mean(var_array_full)) +
+                   ' ' + str(np.std(var_array_full)))
+            print ('=> Truncated array: ' + str(np.min(var_array_new)) + ' ' +
+                   str(np.max(var_array_new)) + ' ' + str(np.mean(var_array_new)) +
+                   ' ' + str(np.std(var_array_new)))
 
             # corresponding indices in truncated state vector
             ibeg_new = Nx
@@ -278,30 +286,11 @@ def LMR_driver_callable(cfg=None):
                                 'ated ye values.')
 
             print 'Loading precalculated Ye values.'
-            Ye_all = LMR_utils.load_precalculated_ye_vals(cfg, prox_manager,
+            Ye_all = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg, prox_manager,
                                                           X.prior_sample_indices)
+
         except (IOError, FlagError) as e:
             print e
-
-            # Check if trying to use seasonally-calibrated psm here while 
-            # use_precalc_ye=False (combination of options not enabled). 
-            if cfg.psm.avgPeriod == 'season':
-                print ('ERROR: Conflicting options in configuration :'
-                       ' Trying to use seasonally-calibrated PSM'
-                       ' (avgPeriod=season in class psm) while'
-                       ' the use_precalc_ye option is set to False. '
-                       ' Combination of options not enabled!')
-                raise SystemExit()
-
-            # Check to see if we have necessary variables in our state to
-            # calculate the Ye values manually.
-            for psm_required_var in cfg.prior.psm_required_variables:
-                if psm_required_var not in cfg.prior.state_variables:
-                    print ('Could not calculate required ye_values from prior.'
-                           ' Add the required variable to the state variable'
-                           ' list -- OR -- run the precalc file builder: '
-                           'misc/build_ye_file.py')
-                    raise SystemExit()
 
             # Manually calculate ye_values from state vector
             print 'Calculating ye_values from the prior...'
@@ -334,7 +323,7 @@ def LMR_driver_callable(cfg=None):
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
 
     # TODO: AP temporary fix for no TAS in state
-    if 'tas_sfc_Amon' in cfg.prior.state_variables:
+    if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
         gmt_save = np.zeros([total_proxy_count+1,recon_period[1] - recon_period[0] + 1])
         nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
         shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
@@ -384,7 +373,7 @@ def LMR_driver_callable(cfg=None):
             except KeyError:
                 # Make sure GMT spot filled from previous proxy
                 # TODO: AP temporary fix for no TAS in state
-                if 'tas_sfc_Amon' in cfg.prior.state_variables:
+                if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
                     gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
                 continue
 
@@ -425,7 +414,7 @@ def LMR_driver_callable(cfg=None):
             Xa = enkf_update_array(Xb, Y.values[t], Ye, ob_err, loc)
 
             # TODO: AP Temporary fix for no TAS in state
-            if 'tas_sfc_Amon' in cfg.prior.state_variables:
+            if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
                 xam = Xa.mean(axis=1)
                 xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
                 [gmt, nhmt, shmt] = \
@@ -465,7 +454,7 @@ def LMR_driver_callable(cfg=None):
     # 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
     # need to fix this so that every year is counted
     # TODO: AP temporary fix for no TAS
-    if 'tas_sfc_Amon' in cfg.prior.state_variables:
+    if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
         gmt_ensemble = np.zeros([ntimes, nens])
         nhmt_ensemble = np.zeros([ntimes,nens])
         shmt_ensemble = np.zeros([ntimes,nens])
