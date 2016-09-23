@@ -669,7 +669,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_avgPeriod = config.psm.linear.avgPeriod
         calib_str = config.psm.linear.datatag_calib
         state_vars_for_ye = config.psm.linear.psm_required_variables
-
+        
     elif psm_key == 'linear_TorP':
         calib_avgPeriod = config.psm.linear_TorP.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.linear_TorP.datatag_calib_T,
@@ -689,7 +689,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         
     else:
         raise ValueError('Unrecognized PSM key.')
-
+    
     if calib_avgPeriod:
         psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str
     else:
@@ -702,7 +702,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
                          sorted(state_vars_for_ye) + [prior_kind])
-        
+
     return '{}_{}_{}.npz'.format(prior_str, psm_str, proxy_str)
 
 
@@ -803,7 +803,7 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
             raise SystemExit()
         precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
 
-
+    
     print '  Now extracting proxy type-dependent Ye values...'
     for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
         psm_key = pobj.psm_obj.psm_key
@@ -812,7 +812,7 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
         
         pidx = pid_idx_map[pobj.id]
         ye_all[i] = precalc_vals[pidx, sample_idxs]
-
+    
     print '  Completed in ',  time() - begin_load, 'secs'
         
     return ye_all
@@ -894,7 +894,18 @@ def validate_config(config):
 
     # Constraints irrespective of value chosen for use_precalc_ye
 
-    # 3) Check compatibility between variable 'kind' ('anom' or 'full')
+    # 3) Cannot use seasonally-calibrated PSMs with PAGES1 proxies
+    #    Required metadata not available in that dataset.
+
+    if config.psm.avgPeriod == 'season' and proxy_database == 'pages':
+        print (' ERROR: Conflicting options in configuration :'
+               ' Trying to use seasonally-calibrated PSM'
+               ' (avgPeriod=season in class psm) with PAGES1 proxies.'
+               ' No seasonality metadata available in that dataset.'
+               ' Change avgPeriod to "annual" in your configuration.')
+        proceed_ok = False
+        
+    # 4) Check compatibility between variable 'kind' ('anom' or 'full')
     #    between prior state variables and requirements of chosen PSMs
 
     # For every PSM class to be used

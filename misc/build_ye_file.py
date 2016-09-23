@@ -72,6 +72,46 @@ proxy_types = proxy_cfg.proxy_psm_type.keys()
 psm_keys = [proxy_cfg.proxy_psm_type[p] for p in proxy_types]
 unique_psm_keys = list(set(psm_keys))
 
+# A quick check of availability of calibrated PSMs
+if 'linear_TorP' in unique_psm_keys:
+    psm_ok = True
+    # check existence of required pre-calibrated PSM files
+    if not os.path.exists(cfg.psm.linear_TorP.pre_calib_datafile_T):
+        print ('*** linear_TorP PSM: Cannot find file of pre-calibrated PSMs for temperature:'
+               ' \n %s' %cfg.psm.linear_TorP.pre_calib_datafile_T)
+        psm_ok = False
+    if not os.path.exists(cfg.psm.linear_TorP.pre_calib_datafile_P):
+        print ('*** linear_TorP PSM: Cannot find file of pre-calibrated PSMs for moisture:'
+               ' \n %s' %cfg.psm.linear_TorP.pre_calib_datafile_P)
+        psm_ok = False
+    if not psm_ok:
+        raise (SystemExit('Exiting! You must use the PSMbuild facility to generate the appropriate calibrated PSMs'))
+  
+if 'linear' in unique_psm_keys:
+    if not os.path.exists(cfg.psm.linear.pre_calib_datafile):
+        print ('*** linear PSM: Cannot find file of pre-calibrated PSMs:'
+               ' \n %s' %cfg.psm.linear.pre_calib_datafile)
+        print ('Perform calibration "on-the-fly" and calculate Ye values?'
+               ' \nThis will take longer and PSM calibration parameters will not be stored in a file...')
+        userinput = raw_input('Continue (y/n)? ')
+        if userinput == 'y' or userinput == 'yes':
+            print 'ok...continuing...'
+        else:
+            raise (SystemExit('Exiting! Use the PSMbuild facility to generate the appropriate calibrated PSMs'))
+        
+if 'bilinear' in unique_psm_keys:
+    if not os.path.exists(cfg.psm.bilinear.pre_calib_datafile):
+        print ('*** bilinear PSM: Cannot find file of pre-calibrated PSMs:'
+               ' \n %s' %cfg.psm.bilinear.pre_calib_datafile)
+        print ('Perform calibration "on-the-fly" and calculate Ye values?'
+               ' \nThis will take longer and PSM calibration parameters will not be stored in a file...')
+        userinput = raw_input('Continue (y/n)? ')
+        if userinput == 'y' or userinput == 'yes':
+            print 'ok...continuing...'
+        else:
+            raise (SystemExit('Exiting! Use the PSMbuild facility to generate the appropriate calibrated PSMs'))
+# Finished checking ...
+
 # Loop over all psm types found in the configuration
 for psm_key in unique_psm_keys:
 

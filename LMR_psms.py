@@ -696,9 +696,21 @@ class LinearPSM_TorP(LinearPSM):
                         str((proxy, site)))
 
         # Check if PSM is calibrated w.r.t. temperature and/or w.r.t.
-        # precipitation/moisture
-        # Assign proxy "sensitivity" based on PSM calibration
-            
+        # precipitation/moisture. Assign proxy "sensitivity" based on
+        # PSM calibration.
+
+        # First check if required PSM calibration data is available      
+        psm_ok = True
+        if not psm_data_T:
+            print ('In "LinearPSM_TorP" class: Cannot find PSM calibration data for temperature.')
+            psm_ok = False
+        if not psm_data_P:
+            print ('In "LinearPSM_TorP" class: Cannot find PSM calibration data for moisture.')
+            psm_ok = False
+        if not psm_ok:
+            raise (SystemExit('Exiting! You must use the PSMbuild facility to generate the appropriate calibrated PSMs'))
+
+        # Now check about temperature vs. moisture ...
         if (proxy, site) in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
             # calibrated for temperature AND for precipitation, check relative goodness of fit 
             # and assign "sensitivity" & corresponding PSM parameters according to best fit.
@@ -942,6 +954,9 @@ class BilinearPSM(BasePSM):
             datag_calib_T = config.psm.bilinear.datatag_calib_T
             datag_calib_P = config.psm.bilinear.datatag_calib_P
 
+            self.calib_temperature = datag_calib_T
+            self.calib_moisture = datag_calib_P
+            
             # Two calibration objects, temperature and precipitation/moisture
             C_T = LMR_calibrate.calibration_assignment(datag_calib_T)
             C_T.datadir_calib = config.psm.bilinear.datadir_calib
@@ -1452,7 +1467,7 @@ class h_interpPSM(BasePSM):
             return {'R_data': R_data}
         except IOError as e:
             print e
-            exit(1) # force an exit
+            raise (SystemExit('In "h_interpPSM" class: Cannot find PSM calibration file: %s. Exiting!' % pre_calib_file))
 
     @staticmethod
     def _load_psm_data(config):
@@ -1461,7 +1476,7 @@ class h_interpPSM(BasePSM):
         R_data_file = config.psm.h_interp.datafile_obsError
         # check if file exists
         if not os.path.isfile(R_data_file):
-            raise(IOError('In "h_interpPSM" class: Cannot find file containing obs. error info.: %s. Exiting!' % R_data_file))
+            raise(SystemExit('In "h_interpPSM" class: Cannot find file containing obs. error info.: %s. Exiting!' % R_data_file))
         else:
             # this returns an array of tuples (proxy type of type string, proxy site name of type string, R value of type float)
             # transformed into a list
