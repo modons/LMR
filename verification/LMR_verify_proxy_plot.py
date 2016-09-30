@@ -72,11 +72,11 @@ fcolor = ['blue', 'red']
 
 
 # -------------------------
-# Section 3: Proxy datasets
+# Section 2: Proxy datasets
 # -------------------------
 
-#proxies = 'PAGES'
-proxies = 'NCDC'
+proxies = 'PAGES'
+#proxies = 'NCDC'
 
 
 # Assign symbol to proxy types for plotting: dependent on proxy database used.
@@ -99,24 +99,21 @@ elif proxies == 'NCDC':
     proxy_verif = {\
                    'Tree Rings_WoodDensity'        :'s',\
                    'Tree Rings_WidthPages'         :'o',\
+                   'Tree Rings_WidthPages2'        :'o',\
                    'Tree Rings_WidthBreit'         :'o',\
+                   'Tree Rings_Isotopes'           :'*',\
                    'Corals and Sclerosponges_d18O' :'p',\
-                   'Corals and Sclerosponges_d13C' :'.',\
-                   'Corals and Sclerosponges_d14C' :'.',\
-                   'Corals and Sclerosponges_SrCa' :'p',\
-                   'Corals and Sclerosponges_BaCa' :'.',\
-                   'Corals and Sclerosponges_CdCa' :'.',\
-                   'Corals and Sclerosponges_MgCa' :'.',\
-                   'Corals and Sclerosponges_UCa'  :'.',\
-                   'Corals and Sclerosponges_Sr'   :'.',\
-                   'Corals and Sclerosponges_Pb'   :'.',\
+                   'Corals and Sclerosponges_SrCa' :'8',\
+                   'Corals and Sclerosponges_Rates':'D',\
                    'Ice Cores_d18O'                :'v',\
                    'Ice Cores_dD'                  :'^',\
                    'Ice Cores_Accumulation'        :'D',\
-                   'Ice Cores_MeltFeature'         :'D',\
+                   'Ice Cores_MeltFeature'         :'d',\
                    'Lake Cores_Varve'              :'<',\
+                   'Lake Cores_BioMarkers'         :'>',\
+                   'Lake Cores_GeoChem'            :'^',\
+                   'Marine Cores_d18O'             :'H',\
                    'Speleothems_d18O'              :'h',\
-                   'Speleothems_d13C'              :'h',\
     }
 else:
     print 'ERROR in the especification of the proxy dataset that will be considered. Exiting...'
@@ -131,20 +128,23 @@ r_crit = 0.0
 # Section 3: Directories & experiments
 # ------------------------------------
 
-datadir_input = '/home/disk/ekman/rtardif/kalman3/LMR/output'
-#datadir_input = '/home/disk/ekman/rtardif/kalman3/LMR/output/verification_production_runs'
+#datadir_input = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_input = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_input = '/home/disk/kalman3/rtardif/LMR/output/verification_production_runs'
 
-#nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 #nexp = 'production_mlost_ccsm4_pagesall_0.75'
-nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
+nexp = 'test'
 
-calib = 'MLOST'
+# - old -
+#calib = 'MLOST'
 #calib = 'GISTEMP'
+# - new - 
+calib = 'linear-MLOST'
+#calib = 'bilinear-linear-GISTEMP-GPCC'
 
 verif_period = [[1880,2000],[0,1879]]
 #verif_period = [[1880,2000],[1759,1879]]
-
 
 # Output directory, where the figs will be dumped.
 #datadir_output = datadir_input # if want to keep things tidy
@@ -175,20 +175,31 @@ def main():
     # loop over verification periods & load data in dictionaries
     for p in range(nbperiods):
         # Read the pickle files containing summary stats
+        """
         fname_assim = datadir_input+'/'+nexp+'/'+'verifProxy_PSMcalib'+calib+'_'+str(verif_period[p][0])+'to'+str(verif_period[p][1])+\
             '/reconstruction_eval_assim_proxy_summary.pckl'
         fname_verif = datadir_input+'/'+nexp+'/'+'verifProxy_PSMcalib'+calib+'_'+str(verif_period[p][0])+'to'+str(verif_period[p][1])+\
             '/reconstruction_eval_verif_proxy_summary.pckl'
+        """
+        fname_assim = datadir_input+'/'+nexp+'/'+'verifProxy_PSM_'+calib+'_'+str(verif_period[p][0])+'to'+str(verif_period[p][1])+\
+            '/reconstruction_eval_assim_proxy_summary.pckl'
+        fname_verif = datadir_input+'/'+nexp+'/'+'verifProxy_PSM_'+calib+'_'+str(verif_period[p][0])+'to'+str(verif_period[p][1])+\
+            '/reconstruction_eval_verif_proxy_summary.pckl'
 
+        
         infile_assim   = open(fname_assim,'r')
         assim_dict[p] = cPickle.load(infile_assim)
         infile_assim.close()
 
-        infile_verif   = open(fname_verif,'r')
-        verif_dict[p] = cPickle.load(infile_verif)
-        infile_verif.close()
+        if os.path.isfile(fname_verif):
+            infile_verif   = open(fname_verif,'r')
+            verif_dict[p] = cPickle.load(infile_verif)
+            infile_verif.close()
+            verif_data = True
+        else:
+            verif_data = False
 
-
+    
     # ==================
     # Now creating plots
     # ==================
@@ -209,6 +220,9 @@ def main():
     irow = 1
     for v in vtype.keys(): # "assim" & "verif" proxies
 
+        if v == 'verif' and not verif_data:
+            break
+        
         ax_master = fig.add_subplot(2,1,irow)
         # Turn off axis lines and ticks of the big subplot 
         ax_master.tick_params(labelcolor=(1.,1.,1., 0.0), top='off', bottom='off', left='off', right='off')
@@ -240,7 +254,8 @@ def main():
             sitetag = workdict[p].keys()
             proxy_types = list(set([item[0] for item in sitetag]))
 
-            tmp = [workdict[p][k]['GrandEnsCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            #tmp = [workdict[p][k]['GrandEnsCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            tmp = [workdict[p][k]['GrandEnsCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
             stat = [item for sublist in tmp for item in sublist] # flatten list of lists
             nbdata = len(stat)
             mean_stat = np.mean(stat)
@@ -250,7 +265,8 @@ def main():
             plt.bar(edges[:-1]+binwidth/2,results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,align="center",label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
 
             # Accumulate prior stat
-            tmp = [workdict[p][k]['PriorGrandEnsCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            #tmp = [workdict[p][k]['PriorGrandEnsCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            tmp = [workdict[p][k]['PriorGrandEnsCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
             prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
         
@@ -283,7 +299,8 @@ def main():
             sitetag = workdict[p].keys()
             proxy_types = list(set([item[0] for item in sitetag]))
 
-            tmp = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            #tmp = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            tmp = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
             stat = [item for sublist in tmp for item in sublist] # flatten list of lists
             nbdata = len(stat)
             mean_stat = np.mean(stat)
@@ -295,7 +312,8 @@ def main():
             plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
 
             # Accumulate prior stat
-            tmp = [workdict[p][k]['PriorGrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            #tmp = [workdict[p][k]['PriorGrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            tmp = [workdict[p][k]['PriorGrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
             prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
         prior_ce = [item for sublist in prior_tmp for item in sublist]
@@ -329,8 +347,10 @@ def main():
             sitetag = workdict[p].keys()
             proxy_types = list(set([item[0] for item in sitetag]))
 
-            tmpPost  = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
-            tmpPrior = [workdict[p][k]['PriorGrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            #tmpPost  = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            #tmpPrior = [workdict[p][k]['PriorGrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
+            tmpPost  = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+            tmpPrior = [workdict[p][k]['PriorGrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
             statPost  = [item for sublist in tmpPost for item in sublist]  # flatten list of lists
             statPrior = [item for sublist in tmpPrior for item in sublist] # flatten list of lists
 
@@ -363,9 +383,9 @@ def main():
         irow = irow + 1
 
     fig.tight_layout()
-    plt.savefig('%s/%s_verify_proxy_hist_corr_ce_Allproxies_PSMcalib%s.png' % (figdir,nexp,calib),bbox_inches='tight')
+    plt.savefig('%s/%s_verify_proxy_hist_corr_ce_Allproxies_PSM_%s.png' % (figdir,nexp,calib),bbox_inches='tight')
     if make_pdfs:
-        plt.savefig('%s/%s_verify_proxy_hist_corr_ce_Allproxies_PSMcalib%s.pdf' % (figdir,nexp,calib),bbox_inches='tight',dpi=300, format='pdf')
+        plt.savefig('%s/%s_verify_proxy_hist_corr_ce_Allproxies_PSM_%s.pdf' % (figdir,nexp,calib),bbox_inches='tight',dpi=300, format='pdf')
     plt.close()
 
     # ==========================================================================

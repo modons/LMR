@@ -23,7 +23,8 @@ Revisions:
 """
 import os, sys
 import numpy as np
-import cPickle    
+import cPickle
+import timeit
 import pandas as pd
 from time import time
 from os.path import join
@@ -61,34 +62,6 @@ def roundup(x):
 # START:  set user parameters here
 # =============================================================================
 
-# ------------------------------
-# Section 1: Plotting parameters
-# ------------------------------
-
-make_plots = False
-make_plots_individual_sites = False
-
-# set the default size of the figure in inches. ['figure.figsize'] = width, height;  
-plt.rcParams['figure.figsize'] = 9, 7  # that's default image size for this interactive session
-plt.rcParams['axes.linewidth'] = 2.0 #set the value globally
-plt.rcParams['font.weight'] = 'bold' #set the font weight globally
-#plt.rc('text', usetex=True)
-plt.rc('text', usetex=False)
-
-# Assign symbol to proxy types for plotting
-proxy_verif = {\
-    'Tree ring_Width'       :'o',\
-    'Tree ring_Density'     :'s',\
-    'Ice core_d18O'         :'v',\
-    'Ice core_d2H'          :'^',\
-    'Ice core_Accumulation' :'D',\
-    'Coral_d18O'            :'p',\
-    'Coral_Luminescence'    :'8',\
-    'Lake sediment_All'     :'<',\
-    'Marine sediment_All'   :'>',\
-    'Speleothem_All'        :'h',\
-    }
-
 class v_core(object):
     """
     High-level parameters of reconstruction experiment
@@ -111,41 +84,22 @@ class v_core(object):
         Whether to write the full eval python dictionary to output directory
     """
 
-    #nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-    #
     # -- production recons for paper 1
     #nexp = 'production_gis_ccsm4_pagesall_0.75/'
     #nexp = 'production_mlost_ccsm4_pagesall_0.75/'
     #nexp = 'production_cru_ccsm4_pagesall_0.75/'
     #
-    # -- test recons with NCDC proxy data
-    #nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
-    #nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-    #nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
-    nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-    
+    nexp = 'test'
+
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HAdCRUT...) and proxies.
+    #lmr_path = '/home/disk/ice4/nobackup/hakim/lmr'
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
 
-    #verif_period = [0, 2000]
-    #verif_period = [0, 1849]
-    #verif_period = [1700,1849]
-    verif_period = [0, 1879]
-    #verif_period = [1880, 2000]
+    # inclusive
+    #verif_period = [0, 1879]
+    verif_period = [1880, 2000]
 
     #iter_range = [0, 0]
     iter_range = [0, 100]
@@ -158,7 +112,7 @@ class v_core(object):
     
     # Output directory, where the verification results & figs will be dumped.
     datadir_output = datadir_input # if want to keep things tidy
-    #datadir_output = '/home/disk/ekman/rtardif/kalman3/LMR/output/verification_production_runs'
+    #datadir_output = '/home/disk/ekman4/rtardif/LMR/output/verification_production_runs'
 
     # Whether to write the full eval python dictionary to output directory ("summary" dict. has most of what we want)
     write_full_verif_dict = False
@@ -187,10 +141,14 @@ class v_proxies(object):
         Fraction of available proxy data (sites) to assimilate
     """
 
-    #use_from = ['pages']
-    use_from = ['NCDC']
+    use_from = ['pages']
+    #use_from = ['NCDC']
     proxy_frac = 1.0
 
+    # type of proxy timeseries to return: 'anom' for anomalies
+    # (temporal mean removed) or asis' to keep unchanged
+    proxy_timeseries_kind = 'asis'
+    
     # ---------------
     # PAGES2k proxies
     # ---------------
@@ -237,23 +195,44 @@ class v_proxies(object):
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
+
         proxy_resolution = [1.0]
-        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
-        
 
         # DO NOT CHANGE FORMAT BELOW
 
-        proxy_order = ['Tree ring_Width',
-                       'Tree ring_Density',
-                       'Ice core_d18O',
-                       'Ice core_d2H',
-                       'Ice core_Accumulation',
-                       'Coral_d18O',
-                       'Coral_Luminescence',
-                       'Lake sediment_All',
-                       'Marine sediment_All',
-                       'Speleothem_All']
+        proxy_order = [
+            'Tree ring_Width',
+            'Tree ring_Density',
+            'Ice core_d18O',
+            'Ice core_d2H',
+            'Ice core_Accumulation',
+            'Coral_d18O',
+            'Coral_Luminescence',
+            'Lake sediment_All',
+            'Marine sediment_All',
+            'Speleothem_All'
+        ]
 
+        # Assignment of psm type per proxy type
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        #  The linear PSM can be used on *all* proxies.
+        #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
+        #  PSMs are aimed at *tree ring* proxies in particular
+        #  The h_interp forward model is to be used for isotope proxies when
+        #  the prior is taken from an isotope-enabled GCM model output. 
+        proxy_psm_type = {
+            'Tree ring_Width'      : 'linear',
+            'Tree ring_Density'    : 'linear',
+            'Ice core_d18O'        : 'linear',
+            'Ice core_d2H'         : 'linear',
+            'Ice core_Accumulation': 'linear',
+            'Coral_d18O'           : 'linear',
+            'Coral_Luminescence'   : 'linear',
+            'Lake sediment_All'    : 'linear',
+            'Marine sediment_All'  : 'linear',
+            'Speleothem_All'       : 'linear',
+            }
+        
         proxy_assim2 = {
             'Tree ring_Width': ['Ring width',
                                 'Tree ring width',
@@ -297,8 +276,9 @@ class v_proxies(object):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = self.proxy_resolution
-            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_timeseries_kind = v_proxies.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
+            self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.proxy_blacklist = list(self.proxy_blacklist)
             
@@ -366,38 +346,30 @@ class v_proxies(object):
         metafile_proxy = 'NCDC_%s_Metadata.df.pckl' %(dbversion)
         dataformat_proxy = 'DF'
 
+        # This is not activated with NCDC data yet...
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
 
         proxy_resolution = [1.0]
-        proxy_timeseries_kind = 'asis' # 'anom' for anomalies (temporal mean removed) or 'asis' to keep unchanged
         
         # Limit proxies to those included in the following databases
-        #database_filter = ['PAGES1']
         database_filter = []
+        #database_filter = ['PAGES2']
+        #database_filter = ['LMR','PAGES2']
 
         # A blacklist on proxy records, to prevent processing of chronologies known to be duplicates.
         proxy_blacklist = []
-        #proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
 
         
         # DO NOT CHANGE FORMAT BELOW
         proxy_order = [
             'Tree Rings_WoodDensity',
-            'Tree Rings_WidthPages',
+        #    'Tree Rings_WidthPages',
             'Tree Rings_WidthPages2',
             'Tree Rings_WidthBreit',
             'Tree Rings_Isotopes',
             'Corals and Sclerosponges_d18O',
-#            'Corals and Sclerosponges_d13C',
-#            'Corals and Sclerosponges_d14C',
             'Corals and Sclerosponges_SrCa',
-#            'Corals and Sclerosponges_BaCa',
-#            'Corals and Sclerosponges_CdCa',
-#            'Corals and Sclerosponges_MgCa',
-#            'Corals and Sclerosponges_UCa',
-#            'Corals and Sclerosponges_Sr',
-#            'Corals and Sclerosponges_Pb',
             'Corals and Sclerosponges_Rates',
             'Ice Cores_d18O',
             'Ice Cores_dD',
@@ -405,25 +377,43 @@ class v_proxies(object):
             'Ice Cores_MeltFeature',
             'Lake Cores_Varve',
             'Lake Cores_BioMarkers',
-            'Lake Cores_Geochem',
+            'Lake Cores_GeoChem',
             'Marine Cores_d18O',
 #            'Speleothems_d18O',
-#            'Speleothems_d13C'
             ]
 
+        # Assignment of psm type per proxy type
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        #  The linear PSM can be used on *all* proxies.
+        #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
+        #  PSMs are aimed at *tree ring* proxies in particular
+        #  The h_interp forward model is to be used for isotope proxies when
+        #  the prior is taken from an isotope-enabled GCM output. 
+        proxy_psm_type = {
+            'Corals and Sclerosponges_d18O' : 'linear',
+            'Corals and Sclerosponges_SrCa' : 'linear',
+            'Corals and Sclerosponges_Rates': 'linear',
+            'Ice Cores_d18O'                : 'linear',
+            'Ice Cores_dD'                  : 'linear',
+            'Ice Cores_Accumulation'        : 'linear',
+            'Ice Cores_MeltFeature'         : 'linear',
+            'Lake Cores_Varve'              : 'linear',
+            'Lake Cores_BioMarkers'         : 'linear',
+            'Lake Cores_GeoChem'            : 'linear',
+            'Marine Cores_d18O'             : 'linear',
+            'Tree Rings_WidthBreit'         : 'linear',
+            'Tree Rings_WidthPages2'        : 'linear',
+            'Tree Rings_WidthPages'         : 'linear',
+            'Tree Rings_WoodDensity'        : 'linear',
+            'Tree Rings_Isotopes'           : 'linear',
+            'Speleothems_d18O'              : 'linear',
+        }
+        
         proxy_assim2 = {
             'Corals and Sclerosponges_d18O' : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm',
                                                'd18o_avg','d18o_ave','dO18','d18O_4'],
-            'Corals and Sclerosponges_d14C' : ['d14C','d14c','ac_d14c'],
-            'Corals and Sclerosponges_d13C' : ['d13C','d13c','d13c_ave','d13c_ann_ave','d13C_int'],
             'Corals and Sclerosponges_SrCa' : ['Sr/Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
-            'Corals and Sclerosponges_Sr'   : ['Sr'],
-            'Corals and Sclerosponges_BaCa' : ['Ba/Ca'],
-            'Corals and Sclerosponges_CdCa' : ['Cd/Ca'],
-            'Corals and Sclerosponges_MgCa' : ['Mg/Ca'],
-            'Corals and Sclerosponges_UCa'  : ['U/Ca','U/Ca_anom'],
-            'Corals and Sclerosponges_Pb'   : ['Pb'],
-            'Corals and Sclerosponges_Rates': ['ext','calc']
+            'Corals and Sclerosponges_Rates': ['ext','calc'],
             'Ice Cores_d18O'                : ['d18O','delta18O','delta18o','d18o','dO18',
                                                'd18o_int','d18O_int',
                                                'd18O_norm','d18o_norm',
@@ -433,10 +423,9 @@ class v_proxies(object):
             'Ice Cores_MeltFeature'         : ['MFP'],
             'Lake Cores_Varve'              : ['varve', 'varve_thickness', 'varve thickness'],
             'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'],
-            'Lake Cores_Geochem'            : ['Sr/Ca', 'Mg/Ca','Cl_cont'],
+            'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca','Cl_cont'],
             'Marine Cores_d18O'             : ['d18O'],
             'Speleothems_d18O'              : ['d18O'],
-            'Speleothems_d13C'              : ['d13C'],
             'Tree Rings_WidthBreit'         : ['trsgi_breit'],
             'Tree Rings_WidthPages2'        : ['trsgi'], 
             'Tree Rings_WidthPages'         : ['TRW',
@@ -467,8 +456,9 @@ class v_proxies(object):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = self.proxy_resolution
-            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_timeseries_kind = v_proxies.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
+            self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.database_filter = list(self.database_filter)
             self.proxy_blacklist = list(self.proxy_blacklist)
@@ -498,14 +488,16 @@ class v_psm(object):
 
     Attributes
     ----------
-    use_psm: dict{str: str}
-        Maps proxy class key to psm class key.  Used to determine which psm
-        is associated with what Proxy type.
+    avgPeriod: str
+        Indicates use of PSMs calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
     """
 
-    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
-    #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
-    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
+    # Keep this as annual, as it is assumed that LMR output is annual
+    avgPeriod = 'annual'
+    
+    # Mapping of calibration sources w/ climate variable
+    # To be modified only if a new calibration source is added. 
+    all_calib_sources = {'temperature': ['GISTEMP', 'MLOST', 'HadCRUT', 'BerkeleyEarth'], 'moisture': ['GPCC','DaiPDSI']}
 
     
     class _linear(object):
@@ -545,7 +537,7 @@ class v_psm(object):
         #datafile_calib = 'Land_and_Ocean_LatLong1.nc'
         # or 
         #datatag_calib = 'GPCC'
-        #datafile_calib = 'GPCC_precip.mon.total.1x1.v6.nc'
+        #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
         #datatag_calib_P = 'DaiPDSI'
         #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
@@ -560,7 +552,8 @@ class v_psm(object):
             self.datatag_calib = self.datatag_calib
             self.datafile_calib = self.datafile_calib
             self.psm_r_crit = self.psm_r_crit
-
+            self.avgPeriod = v_psm.avgPeriod
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
             else:
@@ -571,6 +564,7 @@ class v_psm(object):
                     dbversion = v_proxies._ncdc.dbversion
                     filename = ('PSMs_'+'-'.join(v_proxies.use_from) +
                                 '_' + dbversion +
+                                '_' + self.avgPeriod +
                                 '_' + self.datatag_calib+'.pckl')
                 else:
                     filename = ('PSMs_' + '-'.join(v_proxies.use_from) +
@@ -582,6 +576,23 @@ class v_psm(object):
                 self.pre_calib_datafile = self.pre_calib_datafile
 
 
+            # association of calibration source and state variable needed to calculate Ye's
+            if self.datatag_calib in v_psm.all_calib_sources['temperature']:
+                self.psm_required_variables = {'tas_sfc_Amon': 'anom'}
+
+            elif self.datatag_calib in v_psm.all_calib_sources['moisture']:
+                if self.datatag_calib == 'GPCC':
+                    self.psm_required_variables = {'pr_sfc_Amon':'anom'}
+                elif self.datatag_calib == 'DaiPDSI':
+                    self.psm_required_variables = {'scpdsi_sfc_Amon': 'anom'}
+                else:
+                    raise KeyError('Unrecognized moisture calibration source.'
+                                   ' State variable not identified for Ye calculation.')
+            else:
+                raise KeyError('Unrecognized calibration source.'
+                               ' State variable not identified for Ye calculation.')
+    
+    
     class _linear_TorP(_linear):
         """
         Parameters for the linear fit PSM.
@@ -635,9 +646,6 @@ class v_psm(object):
         # ----------------------------------------
         # Choice between:
         # ---------------
-        # datatag_calib_P = 'GPCC'
-        # datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
-        # or
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
@@ -658,7 +666,8 @@ class v_psm(object):
             self.datafile_calib_P = self.datafile_calib_P
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
-
+            self.avgPeriod = v_psm.avgPeriod
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
             else:
@@ -669,6 +678,7 @@ class v_psm(object):
                     dbversion = v_proxies._ncdc.dbversion
                     filename_t = ('PSMs_' + '-'.join(v_proxies.use_from) +
                                   '_' + dbversion +
+                                  '_' + self.avgPeriod +
                                   '_' + self.datatag_calib_T + '.pckl')
                 else:
                     filename_t = ('PSMs_' + '-'.join(v_proxies.use_from) +
@@ -684,6 +694,7 @@ class v_psm(object):
                     dbversion = v_proxies._ncdc.dbversion
                     filename_p = ('PSMs_' + '-'.join(v_proxies.use_from) +
                                   '_' + dbversion +
+                                  '_' + self.avgPeriod +
                                   '_' + self.datatag_calib_P + '.pckl')
                 else:
                     filename_p = ('PSMs_' + '-'.join(v_proxies.use_from) +
@@ -695,6 +706,21 @@ class v_psm(object):
                 self.pre_calib_datafile_P = self.pre_calib_datafile_P
 
 
+            # association of calibration sources and state variables needed to calculate Ye's
+            required_variables = {'tas_sfc_Amon': 'anom'} # start with temperature
+
+            # now check for moisture & add variable to list
+            if self.datatag_calib_P == 'GPCC':
+                    required_variables['pr_sfc_Amon'] = 'anom'
+            elif self.datatag_calib_P == 'DaiPDSI':
+                    required_variables['scpdsi_sfc_Amon'] = 'anom'
+            else:
+                raise KeyError('Unrecognized moisture calibration source.'
+                               ' State variable not identified for Ye calculation.')
+
+            self.psm_required_variables = required_variables
+            
+                
     class _bilinear(object):
         """
         Parameters for the bilinear fit PSM.
@@ -743,9 +769,6 @@ class v_psm(object):
 
         # calibration w.r.t. precipitation/moisture
         # ----------------------------------------
-        #datatag_calib_P = 'GPCC'
-        #datafile_calib_P = 'GPCC_precip.mon.total.1x1.v6.nc'
-        # or 
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
@@ -764,7 +787,8 @@ class v_psm(object):
             self.datatag_calib_P = self.datatag_calib_P
             self.datafile_calib_P = self.datafile_calib_P
             self.psm_r_crit = self.psm_r_crit
-
+            self.avgPeriod = v_psm.avgPeriod
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(v_core.lmr_path, 'data', 'analyses')
             else:
@@ -776,6 +800,7 @@ class v_psm(object):
                     dbversion = v_proxies._ncdc.dbversion
                     filename = ('PSMs_'+'-'.join(v_proxies.use_from) +
                                 '_' + dbversion +
+                                '_' + self.avgPeriod +
                                 '_' + self.datatag_calib_T +
                                 '_' + self.datatag_calib_P +'.pckl')
                 else:
@@ -788,14 +813,80 @@ class v_psm(object):
             else:
                 self.pre_calib_datafile = self.pre_calib_datafile
 
-    
+            # association of calibration sources and state variables needed to calculate Ye's
+            required_variables = {'tas_sfc_Amon': 'anom'} # start with temperature
+
+            # now check for moisture & add variable to list
+            if self.datatag_calib_P == 'GPCC':
+                    required_variables['pr_sfc_Amon'] = 'anom'
+            elif self.datatag_calib_P == 'DaiPDSI':
+                    required_variables['scpdsi_sfc_Amon'] = 'anom'
+            else:
+                raise KeyError('Unrecognized moisture calibration source.'
+                               ' State variable not identified for Ye calculation.')
+
+            self.psm_required_variables = required_variables
+
+
+    class _h_interp(object):
+        """
+        Parameters for the horizontal interpolator PSM.
+
+        Attributes
+        ----------
+        radius_influence : real
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
+        datadir_obsError: str
+            Absolute path to obs. error variance data
+        filename_obsError: str
+            Filename for obs. error variance data
+        dataformat_obsError: str
+            String indicating the format of the file containing obs. error
+            variance data
+            Note: note currently used by code. For info purpose only.
+        datafile_obsError: str
+            Absolute path/filename of obs. error variance data
+        """
+
+        ##** BEGIN User Parameters **##
+
+        # Interpolation parameter:
+        # Set to 'None' if want Ye = value at nearest grid point to proxy
+        # location
+        # Set to a non-zero float if want Ye = weighted-average of surrounding
+        # gridpoints
+        # radius_influence = None
+        radius_influence = 50. # distance-scale in km
+        
+        ##** END User Parameters **##
+
+        def __init__(self):
+            self.radius_influence = self.radius_influence
+            # File with R values not required in context of this program.
+            self.datafile_obsError = None
+                
+            # define state variable needed to calculate Ye's
+            # only d18O for now ...
+            # psm requirements depend on settings in proxies class 
+            proxy_kind = v_proxies.proxy_timeseries_kind
+            if v_proxies.proxy_timeseries_kind == 'asis':
+                psm_var_kind = 'full'
+            elif v_proxies.proxy_timeseries_kind == 'anom':
+                psm_var_kind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
+                                 ' Unable to assign kind to psm_required_variables'
+                                 ' in h_interp psm class.')                
+            self.psm_required_variables = {'d18O_sfc_Amon': psm_var_kind}
+
+
     # Initialize subclasses with all attributes
     def __init__(self, **kwargs):
-        self.use_psm = self.use_psm
         self.linear = self._linear(**kwargs)
         self.linear_TorP = self._linear_TorP(**kwargs)
         self.bilinear = self._bilinear(**kwargs)
-                
+        self.h_interp = self._h_interp(**kwargs)
 
 # =============================================================================
 # END:  set user parameters here
@@ -806,9 +897,7 @@ class config(object):
         self.proxies = proxies()
         self.psm = psm()
 
-Cfg = config(v_core, v_proxies,v_psm)
-
-#==============================================================================
+Cfg = config(v_core,v_proxies,v_psm)
 
 
 # =============================================================================
@@ -820,28 +909,24 @@ def main():
     #
     # TODO: re-define "verif" proxies as those in the database (all proxy objects given by "load_all") that are NOT in the assimilated set
     # 
-
-
     
     verbose = 1
 
+    # Keep = True for now ...
     complement_set = True
     
     begin_time = time()
 
+    nexp =  Cfg.core.nexp
     proxy_database = Cfg.proxies.use_from[0]
-    # get psm type (linear, linear_torP, bilinear, h_interp)
-    psm_type = Cfg.psm.use_psm[proxy_database]
-    # import related psm class
-    psm_class =  LMR_psms.get_psm_class(psm_type)
-    psm_kwargs = psm_class.get_kwargs(Cfg)
-
     verif_period = Cfg.core.verif_period
-    
+
+    print 'Experiment          :', nexp
     print 'Proxies             :', proxy_database
-    print 'PSM type            :', psm_type
     print 'Verif. period       :', verif_period
 
+    dimtime = (verif_period[1] - verif_period[0]) + 1
+    
     if proxy_database == 'pages':
         print 'Proxy data location :', Cfg.proxies.pages.datadir_proxy
     elif proxy_database == 'NCDC':
@@ -853,9 +938,11 @@ def main():
     # get proxy class
     proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
     # load proxy data
+    beginload = timeit.default_timer()
+    print 'Loading proxy & associated psm objects ...' 
     proxy_ids_by_grp, proxy_objects = proxy_class.load_all(Cfg,
-                                                       verif_period,
-                                                       **psm_kwargs)
+                                                           verif_period,
+                                                           None)
 
     master_proxy_list = []
     for proxy_idx, Y in enumerate(proxy_objects): master_proxy_list.append((Y.type,Y.id))
@@ -868,74 +955,63 @@ def main():
         print('%45s : %5d' % (pkey, len(plist)))
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
     print '--------------------------------------------------------------------'
+    endload = timeit.default_timer()
+    print 'Loading completed in:', (endload-beginload)/60.0 , ' mins'
     print ' '
 
-    """
-    print psm_kwargs.keys()
-    print ' '
-    print psm_kwargs['psm_data']
-    print ' '
-    """
-    #print psm_kwargs['psm_data'][('Tree Rings_WidthBreit', 'europe_pola017B:trsgi')]
-    #print psm_kwargs['psm_data_T'][('Tree Rings_WidthBreit', 'europe_pola017B:trsgi')]
-    #print psm_kwargs['psm_data_P'][('Tree Rings_WidthBreit', 'europe_pola017B:trsgi')]
-        
-
-    # psm type
-    if psm_type == 'linear':
-        print 'Calibration source  :', Cfg.psm.linear.datatag_calib
-        datatag_calib = 'linear_'+Cfg.psm.linear.datatag_calib
-        psm_file = Cfg.psm.linear.pre_calib_datafile
-        required_state_variables = ['tas_sfc_Amon']
-    elif psm_type == 'linear_TorP':
-        print 'Calibration sources :', Cfg.psm.linear_TorP.datatag_calib_T, '+', Cfg.psm.linear_TorP.datatag_calib_P
-        datatag_calib_T = Cfg.psm.linear_TorP.datatag_calib_T
-        datatag_calib_P = Cfg.psm.linear_TorP.datatag_calib_P
-        datatag_calib = 'linear_'+datatag_calib_T+'or'+datatag_calib_P
-        #psm_file = Cfg.psm.bilinear.pre_calib_datafile
-        if datatag_calib_P == 'GPCC':
-            required_state_variables = ['tas_sfc_Amon','pr_sfc_Amon']
-        elif datatag_calib_P == 'DaiPDSI':
-            required_state_variables = ['tas_sfc_Amon','scpdsi_sfc_Amon']
-        else:
-            print 'Unrecognized value for datatag_calib_P. Exiting!'
-            exit(1)
-    elif psm_type == 'bilinear':
-        print 'Calibration sources :', Cfg.psm.bilinear.datatag_calib_T, '+', Cfg.psm.bilinear.datatag_calib_P
-        datatag_calib_T = Cfg.psm.bilinear.datatag_calib_T
-        datatag_calib_P = Cfg.psm.bilinear.datatag_calib_P
-        datatag_calib = 'bilinear_'+datatag_calib_T+'and'+datatag_calib_P
-        psm_file = Cfg.psm.bilinear.pre_calib_datafile
-        if datatag_calib_P == 'GPCC':
-            required_state_variables = ['tas_sfc_Amon','pr_sfc_Amon']
-        elif datatag_calib_P == 'DaiPDSI':
-            required_state_variables = ['tas_sfc_Amon','scpdsi_sfc_Amon']
-        else:
-            print 'Unrecognized value for datatag_calib_P. Exiting!'
-            exit(1)
-    elif psm_type == 'h_interp':
-        datatag_calib = 'interp'
-        required_state_variables = ['d18O_sfc_Amon']
+    #for pobj_idx, pobj in enumerate(proxy_objects): print pobj.id, pobj.psm_obj.__dict__
+    
+    
+    # Given the set of proxies & PSMs selected, define set of reconstruction
+    # state variables that will be have to be uploaded to calculate Ye values
+    if proxy_database == 'NCDC':
+        proxy_cfg = Cfg.proxies.ncdc
+    elif proxy_database == 'pages':
+        proxy_cfg = Cfg.proxies.pages
     else:
-        print 'ERROR: problem with the type of psm!'
-        exit(1)
+        print 'ERROR in specification of proxy database.'
+        raise SystemExit()
 
-    load_time = time() - begin_time
-    print '======================================================='
-    print 'Loading completed in '+ str(load_time/60.0)+' mins'
-    print '======================================================='
+    # proxy types activated in configuration
+    proxy_types = proxy_cfg.proxy_order 
+    # associated psm's
+    psm_keys = list(set([proxy_cfg.proxy_psm_type[p] for p in proxy_types]))
+
+    # Forming list of required state variables
+    psmclasses = dict([(name,cls)  for name, cls in Cfg.psm.__dict__.items()])
+    psm_required_variables = []
+    calib_sources = []
+    for psm_type in psm_keys:
+        #print psm_type, ':', psmclasses[psm_type].psm_required_variables
+        psm_required_variables.extend(psmclasses[psm_type].psm_required_variables)
+
+        if psm_type == 'linear':
+            calib_sources.append(Cfg.psm.linear.datatag_calib)
+        elif psm_type == 'linear_TorP':
+            calib_sources.append(Cfg.psm.linear_TorP.datatag_calib_T)
+            calib_sources.append(Cfg.psm.linear_TorP.datatag_calib_P)
+        elif psm_type == 'bilinear':
+            calib_sources.append(Cfg.psm.bilinear.datatag_calib_T)
+            calib_sources.append(Cfg.psm.bilinear.datatag_calib_P)
+        else:
+            pass
+            
+    # keep unique values
+    psm_required_variables = list(set(psm_required_variables))
+    calib_sources= list(set(calib_sources))
+
+    psm_str = '-'.join(psm_keys + calib_sources)
 
     
     # ==========================================================================
     # Loop over the Monte-Carlo reconstructions
     # ==========================================================================
-    nexp = Cfg.core.nexp
 
     datadir_input = Cfg.core.datadir_input
     datadir_output = Cfg.core.datadir_output
 
-    verif_dict = []
-    assim_dict = []
+    verif_listdict = []
+    assim_listdict = []
 
     Nbiter = Cfg.core.iter_range[1]
     MCiters = np.arange(Cfg.core.iter_range[0], Cfg.core.iter_range[1]+1)
@@ -944,11 +1020,18 @@ def main():
         # Experiment data directory
         workdir = datadir_input+'/'+nexp+'/r'+str(iter)
 
-        print '==> Working on: ' + workdir
+        print ' Working on: ' + workdir
 
+        # Check availability of files containing required variables
+        for var in psm_required_variables:
+            datafile = workdir+'/ensemble_mean_'+var+'.npz'
+            if not os.path.isfile(datafile):
+                raise(SystemExit('ERROR: Required file %s  does not exist. Exiting!' % datafile))
         
+
+        # ======================================================
         # Information on assimilated and non-assimilated proxies
-        # ------------------------------------------------------
+        # ======================================================
 
         # List of assimilated proxies
         # ---------------------------
@@ -983,69 +1066,20 @@ def main():
             indp = [k for k in range(nb_loaded_proxies) if (loaded_proxies[k].keys()[0],loaded_proxies[k][loaded_proxies[k].keys()[0]][0]) in master_proxy_list]
             verif_proxies = loaded_proxies[indp]
             nb_verif_proxies = len(verif_proxies)
-            
             # in list form
             verif_proxies_list = [(verif_proxies[k].keys()[0],verif_proxies[k][verif_proxies[k].keys()[0]][0]) for k in range(nb_verif_proxies)]
         
         print 'Number of proxy sites in verification set:',  nb_verif_proxies
         print '------------------------------------------------'
 
-        # ------------------------------------------------------
-        # Load in the prior data
-        # ------------------------------------------------------
-        file_prior = workdir+'/Xb_one.npz'
-        Xprior_statevector = np.load(file_prior)
-        state_info = Xprior_statevector['state_info'].item()
-        available_state_variables = state_info.keys()
-
         
-        # -------------------------------------------------------
-        # Load in the ensemble-mean reconstruction data
-        # -------------------------------------------------------
-
-        # extract required data from state vector
-        nb_state_var = len(required_state_variables)
-        
-        for state_var in required_state_variables:
-            # Check for presence of file containing reconstruction of state variable
-            filein = workdir+'/ensemble_mean_'+state_var+'.npz'
-            if not os.path.isfile(filein):
-                print 'ERROR in specification of reconstruction data'
-                print 'File ', filein, ' does not exist! - Exiting!'
-                exit(1)
-
-            Xrecon = np.load(filein)
-            recon_times = np.asarray(Xrecon['years'],dtype='int32')          
-            recon_lat = Xrecon['lat']
-            recon_lon = Xrecon['lon']
-            recon_val = Xrecon['xam']
-
-            lat =  recon_lat[:,0]
-            lon =  recon_lon[0,:]
-            annual_data = recon_val
-
-
-            # prior
-            posbeg = state_info[state_var]['pos'][0]
-            posend = state_info[state_var]['pos'][1]
-            Xb_one = Xprior_statevector['Xb_one']
-        
-            nlat = state_info[state_var]['spacedims'][0]
-            nlon = state_info[state_var]['spacedims'][1]
-            var_prior = Xb_one[posbeg:posend+1,:]
-            [_,Nens] = var_prior.shape
-            Xprior = var_prior.reshape(nlat,nlon,Nens)
-            # Broadcast prior ensemble state over time dimension
-            ntime = annual_data.shape[0]
-            tmp = np.repeat(Xprior[None,:,:,:],ntime,axis=0)
-            Xprior_ens = np.rollaxis(tmp,3,0)
-            
-            print state_var, Xprior.shape, annual_data.shape, Xprior_ens.shape
-
+        # ============================
+        # Load the reconstruction data
+        # ============================
 
         # -------------------------------------------------------
         # Load the full ensemble Ye's updated during assimilation
-        # (appended state vector)
+        # => appended state vector method
         # -------------------------------------------------------
         fnameYe = workdir+'/'+'analysis_Ye.pckl'
         try:
@@ -1057,11 +1091,74 @@ def main():
             assimYe = cPickle.load(infile)
             infile.close()
 
+        
+        # ------------------------------------------------------
+        # Load in the prior ensemble data
+        # ------------------------------------------------------
+        file_prior = workdir+'/Xb_one.npz'
+        Xprior_statevector = np.load(file_prior)
+        Xb_state_info = Xprior_statevector['state_info'].item()
+        available_state_variables = Xb_state_info.keys()
+        Xb_one = Xprior_statevector['Xb_one']
+        Xb_coords = Xprior_statevector['Xb_one_coords']
 
+        # prepare array to contain "state vector"
+        print Xb_state_info
+        totlength = 0
+        for var in psm_required_variables:
+            position = Xb_state_info[var]['pos']
+            totlength = totlength + ((position[1] - position[0]) + 1)
+        Xrecon_statevector = np.zeros(shape=[totlength,dimtime])
+        Xrecon_coords = np.empty(shape=[totlength,2])
+        
+        # -------------------------------------------------------
+        # Load in the ensemble-mean reconstruction data
+        # -------------------------------------------------------
+        # extract required data from data files
+        nb_state_var = len(psm_required_variables)
+        Xrecon_state_info = {}
+
+        Nx = 0
+        for state_var in psm_required_variables:
+
+            # Check for presence of file containing reconstruction of state variable
+            filein = workdir+'/ensemble_mean_'+state_var+'.npz'
+
+            Xrecon = np.load(filein)
+            recon_data = Xrecon['xam']
+
+            if Nx == 0: # 1st time in loop over variables                
+                recon_times = np.asarray(Xrecon['years'],dtype='int32')
+                recon_lat = Xrecon['lat']
+                recon_lon = Xrecon['lon']
+                lat =  recon_lat[:,0]
+                lon =  recon_lon[0,:]
+                indverif, = np.where((recon_times>=verif_period[0]) & (recon_times<=verif_period[1]))
+
+            Xrecon_state_info[state_var] = {}
+            Xrecon_state_info[state_var]['spacedims'] = (lat.shape[0], lon.shape[0])
+            Xrecon_state_info[state_var]['spacecoords'] = ('lat','lon') # 2D lat/lon field assumed!
+            ndimtot = lat.shape[0]*lon.shape[0]
+
+            indstart = Nx
+            indend   = Nx+(ndimtot)
+            Xrecon_state_info[state_var]['pos'] = (indstart,indend-1)
+            for i in range(dimtime):
+                Xrecon_statevector[indstart:indend,i] = recon_data[indverif[i],:,:].flatten()
+
+            Xrecon_coords[indstart:indend,0] = recon_lat.flatten()
+            Xrecon_coords[indstart:indend,1] = recon_lon.flatten()
+
+            Nx = Nx + (ndimtot)
+
+        
         # ----------------------------------------------------------
         # loop over proxy objects and calculate proxy estimates (Ye)
         # from reconstruction and from prior
         # ----------------------------------------------------------
+
+        verif_times = np.arange(verif_period[0],verif_period[1]+1)
+        
         pcount_tot   = 0
         pcount_verif = 0
         pcount_assim = 0
@@ -1074,23 +1171,19 @@ def main():
             if (sitetag in verif_proxies_list) or (sitetag in assim_proxies_list):
 
                 # reconstruction (ensemble mean) Ye
-                recon_dat = pobj.psm_obj.get_close_grid_point_data(annual_data,
-                                                                   lon,lat)
-                ye_recon = pobj.psm_obj.basic_psm(recon_dat)
-                
+                ye_recon =  pobj.psm(Xrecon_statevector,Xrecon_state_info,Xrecon_coords)
+
                 # prior (ensemble mean) Ye 
-                xp = np.mean(Xprior,axis=2)
-                Xprior_ensmean = np.repeat(xp[None,:,:],ntime,axis=0)
-                prior_dat = pobj.psm_obj.get_close_grid_point_data(Xprior_ensmean,
-                                                                   lon,lat)
-                ye_prior = pobj.psm_obj.basic_psm(prior_dat)
+                Xb_tmp = np.mean(Xb_one,axis=1)
+                # Broadcast over time/ensemble dimension (axis=1)
+                Xb_ensmean = np.repeat(Xb_tmp[:,None],dimtime,axis=1)
+                ye_prior = pobj.psm(Xb_ensmean,Xb_state_info,Xb_coords) # HERE
 
-                # Ye from prior full ensemble ...
-                prior_dat_ens = pobj.psm_obj.get_close_grid_point_data(Xprior_ens[0:,:,:,:],
-                                                                       lon,lat)
-                prior_dat_ens = np.rollaxis(prior_dat_ens,1,0)
-                ye_prior_ens = pobj.psm_obj.basic_psm(prior_dat_ens[:,0:])
-
+                # prior (full ensemble) Ye
+                ye_prior_tmp = pobj.psm(Xb_one,Xb_state_info,Xb_coords) # HERE
+                tmp = np.repeat(ye_prior_tmp[:,None],dimtime,axis=1)
+                ye_prior_ens = tmp.T
+                [_,Nens] = ye_prior_ens.shape
                 
                 # assign 'verif' or 'assim' status to proxy record
                 if sitetag in verif_proxies_list:
@@ -1106,13 +1199,16 @@ def main():
                 
                 # Merge Ye values from recon (ensemble-mean), prior(ensemble-mean) and prior (full sensemble)
                 # in single array & convert to dataframe
-                ye_data = np.c_[recon_times.T,ye_recon.T,ye_prior.T,ye_prior_ens]
+                ye_data = np.c_[verif_times.T,ye_recon.T,ye_prior.T,ye_prior_ens]
                 df = pd.DataFrame(ye_data)
                 df.columns = headers
 
                 # Add proxy data
                 frame = pd.DataFrame({'time':pobj.time, 'y': pobj.values})
                 df = df.merge(frame, how='outer', on='time')
+
+                # ensure all df entries are floats: if not, some calculations choke
+                df = df.astype(np.float)
 
                 # define dataframe indexing
                 col0 = df.columns[0]
@@ -1244,150 +1340,158 @@ def main():
 
         
 
-        verif_dict.append(evald_verif)
-        assim_dict.append(evald_assim)
+        verif_listdict.append(evald_verif)
+        assim_listdict.append(evald_assim)
+
+
+    # check total nb. of sites in verif. set
+    nb_tot_verif = sum([len(verif_listdict[k]) for k in range(len(verif_listdict))])
 
     
     # ==========================================================================
     # End of loop on MC iterations => Now calculate summary statistics ---------
     # ==========================================================================
 
-    outdir = datadir_output+'/'+nexp+'/verifProxy_PSM_'+datatag_calib+'_'+str(verif_period[0])+'to'+str(verif_period[1])
+    outdir = datadir_output+'/'+nexp+'/verifProxy_PSM_'+psm_str+'_'+str(verif_period[0])+'to'+str(verif_period[1])
     if not os.path.isdir(outdir):
         os.system('mkdir %s' % outdir)
     
     # -----------------------
     # With *** verif_dict ***
     # -----------------------
-    if Cfg.core.write_full_verif_dict:
-        # Dump dictionary to pickle files
-        outfile = open('%s/reconstruction_eval_verif_proxy_full.pckl' % (outdir),'w')
-        cPickle.dump(verif_dict,outfile)
+
+    if nb_tot_verif > 0:
+    
+        if Cfg.core.write_full_verif_dict:
+            # Dump dictionary to pickle files
+            outfile = open('%s/reconstruction_eval_verif_proxy_full.pckl' % (outdir),'w')
+            cPickle.dump(verif_listdict,outfile)
+            outfile.close()
+
+        # For each site :
+        # List of sites in the verif dictionary
+        list_tmp = []
+        for i in range(len(verif_listdict)):
+            for j in range(len(verif_listdict[i].keys())):
+                list_tmp.append(verif_listdict[i].keys()[j])
+        list_sites = list(set(list_tmp)) # filter to unique elements
+    
+        summary_stats_verif = {}
+        for k in range(len(list_sites)):
+            # indices in verif_listdict where this site is present
+            inds  = [j for j in range(len(verif_listdict)) if list_sites[k] in verif_listdict[j].keys()]
+
+        
+            summary_stats_verif[list_sites[k]] = {}
+            summary_stats_verif[list_sites[k]]['lat']            = verif_listdict[inds[0]][list_sites[k]]['lat']
+            summary_stats_verif[list_sites[k]]['lon']            = verif_listdict[inds[0]][list_sites[k]]['lon']
+            summary_stats_verif[list_sites[k]]['alt']            = verif_listdict[inds[0]][list_sites[k]]['alt']
+            summary_stats_verif[list_sites[k]]['NbPts']          = len(inds)
+        
+            #summary_stats_verif[list_sites[k]]['PSMslope']       = verif_listdict[inds[0]][list_sites[k]]['PSMslope']
+            #summary_stats_verif[list_sites[k]]['PSMintercept']   = verif_listdict[inds[0]][list_sites[k]]['PSMintercept']
+            #summary_stats_verif[list_sites[k]]['PSMcorrel']      = verif_listdict[inds[0]][list_sites[k]]['PSMcorrel']
+            summary_stats_verif[list_sites[k]]['PSMinfo']      = verif_listdict[inds[0]][list_sites[k]]['PSMinfo']
+        
+        
+            # These contain data for the "grand ensemble" (i.e. ensemble of realizations) for "kth" site
+            nbpts = [verif_listdict[j][list_sites[k]]['NbEvalPts'] for j in inds]
+            me    = [verif_listdict[j][list_sites[k]]['EnsMean_MeanError'] for j in inds]
+            rmse  = [verif_listdict[j][list_sites[k]]['EnsMean_RMSE'] for j in inds]
+            corr  = [verif_listdict[j][list_sites[k]]['EnsMean_Corr'] for j in inds]
+            ce    = [verif_listdict[j][list_sites[k]]['EnsMean_CE'] for j in inds]
+            corr_prior  = [verif_listdict[j][list_sites[k]]['PriorEnsMean_Corr'] for j in inds]
+            ce_prior    = [verif_listdict[j][list_sites[k]]['PriorEnsMean_CE'] for j in inds]
+
+            # Scores on grand ensemble
+            summary_stats_verif[list_sites[k]]['GrandEnsME']        = me
+            summary_stats_verif[list_sites[k]]['GrandEnsRMSE']      = rmse
+            summary_stats_verif[list_sites[k]]['GrandEnsCorr']      = corr
+            summary_stats_verif[list_sites[k]]['GrandEnsCE']        = ce
+            # prior
+            summary_stats_verif[list_sites[k]]['PriorGrandEnsCorr'] = corr_prior
+            summary_stats_verif[list_sites[k]]['PriorGrandEnsCE']   = ce_prior
+
+            # Summary across grand ensemble
+            summary_stats_verif[list_sites[k]]['MeanME']          = np.mean(me)
+            summary_stats_verif[list_sites[k]]['SpreadME']        = np.std(me)
+            summary_stats_verif[list_sites[k]]['MeanRMSE']        = np.mean(rmse)
+            summary_stats_verif[list_sites[k]]['SpreadRMSE']      = np.std(rmse)
+            summary_stats_verif[list_sites[k]]['MeanCorr']        = np.mean(corr)
+            summary_stats_verif[list_sites[k]]['SpreadCorr']      = np.std(corr)
+            summary_stats_verif[list_sites[k]]['MeanCE']          = np.mean(ce)
+            summary_stats_verif[list_sites[k]]['SpreadCE']        = np.std(ce)
+            # prior
+            summary_stats_verif[list_sites[k]]['PriorMeanCorr']   = np.nanmean(corr_prior)
+            summary_stats_verif[list_sites[k]]['PriorSpreadCorr'] = np.nanstd(corr_prior)
+            summary_stats_verif[list_sites[k]]['PriorMeanCE']     = np.mean(ce_prior)
+            summary_stats_verif[list_sites[k]]['PriorSpreadCE']   = np.std(ce_prior)
+
+            # for time series
+            summary_stats_verif[list_sites[k]]['ts_years']       = verif_listdict[inds[0]][list_sites[k]]['ts_years']
+            summary_stats_verif[list_sites[k]]['ts_ProxyValues'] = verif_listdict[inds[0]][list_sites[k]]['ts_ProxyValues']
+            ts_recon = [verif_listdict[j][list_sites[k]]['ts_EnsMean'] for j in inds]
+            summary_stats_verif[list_sites[k]]['ts_MeanRecon']   = np.mean(ts_recon,axis=0)
+            summary_stats_verif[list_sites[k]]['ts_SpreadRecon'] = np.std(ts_recon,axis=0)
+            # ens. calibration
+            R = [verif_listdict[inds[0]][list_sites[k]]['PSMinfo']['R']]
+            ensVar = np.mean(np.var(ts_recon,axis=0,ddof=1)) # !!! variance in grand ensemble (realizations, not DA ensemble) !!! 
+            mse = np.mean(np.square(rmse))
+            calib = mse/(ensVar+R)
+            summary_stats_verif[list_sites[k]]['EnsCalib'] = calib[0]
+            ## without R
+            #calib = mse/(ensVar)
+            #summary_stats_verif[list_sites[k]]['EnsCalib'] = calib
+
+        # Dump data to pickle file
+        outfile = open('%s/reconstruction_eval_verif_proxy_summary.pckl' % (outdir),'w')
+        cPickle.dump(summary_stats_verif,outfile)
         outfile.close()
 
-    # For each site :    
-    # List of sites in the verif dictionary
-    list_tmp = []
-    for i in range(len(verif_dict)):
-        for j in range(len(verif_dict[i].keys())):
-            list_tmp.append(verif_dict[i].keys()[j])
-    list_sites = list(set(list_tmp)) # filter to unique elements
-    
-    summary_stats_verif = {}
-    for k in range(len(list_sites)):
-        # indices in verif_dict where this site is present
-        inds  = [j for j in range(len(verif_dict)) if list_sites[k] in verif_dict[j].keys()]
-
         
-        summary_stats_verif[list_sites[k]] = {}
-        summary_stats_verif[list_sites[k]]['lat']            = verif_dict[inds[0]][list_sites[k]]['lat']
-        summary_stats_verif[list_sites[k]]['lon']            = verif_dict[inds[0]][list_sites[k]]['lon']
-        summary_stats_verif[list_sites[k]]['alt']            = verif_dict[inds[0]][list_sites[k]]['alt']
-        summary_stats_verif[list_sites[k]]['NbPts']          = len(inds)
-        
-        #summary_stats_verif[list_sites[k]]['PSMslope']       = verif_dict[inds[0]][list_sites[k]]['PSMslope']
-        #summary_stats_verif[list_sites[k]]['PSMintercept']   = verif_dict[inds[0]][list_sites[k]]['PSMintercept']
-        #summary_stats_verif[list_sites[k]]['PSMcorrel']      = verif_dict[inds[0]][list_sites[k]]['PSMcorrel']
-        summary_stats_verif[list_sites[k]]['PSMinfo']      = verif_dict[inds[0]][list_sites[k]]['PSMinfo']
-        
-        
-        # These contain data for the "grand ensemble" (i.e. ensemble of realizations) for "kth" site
-        nbpts = [verif_dict[j][list_sites[k]]['NbEvalPts'] for j in inds]
-        me    = [verif_dict[j][list_sites[k]]['EnsMean_MeanError'] for j in inds]
-        rmse  = [verif_dict[j][list_sites[k]]['EnsMean_RMSE'] for j in inds]
-        corr  = [verif_dict[j][list_sites[k]]['EnsMean_Corr'] for j in inds]
-        ce    = [verif_dict[j][list_sites[k]]['EnsMean_CE'] for j in inds]
-        corr_prior  = [verif_dict[j][list_sites[k]]['PriorEnsMean_Corr'] for j in inds]
-        ce_prior    = [verif_dict[j][list_sites[k]]['PriorEnsMean_CE'] for j in inds]
-
-        # Scores on grand ensemble
-        summary_stats_verif[list_sites[k]]['GrandEnsME']        = me
-        summary_stats_verif[list_sites[k]]['GrandEnsRMSE']      = rmse
-        summary_stats_verif[list_sites[k]]['GrandEnsCorr']      = corr
-        summary_stats_verif[list_sites[k]]['GrandEnsCE']        = ce
-        # prior
-        summary_stats_verif[list_sites[k]]['PriorGrandEnsCorr'] = corr_prior
-        summary_stats_verif[list_sites[k]]['PriorGrandEnsCE']   = ce_prior
-
-        # Summary across grand ensemble
-        summary_stats_verif[list_sites[k]]['MeanME']          = np.mean(me)
-        summary_stats_verif[list_sites[k]]['SpreadME']        = np.std(me)
-        summary_stats_verif[list_sites[k]]['MeanRMSE']        = np.mean(rmse)
-        summary_stats_verif[list_sites[k]]['SpreadRMSE']      = np.std(rmse)
-        summary_stats_verif[list_sites[k]]['MeanCorr']        = np.mean(corr)
-        summary_stats_verif[list_sites[k]]['SpreadCorr']      = np.std(corr)
-        summary_stats_verif[list_sites[k]]['MeanCE']          = np.mean(ce)
-        summary_stats_verif[list_sites[k]]['SpreadCE']        = np.std(ce)
-        # prior
-        summary_stats_verif[list_sites[k]]['PriorMeanCorr']   = np.nanmean(corr_prior)
-        summary_stats_verif[list_sites[k]]['PriorSpreadCorr'] = np.nanstd(corr_prior)
-        summary_stats_verif[list_sites[k]]['PriorMeanCE']     = np.mean(ce_prior)
-        summary_stats_verif[list_sites[k]]['PriorSpreadCE']   = np.std(ce_prior)
-
-        # for time series
-        summary_stats_verif[list_sites[k]]['ts_years']       = verif_dict[inds[0]][list_sites[k]]['ts_years']
-        summary_stats_verif[list_sites[k]]['ts_ProxyValues'] = verif_dict[inds[0]][list_sites[k]]['ts_ProxyValues']
-        ts_recon = [verif_dict[j][list_sites[k]]['ts_EnsMean'] for j in inds]
-        summary_stats_verif[list_sites[k]]['ts_MeanRecon']   = np.mean(ts_recon,axis=0)
-        summary_stats_verif[list_sites[k]]['ts_SpreadRecon'] = np.std(ts_recon,axis=0)
-        # ens. calibration
-        R = [verif_dict[inds[0]][list_sites[k]]['PSMinfo']['R']]
-        ensVar = np.mean(np.var(ts_recon,axis=0,ddof=1)) # !!! variance in grand ensemble (realizations, not DA ensemble) !!! 
-        mse = np.mean(np.square(rmse))
-        calib = mse/(ensVar+R)
-        summary_stats_verif[list_sites[k]]['EnsCalib'] = calib[0]
-        ## without R
-        #calib = mse/(ensVar)
-        #summary_stats_verif[list_sites[k]]['EnsCalib'] = calib
-
-    # Dump data to pickle file
-    outfile = open('%s/reconstruction_eval_verif_proxy_summary.pckl' % (outdir),'w')
-    cPickle.dump(summary_stats_verif,outfile)
-    outfile.close()
-
     # -----------------------
     # With *** assim_dict ***
     # -----------------------
     # Dump dictionary to pickle files
     if Cfg.core.write_full_verif_dict:
         outfile = open('%s/reconstruction_eval_assim_proxy_full.pckl' % (outdir),'w')
-        cPickle.dump(assim_dict,outfile)
+        cPickle.dump(assim_listdict,outfile)
         outfile.close()
 
     # For each site :    
     # List of sites in the assim dictionary
     list_tmp = []
-    for i in range(len(assim_dict)):
-        for j in range(len(assim_dict[i].keys())):
-            list_tmp.append(assim_dict[i].keys()[j])
+    for i in range(len(assim_listdict)):
+        for j in range(len(assim_listdict[i].keys())):
+            list_tmp.append(assim_listdict[i].keys()[j])
     list_sites = list(set(list_tmp)) # filter to unique elements
 
     summary_stats_assim = {}
     for k in range(len(list_sites)):
-        # indices in assim_dict where this site is present
-        inds  = [j for j in range(len(assim_dict)) if list_sites[k] in assim_dict[j].keys()]
+        # indices in assim_listdict where this site is present
+        inds  = [j for j in range(len(assim_listdict)) if list_sites[k] in assim_listdict[j].keys()]
 
         summary_stats_assim[list_sites[k]] = {}
-        summary_stats_assim[list_sites[k]]['lat']            = assim_dict[inds[0]][list_sites[k]]['lat']
-        summary_stats_assim[list_sites[k]]['lon']            = assim_dict[inds[0]][list_sites[k]]['lon']
-        summary_stats_assim[list_sites[k]]['alt']            = assim_dict[inds[0]][list_sites[k]]['alt']
+        summary_stats_assim[list_sites[k]]['lat']            = assim_listdict[inds[0]][list_sites[k]]['lat']
+        summary_stats_assim[list_sites[k]]['lon']            = assim_listdict[inds[0]][list_sites[k]]['lon']
+        summary_stats_assim[list_sites[k]]['alt']            = assim_listdict[inds[0]][list_sites[k]]['alt']
         summary_stats_assim[list_sites[k]]['NbPts']          = len(inds)
         
-        #summary_stats_assim[list_sites[k]]['PSMslope']       = assim_dict[inds[0]][list_sites[k]]['PSMslope']
-        #summary_stats_assim[list_sites[k]]['PSMintercept']   = assim_dict[inds[0]][list_sites[k]]['PSMintercept']
-        #summary_stats_assim[list_sites[k]]['PSMcorrel']      = assim_dict[inds[0]][list_sites[k]]['PSMcorrel']
-        summary_stats_assim[list_sites[k]]['PSMinfo']      = assim_dict[inds[0]][list_sites[k]]['PSMinfo']
+        #summary_stats_assim[list_sites[k]]['PSMslope']       = assim_listdict[inds[0]][list_sites[k]]['PSMslope']
+        #summary_stats_assim[list_sites[k]]['PSMintercept']   = assim_listdict[inds[0]][list_sites[k]]['PSMintercept']
+        #summary_stats_assim[list_sites[k]]['PSMcorrel']      = assim_listdict[inds[0]][list_sites[k]]['PSMcorrel']
+        summary_stats_assim[list_sites[k]]['PSMinfo']      = assim_listdict[inds[0]][list_sites[k]]['PSMinfo']
 
         # These contain data for the "grand ensemble" (i.e. ensemble of realizations) for "kth" site
-        nbpts      = [assim_dict[j][list_sites[k]]['NbEvalPts'] for j in inds]
-        me         = [assim_dict[j][list_sites[k]]['EnsMean_MeanError'] for j in inds]
-        rmse       = [assim_dict[j][list_sites[k]]['EnsMean_RMSE'] for j in inds]
-        corr       = [assim_dict[j][list_sites[k]]['EnsMean_Corr'] for j in inds]
-        ce         = [assim_dict[j][list_sites[k]]['EnsMean_CE'] for j in inds]
-        corr_prior = [assim_dict[j][list_sites[k]]['PriorEnsMean_Corr'] for j in inds]
-        ce_prior   = [assim_dict[j][list_sites[k]]['PriorEnsMean_CE'] for j in inds]
-        DAensCalib = [np.mean(assim_dict[j][list_sites[k]]['ts_DAensCalib']) for j in inds]
-        PriorEnsCalib = [np.mean(assim_dict[j][list_sites[k]]['ts_PriorEnsCalib']) for j in inds]
+        nbpts      = [assim_listdict[j][list_sites[k]]['NbEvalPts'] for j in inds]
+        me         = [assim_listdict[j][list_sites[k]]['EnsMean_MeanError'] for j in inds]
+        rmse       = [assim_listdict[j][list_sites[k]]['EnsMean_RMSE'] for j in inds]
+        corr       = [assim_listdict[j][list_sites[k]]['EnsMean_Corr'] for j in inds]
+        ce         = [assim_listdict[j][list_sites[k]]['EnsMean_CE'] for j in inds]
+        corr_prior = [assim_listdict[j][list_sites[k]]['PriorEnsMean_Corr'] for j in inds]
+        ce_prior   = [assim_listdict[j][list_sites[k]]['PriorEnsMean_CE'] for j in inds]
+        DAensCalib = [np.mean(assim_listdict[j][list_sites[k]]['ts_DAensCalib']) for j in inds]
+        PriorEnsCalib = [np.mean(assim_listdict[j][list_sites[k]]['ts_PriorEnsCalib']) for j in inds]
 
 
         # Scores on grand ensemble
@@ -1417,13 +1521,13 @@ def main():
         summary_stats_assim[list_sites[k]]['PriorSpreadCE']   = np.std(ce_prior)
 
         # for time series
-        summary_stats_assim[list_sites[k]]['ts_years']       = assim_dict[inds[0]][list_sites[k]]['ts_years']
-        summary_stats_assim[list_sites[k]]['ts_ProxyValues'] = assim_dict[inds[0]][list_sites[k]]['ts_ProxyValues']
-        ts_recon = [assim_dict[j][list_sites[k]]['ts_EnsMean'] for j in inds]
+        summary_stats_assim[list_sites[k]]['ts_years']       = assim_listdict[inds[0]][list_sites[k]]['ts_years']
+        summary_stats_assim[list_sites[k]]['ts_ProxyValues'] = assim_listdict[inds[0]][list_sites[k]]['ts_ProxyValues']
+        ts_recon = [assim_listdict[j][list_sites[k]]['ts_EnsMean'] for j in inds]
         summary_stats_assim[list_sites[k]]['ts_MeanRecon']   = np.mean(ts_recon,axis=0)
         summary_stats_assim[list_sites[k]]['ts_SpreadRecon'] = np.std(ts_recon,axis=0)        
         # ens. calibration
-        R = [assim_dict[inds[0]][list_sites[k]]['PSMinfo']['R']]
+        R = [assim_listdict[inds[0]][list_sites[k]]['PSMinfo']['R']]
         ensVar = np.mean(np.var(ts_recon,axis=0,ddof=1)) # !!! variance of ens. means in grand ensemble (realizations, not DA ensemble) !!!
         mse = np.mean(np.square(rmse))
         calib = mse/(ensVar+R)
@@ -1439,627 +1543,6 @@ def main():
     print '======================================================='
     print 'Verification completed in '+ str(verif_time/3600.0)+' hours'
     print '======================================================='
-
-
-
-
-
-
-
-
-
-
-
-    
-
-    # ============================================
-    # Plotting the verification summary stats data
-    # ============================================
-    if make_plots:
-
-        print 'Now producing plots ...'
-
-        figdir = outdir+'/figs'        
-        if not os.path.isdir(figdir):
-            os.system('mkdir %s' % figdir)
-        
-        vtype = {'verif':'Non-assimilated proxies', 'assim': 'Assimilated proxies'}
-        for v in vtype.keys():
-            
-            # pick right dict and associate to "workdict"
-            dname = 'summary_stats_'+v
-            workdict = eval(dname)
-            sitetag = workdict.keys()
-
-            site_status = vtype[v].split()[0]
-
-            # ===============================================================================================
-            # 1) Histogram of (recon, proxy) CORRELATION, CE across grand ensemble for all and per proxy type
-            # ===============================================================================================
-
-            proxy_types = list(set([item[0] for item in sitetag]))
-
-            # --------------
-            # All types
-            # --------------
-            # --- Correlation ---
-            tmp = [workdict[k]['GrandEnsCorr'] for k in sitetag if k[0] in proxy_types]
-            stat = [item for sublist in tmp for item in sublist] # flatten list of lists
-            nbdata = len(stat)
-            mean_stat = np.mean(stat)
-            std_stat = np.std(stat)
-
-            ptitle = '%s, %s' % ('All proxy types',vtype[v])
-            n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-            plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-            plt.title(ptitle)
-            plt.xlabel("Correlation")
-            plt.ylabel("Probability density")
-            xmin,xmax,ymin,ymax = plt.axis()
-            plt.axis((-1,1,ymin,ymax))
-
-            # Annotate plot
-            xmin,xmax,ymin,ymax = plt.axis()
-            ypos = ymax-0.05*(ymax-ymin)
-            xpos = xmin+0.025*(xmax-xmin)
-            plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-            ypos = ypos-0.05*(ymax-ymin)
-            plt.text(xpos,ypos,'Mean= %.2f' %mean_stat,fontsize=11,fontweight='bold')
-            ypos = ypos-0.05*(ymax-ymin)
-            plt.text(xpos,ypos,'Std-dev= %.2f' %std_stat,fontsize=11,fontweight='bold')
-            
-            plt.savefig('%s/summary_%s_stats_hist_corr_All.png' % (figdir,v),bbox_inches='tight')
-            plt.close()
-
-            # --- CE ---
-            tmp = [workdict[k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types]
-            stat = [item for sublist in tmp for item in sublist] # flatten list of lists
-            nbdata = len(stat)
-            mean_stat = np.mean(stat)
-            std_stat = np.std(stat)
-            
-            ptitle = '%s, %s' % ('All proxy types', vtype[v])
-            n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-            plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-            plt.title(ptitle)
-            plt.xlabel("Coefficient of efficiency")
-            plt.ylabel("Probability density")
-            xmin,xmax,ymin,ymax = plt.axis()
-            plt.axis((-1,1,ymin,ymax))
-            
-            # Annotate plot
-            xmin,xmax,ymin,ymax = plt.axis()
-            ypos = ymax-0.05*(ymax-ymin)
-            xpos = xmin+0.025*(xmax-xmin)
-            plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-            ypos = ypos-0.05*(ymax-ymin)
-            plt.text(xpos,ypos,'Mean= %.2f' %mean_stat,fontsize=11,fontweight='bold')
-            ypos = ypos-0.05*(ymax-ymin)
-            plt.text(xpos,ypos,'Std-dev= %.2f' %std_stat,fontsize=11,fontweight='bold')
-            
-            plt.savefig('%s/summary_%s_stats_hist_ce_All.png' % (figdir,v),bbox_inches='tight')
-            plt.close()
-
-            # --------------
-            # Per proxy type
-            # --------------
-            # loop over proxy types
-            for p in proxy_types:
-
-                # --- Correlation ---
-                tmp = [workdict[k]['GrandEnsCorr'] for k in sitetag if k[0] == p]
-                stat = [item for sublist in tmp for item in sublist] # flatten list of lists
-                nbdata = len(stat)
-                mean_stat = np.mean(stat)
-                std_stat = np.std(stat)
-
-                ptitle = '%s, %s' % (p,vtype[v])
-                n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-                plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-                plt.title(ptitle)
-                plt.xlabel("Correlation")
-                plt.ylabel("Probability density")
-                xmin,xmax,ymin,ymax = plt.axis()
-                plt.axis((-1,1,ymin,ymax))
-
-                # Annotate plot
-                xmin,xmax,ymin,ymax = plt.axis()
-                ypos = ymax-0.05*(ymax-ymin)
-                xpos = xmin+0.025*(xmax-xmin)
-                plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                ypos = ypos-0.05*(ymax-ymin)
-                plt.text(xpos,ypos,'Mean= %.2f' %mean_stat,fontsize=11,fontweight='bold')
-                ypos = ypos-0.05*(ymax-ymin)
-                plt.text(xpos,ypos,'Std-dev= %.2f' %std_stat,fontsize=11,fontweight='bold')
-
-                pfname = p.replace (" ", "_")
-                plt.savefig('%s/summary_%s_stats_hist_corr_%s.png' % (figdir,v,pfname),bbox_inches='tight')
-                plt.close()
-
-                # --- CE ---
-                tmp = [workdict[k]['GrandEnsCE'] for k in sitetag if k[0] == p]
-                stat = [item for sublist in tmp for item in sublist] # flatten list of lists
-                nbdata = len(stat)
-                mean_stat = np.mean(stat)
-                std_stat = np.std(stat)
-
-                ptitle = '%s, %s' % (p,vtype[v])
-                n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-                plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-                plt.title(ptitle)
-                plt.xlabel("Coefficient of efficiency")
-                plt.ylabel("Probability density")
-                xmin,xmax,ymin,ymax = plt.axis()
-                plt.axis((-1,1,ymin,ymax))
-
-                # Annotate plot
-                xmin,xmax,ymin,ymax = plt.axis()
-                ypos = ymax-0.05*(ymax-ymin)
-                xpos = xmin+0.025*(xmax-xmin)
-                plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                ypos = ypos-0.05*(ymax-ymin)
-                plt.text(xpos,ypos,'Mean= %.2f' %mean_stat,fontsize=11,fontweight='bold')
-                ypos = ypos-0.05*(ymax-ymin)
-                plt.text(xpos,ypos,'Std-dev= %.2f' %std_stat,fontsize=11,fontweight='bold')
-            
-                pfname = p.replace (" ", "_")
-                plt.savefig('%s/summary_%s_stats_hist_ce_%s.png' % (figdir,v,pfname),bbox_inches='tight')
-                plt.close()
-
-
-            # ===================================================================================
-            # 2) Histogram of reconstruction DA ensemble calibration ratio across grand ensemble
-            # ===================================================================================
-            if v == 'assim':
-                tmp = [workdict[k]['GrandEnsCalib'] for k in sitetag]
-                stat = [item for sublist in tmp for item in sublist] # flatten list of lists
-                mean_stat = np.mean(stat)
-                std_stat = np.std(stat)
-
-                ptitle = '%s, DA ensemble calibration' % (vtype[v])
-                n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-                plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-                plt.title(ptitle)
-                plt.xlabel("Ensemble calibration ratio")
-                plt.ylabel("Probability density")
-                xmin,xmax,ymin,ymax = plt.axis()
-                plt.axis((xmin,xmax,ymin,ymax))
-                plt.axis((0,5,ymin,ymax))
-                plt.plot([1,1],[ymin,ymax],'r--')
-
-                # Annotate with summary stats
-                xmin,xmax,ymin,ymax = plt.axis()
-                ypos = ymax-0.05*(ymax-ymin)
-                xpos = xmax-0.40*(xmax-xmin)
-                plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                ypos = ypos-0.05*(ymax-ymin)
-                plt.text(xpos,ypos,'Mean= %.2f' %mean_stat,fontsize=11,fontweight='bold')
-                ypos = ypos-0.05*(ymax-ymin)
-                plt.text(xpos,ypos,'Std-dev= %.2f' %std_stat,fontsize=11,fontweight='bold')
-
-                plt.savefig('%s/summary_%s_stats_hist_DAensCal_GrandEns.png' % (figdir,v),bbox_inches='tight')
-                plt.close()
-
-
-            # ===============================================================================
-            # 3) Maps with proxy sites plotted on with dots colored according to sample size
-            # ===============================================================================
-
-            verif_metric = 'Sample size'
-
-            mapcolor = plt.cm.hot_r
-            
-            itermax = roundup(Nbiter)
-            fmin = 0.0; fmax = itermax
-            fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, 1, 101);           
-            scaled_colors = mapcolor(fvalc)
-            cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
-            cbarticks=np.linspace(fmin,fmax,11)
-
-            fig = plt.figure()
-            ax  = fig.add_axes([0.1,0.1,0.8,0.8])
-            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.            # GLOBAL
-            
-            water = '#9DD4F0'
-            continents = '#888888'
-            m.drawmapboundary(fill_color=water)
-            m.drawcoastlines(); m.drawcountries()
-            m.fillcontinents(color=continents,lake_color=water)
-            m.drawparallels(np.arange(-80.,81.,latres))
-            m.drawmeridians(np.arange(-180.,181.,lonres))
-
-            # loop over proxy sites
-            l = []
-            proxy_types = []
-            for sitetag in workdict.keys():
-                sitetype = sitetag[0]
-                sitename = sitetag[1]
-                sitemarker = proxy_verif[sitetype]
-
-                lat = workdict[sitetag]['lat']
-                lon = workdict[sitetag]['lon']
-                x, y = m(lon,lat)
-                if sitetype not in proxy_types:
-                    proxy_types.append(sitetype)
-                    l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
-                Gplt = m.scatter(x,y,35,c=workdict[sitetag]['NbPts'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
-
-            cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,extend='neither')
-            cbar.outline.set_linewidth(1.0)
-            cbar.set_label('%s' % verif_metric,size=11,weight='bold')
-            cbar.ax.tick_params(labelsize=10)
-            plt.title(vtype[v],fontweight='bold')
-            plt.legend(l,proxy_types,
-                       scatterpoints=1,
-                       loc='lower center', bbox_to_anchor=(0.5, -0.30),
-                       ncol=3,
-                       fontsize=9)
-
-            plt.savefig('%s/map_recon_proxy_%s_stats_SampleSize.png' % (figdir,v),bbox_inches='tight')
-            plt.close()
-
-
-            # ===============================================================================
-            # 4) Maps with proxy sites plotted on with dots colored according to correlation
-            # ===============================================================================
-
-            verif_metric = 'Correlation'
-
-            #mapcolor = plt.cm.bwr
-            mapcolor = plt.cm.seismic
-            cbarfmt = '%4.1f'
-
-            fmin = -1.0; fmax = 1.0
-            fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, fmax, 101);           
-            scaled_colors = mapcolor(fvalc)
-            cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
-            cbarticks=np.linspace(fmin,fmax,11)
-
-            fig = plt.figure()
-            ax  = fig.add_axes([0.1,0.1,0.8,0.8])
-            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.            # GLOBAL
-            
-            water = '#9DD4F0'
-            continents = '#888888'
-            m.drawmapboundary(fill_color=water)
-            m.drawcoastlines(); m.drawcountries()
-            m.fillcontinents(color=continents,lake_color=water)
-            m.drawparallels(np.arange(-80.,81.,latres))
-            m.drawmeridians(np.arange(-180.,181.,lonres))
-
-            # loop over proxy sites
-            l = []
-            proxy_types = []
-            for sitetag in workdict.keys():
-                sitetype = sitetag[0]
-                sitename = sitetag[1]
-                sitemarker = proxy_verif[sitetype]
-
-                lat = workdict[sitetag]['lat']
-                lon = workdict[sitetag]['lon']
-                x, y = m(lon,lat)
-                if sitetype not in proxy_types:
-                    proxy_types.append(sitetype)
-                    l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
-                Gplt = m.scatter(x,y,35,c=workdict[sitetag]['MeanCorr'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
-
-            cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
-            cbar.outline.set_linewidth(1.0)
-            cbar.set_label('%s' % verif_metric,size=11,weight='bold')
-            cbar.ax.tick_params(labelsize=10)
-            plt.title(vtype[v],fontweight='bold')
-            plt.legend(l,proxy_types,
-                       scatterpoints=1,
-                       loc='lower center', bbox_to_anchor=(0.5, -0.30),
-                       ncol=3,
-                       fontsize=9)
-
-            plt.savefig('%s/map_recon_proxy_%s_stats_corr.png' % (figdir,v),bbox_inches='tight')
-            plt.savefig('map_recon_proxy_%s_stats_corr.pdf' % (v),bbox_inches='tight', dpi=300, format='pdf')
-            plt.close()
-
-
-            # ===============================================================================
-            # 5) Maps with proxy sites plotted on with dots colored according to CE
-            # ===============================================================================
-
-            verif_metric = 'Coefficient of efficiency'
-
-            #mapcolor = plt.cm.bwr
-            mapcolor = plt.cm.seismic
-            cbarfmt = '%4.1f'
-
-            fmin = -1.0; fmax = 1.0
-            fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, fmax, 101);           
-            scaled_colors = mapcolor(fvalc)
-            cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors,extend='both')
-            cbarticks=np.linspace(fmin,fmax,11)
-
-            fig = plt.figure()
-            ax  = fig.add_axes([0.1,0.1,0.8,0.8])
-            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.
-            
-            water = '#9DD4F0'
-            continents = '#888888'
-            m.drawmapboundary(fill_color=water)
-            m.drawcoastlines(); m.drawcountries()
-            m.fillcontinents(color=continents,lake_color=water)
-            m.drawparallels(np.arange(-80.,81.,latres))
-            m.drawmeridians(np.arange(-180.,181.,lonres))
-
-            # loop over proxy sites
-            l = []
-            proxy_types = []
-            for sitetag in workdict.keys():
-                sitetype = sitetag[0]
-                sitename = sitetag[1]
-                sitemarker = proxy_verif[sitetype]
-
-                lat = workdict[sitetag]['lat']
-                lon = workdict[sitetag]['lon']
-                x, y = m(lon,lat)
-                if sitetype not in proxy_types:
-                    proxy_types.append(sitetype)
-                    l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
-                Gplt = m.scatter(x,y,35,c=workdict[sitetag]['MeanCE'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
-
-            cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
-            cbar.outline.set_linewidth(1.0)
-            cbar.set_label('%s' % verif_metric,size=11,weight='bold')
-            cbar.ax.tick_params(labelsize=10)
-            plt.title(vtype[v],fontweight='bold')
-            plt.legend(l,proxy_types,
-                       scatterpoints=1,
-                       loc='lower center', bbox_to_anchor=(0.5, -0.30),
-                       ncol=3,
-                       fontsize=9)
-            
-            plt.savefig('%s/map_recon_proxy_%s_stats_ce.png' % (figdir,v),bbox_inches='tight')
-            plt.savefig('map_recon_proxy_%s_stats_ce.pdf' % (v),bbox_inches='tight', dpi=300, format='pdf')
-            plt.close()
-
-
-            if make_plots_individual_sites:
-            
-                # ===============================================================================
-                # 6) Time series: comparison of proxy values and reconstruction-estimated proxies 
-                #    for every site used in verification
-                #
-                # 7) Scatter plots of proxy vs reconstruction (ensemble-mean)
-                #
-                # 8) Histogram of correlation in grand ensemble for each site
-                #
-                # 9) Histogram of CE in grand ensemble for each site
-                # ===============================================================================
-
-                # loop over proxy sites
-                for sitetag in workdict.keys():
-                    sitetype = sitetag[0].replace (" ", "_")
-                    sitename = sitetag[1]
-
-                    x  = workdict[sitetag]['ts_years']
-                    yp = workdict[sitetag]['ts_ProxyValues']
-                    yr = workdict[sitetag]['ts_MeanRecon']
-                    yrlow = workdict[sitetag]['ts_MeanRecon'] - workdict[sitetag]['ts_SpreadRecon']
-                    yrupp = workdict[sitetag]['ts_MeanRecon'] + workdict[sitetag]['ts_SpreadRecon']
-
-                    # -----------
-                    # Time series
-                    # -----------
-                    p1 = plt.plot(x,yp,'-r',linewidth=2, label='Proxy',alpha=0.7)
-                    p2 = plt.plot(x,yr,'-b',linewidth=2, label='Reconstruction')
-                    plt.fill_between(x, yrlow, yrupp,alpha=0.4,linewidth=0.0)
-
-                    plt.title("Proxy vs reconstruction: %s" % str(sitetag))
-                    plt.xlabel("Years")
-                    plt.ylabel("Proxy obs./estimate")
-                    xmin,xmax,ymin,ymax = plt.axis()
-                    plt.legend( loc='lower right', numpoints = 1, fontsize=11 )
-
-                    # keep ymin and ymax
-                    ts_pmin = ymin; ts_pmax = ymax
-
-                    # Annotate with summary stats
-                    xmin,xmax,ymin,ymax = plt.axis()
-                    ypos = ymax-0.05*(ymax-ymin)
-                    xpos = xmin+0.025*(xmax-xmin)
-                    plt.text(xpos,ypos,'status: %s' %site_status,fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'ME = %s' %"{:.4f}".format(workdict[sitetag]['MeanME']),fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'RMSE = %s' %"{:.4f}".format(workdict[sitetag]['MeanRMSE']),fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'Corr = %s' %"{:.4f}".format(workdict[sitetag]['MeanCorr']),fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'CE = %s' %"{:.4f}".format(workdict[sitetag]['MeanCE']),fontsize=11,fontweight='bold')
-                    
-                    plt.savefig('%s/site_ts_recon_vs_proxy_%s_%s_%s.png' % (figdir, v, sitetype, sitename),bbox_inches='tight')
-                    plt.close()
-
-                    # ------------
-                    # Scatter plot
-                    # ------------
-                    minproxy = np.min(yp); maxproxy = np.max(yp)
-                    minrecon = np.min(yr); maxrecon = np.max(yr)
-                    vmin = np.min([minproxy,minrecon])
-                    vmax = np.max([maxproxy,maxrecon])
-
-                    plt.plot(yr,yp,'o',markersize=8,markerfacecolor='#5CB8E6',markeredgecolor='black',markeredgewidth=1)
-                    plt.title("Proxy vs reconstruction: %s" % str(sitetag))
-                    plt.xlabel("Proxy estimates from reconstruction")
-                    plt.ylabel("Proxy values")
-                    plt.axis((vmin,vmax,vmin,vmax))
-                    xmin,xmax,ymin,ymax = plt.axis()
-                    # one-one line
-                    plt.plot([vmin,vmax],[vmin,vmax],'r--')
-
-                    # Annotate with summary stats
-                    xmin,xmax,ymin,ymax = plt.axis()
-                    ypos = ymax-0.05*(ymax-ymin)
-                    xpos = xmin+0.025*(xmax-xmin)
-                    plt.text(xpos,ypos,'status: %s' %site_status,fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'ME = %s' %"{:.4f}".format(workdict[sitetag]['MeanME']),fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'RMSE = %s' %"{:.4f}".format(workdict[sitetag]['MeanRMSE']),fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'Corr = %s' %"{:.4f}".format(workdict[sitetag]['MeanCorr']),fontsize=11,fontweight='bold')
-                    ypos = ypos-0.05*(ymax-ymin)
-                    plt.text(xpos,ypos,'CE = %s' %"{:.4f}".format(workdict[sitetag]['MeanCE']),fontsize=11,fontweight='bold')
-                    
-                    plt.savefig('%s/site_scatter_recon_vs_proxy_%s_%s_%s.png' % (figdir, v, sitetype, sitename),bbox_inches='tight')
-                    plt.close()
-
-                    sampleSize = workdict[sitetag]['NbPts']
-                    if sampleSize > 1:
-
-                        # ---------------------------
-                        # Mean Error (bias) histogram
-                        # ---------------------------
-                        stat = workdict[sitetag]['GrandEnsME']
-                        nbMCiter = len(stat)
-                        mean_stat = np.mean(stat)
-                        stddev_stat = np.std(stat)
-
-                        n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-                        plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-                        plt.title("Bias: %s" % str(sitetag))
-                        plt.xlabel("Mean error")
-                        plt.ylabel("Probability density")
-                        xmin,xmax,ymin,ymax = plt.axis()
-                        #xrg = np.maximum(np.abs(ts_pmin),np.abs(ts_pmax)) # some measure of proxy range
-                        xrg = np.std(yp) # some measure of proxy range
-                        plt.axis((-xrg,xrg,ymin,ymax))
-                        plt.plot([0,0],[ymin,ymax],'r--')
-                
-                        # Annotate with summary stats
-                        xmin,xmax,ymin,ymax = plt.axis()
-                        ypos = ymax-0.05*(ymax-ymin)
-                        xpos = xmin+0.025*(xmax-xmin)
-                        plt.text(xpos,ypos,'status: %s' %site_status,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'Mean: %.2f' %mean_stat,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'Std-dev: %.2f' %stddev_stat,fontsize=11,fontweight='bold')
-
-                        plt.savefig('%s/site_hist_bias_%s_%s_%s.png' % (figdir,v,sitetype, sitename),bbox_inches='tight')
-                        plt.close()
-
-
-                        # ----------------------
-                        # Correlation histogram
-                        # ---------------------
-                        stat = workdict[sitetag]['GrandEnsCorr']
-                        nbMCiter = len(stat)
-                        mean_stat = np.mean(stat)
-                        stddev_stat = np.std(stat)
-
-                        n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-                        plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-                        plt.title("Correlation: %s" % str(sitetag))
-                        plt.xlabel("Correlation")
-                        plt.ylabel("Probability density")
-                        xmin,xmax,ymin,ymax = plt.axis()
-                        plt.axis((xmin,xmax,ymin,ymax))
-                        plt.axis((-1,1,ymin,ymax))
-                        plt.plot([0,0],[ymin,ymax],'r--')
-
-                        # Annotate with summary stats
-                        xmin,xmax,ymin,ymax = plt.axis()
-                        ypos = ymax-0.05*(ymax-ymin)
-                        xpos = xmin+0.025*(xmax-xmin)
-                        plt.text(xpos,ypos,'status: %s' %site_status,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'Mean: %.2f' %mean_stat,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'Std-dev: %.2f' %stddev_stat,fontsize=11,fontweight='bold')
-
-                        plt.savefig('%s/site_hist_corr_%s_%s_%s.png' % (figdir,v,sitetype, sitename),bbox_inches='tight')
-                        plt.close()
-
-                        # ---------------------
-                        # CE histogram
-                        # ---------------------
-                        stat = workdict[sitetag]['GrandEnsCE']
-                        nbMCiter = len(stat)
-                        mean_stat = np.mean(stat)
-                        stddev_stat = np.std(stat)
-
-                        n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-                        plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-                        plt.title("Coefficient of efficiency: %s" % str(sitetag))
-                        plt.xlabel("Coefficient of efficiency")
-                        plt.ylabel("Probability density")
-                        xmin,xmax,ymin,ymax = plt.axis()
-                        plt.axis((xmin,xmax,ymin,ymax))
-                        plt.axis((-1,1,ymin,ymax))
-                        plt.plot([0,0],[ymin,ymax],'r--')
-
-                        # Annotate with summary stats
-                        xmin,xmax,ymin,ymax = plt.axis()
-                        ypos = ymax-0.05*(ymax-ymin)
-                        xpos = xmin+0.025*(xmax-xmin)
-                        plt.text(xpos,ypos,'status: %s' %site_status,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'Mean: %.2f' %mean_stat,fontsize=11,fontweight='bold')
-                        ypos = ypos-0.05*(ymax-ymin)
-                        plt.text(xpos,ypos,'Std-dev: %.2f' %stddev_stat,fontsize=11,fontweight='bold')
-
-                        plt.savefig('%s/site_hist_ce_%s_%s_%s.png' % (figdir,v,sitetype,sitename),bbox_inches='tight')
-                        plt.close()
-
-                
-                        # ------------------------------------
-                        # Ensemble calibration ratio histogram
-                        # ------------------------------------
-                        if v == 'assim':                
-                            stat = workdict[sitetag]['GrandEnsCalib']
-                            mean_stat = np.mean(stat)
-                            stddev_stat = np.std(stat)
-
-                            n, bins, patches = plt.hist(stat, histtype='stepfilled',normed=True)
-                            plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-                            plt.title("DA ensemble calibration: %s" % str(sitetag))
-                            plt.xlabel("Ensemble calibration ratio")
-                            plt.ylabel("Probability density")
-                            xmin,xmax,ymin,ymax = plt.axis()
-                            plt.axis((xmin,xmax,ymin,ymax))
-                            plt.axis((0,5,ymin,ymax))
-                            plt.plot([0,0],[ymin,ymax],'r--')
-
-                            # Annotate with summary stats
-                            xmin,xmax,ymin,ymax = plt.axis()
-                            ypos = ymax-0.05*(ymax-ymin)
-                            xpos = xmax-0.40*(xmax-xmin)
-                            plt.text(xpos,ypos,'status: %s' %site_status,fontsize=11,fontweight='bold')
-                            ypos = ypos-0.05*(ymax-ymin)
-                            plt.text(xpos,ypos,'PSM calib: %s' %datatag_calib,fontsize=11,fontweight='bold')
-                            ypos = ypos-0.05*(ymax-ymin)
-                            plt.text(xpos,ypos,'Mean: %.2f' %mean_stat,fontsize=11,fontweight='bold')
-                            ypos = ypos-0.05*(ymax-ymin)
-                            plt.text(xpos,ypos,'Std-dev: %.2f' %stddev_stat,fontsize=11,fontweight='bold')
-
-                            plt.savefig('%s/site_hist_enscal_%s_%s_%s.png' % (figdir,v,sitetype,sitename),bbox_inches='tight')
-                            plt.close()
-
-                    else:
-                        print 'Sample size too small to plot histograms for proxy site:', sitetag
-
-    end_time = time() - begin_time
-    print '======================================================='
-    print 'All completed in '+ str(end_time/3600.0)+' hours'
-    print '======================================================='
-
 
 
 # =============================================================================

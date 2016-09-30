@@ -329,9 +329,10 @@ class ProxyPages(BaseProxyObject):
         pages_type = site_meta['Archive type'].iloc[0]
         try:
             proxy_type = pages_cfg.proxy_type_mapping[(pages_type, pmeasure)]
-        except KeyError as e:
+        except (KeyError, ValueError) as e:
             print 'Proxy type/measurement not found in mapping: {}'.format(e)
-            proxy_type = None
+            raise ValueError(e)
+
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
@@ -513,9 +514,10 @@ class ProxyNCDC(BaseProxyObject):
         NCDC_type = site_meta['Archive type'].iloc[0]
         try:
             proxy_type = ncdc_cfg.proxy_type_mapping[(NCDC_type,pmeasure)]
-        except KeyError as e:
+        except (KeyError, ValueError) as e:
             print 'Proxy type/measurement not found in mapping: {}'.format(e)
-            proxy_type = None
+            raise ValueError(e)
+
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
