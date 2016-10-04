@@ -66,7 +66,7 @@ class prior_master(object):
         from random import sample, seed
 
 
-        # Load prior **annually averaged** data from file(s) - multiple state variables
+        # Load prior data from file(s) - multiple state variables
         self.read_prior()
 
         nbvars = len(self.statevars)
@@ -109,7 +109,7 @@ class prior_master(object):
             # determining length of state vector
             Nx = Nx + (ndimtot)
 
-            # Looped through all state variables, now a summary:
+        # Looped through all state variables, now a summary:
         print ' '
         print 'State vector information:'
         print 'Nx =', Nx
@@ -193,7 +193,7 @@ class prior_master(object):
         self.ens    = Xb
         self.coords = Xb_coords
         self.full_state_info = state_vect_info
-
+        
         return
 
 
@@ -224,8 +224,7 @@ class prior_ccsm4_last_millenium(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend,
-                                                        self.kind)
+                                                        self.detrend)
 
         return
 
@@ -238,8 +237,7 @@ class prior_ccsm4_preindustrial_control(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend,
-                                                        self.kind)
+                                                        self.detrend)
         return
 
 # class for the CCSM4 isotope-enabled control simulation (from D. Noone)
@@ -251,8 +249,7 @@ class prior_ccsm4_isotope_controlrun(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend,
-                                                        self.kind)
+                                                        self.detrend)
         return
     
 # class for the MPI-ESM-P Last Millenniun simulation
@@ -264,8 +261,7 @@ class prior_mpi_esm_p_last_millenium(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend,
-                                                        self.kind)
+                                                        self.detrend)
         return
 
 # class for the GFDL-CM3 Pre-Industrial Control simulation
@@ -277,8 +273,7 @@ class prior_gfdl_cm3_preindustrial_control(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend,
-                                                        self.kind)
+                                                        self.detrend)
         return
 
 # class for NOAA's 20th century reanalysis (20CR)
@@ -290,8 +285,7 @@ class prior_20cr(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend,
-                                                        self.kind)
+                                                        self.detrend)
         return
 
 # class for ECMWF's 20th century reanalysis (ERA20C)
@@ -303,8 +297,7 @@ class prior_era20c(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend,
-                                                        self.kind)
+                                                        self.detrend)
         return
 
 # class for ECMWF's 20th century model ensemble (ERA20CM)

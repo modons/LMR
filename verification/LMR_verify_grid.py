@@ -16,7 +16,7 @@ matplotlib.use('Agg')
 
 # generic imports
 import numpy as np
-import glob, os
+import glob, os, sys
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 # LMR specific imports
+sys.path.append('../')
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
@@ -51,9 +52,6 @@ nya = 0
 # option to print figures
 fsave = True
 #fsave = False
-
-# variable
-var = 'tas_sfc_Amon'
 
 # set paths, the filename for plots, and global plotting preferences
 
@@ -108,14 +106,25 @@ var = 'tas_sfc_Amon'
 #nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+# ---
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPannual_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPseason_NCDCv0.1.0TreesPages2only_pf0.75'
+#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
+nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
 
 
 # override datadir
 #datadir_output = './data/'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+
+# Directory where reanalysis data can be found
+datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model'
 
 # threshold for fraction of valid data in calculation of verif. stats
 valid_frac = 0.5
@@ -150,6 +159,9 @@ plt.rc('text', usetex=False)
 ##################################
 # END:  set user parameters here
 ##################################
+
+# variable
+var = 'tas_sfc_Amon'
 
 workdir = datadir_output + '/' + nexp
 print 'working directory = ' + workdir
@@ -262,13 +274,18 @@ print '\nloading verification data...\n'
 # ===================
 # Reanalysis products
 # ===================
- 
-# load ERA20C reanalysis -------------------------------------------------------
-datadir = '/home/disk/kalman3/rtardif/LMR/data/model/era20c'
-datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
-vardef = 'tas_sfc_Amon'
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
+# Define month sequence for the calendar year 
+# (argument needed in upload of reanalysis data)
+annual = range(1,13)
+
+# load ERA20C reanalysis -------------------------------------------------------
+datadir = datadir_reanl+'/era20c'
+datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
+vardict = {'tas_sfc_Amon': 'anom'}
+vardef = vardict.keys()[0]
+
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
@@ -287,11 +304,12 @@ ERA20C = ERA20C - ref_mean_era
 
 
 # load 20th century reanalysis (TCR) reanalysis --------------------------------
-datadir = '/home/disk/kalman3/rtardif/LMR/data/model/20cr'
+datadir = datadir_reanl+'/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
-vardef = 'tas_sfc_Amon'
+vardict = {'tas_sfc_Amon': 'anom'}
+vardef = vardict.keys()[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])

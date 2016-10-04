@@ -35,7 +35,7 @@ Revisions:
    field either at the nearest grid pt. or as the weighted-average of values at
    grid points surrounding the isotope proxy site assimilated.
    [ R. Tardif, Univ. of Washington, June 2016 ]
--  Added definitions associated with a new psm class (bilinear) for bivariate
+ - Added definitions associated with a new psm class (bilinear) for bivariate
    linear regressions w/ temperature AND precipitation/PSDI as independent
    variables.
    [ R. Tardif, Univ. of Washington, June 2016 ]
@@ -45,6 +45,12 @@ Revisions:
    values used by the reconstruction process.  This helps the configuration
    stay consistent if one is altering values on the fly.
    [ A. Perkins, Univ. of Washington, June 2016 ]
+ - Use of PSMs calibrated on the basis of a proxy record seasonality metadata
+   can now be activated (see avgPeriod parameter in the "psm" class)
+   [ R. Tardif, Univ. of Washington, July 2016 ]
+ - PSM classes can now be specified per proxy type. 
+   See proxy_psm_type dictionaries in the "proxies" class below.
+   [ R. Tardif, Univ. of Washington, August 2016 ]
 
 """
 
@@ -115,9 +121,9 @@ class core(object):
 
     ##** BEGIN User Parameters **##
 
-    #nexp = 'testdev_precalc_integ_use_precalc_pr_req_not_in_statevar'
     nexp = 'test'
-    
+
+    #lmr_path = '/home/disk/ice4/nobackup/hakim/lmr'
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
@@ -126,18 +132,18 @@ class core(object):
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = (1800, 2000)
     nens = 100
-    seed = 0
+    seed = None
     loc_rad = None
 
+    #datadir_output = '/home/disk/ice4/hakim/svnwork/lmr/trunk/data'
     #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
     datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     
-
+    #archive_dir = '/home/disk/kalman3/hakim/LMR/'
     #archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
     archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
-    #archive_dir = '/home/disk/kalman3/hakim/LMR/'
 
     ##** END User Parameters **##
 
@@ -170,6 +176,9 @@ class proxies(object):
         stored in LMR_proxy_pandas_rework.
     proxy_frac: float
         Fraction of available proxy data (sites) to assimilate
+    proxy_timeseries_kind: string
+        Type of proxy timeseries to use. 'anom' for animalies or 'asis'
+        to keep records as included in the database. 
     """
 
     ##** BEGIN User Parameters **##
@@ -180,9 +189,14 @@ class proxies(object):
     #use_from = ['pages']
     use_from = ['NCDC']
 
-    proxy_frac = 1.0
-    #proxy_frac = 0.75
+    #proxy_frac = 1.0
+    proxy_frac = 0.75
 
+    # type of proxy timeseries to return: 'anom' for anomalies
+    # (temporal mean removed) or asis' to keep unchanged
+    proxy_timeseries_kind = 'asis'
+
+    
     ##** END User Parameters **##
 
     # ---------------
@@ -235,11 +249,9 @@ class proxies(object):
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
+
         proxy_resolution = [1.0]
 
-        # 'anom' for anomalies (temporal mean removed) or 'asis' to keep
-        # unchanged
-        proxy_timeseries_kind = 'asis'
         # DO NOT CHANGE FORMAT BELOW
 
         proxy_order = [
@@ -255,6 +267,26 @@ class proxies(object):
             'Speleothem_All'
             ]
 
+        # Assignment of psm type per proxy type
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        #  The linear PSM can be used on *all* proxies.
+        #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
+        #  PSMs are aimed at *tree ring* proxies in particular
+        #  The h_interp forward model is to be used for isotope proxies when
+        #  the prior is taken from an isotope-enabled GCM model output. 
+        proxy_psm_type = {
+            'Tree ring_Width'      : 'linear',
+            'Tree ring_Density'    : 'linear',
+            'Ice core_d18O'        : 'linear',
+            'Ice core_d2H'         : 'linear',
+            'Ice core_Accumulation': 'linear',
+            'Coral_d18O'           : 'linear',
+            'Coral_Luminescence'   : 'linear',
+            'Lake sediment_All'    : 'linear',
+            'Marine sediment_All'  : 'linear',
+            'Speleothem_All'       : 'linear',
+            }
+        
         proxy_assim2 = {
             'Tree ring_Width': ['Ring width',
                                 'Tree ring width',
@@ -300,8 +332,9 @@ class proxies(object):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = self.proxy_resolution
-            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_timeseries_kind = proxies.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
+            self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.proxy_blacklist = list(self.proxy_blacklist)
 
@@ -372,13 +405,11 @@ class proxies(object):
         metafile_proxy = 'NCDC_%s_Metadata.df.pckl' % (dbversion)
         dataformat_proxy = 'DF'
 
+        # This is not activated with NCDC data yet...
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
 
         proxy_resolution = [1.0]
-        # 'anom' for anomalies (temporal mean removed) or 'asis' to keep
-        # unchanged
-        proxy_timeseries_kind = 'asis'
 
         # Limit proxies to those included in the following list of databases
         # Note: Empty list = no restriction
@@ -393,7 +424,7 @@ class proxies(object):
             'Tree Rings_WoodDensity',
 #            'Tree Rings_WidthPages',
             'Tree Rings_WidthPages2',            
-#            'Tree Rings_WidthBreit',
+            'Tree Rings_WidthBreit',
             'Tree Rings_Isotopes',
             'Corals and Sclerosponges_d18O',
             'Corals and Sclerosponges_SrCa',
@@ -408,23 +439,41 @@ class proxies(object):
             'Marine Cores_d18O',
             ]
 
+        # Assignment of psm type per proxy type
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        #  The linear PSM can be used on *all* proxies.
+        #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
+        #  PSMs are aimed at *tree ring* proxies in particular
+        #  The h_interp forward model is to be used for isotope proxies when
+        #  the prior is taken from an isotope-enabled GCM output. 
+        proxy_psm_type = {
+            'Corals and Sclerosponges_d18O' : 'linear',
+            'Corals and Sclerosponges_SrCa' : 'linear',
+            'Corals and Sclerosponges_Rates': 'linear',
+            'Ice Cores_d18O'                : 'linear',
+            'Ice Cores_dD'                  : 'linear',
+            'Ice Cores_Accumulation'        : 'linear',
+            'Ice Cores_MeltFeature'         : 'linear',
+            'Lake Cores_Varve'              : 'linear',
+            'Lake Cores_BioMarkers'         : 'linear',
+            'Lake Cores_GeoChem'            : 'linear',
+            'Marine Cores_d18O'             : 'linear',
+            'Tree Rings_WidthBreit'         : 'linear',
+            'Tree Rings_WidthPages2'        : 'linear',
+            'Tree Rings_WidthPages'         : 'linear',
+            'Tree Rings_WoodDensity'        : 'linear',
+            'Tree Rings_Isotopes'           : 'linear',
+            'Speleothems_d18O'              : 'linear',
+        }
+         
         proxy_assim2 = {
             'Corals and Sclerosponges_d18O' : ['d18O', 'delta18O', 'd18o',
                                                'd18O_stk', 'd18O_int',
                                                'd18O_norm', 'd18o_avg',
                                                'd18o_ave', 'dO18',
                                                'd18O_4'],
-            'Corals and Sclerosponges_d14C' : ['d14C', 'd14c', 'ac_d14c'],
-            'Corals and Sclerosponges_d13C' : ['d13C', 'd13c', 'd13c_ave',
-                                               'd13c_ann_ave', 'd13C_int'],
             'Corals and Sclerosponges_SrCa' : ['Sr/Ca', 'Sr_Ca', 'Sr/Ca_norm',
                                                'Sr/Ca_anom', 'Sr/Ca_int'],
-            'Corals and Sclerosponges_Sr'   : ['Sr'],
-            'Corals and Sclerosponges_BaCa' : ['Ba/Ca'],
-            'Corals and Sclerosponges_CdCa' : ['Cd/Ca'],
-            'Corals and Sclerosponges_MgCa' : ['Mg/Ca'],
-            'Corals and Sclerosponges_UCa'  : ['U/Ca', 'U/Ca_anom'],
-            'Corals and Sclerosponges_Pb'   : ['Pb'],
             'Corals and Sclerosponges_Rates': ['ext','calc'],
             'Ice Cores_d18O'                : ['d18O', 'delta18O', 'delta18o',
                                                'd18o', 'd18o_int', 'd18O_int',
@@ -438,8 +487,6 @@ class proxies(object):
             'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'],
             'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca', 'Cl_cont'],
             'Marine Cores_d18O'             : ['d18O'],
-            'Speleothems_d18O'              : ['d18O'],
-            'Speleothems_d13C'              : ['d13C'],
             'Tree Rings_WidthBreit'         : ['trsgi_breit'],
             'Tree Rings_WidthPages2'        : ['trsgi'],
             'Tree Rings_WidthPages'         : ['TRW',
@@ -453,14 +500,17 @@ class proxies(object):
                                                'late_d',
                                                'MXD'],
             'Tree Rings_Isotopes'           : ['d18O'],
-            }
+            'Speleothems_d18O'              : ['d18O'],
+        }
 
         # A blacklist on proxy records, to prevent assimilation of specific
         # chronologies known to be duplicates.
         # proxy_blacklist = []
         proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
-                           '09japa01a', '10guad01a', '99aust01a', '99fpol01a']
+                           '09japa01a', '10guad01a', '99aust01a', '99fpol01a',
+                           '72Devo01',  '72Devo05']
 
+        
         ##** END User Parameters **##
 
         def __init__(self):
@@ -477,8 +527,9 @@ class proxies(object):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = self.proxy_resolution
-            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_timeseries_kind = proxies.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
+            self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.database_filter = list(self.database_filter)
             self.proxy_blacklist = list(self.proxy_blacklist)
@@ -507,22 +558,18 @@ class psm(object):
 
     Attributes
     ----------
-    use_psm: dict{str: str}
-        Maps proxy class key to psm class key.  Used to determine which psm
-        is associated with what Proxy type. This mapping can be extended to
-        make more intricate proxy - psm relationships.
+    avgPeriod: str
+        Indicates use of PSMs calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
     """
 
     ##** BEGIN User Parameters **##
-
-    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
-    #use_psm = {'pages': 'linear_TorP', 'NCDC': 'linear_TorP'}
-    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
-    #use_psm = {'pages': 'h_interp', 'NCDC': 'h_interp'}
     
-    # Use PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
     avgPeriod = 'annual'
     #avgPeriod = 'season'
+
+    # Mapping of calibration sources w/ climate variable
+    # To be modified only if a new calibration source is added. 
+    all_calib_sources = {'temperature': ['GISTEMP', 'MLOST', 'HadCRUT', 'BerkeleyEarth'], 'moisture': ['GPCC','DaiPDSI']}
     
     ##** END User Parameters **##
 
@@ -614,6 +661,23 @@ class psm(object):
             else:
                 self.pre_calib_datafile = self.pre_calib_datafile
 
+            # association of calibration source and state variable needed to calculate Ye's
+            if self.datatag_calib in psm.all_calib_sources['temperature']:
+                self.psm_required_variables = {'tas_sfc_Amon': 'anom'}
+
+            elif self.datatag_calib in psm.all_calib_sources['moisture']:
+                if self.datatag_calib == 'GPCC':
+                    self.psm_required_variables = {'pr_sfc_Amon':'anom'}
+                elif self.datatag_calib == 'DaiPDSI':
+                    self.psm_required_variables = {'scpdsi_sfc_Amon': 'anom'}
+                else:
+                    raise KeyError('Unrecognized moisture calibration source.'
+                                   ' State variable not identified for Ye calculation.')
+            else:
+                raise KeyError('Unrecognized calibration source.'
+                               ' State variable not identified for Ye calculation.')
+
+                
     class _linear_TorP(_linear):                
         """
         Parameters for the linear fit PSM.
@@ -736,6 +800,21 @@ class psm(object):
             else:
                 self.pre_calib_datafile_P = self.pre_calib_datafile_P
 
+            # association of calibration sources and state variables needed to calculate Ye's
+            required_variables = {'tas_sfc_Amon': 'anom'} # start with temperature
+
+            # now check for moisture & add variable to list
+            if self.datatag_calib_P == 'GPCC':
+                    required_variables['pr_sfc_Amon'] = 'anom'
+            elif self.datatag_calib_P == 'DaiPDSI':
+                    required_variables['scpdsi_sfc_Amon'] = 'anom'
+            else:
+                raise KeyError('Unrecognized moisture calibration source.'
+                               ' State variable not identified for Ye calculation.')
+
+            self.psm_required_variables = required_variables
+
+                
     class _bilinear(object):
         """
         Parameters for the bilinear fit PSM.
@@ -839,6 +918,20 @@ class psm(object):
             else:
                 self.pre_calib_datafile = self.pre_calib_datafile
 
+            # association of calibration sources and state variables needed to calculate Ye's
+            required_variables = {'tas_sfc_Amon': 'anom'} # start with temperature
+
+            # now check for moisture & add variable to list
+            if self.datatag_calib_P == 'GPCC':
+                    required_variables['pr_sfc_Amon'] = 'anom'
+            elif self.datatag_calib_P == 'DaiPDSI':
+                    required_variables['scpdsi_sfc_Amon'] = 'anom'
+            else:
+                raise KeyError('Unrecognized moisture calibration source.'
+                               ' State variable not identified for Ye calculation.')
+
+            self.psm_required_variables = required_variables
+
         
     class _h_interp(object):
         """
@@ -891,10 +984,23 @@ class psm(object):
             else:
                 self.datafile_obsError = self.datafile_obsError
 
+            # define state variable needed to calculate Ye's
+            # only d18O for now ...
+
+            # psm requirements depend on settings in proxies class 
+            proxy_kind = proxies.proxy_timeseries_kind
+            if proxies.proxy_timeseries_kind == 'asis':
+                psm_var_kind = 'full'
+            elif proxies.proxy_timeseries_kind == 'anom':
+                psm_var_kind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
+                                 ' Unable to assign kind to psm_required_variables'
+                                 ' in h_interp psm class.')                
+            self.psm_required_variables = {'d18O_sfc_Amon': psm_var_kind}
     
     # Initialize subclasses with all attributes 
     def __init__(self, **kwargs):
-        self.use_psm = self.use_psm
         self.linear = self._linear(**kwargs)
         self.linear_TorP = self._linear_TorP(**kwargs)
         self.bilinear = self._bilinear(**kwargs)
@@ -915,10 +1021,14 @@ class prior(object):
         Name of prior file to use
     dataformat_prior: str
         Datatype of prior container
-    psm_required_variables: list(str)
-        List of variables used to calculate ye values.
     state_variables: list(str)
         List of variables to use in the state vector for the prior.
+    state_kind: str
+        Indicates whether the state is to be anomalies ('anom') or full field ('full').
+    detrend: bool
+        Indicates whether to detrend the prior or not.
+    avgInterval: list(int)
+        List of integers indicating the months over which to average the prior.
     """
 
     ##** BEGIN User Parameters **##
@@ -952,36 +1062,34 @@ class prior(object):
 
     dataformat_prior = 'NCD'
 
-    psm_required_variables = ['tas_sfc_Amon']
-    #psm_required_variables = ['pr_sfc_Amon']
-    #psm_required_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
-    #psm_required_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
-    #psm_required_variables = ['d18O_sfc_Amon']
 
-    state_variables = ['tas_sfc_Amon']
-    #state_variables = ['pr_sfc_Amon']
-    #state_variables = ['scpdsi_sfc_Amon']
-    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon']
-    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCindex_Omon']
-    #state_variables = ['tas_sfc_Amon', 'zg_500hPa_Amon',
-    #                    'AMOCindex_Omon', 'AMOC26Nmax_Omon',
-    #                    'AMOC26N1000m_Omon', 'AMOC45N1000m_Omon',
-    #                    'ohcAtlanticNH_0-700m_Omon',
-    #                    'ohcAtlanticSH_0-700m_Omon',
-    #                    'ohcPacificNH_0-700m_Omon', 'ohcPacificSH_0-700m_Omon',
-    #                    'ohcIndian_0-700m_Omon', 'ohcSouthern_0-700m_Omon',
-    #                    'ohcArctic_0-700m_Omon']
-    #state_variables = ['tas_sfc_Amon', 'pr_sfc_Amon']
-    #state_variables = ['tas_sfc_Amon', 'scpdsi_sfc_Amon']
-    #state_variables = ['tas_sfc_Amon', 'd18O_sfc_Amon']
+    # dict defining variables to be included in state vector (keys)
+    # and associated "kind", i.e. as anomalies ('anom') or full field ('full')
+    state_variables = {
+        'tas_sfc_Amon'              : 'anom',
+        'pr_sfc_Amon'               : 'anom',
+    #    'scpdsi_sfc_Amon'           : 'anom',
+    #    'psl_sfc_Amon'              : 'anom',
+    #    'zg_500hPa_Amon'            : 'full',
+    #    'wap_500hPa_Amon'           : 'full',
+    #    'AMOCindex_Omon'            : 'anom',
+    #    'AMOC26Nmax_Omon'           : 'anom',
+    #    'AMOC26N1000m_Omon'         : 'anom',
+    #    'AMOC45N1000m_Omon'         : 'anom',
+    #    'ohcAtlanticNH_0-700m_Omon' : 'anom',
+    #    'ohcAtlanticSH_0-700m_Omon' : 'anom',
+    #    'ohcPacificNH_0-700m_Omon'  : 'anom',
+    #    'ohcPacificSH_0-700m_Omon'  : 'anom',
+    #    'ohcIndian_0-700m_Omon'     : 'anom',
+    #    'ohcSouthern_0-700m_Omon'   : 'anom',
+    #    'ohcArctic_0-700m_Omon'     : 'anom',
+    #    'd18O_sfc_Amon'             : 'full',
+        }
+
     
     # boolean : detrend prior?
     # by default, considers the entire length of the simulation
     detrend = False
-
-    # Full field or anomalies? Allowed values : 'full' or 'anom'
-    #state_kind = 'full'
-    state_kind = 'anom'
 
     avgInterval = None
     
@@ -992,11 +1100,8 @@ class prior(object):
         self.prior_source = self.prior_source
         self.datafile_prior = self.datafile_prior
         self.dataformat_prior = self.dataformat_prior
-        self.state_variables = list(self.state_variables)
-        self.psm_required_variables = self.psm_required_variables
+        self.state_variables = self.state_variables
         self.detrend = self.detrend
-        self.state_kind = self.state_kind
-        self.avgInterval = self.avgInterval
         self.seed = core.seed
 
         if self.datadir_prior is None:
@@ -1006,8 +1111,9 @@ class prior(object):
             self.datadir_prior = self.datadir_prior
 
         if self.avgInterval is None:
-            self.avgInterval = 'annual'
-
+            self.avgInterval = [1,2,3,4,5,6,7,8,9,10,11,12] # annual (calendar) as default
+        else:
+            self.avgInterval = self.avgInterval
 
 class Config(object):
 

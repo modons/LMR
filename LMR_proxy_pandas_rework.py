@@ -68,16 +68,10 @@ class ProxyManager:
         for proxy_class_key in config.proxies.use_from:
             pclass = get_proxy_class(proxy_class_key)
 
-            # Get PSM kwargs
-            proxy_psm_key = config.psm.use_psm[proxy_class_key]
-            psm_class = LMR_psms.get_psm_class(proxy_psm_key)
-            psm_kwargs = psm_class.get_kwargs(config)
-
             # Load proxies for current class
             ids_by_grp, proxies = pclass.load_all(config,
                                                   data_range,
-                                                  **psm_kwargs)
-
+                                                  None)
             # Add to total lists
             self.all_proxies += proxies
             for k, v in ids_by_grp.iteritems():
@@ -197,8 +191,6 @@ class BaseProxyObject:
     elev
     values
     time
-    psm_kwargs: dict(unpacked)
-        Keyword arguments to be passed to the PSM
 
     Notes
     -----
@@ -208,7 +200,7 @@ class BaseProxyObject:
     __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
-                 lat, lon, elev, seasonality, values, time, **psm_kwargs):
+                 lat, lon, elev, seasonality, values, time):
 
         if (values is None) or len(values) == 0:
             raise ValueError('No proxy data given for object initialization')
@@ -225,10 +217,10 @@ class BaseProxyObject:
         self.elev = elev
         self.time = time
         self.seasonality = seasonality
-        
+
         # Retrieve appropriate PSM function
-        psm_obj = self.get_psm_obj(config)
-        self.psm_obj = psm_obj(config, self, **psm_kwargs)
+        psm_obj = self.get_psm_obj(config,prox_type)
+        self.psm_obj = psm_obj(config, self)
         self.psm = self.psm_obj.psm
 
     @staticmethod
@@ -240,8 +232,7 @@ class BaseProxyObject:
     @classmethod
     @abstractmethod
     def load_site(cls,  config, site, data_range=None, meta_src=None,
-                  data_src=None,
-                  **psm_kwargs):
+                  data_src=None):
         """
         Load proxy object from single site.
 
@@ -257,8 +248,6 @@ class BaseProxyObject:
             Source for proxy record data (might be same as meta_src)
         data_range: iterable
             Two-item container holding beginning and end date of reconstruction
-        psm_kwargs: dict(unpacked)
-            Keyword arguments to be passed to the psm.
 
         Returns
         -------
@@ -274,7 +263,7 @@ class BaseProxyObject:
 
     @classmethod
     @abstractmethod
-    def load_all(cls, config, data_range, **psm_kwargs):
+    def load_all(cls, config, data_range):
         """
         Load proxy objects from all sites matching filter criterion.
 
@@ -288,8 +277,6 @@ class BaseProxyObject:
             Source for proxy record data (might be same as meta_src)
         data_range: iterable
             Two-item container holding beginning and end date of reconstruction
-        psm_kwargs: dict(unpacked)
-            Keyword arguments to be passed to the psm.
 
         Returns
         -------
@@ -317,15 +304,14 @@ class BaseProxyObject:
 class ProxyPages(BaseProxyObject):
 
     @staticmethod
-    def get_psm_obj(config):
-        psm_key = config.psm.use_psm['pages']
+    def get_psm_obj(config,proxy_type):
+        psm_key = config.proxies.pages.proxy_psm_type[proxy_type]
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
     @augment_docstr
     def load_site(cls, config, site, data_range=None, meta_src=None,
-                  data_src=None,
-                  **psm_kwargs):
+                  data_src=None):
         """%%aug%%
 
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
@@ -343,9 +329,10 @@ class ProxyPages(BaseProxyObject):
         pages_type = site_meta['Archive type'].iloc[0]
         try:
             proxy_type = pages_cfg.proxy_type_mapping[(pages_type, pmeasure)]
-        except KeyError as e:
+        except (KeyError, ValueError) as e:
             print 'Proxy type/measurement not found in mapping: {}'.format(e)
-            proxy_type = None
+            raise ValueError(e)
+
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
@@ -373,12 +360,12 @@ class ProxyPages(BaseProxyObject):
             raise ValueError('No observations in specified time range.')
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
-                   seasonality, values, times, **psm_kwargs)
+                   seasonality, values, times)
 
     @classmethod
     @augment_docstr
     def load_all(cls, config, data_range, meta_src=None,
-                 data_src=None, **psm_kwargs):
+                 data_src=None):
         """%%aug%%
 
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
@@ -445,8 +432,7 @@ class ProxyPages(BaseProxyObject):
         for site in all_proxy_ids:
             try:
                 pobj = cls.load_site(config, site, data_range,
-                                     meta_src=meta_src, data_src=data_src,
-                                     **psm_kwargs)
+                                     meta_src=meta_src, data_src=data_src)
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
@@ -460,7 +446,7 @@ class ProxyPages(BaseProxyObject):
 
     @classmethod
     def load_all_annual_no_filtering(cls, config, meta_src=None,
-                                     data_src=None, **psm_kwargs):
+                                     data_src=None):
         """
         Method created to facilitate the loading of all possible proxy records
         that can be calibrated with annual resolution.
@@ -488,8 +474,7 @@ class ProxyPages(BaseProxyObject):
         for site in proxy_ids:
             try:
                 pobj = cls.load_site(config, site,
-                                     meta_src=meta_src, data_src=data_src,
-                                     **psm_kwargs)
+                                     meta_src=meta_src, data_src=data_src)
                 proxy_objs.append(pobj)
             except ValueError as e:
                 print e
@@ -504,15 +489,14 @@ class ProxyPages(BaseProxyObject):
 class ProxyNCDC(BaseProxyObject):
 
     @staticmethod
-    def get_psm_obj(config):
-        psm_key = config.psm.use_psm['NCDC']
+    def get_psm_obj(config,proxy_type):
+        psm_key = config.proxies.ncdc.proxy_psm_type[proxy_type]
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
     @augment_docstr
     def load_site(cls, config, site, data_range=None, meta_src=None,
-                  data_src=None,
-                  **psm_kwargs):
+                  data_src=None):
         """%%aug%%
 
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
@@ -530,9 +514,10 @@ class ProxyNCDC(BaseProxyObject):
         NCDC_type = site_meta['Archive type'].iloc[0]
         try:
             proxy_type = ncdc_cfg.proxy_type_mapping[(NCDC_type,pmeasure)]
-        except KeyError as e:
+        except (KeyError, ValueError) as e:
             print 'Proxy type/measurement not found in mapping: {}'.format(e)
-            proxy_type = None
+            raise ValueError(e)
+
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
         lat = site_meta['Lat (N)'].iloc[0]
@@ -562,12 +547,12 @@ class ProxyNCDC(BaseProxyObject):
             raise ValueError('No observations in specified time range.')
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
-                   seasonality, values, times, **psm_kwargs)
+                   seasonality, values, times)
 
     @classmethod
     @augment_docstr
     def load_all(cls, config, data_range, meta_src=None,
-                 data_src=None, **psm_kwargs):
+                 data_src=None):
         """%%aug%%
 
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
@@ -668,8 +653,7 @@ class ProxyNCDC(BaseProxyObject):
         for site in all_proxy_ids:
             try:
                 pobj = cls.load_site(config, site, data_range,
-                                     meta_src=meta_src, data_src=data_src,
-                                     **psm_kwargs)                
+                                     meta_src=meta_src, data_src=data_src)
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
@@ -682,7 +666,7 @@ class ProxyNCDC(BaseProxyObject):
 
     @classmethod
     def load_all_annual_no_filtering(cls, config, meta_src=None,
-                                     data_src=None, **psm_kwargs):
+                                     data_src=None):
         """
         Method created to facilitate the loading of all possible proxy records
         that can be calibrated with annual resolution.
@@ -711,8 +695,7 @@ class ProxyNCDC(BaseProxyObject):
         for site in proxy_ids:
             try:
                 pobj = cls.load_site(config, site,
-                                     meta_src=meta_src, data_src=data_src,
-                                     **psm_kwargs)
+                                     meta_src=meta_src, data_src=data_src)
                 proxy_objs.append(pobj)
             except ValueError as e:
                 print e

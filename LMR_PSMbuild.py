@@ -16,7 +16,15 @@
    NCDC database. [R. Tardif, U. of Washington, Spring 2016]
  - Included the GPCC precipitation historical dataset as a possible PSM calibration source.
    [R. Tardif, U. of Washington, Spring 2016]
-
+ - Included the Dai PSDI historical dataset as a possible PSM calibration source.
+   [R. Tardif, U. of Washington, Spring 2016]
+ - Added definitions of parameters related to the calibration of bilinear (temperature/
+   precipitation or moisture) PSMs. [R. Tardif, U. of Washington, June 2016]
+ - Added definitions related to the calibration of PSMs on the basis of a proxy record 
+   seasonality metadata. [ R. Tardif, Univ. of Washington, July 2016 ]
+ - Adjustment to specification of psm type to calibrate for compatibility with modified 
+   classes handling use of different psms per proxy types.
+   [ R. Tardif, Univ. of Washington, August 2016 ]
 """
 import os
 import numpy as np
@@ -48,10 +56,8 @@ class v_core(object):
         are located
     calib_period: tuple(int)
         Time period considered for the calibration
-    datadir_output: str
-        Absolute path to working directory output where the PSM data
-        will be stored.
-
+    psm_type: str
+        Indicates the type of PSM to calibrate. For now, allows 'linear' or 'bilinear'
     """
 
     ##** BEGIN User Parameters **##
@@ -62,13 +68,16 @@ class v_core(object):
 
     calib_period = (1850, 2010)
 
-    
+    # PSM type to calibrate: 'linear' or 'bilinear'
+    psm_type = 'linear'
+    #psm_type = 'bilinear'
+
     ##** END User Parameters **##
         
     def __init__(self):
         self.lmr_path = self.lmr_path
         self.calib_period = self.calib_period
-        
+        self.psm_type = self.psm_type
     
 class v_proxies(object):
     """
@@ -83,12 +92,10 @@ class v_proxies(object):
         Fraction of available proxy data (sites) to assimilate
     """
 
-    # =============================
-    # Which proxy database to use ?
-    # =============================
 
     ##** BEGIN User Parameters **##
 
+    # Which proxy database to use ?
     #use_from = ['pages']
     use_from = ['NCDC']
 
@@ -208,6 +215,9 @@ class v_proxies(object):
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.proxy_blacklist = list(self.proxy_blacklist)
 
+            self.proxy_psm_type = {}
+            for p in self.proxy_order: self.proxy_psm_type[p] = v_core.psm_type
+            
             # Create mapping for Proxy Type/Measurement Type to type names above
             self.proxy_type_mapping = {}
             for ptype, measurements in self.proxy_assim2.iteritems():
@@ -218,7 +228,6 @@ class v_proxies(object):
 
             self.simple_filters = {'PAGES 2k Region': self.regions,
                                    'Resolution (yr)': self.proxy_resolution}
-
 
 
     # ----------------
@@ -366,6 +375,9 @@ class v_proxies(object):
             self.database_filter = list(self.database_filter)
             self.proxy_blacklist = list(self.proxy_blacklist)
 
+            self.proxy_psm_type = {}
+            for p in self.proxy_order: self.proxy_psm_type[p] = v_core.psm_type
+
             self.proxy_type_mapping = {}
             for ptype, measurements in self.proxy_assim2.iteritems():
                 # Fetch proxy type name that occurs before underscore
@@ -392,22 +404,17 @@ class v_psm(object):
 
     Attributes
     ----------
-    use_psm: dict{str: str}
-        Maps proxy class key to psm class key.  Used to determine which psm
-        is associated with what Proxy type.
+    avgPeriod: str
+        PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
     """
 
     ##** BEGIN User Parameters **##
-
-    use_psm = {'pages': 'linear', 'NCDC': 'linear'}
-    #use_psm = {'pages': 'bilinear', 'NCDC': 'bilinear'}
-
 
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
     avgPeriod = 'annual'
     #avgPeriod = 'season'
     
-    ##** BEGIN User Parameters **##
+    ##** END User Parameters **##
 
     
     class _linear(object):
@@ -601,7 +608,6 @@ class v_psm(object):
     
     # Initialize subclasses with all attributes
     def __init__(self, **kwargs):
-        self.use_psm = self.use_psm
         self.linear = self._linear(**kwargs)
         self.bilinear = self._bilinear(**kwargs)
 
@@ -626,7 +632,7 @@ def main():
     begin_time = time()
 
     proxy_database = Cfg.proxies.use_from[0]
-    psm_type = Cfg.psm.use_psm[proxy_database]
+    psm_type = Cfg.core.psm_type
 
     print 'Proxies             :', proxy_database
     print 'PSM type            :', psm_type

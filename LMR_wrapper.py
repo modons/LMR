@@ -21,12 +21,18 @@ import datetime
 import LMR_driver_callable as LMR
 import LMR_config
 
-from LMR_utils import ensemble_stats
+from LMR_utils import validate_config, ensemble_stats
 
 print '\n' + str(datetime.datetime.now()) + '\n'
 
 # Define main experiment output directory
 cfg = LMR_config.Config()
+
+proceed = validate_config(cfg)
+if not proceed:
+    raise SystemExit()
+else:
+    print 'OK!'
 
 iter_range = cfg.wrapper.iter_range
 expdir = os.path.join(cfg.core.datadir_output, cfg.core.nexp)

@@ -11,10 +11,12 @@ Originator: Greg Hakim, U. of Washington, November 2015
 Revisions: 
 
 """
+
 import matplotlib
 # need to do this when running remotely, and to suppress figures
 matplotlib.use('Agg')
 
+import sys
 import csv
 import glob, os, fnmatch
 import numpy as np
@@ -26,9 +28,12 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 from scipy import stats
 from netCDF4 import Dataset
 from datetime import datetime, timedelta
+import cPickle
 
 import pandas as pd
-#
+
+# LMR specific imports
+sys.path.append('../')
 from LMR_plot_support import *
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
 from load_gridded_data import read_gridded_data_GISTEMP
@@ -55,6 +60,14 @@ def truncate_colormap(cmap, minval=0.0,maxval=1.0,n=100):
 stime = 1880
 etime = 2000
 
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (90,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+MCset = (0,1)
+
 # define the running time mean 
 #nsyrs = 31 # 31-> 31-year running mean--nsyrs must be odd!
 nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
@@ -64,13 +77,13 @@ nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
 iplot = True
 
 # option to save figures to a file
-#fsave = True
 fsave = True
 
 # file specification
 #
 # current datasets
 # ---
+# controls, published:
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 #nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
@@ -96,15 +109,23 @@ fsave = True
 #nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
 #nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
-nexp = 'test_ncdc_v0.1.0'
+#nexp = 'test_ncdc_v0.1.0'
+#nexp = 'test_V2proto'
+#nexp = 'test_V2proto_TorP'
+nexp = 'test_final_precalcYeSeason'
 
-# specify directories for LMR and calibration data
+# specify directories for LMR data
 #datadir_output = './data/'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
 datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
 
+# Directory where historical griddded data products can be found
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
+
+# Directory where reanalysis data can be found
+datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model'
 
 # plotting preferences
 nlevs = 30 # number of contours
@@ -139,9 +160,6 @@ print '--------------------------------------------------'
 
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
-# sorted
-dirs.sort()
-
 
 # query file for assimilated proxy information (for now, ONLY IN THE r0 directory!)
 
@@ -168,7 +186,7 @@ nlat_GIS = len(GIS_lat)
 nlon_GIS = len(GIS_lon)
 
 
-# load HadCRU
+# load HadCRUT
 datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
 calib_vars = ['Tsfc']
 [ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
@@ -209,11 +227,17 @@ MLOST_time = np.array(mlost_time)
 # Reanalysis products
 # ===================
 
-datadir = '/home/disk/kalman3/rtardif/LMR/data/model/era20c'
-datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
-vardef = 'tas_sfc_Amon'
+# Define month sequence for the calendar year 
+# (argument needed in upload of reanalysis data)
+annual = range(1,13)
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
+# load ECMWF's 20th century reanalysis (ERA20C) reanalysis --------------------------------
+datadir = datadir_reanl+'/era20c'
+datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
+vardict = {'tas_sfc_Amon': 'anom'}
+vardef = vardict.keys()[0]
+
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
@@ -238,12 +262,13 @@ for i in xrange(0,len(ERA20C_time)):
     [era_gm[i],era_nhm[i],era_shm[i]] = global_hemispheric_means(ERA20C[i,:,:],lat_ERA20C)
 
 
-# load 20th century reanalysis (TCR) reanalysis --------------------------------
-datadir = '/home/disk/kalman3/rtardif/LMR/data/model/20cr'
+# load NOAA's 20th century reanalysis (TCR) reanalysis --------------------------------
+datadir = datadir_reanl+'/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
-vardef = 'tas_sfc_Amon'
+vardict = {'tas_sfc_Amon': 'anom'}
+vardef = vardict.keys()[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,[vardef],outfreq='annual')
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])
@@ -281,12 +306,12 @@ if iplot:
 
 first = True
 kk = -1
-# one experiment only
 
-# use all of the directories found from scanning the disk
-dirset = dirs
-# use a custom selection
-#dirset = dirs[0:1]
+# selecting  the MC iterations to keep
+if MCset:
+    dirset = dirs[MCset[0]:MCset[1]+1]
+else:
+    dirset = dirs
 niters = len(dirset)
 
 print '--------------------------------------------------'
@@ -1268,8 +1293,63 @@ fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_ce_table'
 #plt.savefig(fname+'.png')
 plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
 
+    
+#
+# NEW 9/15/16 dictionary for objective verification
+#
 
+gmt_verification_stats = {}
+stat_vars = ['stime','etime',
+             'ltc','lec','lgc','lcc','lbc','lmc','loc',
+             'ltce','lece','lgce','lcce','lbce','lmce','loce',
+             'lgrd','lgcd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
+             'lmrs','gs','crus','bes','mlosts','tcrs','eras']
 
+stat_metadata = {'stime':"starting year of verification time period",
+                 'etime':"ending year of verification time period",
+                 'ltc':'LMR_TCR correlation',
+                 'lec':'LMR_ERA correlation',
+                 'lgc':'LMR_GIS correlation',
+                 'lcc':'LMR_CRU correlation',
+                 'lbc':'LMR_BE correlation',
+                 'lmc':'LMR_MLOST correlation',
+                 'loc':'LMR_consensus correlation',
+                 'ltce':'LMR_TCR coefficient of efficiency',
+                 'lece':'LMR_ERA coefficient of efficiency',
+                 'lgce':'LMR_GIS coefficient of efficiency',
+                 'lcce':'LMR_CRU coefficient of efficiency',
+                 'lbce':'LMR_BE coefficient of efficiency',
+                 'lmce':'LMR_MLOST coefficient of efficiency',
+                 'loce':'LMR_consensus coefficient of efficiency',
+                 'ltrd':'LMR_TCR detrended correlation',
+                 'lerd':'LMR_ERA detrended correlation',
+                 'lgrd':'LMR_GIS detrended correlation',
+                 'lcrd':'LMR_CRU detrended correlation',
+                 'lbrd':'LMR_BE detrended correlation',
+                 'lmrd':'LMR_MLOST detrended correlation',
+                 'ltcd':'LMR_TCR detrended coefficient of efficiency',
+                 'lecd':'LMR_ERA detrended coefficient of efficiency',
+                 'lgcd':'LMR_GIS detrended coefficient of efficiency',
+                 'lccd':'LMR_CRU detrended coefficient of efficiency',
+                 'lbcd':'LMR_BE detrended coefficient of efficiency',
+                 'lmcd':'LMR_MLOST detrended coefficient of efficiency',
+                 'lmrs':'LMR trend (K/100 years)',
+                 'gs':'GIS trend (K/100 years)',
+                 'crus':'CRU trend (K/100 years)',
+                 'bes':'BE trend (K/100 years)',
+                 'mlosts':'MLOST trend (K/100 years)',
+                 'tcrs':'TCR trend (K/100 years)',
+                 'eras':'ERA trend (K/100 years)',
+                 'stat_metadata':'metdata'
+                 }
 
+for var in stat_vars:
+    gmt_verification_stats[var] = locals()[var]
 
+gmt_verification_stats['stat_metadata'] = stat_metadata
 
+# dump the dictionary to a pickle file
+spfile = nexp+'_'+str(niters)+'_iters_gmt_verification.pckl'
+print 'writing statistics to pickle file: ' + spfile
+outfile = open(spfile,'w')
+cPickle.dump(gmt_verification_stats,outfile)
