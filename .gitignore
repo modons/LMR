@@ -49,9 +49,6 @@ coverage.xml
 *.log
 *.pot
 
-# Sphinx documentation
-docs/_build/
-
 #Data Files
 *.npy
 *.h5
