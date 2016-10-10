@@ -60,11 +60,14 @@ You must read and understand the version 1 instructions (README) before proceedi
        the data (proxy and calibration dataset for PSM calibration.
        Ex. (1850,2000)
 
+     - psm_type: dictionary defining the type of PSM to calibrate per proxy database.
+       Either 'linear' or 'bilinear'
+
    * In class v_proxies:
      - use_from: List defining the proxy database to use. 
        Either ['pages'] or ['NCDC']
 
-   * In class _ncdc:
+   * In class _ncdc and/or _pages:
      - dbversion: Version of the proxy database for which to calibrate the 
        linear PSMs. ex: v0.1.0
        Note: Only relevant if use_from is set to ['NCDC']
@@ -78,9 +81,6 @@ You must read and understand the version 1 instructions (README) before proceedi
        or 'anom' (temporal mean removed)
 
    * In class v_psm:
-     - use_psm: dictionary defining the type of PSM to calibrate per proxy database.
-       Either 'linear' or 'bilinear'
-
      - avgPeriod: String defining the averaging period over which the calibration is
        to be performed. Either 'annual' or 'season' are allowed. 
 
@@ -119,8 +119,8 @@ You must read and understand the version 1 instructions (README) before proceedi
 
    Command:
    -------
-   To generate the Ye values, from the main LMR code directory, type
-   python misc/build_ye_file.py
+   To generate the Ye values, from the main LMR code directory, change into the misc/ directory and type
+   python build_ye_file.py
 
    .npz files containing the Ye values are generated in a /ye_precalc_files
    directory in your <<lmr_path>> directory.
