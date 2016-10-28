@@ -51,6 +51,9 @@ Revisions:
  - PSM classes can now be specified per proxy type. 
    See proxy_psm_type dictionaries in the "proxies" class below.
    [ R. Tardif, Univ. of Washington, August 2016 ]
+ - Addition of filters for selecting the set of proxy records available for
+   assimilation on data availability over reconstruction period.
+   [ R. Tardif, Univ. of Washington, October 2016 ]
 
 """
 
@@ -179,6 +182,17 @@ class proxies(object):
     proxy_timeseries_kind: string
         Type of proxy timeseries to use. 'anom' for animalies or 'asis'
         to keep records as included in the database. 
+    proxy_availability_filter: boolean
+        True/False flag indicating whether filtering of proxy records
+        according to data availability over reconstruction period is
+        to be performed. If True, only proxies with data covering the
+        reconstruction period are retained for assimilation. 
+        Condition on record completeness is controlled with the next 
+        config. parameter (see just below).
+    proxy_availability_fraction: float
+        Minimum threshold on the fraction of available proxy annual data 
+        over the reconstruction period. i.e. control on the fraction of 
+        available data that a recors must have in order to be assimilated. 
     """
 
     ##** BEGIN User Parameters **##
@@ -196,6 +210,22 @@ class proxies(object):
     # (temporal mean removed) or asis' to keep unchanged
     proxy_timeseries_kind = 'asis'
 
+    # Filtering proxy records on conditions of data availability during
+    # the reconstruction period. 
+    # - Filtrering disabled if proxy_availability_filter = False.
+    # - If proxy_availability_filter = True, only records with
+    #   oldest and youngest data outside or at edges of the recon. period
+    #   are considered for assimilation.
+    # - Testing for record completeness through the application of a threshold
+    #   on data availability fraction (proxy_availability_fraction parameter).
+    #   Records with a fraction of available data (ratio of valid data over
+    #   the maximum data expected within the reconstruction period) below the
+    #   user-defined threshold are omitted. 
+    #   Set this threshold to 0.0 if you do not want this threshold applied.
+    #   Set this threshold to 1.0 to prevent assimilation of records with
+    #   any missing data within the reconstruction period. 
+    proxy_availability_filter = False
+    proxy_availability_fraction = 1.0
     
     ##** END User Parameters **##
 
@@ -337,7 +367,9 @@ class proxies(object):
             self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.proxy_blacklist = list(self.proxy_blacklist)
-
+            self.proxy_availability_filter = proxies.proxy_availability_filter
+            self.proxy_availability_fraction = proxies.proxy_availability_fraction
+            
             # Create mapping for Proxy Type/Measurement Type to type names above
             self.proxy_type_mapping = {}
             for ptype, measurements in self.proxy_assim2.iteritems():
@@ -533,7 +565,9 @@ class proxies(object):
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.database_filter = list(self.database_filter)
             self.proxy_blacklist = list(self.proxy_blacklist)
-
+            self.proxy_availability_filter = proxies.proxy_availability_filter
+            self.proxy_availability_fraction = proxies.proxy_availability_fraction
+            
             self.proxy_type_mapping = {}
             for ptype, measurements in self.proxy_assim2.iteritems():
                 # Fetch proxy type name that occurs before underscore
@@ -845,8 +879,8 @@ class psm(object):
 
         ##** BEGIN User Parameters **##
 
-        # linear PSM w.r.t. temperature
-        # -----------------------------        
+        # calibration source for  temperature
+        # -----------------------------------
         datatag_calib_T = 'GISTEMP'
         datafile_calib_T = 'gistemp1200_ERSST.nc'
         # or
@@ -861,8 +895,8 @@ class psm(object):
 
         dataformat_calib_T = 'NCD'
         
-        # linear PSM w.r.t. precipitation/moisture
-        # ----------------------------------------
+        # calibration source for precipitation/moisture
+        # ---------------------------------------------
         datatag_calib_P = 'GPCC'
         datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or

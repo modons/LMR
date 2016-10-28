@@ -166,7 +166,7 @@ def LMR_driver_callable(cfg=None):
         print 'Proxy counts for experiment:'
         # count the total number of proxies
         total_proxy_count = len(prox_manager.ind_assim)
-        for pkey, plist in type_site_assim.iteritems():
+        for pkey, plist in sorted(type_site_assim.iteritems()):
             print('%45s : %5d' % (pkey, len(plist)))
         print('%45s : %5d' % ('TOTAL', total_proxy_count))
         print '--------------------------------------------------------------------'
@@ -286,7 +286,7 @@ def LMR_driver_callable(cfg=None):
                                 'ated ye values.')
 
             print 'Loading precalculated Ye values.'
-            Ye_all = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg, prox_manager,
+            [Ye_all, Ye_all_coords] = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg, prox_manager,
                                                           X.prior_sample_indices)
 
         except (IOError, FlagError) as e:
@@ -295,17 +295,19 @@ def LMR_driver_callable(cfg=None):
             # Manually calculate ye_values from state vector
             print 'Calculating ye_values from the prior...'
             Ye_all = np.empty(shape=[total_proxy_count, nens])
+            Ye_all_coords = np.empty(shape=[total_proxy_count, 2])
             for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
                 Ye_all[k, :] = proxy.psm(Xb_one_full,
                                          X.full_state_info,
                                          X.coords)
-
+                Ye_all_coords[k, :] = np.asarray([proxy.lat, proxy.lon], dtype=np.float64)
+                
         # ----------------------------------
         # Augment state vector with the Ye's
         # ----------------------------------
-
         # Append ensemble of Ye's to prior state vector
         Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
+        Xb_one_coords = np.append(Xb_one_coords, Ye_all_coords, axis=0)
     else:
         Xb_one_aug = Xb_one
 
@@ -389,7 +391,7 @@ def LMR_driver_callable(cfg=None):
             if loc_rad is not None:
                 if verbose > 2:
                     print '...computing localization...'
-                    loc = cov_localization(loc_rad, X, Y)
+                loc = cov_localization(loc_rad, Y, X, Xb_one_coords)
 
             # Get Ye values for current proxy
             if online:

@@ -17,11 +17,13 @@ Revisions:
            information is found in the metadata, as extracted from the
            NCDC-templated text files.
            [ R. Tardif, U. Washington, March 2016 ]
-
          - Added capability to filter out *NCDC proxies* listed in a blacklist.
            This is mainly used to prevent the assimilation of chronologies known
            to be duplicates.
            [ R. Tardif, U. Washington, March 2016 ]
+         - Added capability to select proxies according to data availability over
+           the reconstruction period.
+           [ R. Tardif, U. Washington, October 2016 ]
 """
 
 import LMR_psms
@@ -380,11 +382,15 @@ class ProxyPages(BaseProxyObject):
         filters = config.proxies.pages.simple_filters
         proxy_order = config.proxies.pages.proxy_order
         ptype_filters = config.proxies.pages.proxy_assim2
-
-        # initial mask all true before filtering
+        availability_filter = config.proxies.pages.proxy_availability_filter
+        availability_fraction = config.proxies.pages.proxy_availability_fraction
+        
+        # initial masks all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
         useable |= True
-
+        availability_mask = meta_src[meta_src.columns[0]] == 0
+        availability_mask |= True
+        
         # Find indices matching filter specifications
         for colname, filt_list in filters.iteritems():
             simple_mask = meta_src[colname] == 0
@@ -395,6 +401,27 @@ class ProxyPages(BaseProxyObject):
 
             useable &= simple_mask
 
+        # Filtering proxy records on conditions of availability during
+        # the reconstruction period (recon_period in configuration, or
+        # data_range here).
+        if availability_filter: # if not None
+            start, finish = data_range
+            # Checking proxy metadata's period of availability against
+            # reconstruction period.
+            availability_mask = ((meta_src['Oldest (C.E.)'] <= start) &
+                                 (meta_src['Youngest (C.E.)'] >= finish))
+            # Checking level of completeness of record within the reconstruction
+            # period (ignore record if fraction of available data is below user-defined
+            # threshold (proxy_availability_fraction in config).
+            maxnb = (finish - start) + 1
+            proxies_to_test = meta_src['PAGES ID'][availability_mask & useable].values
+            for prx in proxies_to_test.tolist():
+                values = data_src[prx][(data_src[:].index >= start) & (data_src[:].index <= finish)]
+                values = values[values.notnull()]
+                frac_available = float(len(values))/float(maxnb)
+                if frac_available < availability_fraction:
+                    availability_mask[meta_src[meta_src['PAGES ID'] == prx].index] = False
+            
         # Create proxy id lists
         proxy_id_by_type = {}
         all_proxy_ids = []
@@ -419,7 +446,7 @@ class ProxyPages(BaseProxyObject):
 
             # Extract proxy ids using mask and append to lists
             proxies = meta_src['PAGES ID'][measure_mask & type_mask &
-                                           useable].values
+                                           availability_mask & useable].values
 
             # If we have ids after filtering add them to the type list
             if len(proxies) > 0:
@@ -569,11 +596,15 @@ class ProxyNCDC(BaseProxyObject):
         ptype_filters = config.proxies.ncdc.proxy_assim2
         dbase_filters = config.proxies.ncdc.database_filter
         proxy_blacklist = config.proxies.ncdc.proxy_blacklist
-
+        availability_filter = config.proxies.ncdc.proxy_availability_filter
+        availability_fraction = config.proxies.ncdc.proxy_availability_fraction
+        
         # initial mask all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
         useable |= True
-
+        availability_mask = meta_src[meta_src.columns[0]] == 0
+        availability_mask |= True
+        
         # Find indices matching simple filter specifications
         for colname, filt_list in filters.iteritems():
             simple_mask = meta_src[colname] == 0
@@ -584,6 +615,27 @@ class ProxyNCDC(BaseProxyObject):
 
             useable &= simple_mask
 
+        # Filtering proxy records on conditions of availability during
+        # the reconstruction period (recon_period in configuration, or
+        # data_range here).
+        if availability_filter: # if not None
+            start, finish = data_range
+            # Checking proxy metadata's period of availability against
+            # reconstruction period.
+            availability_mask = ((meta_src['Oldest (C.E.)'] <= start) &
+                                 (meta_src['Youngest (C.E.)'] >= finish))
+            # Checking level of completeness of record within the reconstruction
+            # period (ignore record if fraction of available data is below user-defined
+            # threshold (proxy_availability_fraction in config).
+            maxnb = (finish - start) + 1
+            proxies_to_test = meta_src['NCDC ID'][availability_mask & useable].values
+            for prx in proxies_to_test.tolist():
+                values = data_src[prx][(data_src[:].index >= start) & (data_src[:].index <= finish)]
+                values = values[values.notnull()]
+                frac_available = float(len(values))/float(maxnb)
+                if frac_available < availability_fraction:
+                    availability_mask[meta_src[meta_src['NCDC ID'] == prx].index] = False
+            
         # Find indices matching **database filter** specifications
         database_col = 'Databases'
         
@@ -641,7 +693,7 @@ class ProxyNCDC(BaseProxyObject):
             # Extract proxy ids using mask and append to lists
             proxies = meta_src['NCDC ID'][measure_mask & type_mask &
                                           dbase_mask & blacklist_mask &
-                                          useable].values
+                                          availability_mask & useable].values
             # If we have ids after filtering add them to the type list
             if len(proxies) > 0:
                 proxy_id_by_type[name] = proxies.tolist()

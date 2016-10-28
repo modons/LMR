@@ -770,6 +770,7 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
     num_proxies_assim = len(proxy_manager.ind_assim)
     num_samples = len(sample_idxs)
     ye_all = np.zeros((num_proxies_assim, num_samples))
+    ye_all_coords = np.zeros((num_proxies_assim, 2))
     
     psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))    
     precalc_files = {}
@@ -812,10 +813,12 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
         
         pidx = pid_idx_map[pobj.id]
         ye_all[i] = precalc_vals[pidx, sample_idxs]
-    
+
+        ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
+        
     print '  Completed in ',  time() - begin_load, 'secs'
         
-    return ye_all
+    return ye_all, ye_all_coords
 
 
 def validate_config(config):

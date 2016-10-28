@@ -103,6 +103,23 @@ class v_proxies(object):
     
     proxy_frac = 1.0 # this needs to remain = 1.0 if all possible proxies are to be considered for calibration
 
+    # Filtering proxy records on conditions of data availability during
+    # the reconstruction period. 
+    # - Filtrering disabled if proxy_availability_filter = False.
+    # - If proxy_availability_filter = True, only records with
+    #   oldest and youngest data outside or at edges of the recon. period
+    #   are considered for assimilation.
+    # - Testing for record completeness through the application of a threshold
+    #   on data availability fraction (proxy_availability_fraction parameter).
+    #   Records with a fraction of available data (ratio of valid data over
+    #   the maximum data expected within the reconstruction period) below the
+    #   user-defined threshold are omitted. 
+    #   Set this threshold to 0.0 if you do not want this threshold applied.
+    #   Set this threshold to 1.0 to prevent assimilation of records with
+    #   any missing data within the reconstruction period. 
+    proxy_availability_filter = False
+    proxy_availability_fraction = 0.0
+
     # -------------------
     # for PAGES2k proxies
     # -------------------
@@ -214,6 +231,8 @@ class v_proxies(object):
             self.proxy_order = list(self.proxy_order)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.proxy_blacklist = list(self.proxy_blacklist)
+            self.proxy_availability_filter = v_proxies.proxy_availability_filter
+            self.proxy_availability_fraction = v_proxies.proxy_availability_fraction
 
             self.proxy_psm_type = {}
             for p in self.proxy_order: self.proxy_psm_type[p] = v_core.psm_type
@@ -374,7 +393,9 @@ class v_proxies(object):
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.database_filter = list(self.database_filter)
             self.proxy_blacklist = list(self.proxy_blacklist)
-
+            self.proxy_availability_filter = v_proxies.proxy_availability_filter
+            self.proxy_availability_fraction = v_proxies.proxy_availability_fraction
+            
             self.proxy_psm_type = {}
             for p in self.proxy_order: self.proxy_psm_type[p] = v_core.psm_type
 

@@ -602,7 +602,7 @@ class LinearPSM(BasePSM):
     def _load_psm_data(config):
         """Helper method for loading from dataframe"""
         pre_calib_file = config.psm.linear.pre_calib_datafile
-
+        
         return load_cpickle(pre_calib_file)
 
 
@@ -747,7 +747,7 @@ class LinearPSM_TorP(LinearPSM):
             raise ValueError('Could not find proxy in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
 
-
+        
         # Raise exception if critical correlation value not met
         if abs(self.corr) < r_crit:
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
@@ -867,7 +867,7 @@ class LinearPSM_TorP(LinearPSM):
         else:
             raise(ValueError('Unrecognized calibration variable'
                              ' to calibrate psm.'))
-
+        
         return load_cpickle(pre_calib_file)
 
 
@@ -1318,7 +1318,6 @@ class BilinearPSM(BasePSM):
         
         return load_cpickle(pre_calib_file)
 
-    
 
 class h_interpPSM(BasePSM):
     """
@@ -1412,11 +1411,11 @@ class h_interpPSM(BasePSM):
         # Now, d18O is the only isotope considered, irrespective of the proxy type to be assimilated.
         # (TODO: more comprehensive & flexible way to do this...)
         state_var = 'd18O_sfc_Amon'
-
+        
         if state_var not in X_state_info.keys():
             raise KeyError('Needed variable not in state vector for Ye'
                            ' calculation.')
-
+        
         # TODO: end index should already be +1, more pythonic
         statevar_startidx, statevar_endidx = X_state_info[state_var]['pos']
         ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
@@ -1468,23 +1467,29 @@ class h_interpPSM(BasePSM):
         except IOError as e:
             print e
             raise (SystemExit('In "h_interpPSM" class: Cannot find PSM calibration file: %s. Exiting!' % pre_calib_file))
-
+    
     @staticmethod
     def _load_psm_data(config):
         """Helper method for loading from dataframe"""
         
         R_data_file = config.psm.h_interp.datafile_obsError
-        # check if file exists
-        if not os.path.isfile(R_data_file):
-            raise(SystemExit('In "h_interpPSM" class: Cannot find file containing obs. error info.: %s. Exiting!' % R_data_file))
-        else:
-            # this returns an array of tuples (proxy type of type string, proxy site name of type string, R value of type float)
-            # transformed into a list
-            Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None).tolist()
 
-            # transform into a dictionary with (proxy type, proxy site) tuples as keys and R as the paired values
-            Rdata_dict = dict([((item[0],item[1]),item[2]) for item in Rdata_list])            
-            
+        if R_data_file:
+            # check if file exists
+            if not os.path.isfile(R_data_file):
+                raise(SystemExit('In "h_interpPSM" class: Cannot find file containing obs. error info.: %s. Exiting!' % R_data_file))
+
+            else:
+                # this returns an array of tuples (proxy type of type string, proxy site name of type string, R value of type float)
+                # transformed into a list
+                Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None).tolist()
+
+                # transform into a dictionary with (proxy type, proxy site) tuples as keys and R as the paired values
+                Rdata_dict = dict([((item[0],item[1]),item[2]) for item in Rdata_list])            
+
+        else:
+            Rdata_dict = {}
+                
         return Rdata_dict
 
 
