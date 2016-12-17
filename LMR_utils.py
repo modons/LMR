@@ -47,7 +47,7 @@ def get_distance(lon_pt, lat_pt, lon_ref, lat_ref):
                        are to be calculated. Both should be scalars.
     lon_ref, lat_ref : longitudes, latitudes of reference field
                        (e.g. calibration dataset, reconstruction grid)
-                       May be scalar, 1D array.
+                       May be scalar, 1D arrays, or 2D arrays.
 
     Output: Returns array containing distances between (lon_pt, lat_pt) and all other points
             in (lon_ref,lat_ref). Array has dimensions [dim(lon_ref),dim(lat_ref)].
@@ -59,14 +59,25 @@ def get_distance(lon_pt, lat_pt, lon_ref, lat_ref):
     # Convert decimal degrees to radians 
     lon_pt, lat_pt, lon_ref, lat_ref = map(np.radians, [lon_pt, lat_pt, lon_ref, lat_ref])
 
+    # check dimension of lon_ref and lat_ref
+    dims_ref = len(lon_ref.shape)
 
-    lon_dim = len(lon_ref)
-    lat_dim = len(lat_ref)
-    nbpts = lon_dim*lat_dim
-    
-    lats = np.array([lat_ref,]*lon_dim).transpose()
-    lons = np.array([lon_ref,]*lat_dim)
-
+    if dims_ref == 0:
+        lats = lat_ref
+        lons = lon_ref
+    elif dims_ref == 1:
+        lon_dim = len(lon_ref)
+        lat_dim = len(lat_ref)
+        nbpts = lon_dim*lat_dim
+        lats = np.array([lat_ref,]*lon_dim).transpose()
+        lons = np.array([lon_ref,]*lat_dim)
+    elif dims_ref == 2:
+        lats = lat_ref
+        lons = lon_ref
+    else:
+        print 'ERROR in get_distance!'
+        raise SystemExit()
+        
     # Haversine formula using arrays as input
     dlon = lons - lon_pt 
     dlat = lats - lat_pt 
@@ -77,6 +88,94 @@ def get_distance(lon_pt, lat_pt, lon_ref, lat_ref):
 
     return km
 
+
+def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
+    """
+        Extracts data from a gridded field (data) at the gridpt closest to the 
+        reference location (lat_pt, lon_pt) which has valid (i.e. non-NaN) values.
+
+        Parameters
+        ----------
+        data: ndarray
+            Gridded data matching dimensions of (sample, lat, lon) or
+            (sample, lat*lon).
+        lon_data: ndarray
+            Longitudes pertaining to the input data.  Can have shape as a single
+            vector (lat), a grid (lat, lon), or a flattened grid (lat*lon).
+        lat_data: ndarray
+            Latitudes pertaining to the input data. Can have shape as a single
+            vector (lon), a grid (lat, lon), or a flattened grid (lat*lon).
+        lon_pt: float
+            Longitude of the reference point (proxy site or other).
+        lat_pt: float
+            Latitude of the reference point (proxy site or other).
+        getvalid: bool
+            ...
+
+        Returns
+        -------
+        pt_data: ndarray
+            Grid point data closest to the lat/lon of the reference location.
+            Dimension of returned array is 1D along sample axis).
+
+       Originator: R. Tardif, Atmospheric sciences, U. of Washington, December 2016
+
+    """
+    # Initialize returned array to missing (nan)
+    # sample axis is assumed to be axis=0
+    pt_data = np.zeros(shape=data.shape[0])
+    pt_data[:] = np.nan
+
+    # Representative distance between grid pts.
+    dist = haversine(np.roll(lon_data,1), np.roll(lat_data,1), lon_data, lat_data)
+    meandist =  np.mean(dist)
+    
+    # Calculate distances
+    dist = haversine(lon_pt, lat_pt, lon_data, lat_data)
+    workdist = np.ravel(dist)
+    sorteddist = np.sort(workdist)
+
+    # Find closest grid point with *valid* data.
+    # Impose max of search distance equal to twice the representsative distance
+    # Start with min dist.
+
+    distptmin = sorteddist[0]
+    i = 0
+    distpt = distptmin
+    inds2 = np.where(workdist == distpt)[0][0]
+    inds = np.unravel_index(inds2, dist.shape)
+
+
+    if getvalid:
+        valid = False
+        while not valid and distpt < meandist*2.:
+
+            inds2 = np.where(workdist == distpt)[0][0]
+            inds = np.unravel_index(inds2, dist.shape)
+
+            if len(inds) == 2:
+                test_valid = np.isfinite(data[:,inds[0],inds[1]])
+            elif len(inds) == 1:
+                test_valid = np.isfinite(data[:,inds])
+            else:
+                print 'ERROR in distance calc in get_data_closest_gridpt!'
+                raise SystemExit(1)            
+            if np.all(test_valid): valid = True
+            i +=1
+            distpt = sorteddist[i]
+
+    else:
+        pass
+
+    # Extract the data at the identified grid pt.
+    if len(inds) == 2:
+        pt_data = data[:,inds[0],inds[1]]
+    elif len(inds) == 1:
+        pt_data = data[:,inds[0]]
+    else:
+        pass
+
+    return pt_data
 
 
 def year_fix(t):

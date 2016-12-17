@@ -477,8 +477,8 @@ class v_psm(object):
         #datatag_calib = 'GPCC'
         #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
         # or
-        #datatag_calib_P = 'DaiPDSI'
-        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+        #datatag_calib = 'DaiPDSI'
+        #datafile_calib = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
         
         pre_calib_datafile = None
