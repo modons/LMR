@@ -38,11 +38,16 @@ def main():
     # 
 
     #proxy_data_source = 'PAGES2K'
+    # --
     proxy_data_source = 'NCDC'
     # version of the NCDC proxy db to process
-    #dbversion = 'v0.0.0' 
-    dbversion = 'v0.1.0' 
+    #ncdc_dbversion = 'v0.0.0' 
+    ncdc_dbversion = 'v0.1.0' 
+    # --
+    proxy_data_source = 'DADT'
+    dadt_dbversion = 'v0.0.0'
 
+    
     eliminate_duplicates = True
 
     # datadir: directory where the original proxy datafiles are located
@@ -115,6 +120,19 @@ def main():
 
         ncdc_txt_to_dataframes(datadir, proxy_def, meta_outfile, data_outfile, eliminate_duplicates)
 
+
+    elif proxy_data_source == 'DADT':
+        # ============================================================================
+        # DADT project proxy data ----------------------------------------------------
+        # ============================================================================
+
+        take_average_out = False
+
+        fname = datadir + 'DADT_proxies_'+dadt_dbversion+'.xlsx'
+        meta_outfile = outdir + 'DADT_'+dadt_dbversion+'_Metadata.df.pckl'
+        outfile = outdir + 'DADT_'+dadt_dbversion+'_Proxies.df.pckl'
+        DADT_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
+        
     else:
         print 'ERROR: Unkown proxy data source! Exiting!'
         exit(1)
@@ -198,6 +216,99 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     # TODO: make sure year index is consecutive
     #write data to file
     df.to_pickle(dataout)
+
+
+# ===================================================================================
+# For DADT project proxy data ---------------------------------------------------------
+# ===================================================================================
+
+def DADT_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
+    """
+    Takes in Pages2K CSV and converts it to dataframe storage.  This increases
+    size on disk due to the joining along the time index (lots of null values).
+
+    Makes it easier to query and grab data for the proxy experiments.
+
+    :param filename:
+    :param metaout:
+    :param dataout:
+    :return:
+
+    Author: Robert Tardif, Univ. of Washington
+
+    Based on pages_xcel_to_dataframes function written by 
+    Andre Perkins (Univ. of Washington)
+
+    """
+
+    meta_sheet_name = 'Metadata'
+    metadata = pd.read_excel(filename, meta_sheet_name)
+    metadata.to_pickle(metaout)
+
+    nbrecords = len(metadata)
+
+    # One proxy record per sheet, all named as DataXXX
+    record_sheet_names = ['Data'+str("{0:03d}".format(i+1)) for i in range(nbrecords)]
+
+    
+    for i, sheet in enumerate(record_sheet_names):
+        pdata = pd.read_excel(filename, sheet)
+
+        # rounding age data to nearest year (Jess Tierney, pers. comm.)
+        age = (pdata[pdata.columns[0]][1:]).astype('float').round()
+        pdata[pdata.columns[0]][1:] = age
+
+
+        
+        # -- just for print out - looking into time axis for each record
+        # age difference between consecutive data
+        diff = np.diff(pdata[pdata.columns[0]][1:], 1)
+        print pdata.columns[1], ':', 'mean=', "{:7.1f}".format(np.mean(diff)), 'median=', "{:7.1f}".format(np.median(diff)),\
+                                            'min=', "{:7.1f}".format(np.min(diff)), 'max=', "{:7.1f}".format(np.max(diff))
+
+        
+        if i == 0:
+            df = pdata
+        else:
+            # SQL like table join along index
+            df = df.merge(pdata, how='outer', on='Proxy ID')
+
+    #fix index and column name
+    col0 = df.columns[0]
+
+    # check time definition and convert to year CE if needed
+    newcol0 = df[col0][0]
+    if newcol0 == 'Year C.E.' or newcol0 == 'Year CE':
+        # do nothing
+        pass
+    elif newcol0 == 'Year BP':
+        newcol0 = 'Year C.E.'
+        df[col0][1:] = 1950. - df[col0][1:]
+    else:
+        print 'Unrecognized time definition...'
+        raise SystemExit()
+    
+    df.set_index(col0, drop=True, inplace=True)
+    df.index.name = newcol0
+    df = df.ix[1:]
+    df.sort_index(inplace=True)
+
+    # Checkin for duplicate ages in proxy record. If present, calculate average (Jess Tierney, pers. comm.)
+    df = df.astype(float)
+    df_f = df.groupby(df.index).mean()
+    
+    if take_average_out:
+        # copy of dataframe
+        df_tmp = df_f
+        # fill dataframe with new values where temporal averages over proxy records are subtracted
+        df_f = df_tmp.sub(df_tmp.mean(axis=0), axis=1)
+
+    
+    # TODO: make sure year index is consecutive
+    #write data to file
+    df_f.to_pickle(dataout)
+
+
 
 # ===================================================================================
 # For NCDC proxy data files ---------------------------------------------------------

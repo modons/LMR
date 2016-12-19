@@ -13,7 +13,8 @@ Revisions:
             [R. Tardif, U of Washington, February 2016]
           - Added function for the upload of the Dai historical PDSI dataset.
             [R. Tardif, U of Washington, May 2016]
-
+          - Added function to upload the data from the TraCE21ka climate simulation.
+            [R. Tardif, U of Washington, December 2016]
 """
 from netCDF4 import Dataset, date2num, num2date
 from datetime import datetime, timedelta
@@ -21,7 +22,7 @@ from scipy import stats
 import numpy as np
 import os.path
 import string
-
+import math
 
 def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq):
 #==========================================================================================
@@ -1552,3 +1553,424 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
 
 #==========================================================================================
 
+def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=None):
+#==========================================================================================
+#
+# Reads the monthly data from a CMIP5 model and return yearly averaged values
+#
+# Input: 
+#      - data_dir     : Full name of directory containing gridded 
+#                       data. (string)
+#      - data_file    : Name of file containing gridded data. (string)
+#
+#      - data_vars    : Variables names to be read, and info on whether each
+#                       variable is to be returned as anomalies of as full field
+#                       (dict)
+#
+#      - outtimeavg   : Dictionary indicating the type of averaging (key) and associated
+#                       information on averaging period (integer list)
+#                       if the type is "annual": list of integers indicating the months of the year
+#                                                over which to average the data.
+#                       if type is "multiyear" : list of single integer indicating the length
+#                                                of averaging period (in years)
+#                       ex 1: outtimeavg = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]}
+#                       ex 2: outtimeavg = {'multiyear': [100]} -> 100yr average
+#
+#      - detrend      : Boolean to indicate if detrending is to be applied to the prior
+#
+#
+# Output: 
+#      - datadict     : Master dictionary containing dictionaries, one for each state 
+#                       variable, themselves containing the following numpy arrays:
+#                       - time_yrs  : Array with years over which data is available.
+#                                     dims: [nb_years]
+#                       - lat       : Array containing the latitudes of gridded  data. 
+#                                     dims: [lat]
+#                       - lon       : Array containing the longitudes of gridded  data. 
+#                                     dims: [lon]
+#                       - value     : Array with the annually-averaged data calculated from 
+#                                     monthly data dims: [time,lat,lon]
+# 
+#  ex. data access : datadict['tas_sfc_Amon']['years'] => array containing years of the 
+#                                                         'tas' data
+#                    datadict['tas_sfc_Amon']['lat']   => array of lats for 'tas' data
+#                    datadict['tas_sfc_Amon']['lon']   => array of lons for 'tas' data
+#                    datadict['tas_sfc_Amon']['value'] => array of 'tas' data values
+#
+#========================================================================================== 
+
+    datadict = {}
+
+    # Loop over state variables to load
+    for v in range(len(data_vars)):
+
+        vardef = data_vars.keys()[v]
+        data_file_read = string.replace(data_file,'[vardef_template]',vardef)
+        
+        # Check if file exists
+        infile = data_dir + '/' + data_file_read
+        if not os.path.isfile(infile):
+            print 'Error in specification of gridded dataset'
+            print 'File ', infile, ' does not exist! - Exiting ...'
+            exit(1)
+        else:
+            print 'Reading file: ', infile
+
+        # Load entire dataset from file
+        data = Dataset(infile,'r')
+
+        # Dimensions used to store the data
+        nc_dims = [dim for dim in data.dimensions]
+        dictdims = {}
+        for dim in nc_dims:
+            dictdims[dim] = len(data.dimensions[dim])
+
+        # Define the name of the variable to extract from the variable definition (from namelist)
+        var_to_extract = vardef.split('_')[0]
+
+        # Query its dimensions
+        vardims = data.variables[var_to_extract].dimensions
+        nbdims  = len(vardims)
+        # names of variable dims
+        vardimnames = []
+        for d in vardims:
+            vardimnames.append(d)
+        
+        # put everything in lower case for homogeneity
+        vardimnames = [item.lower() for item in vardimnames]
+
+        # One of the dims has to be time! 
+        if 'time' not in vardimnames:
+            print 'Variable does not have *time* as a dimension! Exiting!'
+            exit(1)
+        else:
+            # read in the time netCDF4.Variable
+            time = data.variables['time']
+
+        # Transform "ka BP" year to CE years
+        dates = time[:] *1000.0 + 1950.0
+        time_yrs_list = dates.tolist()
+
+        time_diff = np.diff(time_yrs_list)
+        time_diff_mean = np.mean(time_diff)
+        monthly = 1./12.
+        if time_diff_mean < 1.0:
+            # subannual data available
+            # test for monthly
+            if np.isclose(time_diff_mean,monthly, rtol=1e-05, atol=1e-07, equal_nan=False):
+                time_resolution = monthly
+            else:
+                time_resolution = time_diff_mean
+        else:
+            # annual or interannual data available
+            time_resolution = np.rint(time_diff_mean)
+
+        print ':: Data temporal resolution = ', time_resolution, 'yrs'
+
+        # List years available in dataset and sort
+        years_all = [int(d) for d in np.rint(dates)]
+        years     = list(set(years_all)) # 'set' is used to retain unique values in list
+        years.sort() # sort the list
+        time_yrs  = np.zeros(len(years), dtype=int)
+
+        
+        
+        # Query info on spatial coordinates ...
+        # get rid of time in list        
+        varspacecoordnames = [item for item in vardimnames if item != 'time'] 
+        nbspacecoords = len(varspacecoordnames)
+        #print vardimnames, nbspacecoords, dictdims
+
+        if nbspacecoords == 0: # data => simple time series
+            vartype = '1D:time series'
+            value = np.empty([len(years)], dtype=float)
+            spacecoords = None
+        elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
+            # get rid of plev in list        
+            varspacecoordnames = [item for item in varspacecoordnames if item != 'plev'] 
+            spacecoords = (varspacecoordnames[0],varspacecoordnames[1])
+            spacevar1 = data.variables[spacecoords[0]][:]
+            spacevar2 = data.variables[spacecoords[1]][:]
+
+            if 'lat' in spacecoords and 'lon' in spacecoords:
+                vartype = '2D:horizontal'
+            elif 'lat' in spacecoords and 'lev' in spacecoords:
+                vartype = '2D:meridional_vertical'
+            else:
+                print 'Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!'
+                exit(1)
+        else:
+            print 'Cannot handle this variable yet! Too many dimensions... Exiting!'
+            exit(1)
+
+        # data array
+        data_var = data.variables[var_to_extract][:]
+        print data_var.shape
+        
+        # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
+        if vartype == '2D:horizontal':
+
+            vardims = data_var.shape
+
+            # which dim is lat & which is lon?
+            indlat = spacecoords.index('lat')
+            indlon = spacecoords.index('lon')
+            print 'indlat=', indlat, ' indlon=', indlon
+            
+            if indlon == 0:
+                vlon = spacevar1
+                vlat = spacevar2
+                nlat = vardims[2]
+                nlon = vardims[1]
+            elif indlon == 1:
+                vlon = spacevar2
+                vlat = spacevar1
+                nlat = vardims[1]
+                nlon = vardims[2]
+
+            # are coordinates defined as 1d or 2d array?
+            spacevardims = len(vlat.shape)
+            if spacevardims == 1:
+                varlat = np.array([vlat,]*nlon).transpose()
+                varlon = np.array([vlon,]*nlat)
+            else:
+                varlat = vlat
+                varlon = vlon
+
+            varlatdim = len(varlat.shape)
+            varlondim = len(varlon.shape)
+                
+            # Check if latitudes are defined in the [-90,90] domain
+            # and if longitudes are in the [0,360] domain
+            fliplat = None
+            if varlatdim == 2: # 2D lat array
+                if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
+                    fliplat = True
+                else:
+                    fliplat = False
+            elif varlatdim == 1: # 1D lat array
+                if varlat[0] > varlat[-1]: # lat not as [-90,90] => array upside-down
+                    fliplat = True
+                else:
+                    fliplat = False
+            else:
+                print 'ERROR!'
+                raise SystemExit(1)
+
+            if fliplat:
+                varlat = np.flipud(varlat)
+                # flip data variable
+                if indlat == 0:
+                    tmp = data_var[:,::-1,:]
+                else:
+                    tmp = data_var[:,:,::-1]
+                data_var = tmp
+
+            # Transform longitudes from [-180,180] domain to [0,360] domain if needed
+            indneg = np.where(varlon < 0)
+            if len(indneg) > 0: # if non-empty
+                varlon[indneg] = 360.0 + varlon[indneg]
+                
+            # Back into right arrays
+            if indlon == 0:
+                spacevar1 = varlon
+                spacevar2 = varlat
+            elif indlon == 1:
+                spacevar2 = varlon
+                spacevar1 = varlat
+        
+
+
+        # if 2D:meridional_vertical variable,
+        # TO DO ...
+        # ... ... ...
+        
+
+        # --------------------
+        # Calculate anomalies?
+        # --------------------
+        kind = data_vars[vardef]
+        
+        if not kind or kind == 'anom':
+            print 'Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...'
+
+            # monthly data?
+            if time_resolution == monthly:
+                # monthly climatology
+                if vartype == '1D:time series':
+                    climo_month = np.zeros((12))
+                elif '2D' in vartype:
+                    climo_month = np.zeros([12, vardims[1], vardims[2]], dtype=float)
+                
+                dates_years = np.array([math.modf(item)[1] for item in dates])
+                tmp = np.array([abs(math.modf(item)[0]) for item in dates])
+                dates_months = np.rint((tmp/monthly)+1.)
+                # loop over months
+                for i in range(12):
+                    m = i+1.
+                    indsm = [j for j,v in enumerate(dates_months) if v == m]
+                    climo_month[i] = np.nanmean(data_var[indsm], axis=0)
+                    data_var[indsm] = (data_var[indsm] - climo_month[i])
+            else:
+                # other than monthly data
+                climo = np.nanmean(data_var,axis=0)
+                data_var = (data_var - climo)
+
+        elif kind == 'full':
+            print 'Full field provided as the prior'
+            # Calculating climo nevertheless. Needed as output.
+            climo = np.nanmean(data_var,axis=0)
+            # do nothing else...
+        else:
+            print 'ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...'
+            raise SystemExit()
+
+        print var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)        
+
+        
+        # --------------------------
+        # Possibly detrend the prior
+        # --------------------------
+        if detrend:
+            print 'Detrending the prior for variable: '+var_to_extract
+            if vartype == '1D:time series':
+                xdim = data_var.shape[0]
+                xvar = range(xdim)
+                data_var_copy = np.copy(data_var)
+                slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy)
+                trend = slope*np.squeeze(xvar) + intercept
+                data_var = data_var_copy - trend
+            elif '2D' in vartype: 
+                data_var_copy = np.copy(data_var)
+                [xdim,dim1,dim2] = data_var.shape
+                xvar = range(xdim)
+                # loop over grid points
+                for i in range(dim1):
+                    for j in range(dim2):
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy[:,i,j])
+                        trend = slope*np.squeeze(xvar) + intercept
+                        data_var[:,i,j] = data_var_copy[:,i,j] - trend
+
+            print var_to_extract, ': Global(detrended): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
+
+
+        # ------------------------------------------------------------------------
+        # Average the data over user-specified period. Two configurations: 
+        # 1) Annual: Averaging over the monthly sequence specified in outtimeavg
+        #    One output data per year is provided as output, but averaged over
+        #    specified sequence of months.
+        #    Requires availability of monthly data.
+        #
+        # 2) multiyear: Averaging available data over a time interval corresponding
+        #    to the specified number of years. 
+        #    Requires availability of data with a resolution of at least the
+        #    averaging interval.
+        # ------------------------------------------------------------------------
+
+        
+        if outtimeavg.keys()[0] == 'annual':
+            print 'Averaging over month sequence:', outtimeavg['annual']
+
+            # check availability of monthly data
+            if time_resolution == monthly:
+
+                year_current = [m for m in outtimeavg['annual'] if m>0 and m<=12]
+                year_before  = [abs(m) for m in outtimeavg['annual'] if m < 0]        
+                year_follow  = [m-12 for m in outtimeavg['annual'] if m > 12]
+        
+                avgmonths = year_before + year_current + year_follow
+                indsclimo = sorted([item-1 for item in avgmonths])
+        
+                # List years available in dataset and sort
+                years_all = [d for d in dates_years]
+                years     = list(set(years_all)) # 'set' used to retain unique values in list
+                years.sort() # sort the list
+                ntime = len(years)
+                datesYears = years
+        
+                if vartype == '1D:time series':
+                    value = np.zeros([ntime], dtype=float) # vartype = '1D:time series' 
+                elif vartype == '2D:horizontal':
+                    value = np.zeros([ntime, vardims[1], vardims[2]], dtype=float)
+                # really initialize with missing values (NaNs)
+                value[:] = np.nan 
+                
+                # Loop over years in dataset (less memory intensive...otherwise need to deal with large arrays) 
+                for i in range(ntime):
+                    tindsyr   = [k for k,d in enumerate(dates_years) if d == years[i]    and dates_months[k] in year_current]
+                    tindsyrm1 = [k for k,d in enumerate(dates_years) if d == years[i]-1. and dates_months[k] in year_before]
+                    tindsyrp1 = [k for k,d in enumerate(dates_years) if d == years[i]+1. and dates_months[k] in year_follow]
+                    indsyr = tindsyrm1+tindsyr+tindsyrp1
+
+                    if vartype == '1D:time series':
+                        value[i] = np.nanmean(data_var[indsyr],axis=0)
+                    elif '2D' in vartype: 
+                        if nbdims > 3:
+                            value[i,:,:] = np.nanmean(np.squeeze(data_var[indsyr]),axis=0)
+                        else:
+                            value[i,:,:] = np.nanmean(data_var[indsyr],axis=0)
+                        
+                print var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+                    
+                climo = np.mean(climo_month[indsclimo], axis=0)
+
+            else:
+                print 'ERROR: Specified averaging requires monthly data'
+                print '       Here we have data with temporal resolution of ', time_resolution, 'years'
+                print '       Exiting!'
+                raise SystemExit()
+                
+        elif outtimeavg.keys()[0] == 'multiyear':
+            print 'Averaging period (years):', outtimeavg['multiyear']
+
+            avg_period = float(outtimeavg['multiyear'][0])
+
+            # check if specified avg. period compatible with the available data
+            if avg_period < time_resolution:
+                print 'ERROR: Specified averaging requires data with higher temporal resolution!'
+                print '       Here we have data with temporal resolution of ', time_resolution, 'years'
+                print '       while specified averaging period is:', avg_period, ' yrs'
+                print '       Exiting!'
+                raise SystemExit()
+            else:
+                pass # ok, do nothing here
+
+            # How many averaged data can be calculated w/ the dataset?
+            nbpts = int(avg_period/time_resolution)
+            years_range = years[-1] - years[0]
+            nbintervals = int(math.modf(years_range/avg_period)[1])
+
+            datesYears = np.zeros([nbintervals])
+            if vartype == '1D:time series':
+                value = np.zeros([nbintervals], dtype=float)
+            elif '2D' in vartype: 
+                #value = np.zeros([nbintervals, vardims[1], vardims[2]], dtype=float)
+                value = np.zeros([nbintervals, vardims[1], vardims[2]])
+            # really initialize with missing values (NaNs)
+            value[:] = np.nan
+
+            for i in range(nbintervals):
+                edgel = i*nbpts
+                edger = edgel+nbpts
+                datesYears[i] = np.mean(years[edgel:edger])
+                value[i] = np.nanmean(data_var[edgel:edger], axis=0)
+        
+        # Dictionary of dictionaries
+        # ex. data access : datadict['tas_sfc_Amon']['years'] => arrays containing years of the 'tas' data
+        #                   datadict['tas_sfc_Amon']['value'] => array of 'tas' data values etc ...
+        d = {}
+        d['vartype'] = vartype
+        d['years']   = datesYears
+        d['value']   = value
+        d['climo']   = climo
+        d['spacecoords'] = spacecoords
+        if '2D' in vartype:
+            d[spacecoords[0]] = spacevar1
+            d[spacecoords[1]] = spacevar2
+
+        datadict[vardef] = d
+
+
+    return datadict
+
+#==========================================================================================

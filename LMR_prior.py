@@ -19,6 +19,9 @@ Revisions:
           - Added the 'ccsm4_isotope_controlrun' as a possible prior source.
             Contains simulated isotope (d18O) field. 
             [R. Tardif, U. of Washington, May 2016]
+          - Added 'ccsm3_trace21ka' (simulation of the transient climate of 
+            the last 21k years) as a possible prior source
+            [R. Tardif, U. of Washington, Nov 2016]
 
 """
 # -------------------------------------------------------------------------------
@@ -46,7 +49,8 @@ def prior_assignment(iprior):
         prior_object = prior_era20c()
     elif iprior == 'era20cm':
         prior_object = prior_era20cm()
-
+    elif iprior == 'ccsm3_trace21ka':
+        prior_object = prior_ccsm3_trace21ka()
 
     return prior_object
 
@@ -310,3 +314,14 @@ class prior_era20cm(prior_master):
                                                                  self.statevars)
         return
 
+# class for the simulation of the transient climate of the last 21k years (TraCE21ka)
+class prior_ccsm3_trace21ka(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_TraCE21ka
+        self.prior_dict = read_gridded_data_TraCE21ka(self.prior_datadir,
+                                                      self.prior_datafile,
+                                                      self.statevars,
+                                                      self.avgInterval,
+                                                      self.detrend)
+        return
