@@ -121,14 +121,14 @@ class core(object):
 
     ##** BEGIN User Parameters **##
 
-    nexp = 'reference_pages'
+    nexp = 'reference_ncdc'
 
     #lmr_path = '/home/disk/ice4/nobackup/hakim/lmr'
-    #lmr_path = '/home/disk/katabatic/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    lmr_path = '/home/disk/katabatic/wperkins/data/LMR'
+    # lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = False
+    use_precalc_ye = False 
     # TODO: More pythonic to make last time a non-inclusive edge
     recon_period = (1900, 1920)
     nens = 10
@@ -186,8 +186,8 @@ class proxies(object):
     # =============================
     # Which proxy database to use ?
     # =============================
-    use_from = ['pages']
-    # use_from = ['NCDC']
+    #use_from = ['pages']
+    use_from = ['NCDC']
 
     #proxy_frac = 1.0
     proxy_frac = 0.75
@@ -460,8 +460,8 @@ class proxies(object):
             'Marine Cores_d18O'             : 'linear',
             'Tree Rings_WidthBreit'         : 'linear',
             'Tree Rings_WidthPages2'        : 'linear',
-            'Tree Rings_WidthPages'         : 'linear',
-            'Tree Rings_WoodDensity'        : 'linear',
+            'Tree Rings_WidthPages'         : 'bilinear',
+            'Tree Rings_WoodDensity'        : 'linear_TorP',
             'Tree Rings_Isotopes'           : 'linear',
             'Speleothems_d18O'              : 'linear',
         }
