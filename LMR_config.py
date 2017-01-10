@@ -121,28 +121,28 @@ class core(object):
 
     ##** BEGIN User Parameters **##
 
-    nexp = 'test'
+    nexp = 'reference_pages'
 
     #lmr_path = '/home/disk/ice4/nobackup/hakim/lmr'
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
+    #lmr_path = '/home/disk/katabatic/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
     online_reconstruction = False
     clean_start = True
-    use_precalc_ye = True
+    use_precalc_ye = False
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = (1800, 2000)
-    nens = 100
-    seed = None
+    recon_period = (1900, 1920)
+    nens = 10
+    seed = 0
     loc_rad = None
 
     #datadir_output = '/home/disk/ice4/hakim/svnwork/lmr/trunk/data'
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    datadir_output = '/home/disk/katabatic/wperkins/data/LMR/output/working'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
-    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    archive_dir = '/home/disk/katabatic2/wperkins/LMR_output/testing'
+    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
 
     ##** END User Parameters **##
@@ -275,8 +275,8 @@ class proxies(object):
         #  The h_interp forward model is to be used for isotope proxies when
         #  the prior is taken from an isotope-enabled GCM model output. 
         proxy_psm_type = {
-            'Tree ring_Width'      : 'linear',
-            'Tree ring_Density'    : 'linear',
+            'Tree ring_Width'      : 'linear_TorP',
+            'Tree ring_Density'    : 'bilinear',
             'Ice core_d18O'        : 'linear',
             'Ice core_d2H'         : 'linear',
             'Ice core_Accumulation': 'linear',
