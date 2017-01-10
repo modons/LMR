@@ -15,7 +15,7 @@ def test_prior_seed():
     prior_source = '20cr'
     datadir_prior = 'data'
     datafile_prior = '[vardef_template]_gridded_dat.nc'
-    state_variables = ['air']
+    state_variables = {'air': 'anom'}
     state_kind = 'anom'
 
     X = LMR_prior.prior_assignment(prior_source)
@@ -26,6 +26,7 @@ def test_prior_seed():
     X.Nens = 1
     X.detrend = False
     X.kind = state_kind
+    X.avgInterval = [1,2,3,4,5,6,7,8,9,10,11,12]
 
     X.populate_ensemble(prior_source, prior_cfg)
 
@@ -37,6 +38,7 @@ def test_prior_seed():
     X2.Nens = 1
     X2.detrend = False
     X2.kind = state_kind
+    X2.avgInterval = [1,2,3,4,5,6,7,8,9,10,11,12]
 
     X2.populate_ensemble(prior_source, prior_cfg)
 
@@ -50,8 +52,9 @@ def test_prior_use_full_prior():
     prior_source = '20cr'
     datadir_prior = 'data'
     datafile_prior = '[vardef_template]_gridded_dat.nc'
-    state_variables = ['air']
+    state_variables = {'air': 'anom'}
     state_kind = 'anom'
+    avgInterval = [1,2,3,4,5,6,7,8,9,10,11,12]
 
     X = LMR_prior.prior_assignment(prior_source)
 
@@ -61,6 +64,7 @@ def test_prior_use_full_prior():
     X.Nens = None
     X.detrend = False
     X.kind = state_kind
+    X.avgInterval = avgInterval
 
     X.populate_ensemble(prior_source, prior_cfg)
 
@@ -71,6 +75,7 @@ def test_prior_use_full_prior():
     X2.Nens = None
     X2.detrend = False
     X2.kind = state_kind
+    X2.avgInterval = avgInterval
 
     X2.read_prior()
 

@@ -186,8 +186,8 @@ class proxies(object):
     # =============================
     # Which proxy database to use ?
     # =============================
-    #use_from = ['pages']
-    use_from = ['NCDC']
+    use_from = ['pages']
+    # use_from = ['NCDC']
 
     #proxy_frac = 1.0
     proxy_frac = 0.75

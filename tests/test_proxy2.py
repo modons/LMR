@@ -37,6 +37,7 @@ def dummy_proxy(request):
     p.lon = 210
     p.elev = 0
     p.time = range(1950, 1961)
+    p.seasonality = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
     return p
 
@@ -51,6 +52,11 @@ def meta(request):
 def pdata(request):
     with open('test_pdata.pckl', 'rb') as f:
         return cPickle.load(f)
+
+@pytest.fixture(scope='module')
+def seasons(request):
+    data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    return data
 
 
 @pytest.mark.xfail
@@ -72,8 +78,9 @@ def test_pages_init(psm_dat, dummy_proxy):
     cfg_obj = cfg.Config()
     p = dummy_proxy
     pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr, p.end_yr,
-                               p.lat, p.lon, p.elev, p.values, p.time,
-                               **{'psm_data': psm_dat})
+                               p.lat, p.lon, p.elev, p.seasonality,
+                               p.values,
+                               p.time)
 
     assert pclass.id == p.pid
     assert pclass.type == p.ptype
@@ -84,38 +91,37 @@ def test_pages_init(psm_dat, dummy_proxy):
     assert pclass.lon == p.lon
     assert pclass.elev == p.elev
     assert pclass.time == p.time
+    assert pclass.seasonality == p.seasonality
     assert hasattr(pclass, 'psm')
 
 
-def test_pages_empty_values(psm_dat, dummy_proxy):
+def test_pages_empty_values(seasons, dummy_proxy):
     cfg_obj = cfg.Config()
     with pytest.raises(ValueError):
         p = dummy_proxy
         pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr,
                                    p.end_yr,
-                                   p.lat, p.lon, p.elev, [], p.time,
-                                   psm_kwargs={'psm_data': psm_dat})
+                                   p.lat, p.lon, p.elev, seasons, [], p.time)
 
 
-def test_pages_none_values(psm_dat, dummy_proxy):
+def test_pages_none_values(seasons, dummy_proxy):
     cfg_obj = cfg.Config()
     with pytest.raises(ValueError):
         p = dummy_proxy
         pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr,
                                    p.end_yr,
-                                   p.lat, p.lon, p.elev, None, p.time,
-                                   psm_kwargs={'psm_data': psm_dat})
+                                   p.lat, p.lon, p.elev, seasons, None, p.time)
 
 
-def test_pages_time_values_len_mismatch(psm_dat, dummy_proxy):
+def test_pages_time_values_len_mismatch(seasons, dummy_proxy):
     cfg_obj = cfg.Config()
     with pytest.raises(AssertionError):
         p = dummy_proxy
         time = p.time[0:-2]
         pclass = proxy2.ProxyPages(cfg_obj, p.pid, p.ptype, p.start_yr,
                                    p.end_yr,
-                                   p.lat, p.lon, p.elev, p.values, time,
-                                   psm_kwargs={'psm_data': psm_dat})
+                                   p.lat, p.lon, p.elev, seasons, p.values,
+                                   time)
 
 
 def test_pages_load_site(meta, pdata, psm_dat):
@@ -123,8 +129,7 @@ def test_pages_load_site(meta, pdata, psm_dat):
     psm_kwargs = {'psm_data': psm_dat}
     drange = [1980, 2000]
     start, end = drange
-    pclass = proxy2.ProxyPages.load_site(cfg_obj, 'Aus_16', drange, meta, pdata,
-                                         **psm_kwargs)
+    pclass = proxy2.ProxyPages.load_site(cfg_obj, 'Aus_16', drange, meta, pdata)
 
     assert pclass.id == 'Aus_16'
     assert np.alltrue((pclass.time >= start) & (pclass.time <= end))
@@ -142,7 +147,7 @@ def test_pages_load_site_no_preloaded(meta, pdata, psm_dat):
     psm_kwargs = {'psm_data': psm_dat}
     drange = [1980, 2000]
     start, end = drange
-    pclass = proxy2.ProxyPages.load_site(cfg_obj, 'Aus_16', drange, **psm_kwargs)
+    pclass = proxy2.ProxyPages.load_site(cfg_obj, 'Aus_16', drange)
 
     assert pclass.id == 'Aus_16'
     assert np.alltrue((pclass.time >= start) & (pclass.time <= end))
@@ -162,7 +167,7 @@ def test_pages_load_site_no_obs(meta, pdata, psm_dat):
     drange = [2000, 3000]
     with pytest.raises(ValueError):
         pclass = proxy2.ProxyPages.load_site(cfg_obj, 'Aus_16', drange, meta,
-                                             pdata, **psm_kwargs)
+                                             pdata)
 
 
 def test_pages_load_site_non_consectutive(meta, pdata, psm_dat):
@@ -175,8 +180,7 @@ def test_pages_load_site_non_consectutive(meta, pdata, psm_dat):
     psm_kwargs = {'psm_data': psm_dat}
     drange = [1982, 1991]
 
-    pclass = proxy2.ProxyPages.load_site(cfg_obj, 'Aus_16', drange, meta, pdata,
-                                         **psm_kwargs)
+    pclass = proxy2.ProxyPages.load_site(cfg_obj, 'Aus_16', drange, meta, pdata)
     np.testing.assert_array_equal(dat.index.values, pclass.time)
     np.testing.assert_array_equal(dat.values, pclass.values.values)
 
@@ -189,8 +193,7 @@ def test_pages_load_all(meta, pdata, psm_dat):
     cfg_obj = cfg.Config()
 
     # Everything here depends upon default configuration
-    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, meta, pdata,
-                                              **psm_kwargs)
+    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, meta, pdata)
 
     assert len(allp) == 4
     assert bytype['Tree ring_Width'] == ['Aus_04']
@@ -219,8 +222,7 @@ def test_pages_load_all_specific_regions(meta, pdata, psm_dat):
         cfg_obj.proxies.pages.regions
 
     # Everything here depends upon default configuration
-    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, meta, pdata,
-                                              **psm_kwargs)
+    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, meta, pdata)
 
     assert len(allp) == 3
 
@@ -246,8 +248,7 @@ def test_pages_load_all_specific_type(meta, pdata, psm_dat):
     cfg_obj.proxies.pages.proxy_order = ['Tree ring_Width', 'Ice core_d18O']
 
     # Everything here depends upon default configuration
-    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, meta, pdata,
-                                              **psm_kwargs)
+    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, meta, pdata)
 
     assert len(allp) == 2
     assert bytype['Ice core_d18O'] == ['Arc_35']
@@ -274,8 +275,7 @@ def test_pages_load_all_annual_no_filtering(meta, pdata, psm_dat):
     cfg_obj.proxies.pages.proxy_order = []
     cfg_obj.proxies.pages.regions = []
 
-    pobjs = proxy2.ProxyPages.load_all_annual_no_filtering(cfg_obj, meta, pdata,
-                                                           **psm_kwargs)
+    pobjs = proxy2.ProxyPages.load_all_annual_no_filtering(cfg_obj, meta, pdata)
 
     # There are six proxy records, one of them has no values
     assert len(pobjs) == 5
@@ -294,7 +294,7 @@ def test_pages_proxy_manager_all(psm_dat):
     assert pmanager.ind_eval is None
     assert len(pmanager.ind_assim) == 4
 
-    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange, **psm_kwargs)
+    bytype, allp = proxy2.ProxyPages.load_all(cfg_obj, drange)
 
     for mobj, pobj in izip(pmanager.sites_assim_proxy_objs(), allp):
         assert mobj.id == pobj.id
