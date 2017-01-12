@@ -138,7 +138,8 @@ class wrapper(ConfigGroup):
     def __init__(self, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
 
-        self.multi_seed = list(self.multi_seed)
+        if self.multi_seed is not None:
+            self.multi_seed = list(self.multi_seed)
         self.iter_range = self.iter_range
         self.param_search = deepcopy(self.param_search)
 
