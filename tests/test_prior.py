@@ -9,9 +9,8 @@ import pytest
 
 
 def test_prior_seed():
-    cfg_obj = cfg.Config()
+    cfg_obj = cfg.Config(**{'core':{'seed': 2}})
     prior_cfg = cfg_obj.prior
-    prior_cfg.seed = 2
     prior_source = '20cr'
     datadir_prior = 'data'
     datafile_prior = '[vardef_template]_gridded_dat.nc'
@@ -46,9 +45,8 @@ def test_prior_seed():
 
 
 def test_prior_use_full_prior():
-    cfg_obj = cfg.Config()
+    cfg_obj = cfg.Config(**{'core': {'seed': None}})
     prior_cfg = cfg_obj.prior
-    prior_cfg.seed = None
     prior_source = '20cr'
     datadir_prior = 'data'
     datafile_prior = '[vardef_template]_gridded_dat.nc'

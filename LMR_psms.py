@@ -959,10 +959,10 @@ class BilinearPSM(BasePSM):
             
             # Two calibration objects, temperature and precipitation/moisture
             C_T = LMR_calibrate.calibration_assignment(datag_calib_T)
-            C_T.datadir_calib = config.psm.bilinear.datadir_calib
+            C_T.datadir_calib = config.psm.bilinear.datadir_calib_T
             C_T.read_calibration()
             C_P = LMR_calibrate.calibration_assignment(datag_calib_P)
-            C_P.datadir_calib = config.psm.bilinear.datadir_calib
+            C_P.datadir_calib = config.psm.bilinear.datadir_calib_P
             C_P.read_calibration()
         
             self.calibrate(C_T, C_P, proxy_obj)                        

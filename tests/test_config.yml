@@ -58,8 +58,8 @@ proxies:
       'Speleothem_All'
       ]
     proxy_psm_type:
-      Tree ring_Width: linear_TorP
-      Tree ring_Density: bilinear
+      Tree ring_Width: linear
+      Tree ring_Density: linear
       Ice core_d18O: linear
       Ice core_d2H: linear
       Ice core_Accumulation: linear
@@ -246,7 +246,7 @@ psm:
 
   linear:
     datatag_calib: GISTEMP
-
+    pre_calib_datafile: '/home/katabatic/wperkins/data/LMR/PSM/PSMs_GISTEMP.pckl'
     psm_r_crit: 0.2
 
   linear_TorP:
@@ -254,13 +254,13 @@ psm:
     datatag_calib_P: GPCC
     pre_calib_datafile_T: null
     pre_calib_datafile_P: null
-    psm_r_crit: 0.0
+    psm_r_crit: 0.2
 
   bilinear:
     datatag_calib_T: GISTEMP
     datatag_calib_P: GPCC
     pre_calib_datafile: null
-    psm_r_crit: 0.0
+    psm_r_crit: 0.2
 
   h_interp:
     radius_influence: 50.0
@@ -275,5 +275,4 @@ prior:
     tas_sfc_Amon: anom
     pr_sfc_Amon: anom
   detrend: False
-  state_kind: anom
   avgInterval: null

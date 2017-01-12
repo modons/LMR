@@ -1073,7 +1073,8 @@ class psm(ConfigGroup):
         self.avgPeriod = self.avgPeriod
         self.all_calib_sources = deepcopy(self.all_calib_sources)
 
-class prior(object):
+
+class prior(ConfigGroup):
     """
     Parameters for the ensDA prior
 
