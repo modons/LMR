@@ -1,0 +1,241 @@
+# Holds information about the different datasets used by the LMR code.  Each
+# source is named as the tag used to designate it in the config.yml
+
+# NASA GISTEMP
+GISTEMP:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [tempanomaly]
+
+  datadir: null
+  datafile: gistemp1200_ERSST.nc
+  dataformat: NCD
+
+MLOST:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [air]
+
+  datadir: null
+  datafile: MLOST_air.mon.anom_V3.5.4.nc
+  dataformat: NCD
+
+HadCRUT:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [temperature_anomaly]
+
+  datadir: null
+  datafile: HadCRUT.4.3.0.0.median.nc
+  dataformat: NCD
+
+BerkeleyEarth:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [temperature]
+
+  datadir: null
+  datafile: Land_and_Ocean_LatLong1.nc
+  dataformat: NCD
+
+NOAA:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [data]
+
+  datadir: null
+  datafile: er-ghcn-sst.nc
+  dataformat: NCD
+
+GPCC:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [precip]
+
+  datadir: null
+  datafile: GPCC_precip.mon.flux.1x1.v6.nc
+  dataformat: NCD
+
+DaiPDSI:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [pdsi]
+
+  datadir: null
+  datafile: Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc
+  dataformat: NCD
+
+
+
+ccsm4_last_millenium:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: [AMOCindex_Omon, AMOC26Nmax_Omon, AMOC26N1000m_Omon,
+                     AMOC45N1000_Omon, ohcArctic_0-700m_Omon,
+                     ohcAtlanticNH_0-700m_Omon, ohcAtlanticSH_0-700m_Omon,
+                     ohcAtlantic_0-700m_Omon, ohcIndian_0-700m_Omon,
+                     ohcPacificNH_0-700m_Omon, ohcPacificSH_0-700m_Omon,
+                     ohcPacific_0-700m_Omon, ohcSouthern_0-700m_Omon,
+                     ohc_0-700m_Omon,
+                     pr_sfc_Amon, psl_sfc_Amon, scpdsi_sfc_Amon, tas_sfc_Amon,
+                     wap_500hPa_Amon, zg_500hPa_Amon]
+
+  datadir: null
+  datafile: '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+  dataformat: NCD
+
+ccsm4_preindustrial_control:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: [AMOC26N1000m_Omon, AMOC26Nmax_Omon, AMOC45N1000m_Omon,
+                     AMOCindex_Omon, pr_sfc_Amon, psl_sfc_Amon, tas_sfc_Amon,
+                     zg_500hPa_Amon]
+
+  datadir: null
+  datafile: '[vardef_template]_CCSM4_piControl_080001-130012.nc'
+  dataformat: NCD
+
+ccsm4_isotope_controlrun:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: [d180_sfc_Amon, tas_sfc_Amon, zg_500hPa_Amon]
+
+  datadir: null
+  datafile: '[vardef_template]_CCSM4_isotope_controlrun.nc'
+  dataformat: NCD
+
+gfdl-cm3_preindustrial_control:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['tas_sfc_Amon', 'zg_500hPa_Amon', 'AMOCstreamfct_Omon',
+                     'AMOCindex_Omon', 'ohcAtlanticNH_0-700m_Omon',
+                      'ohcAtlanticSH_0-700m_Omon', 'ohcAtlantic_0-700m_Omon',
+                      'ohcIndian_0-700m_Omon', 'ohcPacificNH_0-700m_Omon',
+                      'ohcPacificSH_0-700m_Omon', 'ohcPacific_0-700m_Omon',
+                      'ohcSouthern_0-700m_Omon', 'ohc_0-700m_Omon',
+                      'ohcArctic_0-700m_Omon', 'AMOC26N1000m_Omon',
+                      'AMOC45N1000m_Omon', 'AMOC26Nmax_Omon', 'psl_sfc_Amon',
+                      'pr_sfc_Amon', 'wap_1000hPa_Amon', 'wap_250hPa_Amon',
+                      'wap_500hPa_Amon', 'wap_700hPa_Amon', 'wap_850hPa_Amon',
+                      'uas_sfc_Amon', 'vas_sfc_Amon', 'ua_1000hPa_Amon',
+                      'ua_250hPa_Amon', 'ua_500hPa_Amon', 'ua_700hPa_Amon',
+                      'ua_850hPa_Amon', 'ua_925hPa_Amon', 'va_1000hPa_Amon',
+                      'va_250hPa_Amon', 'va_500hPa_Amon', 'va_700hPa_Amon',
+                      'va_850hPa_Amon', 'va_925hPa_Amon']
+
+
+  datadir: null
+  datafile: '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
+  dataformat: NCD
+
+mpi-esm-p_last_millenium:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['msftmyz_Omon', 'tas_sfc_Amon', 'zg_1000hPa_Amon',
+                     'zg_500hPa_Amon', 'AMOCindex_Omon', 'AMOC26N1000m_Omon',
+                     'AMOC45N1000m_Omon', 'AMOC26Nmax_Omon',
+                     'AMOCstreamfct_Omon', 'psl_sfc_Amon', 'pr_sfc_Amon',
+                     'uas_sfc_Amon', 'vas_sfc_Amon', 'wap_500hPa_Amon',
+                     'wap_700hPa_Amon', 'wap_850hPa_Amon', 'wap_250hPa_Amon',
+                     'wap_1000hPa_Amon', 'ua_1000hPa_Amon', 'ua_250hPa_Amon',
+                     'ua_500hPa_Amon', 'ua_700hPa_Amon', 'ua_850hPa_Amon',
+                     'ua_925hPa_Amon', 'va_1000hPa_Amon', 'va_250hPa_Amon',
+                     'va_500hPa_Amon', 'va_700hPa_Amon', 'va_850hPa_Amon',
+                     'va_925hPa_Amon']
+
+  datadir: null
+  datafile: '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
+  dataformat: NCD
+
+20cr:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['tas_sfc_Amon', 'zg_1000hPa_Amon', 'zg_500hPa_Amon',
+                     'psl_sfc_Amon', 'wap_1000hPa_Amon', 'wap_250hPa_Amon',
+                     'wap_500hPa_Amon', 'wap_700hPa_Amon', 'wap_850hPa_Amon',
+                     'pr_sfc_Amon', 'uas_sfc_Amon', 'vas_sfc_Amon',
+                     'ua_1000hPa_Amon', 'ua_250hPa_Amon', 'ua_500hPa_Amon',
+                     'ua_700hPa_Amon', 'ua_850hPa_Amon', 'ua_950hPa_Amon',
+                     'va_1000hPa_Amon', 'va_250hPa_Amon', 'va_500hPa_Amon',
+                     'va_700hPa_Amon', 'va_850hPa_Amon', 'va_950hPa_Amon',
+                     'ua_600hPa_Amon', 'va_600hPa_Amon']
+
+  datadir: null
+  datafile: '[vardef_template]_20CR_185101-201112.nc'
+  dataformat: NCD
+
+era20c:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['pr_sfc_Amon', 'psl_sfc_Amon', 'tas_sfc_Amon',
+                     'uas_sfc_Amon', 'vas_sfc_Amon', 'wap_1000hPa_Amon',
+                     'wap_250hPa_Amon', 'wap_500hPa_Amon', 'wap_700hPa_Amon',
+                     'wap_850hPa_Amon', 'zg_500hPa_Amon', 'ua_1000hPa_Amon',
+                     'ua_250hPa_Amon', 'ua_500hPa_Amon', 'ua_700hPa_Amon',
+                     'ua_850hPa_Amon', 'ua_925hPa_Amon', 'va_1000hPa_Amon',
+                     'va_250hPa_Amon', 'va_500hPa_Amon', 'va_700hPa_Amon',
+                     'va_850hPa_Amon', 'va_925hPa_Amon', 'ua_600hPa_Amon',
+                     'va_600hPa_Amon', 'ua_950hPa_Amon', 'va_950hPa_Amon']
+
+  datadir: null
+  datafile: '[vardef_template]_ERA20C_190001-201012.nc'
+  dataformat: NCD
+
+era20cm:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['tas_sfc_Amon', 'zg_500hPa_Amon']
+
+  datadir: null
+  datafile: '[vardef_template]_ERA20CM_190001-201012.nc'
+  dataformat: NCD
+
+
+# Non - default Datasets
+# 20CR used for LIM calibrations in Perkins & Hakim 2017
+old20cr:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [air]
+
+  datadir: /home/disk/katabatic/wperkins/data/20CR/
+  datafile: 'air.2m.mon.mean.nc'
+  dataformat: NCD
+
+# Shortened dataset for more complete observational coverage
+shortBerkeleyEarth:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [tas_run_mean]
+
+  datadir: /home/disk/katabatic/wperkins/data/LMR/data/analyses/Experimental/
+  datafile: tas_run_mean_berkeley_earth_monthly_195701-201412.nc
+  dataformat: NCD
+
+# Test data for test_gridded
+test_20cr:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: [air, tseries]
+
+  datadir: /home/disk/p/wperkins/Research/LMR/tests/data/
+  datafile: '[vardef_template]_gridded_dat.nc'
+  dataformat: NCD

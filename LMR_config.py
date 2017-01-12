@@ -131,7 +131,7 @@ class wrapper(ConfigGroup):
 
     iter_range = (0, 0)
     param_search = None
-    multi_seed = None
+    multi_seed = [12, 32, 48, 82]
 
     ##** END User Parameters **##
 
@@ -404,7 +404,7 @@ class proxies(ConfigGroup):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = list(self.proxy_resolution)
-            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_timeseries_kind = proxies.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
             self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
@@ -473,8 +473,8 @@ class proxies(ConfigGroup):
         dbversion = 'v0.1.0'
 
         datadir_proxy = None
-        datafile_proxy = 'NCDC_%s_Proxies.df.pckl' %(dbversion)
-        metafile_proxy = 'NCDC_%s_Metadata.df.pckl' % (dbversion)
+        datafile_proxy = 'NCDC_{}_Proxies.df.pckl'.format(dbversion)
+        metafile_proxy = 'NCDC_{}_Metadata.df.pckl'.format(dbversion)
         dataformat_proxy = 'DF'
 
         # This is not activated with NCDC data yet...
@@ -603,7 +603,7 @@ class proxies(ConfigGroup):
             self.dataformat_proxy = self.dataformat_proxy
             self.regions = list(self.regions)
             self.proxy_resolution = list(self.proxy_resolution)
-            self.proxy_timeseries_kind = self.proxy_timeseries_kind
+            self.proxy_timeseries_kind = proxies.proxy_timeseries_kind
             self.proxy_order = list(self.proxy_order)
             self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
@@ -683,7 +683,6 @@ class psm(ConfigGroup):
         ##** BEGIN User Parameters **##
 
         datatag_calib = 'GISTEMP'
-        varname_calib = 'tempanomaly'
 
         pre_calib_datafile = None
 
@@ -737,13 +736,6 @@ class psm(ConfigGroup):
             else:
                 self.pre_calib_datafile = self.pre_calib_datafile
 
-            # Is variable requested in list of those specified as available?
-            if self.varname_calib not in self.datainfo_calib['available_vars']:
-                raise SystemExit(('Could not find requested variable {} in the '
-                                  'list of available variables for the {} '
-                                  'dataset').format(self.varname_calib,
-                                                    self.datatag_calib))
-
             # association of calibration source and state variable needed to calculate Ye's
             if self.datatag_calib in psm.all_calib_sources['temperature']:
                 self.psm_required_variables = {'tas_sfc_Amon': 'anom'}
@@ -795,12 +787,10 @@ class psm(ConfigGroup):
         # linear PSM w.r.t. temperature
         # -----------------------------
         datatag_calib_T = 'GISTEMP'
-        varname_calib_T = 'tempanomaly'
 
         # linear PSM w.r.t. precipitation/moisture
         # ----------------------------------------
         datatag_calib_P = 'GPCC'
-        varname_calib_P = 'precip'
 
         pre_calib_datafile_T = None
         pre_calib_datafile_P = None
@@ -877,19 +867,6 @@ class psm(ConfigGroup):
             else:
                 self.pre_calib_datafile_P = self.pre_calib_datafile_P
 
-            # Is variable requested in list of those specified as available?
-            if self.varname_calib_T not in self.datainfo_calib_T['available_vars']:
-                raise SystemExit(('Could not find requested variable {} in the '
-                                  'list of available variables for the {} '
-                                  'dataset').format(self.varname_calib_T,
-                                                    self.datatag_calib_T))
-
-            if self.varname_calib_P not in self.datainfo_calib_P['available_vars']:
-                raise SystemExit(('Could not find requested variable {} in the '
-                                  'list of available variables for the {} '
-                                  'dataset').format(self.varname_calib_P,
-                                                    self.datatag_calib_P))
-
             # association of calibration sources and state variables needed to calculate Ye's
             required_variables = {'tas_sfc_Amon': 'anom'} # start with temperature
 
@@ -905,7 +882,7 @@ class psm(ConfigGroup):
             self.psm_required_variables = required_variables
 
 
-    class bilinear(ConfigObject):
+    class bilinear(ConfigGroup):
         """
         Parameters for the bilinear fit PSM.
 
@@ -936,46 +913,36 @@ class psm(ConfigGroup):
         ##** BEGIN User Parameters **##
 
         # linear PSM w.r.t. temperature
-        # -----------------------------        
+        # -----------------------------
         datatag_calib_T = 'GISTEMP'
-        datafile_calib_T = 'gistemp1200_ERSST.nc'
-        # or
-        #datatag_calib_T = 'MLOST'
-        #datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
-        # or 
-        #datatag_calib_T = 'HadCRUT'
-        #datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
-        # or 
-        #datatag_calib_T = 'BerkeleyEarth'
-        #datafile_calib_T = 'Land_and_Ocean_LatLong1.nc'
 
-        dataformat_calib_T = 'NCD'
-        
         # linear PSM w.r.t. precipitation/moisture
         # ----------------------------------------
         datatag_calib_P = 'GPCC'
-        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
-        # or
-        #datatag_calib_P = 'DaiPDSI'
-        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
-        dataformat_calib_P = 'NCD'
-
-        datadir_calib = None
         pre_calib_datafile = None
-
         psm_r_crit = 0.0
 
-        
+
         ##** END User Parameters **##
 
-        def __init__(self):
+        def __init__(self, lmr_path=None, **kwargs):
+            super(self.__class__, self).__init__(**kwargs)
+
             self.datatag_calib_T = self.datatag_calib_T
-            self.datafile_calib_T = self.datafile_calib_T
-            self.dataformat_calib_T = self.dataformat_calib_T
+            dataset_descr_T = _DataInfo.get_dataset_dict(self.datatag_calib_T)
+            self.datainfo_calib_T = dataset_descr_T['info']
+            self.datadir_calib_T = dataset_descr_T['datadir']
+            self.datafile_calib_T = dataset_descr_T['datafile']
+            self.dataformat_calib_T = dataset_descr_T['dataformat']
+
             self.datatag_calib_P = self.datatag_calib_P
-            self.datafile_calib_P = self.datafile_calib_P
-            self.dataformat_calib_P = self.dataformat_calib_P
+            dataset_descr_P = _DataInfo.get_dataset_dict(self.datatag_calib_P)
+            self.datainfo_calib_P = dataset_descr_P['info']
+            self.datadir_calib_P = dataset_descr_P['datadir']
+            self.datafile_calib_P = dataset_descr_P['datafile']
+            self.dataformat_calib_P = dataset_descr_P['dataformat']
+
             self.psm_r_crit = self.psm_r_crit
             self.avgPeriod = psm.avgPeriod
 
@@ -984,15 +951,18 @@ class psm(ConfigGroup):
                 print '       No seasonality metadata provided in that dataset. Exiting!'
                 print '       Change avgPeriod to "annual" in your configuration.'
                 raise SystemExit()
-                        
-            if self.datadir_calib is None:
-                self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
-            else:
-                self.datadir_calib = self.datadir_calib
+
+            if lmr_path is None:
+                lmr_path = core.lmr_path
+
+            if self.datadir_calib_T is None:
+                self.datadir_calib_T = join(lmr_path, 'data', 'analyses')
+            if self.datadir_calib_P is None:
+                self.datadir_calib_P = join(lmr_path, 'data', 'analyses')
 
             if self.pre_calib_datafile is None:
                 if '-'.join(proxies.use_from) == 'NCDC':
-                    dbversion = proxies._ncdc.dbversion
+                    dbversion = proxies.ncdc.dbversion
                     filename = ('PSMs_'+'-'.join(proxies.use_from) +
                                 '_' + dbversion +
                                 '_' + self.avgPeriod +
@@ -1023,7 +993,7 @@ class psm(ConfigGroup):
             self.psm_required_variables = required_variables
 
         
-    class _h_interp(object):
+    class h_interp(ConfigGroup):
         """
         Parameters for the horizontal interpolator PSM.
 
@@ -1052,8 +1022,8 @@ class psm(ConfigGroup):
         # Set to a non-zero float if want Ye = weighted-average of surrounding
         # gridpoints
         # radius_influence = None
-        radius_influence = 50. # distance-scale in km
-        
+        radius_influence = 50.0  # distance-scale in km
+
         datadir_obsError = './'
         filename_obsError = 'R.txt'
         dataformat_obsError = 'TXT'
@@ -1062,22 +1032,23 @@ class psm(ConfigGroup):
 
         ##** END User Parameters **##
 
-        def __init__(self):
+        def __init__(self, **kwargs):
+            super(self.__class__, self).__init__(**kwargs)
+
             self.radius_influence = self.radius_influence
             self.datadir_obsError = self.datadir_obsError
             self.filename_obsError = self.filename_obsError
-            self.dataformat_obsError = self.dataformat_obsError 
+            self.dataformat_obsError = self.dataformat_obsError
 
             if self.datafile_obsError is None:
                 self.datafile_obsError = join(self.datadir_obsError,
                                               self.filename_obsError)
             else:
                 self.datafile_obsError = self.datafile_obsError
-
             # define state variable needed to calculate Ye's
             # only d18O for now ...
 
-            # psm requirements depend on settings in proxies class 
+            # psm requirements depend on settings in proxies class
             proxy_kind = proxies.proxy_timeseries_kind
             if proxies.proxy_timeseries_kind == 'asis':
                 psm_var_kind = 'full'
@@ -1086,16 +1057,21 @@ class psm(ConfigGroup):
             else:
                 raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
                                  ' Unable to assign kind to psm_required_variables'
-                                 ' in h_interp psm class.')                
+                                 ' in h_interp psm class.')
             self.psm_required_variables = {'d18O_sfc_Amon': psm_var_kind}
-    
-    # Initialize subclasses with all attributes 
-    def __init__(self, **kwargs):
-        self.linear = self._linear(**kwargs)
-        self.linear_TorP = self._linear_TorP(**kwargs)
-        self.bilinear = self._bilinear(**kwargs)
-        self.h_interp = self._h_interp(**kwargs)
 
+    # Initialize subclasses with all attributes
+    def __init__(self, lmr_path=None, **kwargs):
+        self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))
+        self.linear_TorP = self.linear_TorP(lmr_path=lmr_path,
+                                            **kwargs.pop('linear_TorP', {}))
+        self.bilinear = self.bilinear(lmr_path=lmr_path,
+                                      **kwargs.pop('bilinear', {}))
+        self.h_interp = self.h_interp(**kwargs.pop('h_interp', {}))
+
+        super(self.__class__, self).__init__(**kwargs)
+        self.avgPeriod = self.avgPeriod
+        self.all_calib_sources = deepcopy(self.all_calib_sources)
 
 class prior(object):
     """
@@ -1123,34 +1099,9 @@ class prior(object):
 
     ##** BEGIN User Parameters **##
 
-    datadir_prior = None
 
     # Prior data directory & model source
     prior_source = 'ccsm4_last_millenium'
-    datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
-    # or
-    #prior_source     = 'ccsm4_preindustrial_control'
-    #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
-    # or
-    #prior_source     = 'ccsm4_isotope_controlrun'
-    #datafile_prior   = '[vardef_template]_CCSM4_isotope_controlrun.nc'
-    # or
-    #prior_source     = 'gfdl-cm3_preindustrial_control'
-    #datafile_prior   = '[vardef_template]_GFDL-CM3_piControl_000101-050012.nc'
-    # or
-    #prior_source     = 'mpi-esm-p_last_millenium'
-    #datafile_prior   = '[vardef_template]_MPI-ESM-P_past1000_085001-185012.nc'
-    # or
-    #prior_source     = '20cr'
-    #datafile_prior   = '[vardef_template]_20CR_185101-201112.nc'
-    # or
-    #prior_source     = 'era20c'
-    #datafile_prior   = '[vardef_template]_ERA20C_190001-201012.nc'
-    # or
-    #prior_source     = 'era20cm'
-    #datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
-
-    dataformat_prior = 'NCD'
 
 
     # dict defining variables to be included in state vector (keys)
@@ -1176,7 +1127,6 @@ class prior(object):
     #    'd18O_sfc_Amon'             : 'full',
         }
 
-    
     # boolean : detrend prior?
     # by default, considers the entire length of the simulation
     detrend = False
@@ -1185,32 +1135,134 @@ class prior(object):
     
     ##** END User Parameters **##
 
-    
-    def __init__(self):
+    def __init__(self, lmr_path=None, seed=None, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+
         self.prior_source = self.prior_source
-        self.datafile_prior = self.datafile_prior
-        self.dataformat_prior = self.dataformat_prior
-        self.state_variables = self.state_variables
+
+        dataset_descr = _DataInfo.get_dataset_dict(self.prior_source)
+        self.datainfo_prior = dataset_descr['info']
+        self.datadir_prior = dataset_descr['datadir']
+        self.datafile_prior = dataset_descr['datafile']
+        self.dataformat_prior = dataset_descr['dataformat']
+        self.state_variables = deepcopy(self.state_variables)
         self.detrend = self.detrend
-        self.seed = core.seed
+
+        if seed is None:
+            seed = core.seed
+        self.seed = seed
+
+        if lmr_path is None:
+            lmr_path = core.lmr_path
 
         if self.datadir_prior is None:
-            self.datadir_prior = join(core.lmr_path, 'data', 'model',
+            self.datadir_prior = join(lmr_path, 'data', 'model',
                                       self.prior_source)
-        else:
-            self.datadir_prior = self.datadir_prior
-
         if self.avgInterval is None:
             self.avgInterval = [1,2,3,4,5,6,7,8,9,10,11,12] # annual (calendar) as default
         else:
             self.avgInterval = self.avgInterval
 
-class Config(object):
+        # Is variable requested in list of those specified as available?
+        var_mismat = [varname for varname in self.state_variables
+                      if varname not in self.datainfo_prior['available_vars']]
+        if var_mismat:
+            raise SystemExit(('Could not find requested variable(s) {} in the '
+                              'list of available variables for the {} '
+                              'dataset').format(var_mismat,
+                                                self.prior_source))
 
-    def __init__(self):
-        self.wrapper = wrapper()
-        self.core = core()
-        self.proxies = proxies()
-        self.psm = psm()
-        self.prior = prior()
+class Config(ConfigGroup):
+    """
+    An instanceable container for all the configuration objects.
+    """
 
+    def __init__(self, **kwargs):
+        self.wrapper = wrapper(**kwargs.pop('wrapper', {}))
+        self.core = core(**kwargs.pop('core', {}))
+        lmr_path = self.core.lmr_path
+        seed = self.core.seed
+        self.proxies = proxies(lmr_path=lmr_path,
+                               seed=seed,
+                               **kwargs.pop('proxies', {}))
+        self.psm = psm(lmr_path=lmr_path, **kwargs.pop('psm', {}))
+        self.prior = prior(lmr_path=lmr_path,
+                           seed=seed,
+                           **kwargs.pop('prior', {}))
+
+
+def is_config_class(obj):
+    """
+    Tests whether the input object is an instance of ConfigGroup
+
+    Parameters
+    ----------
+    obj: object
+        Object for testing
+    """
+    try:
+        if isinstance(obj, ConfigGroup):
+            return True
+        else:
+            return issubclass(obj, ConfigGroup)
+    except TypeError:
+        return False
+
+
+def update_config_class_yaml(yaml_dict, cfg_module):
+    """
+    Updates a configuration object using a dictionary (typically from a yaml
+    file) that follows the naming convention and nesting of these
+    configuration classes.
+
+    Parameters
+    ----------
+    yaml_dict: dict
+        The dictionary of values to update in the current configuration input
+    cfg_module: ConfigGroup like
+        The configuration object to be updated by yaml_dict
+
+    Returns
+    -------
+    dict
+        Returns a dictionary of all unused parameters from the update process
+
+    Examples
+    --------
+    If cfg_module is an imported LMR_config as cfg then the following
+    dictionary could be used to update a core and linear psm attribute.
+    yaml_dict = {'core': {'lmr_path': '/new/path/to/LMR_files'},
+                 'psm': {'linear': {'datatag_calib': 'GISTEMP'}}}
+
+    These are the types of dictionaries that result from a yaml.load function.
+
+    Warnings
+    --------
+    This function is meant to be run on imported configuration classes not
+    their instances.  If you'd only like to update the attributes of an
+    instance then please use keyword arguments durining initialization.
+    """
+
+    for attr_name in yaml_dict.keys():
+        try:
+            curr_cfg_obj = getattr(cfg_module, attr_name)
+            cfg_attr = yaml_dict.pop(attr_name)
+
+            if is_config_class(curr_cfg_obj):
+                result = update_config_class_yaml(cfg_attr, curr_cfg_obj)
+
+                if result:
+                    yaml_dict[attr_name] = result
+
+            else:
+                setattr(cfg_module, attr_name, cfg_attr)
+        except (AttributeError, KeyError) as e:
+            print e
+
+    return yaml_dict
+
+
+if __name__ == "__main__":
+    kwargs = {'wrapper': {'multi_seed': [1, 2, 3]}, 'psm': {'linear': {'datatag_calib': 'BE'}}}
+    tmp = Config(**kwargs)
+    pass
