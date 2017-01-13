@@ -16,6 +16,7 @@ import glob
 import os
 import numpy as np
 import cPickle
+import collections
 from time import time
 from math import radians, cos, sin, asin, sqrt
 from scipy import signal
@@ -958,6 +959,87 @@ def validate_config(config):
     
     
     return proceed_ok
+
+
+def _param_str_to_update_dict(param_str, value):
+    split_params = param_str.split('.')
+    try:
+        value_str = '{:g}'.format(value)
+    except ValueError as e:
+        value_str = '{}'.format(value)
+    param_dir_str = split_params[-1] + '-' + value_str
+
+    while split_params:
+        curr_param = split_params.pop()
+        update_dict = {curr_param: value}
+        value = update_dict
+
+    return update_dict, param_dir_str
+
+
+def nested_dict_update(orig_dict, update_dict):
+    for key, val in update_dict.iteritems():
+        if isinstance(val, collections.Mapping):
+            res = nested_dict_update(orig_dict.get(key, {}), val)
+            orig_dict[key] = res
+        else:
+            orig_dict[key] = val
+    return orig_dict
+
+
+def param_cfg_update(param_str, val, cfg_dict=None):
+
+    if cfg_dict is None:
+        cfg_dict = {}
+
+    update_dict, _ = _param_str_to_update_dict(param_str, val)
+    return nested_dict_update(cfg_dict, update_dict)
+
+
+def psearch_list_cfg_update(param_str_list, val_list, cfg_dict=None):
+
+    if cfg_dict is None:
+        cfg_dict = {}
+
+    param_dir_str = []
+    for param_str, val in zip(param_str_list, val_list):
+        update_dict, dir_str = _param_str_to_update_dict(param_str, val)
+        param_dir_str.append(dir_str)
+        cfg_dict = nested_dict_update(cfg_dict, update_dict)
+
+    param_dir_str = '_'.join(param_dir_str)
+    return cfg_dict, param_dir_str
+
+
+def set_cfg_attribute(key, value, cfg_object):
+    raise DeprecationWarning('Function no longer being updated.'
+                             ' Use psearch_list_cfg_update instead.')
+    attr_list = key.split('.')
+
+    while len(attr_list) > 1:
+        cfg_object = getattr(cfg_object, attr_list[0])
+        attr_list = attr_list[1:]
+
+    setattr(cfg_object, attr_list[-1], value)
+    try:
+        value_str = '{:g}'.format(value)
+    except ValueError as e:
+        value_str = '{}'.format(value)
+
+    return attr_list[-1] + value_str
+
+
+def set_paramsearch_attributes(sorted_keys, values, cfg_object):
+    raise DeprecationWarning('Function no longer being updated.'
+                             ' Use psearch_list_cfg_update instead.')
+    paramsearch_dir = []
+
+    for key, value in zip(sorted_keys, values):
+
+        param_str = set_cfg_attribute(key, value, cfg_object)
+        paramsearch_dir.append(param_str)
+
+    return '_'.join(paramsearch_dir)
 
 
 class FlagError(ValueError):
