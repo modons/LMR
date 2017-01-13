@@ -27,15 +27,13 @@ import LMR_config
 from LMR_utils import validate_config, ensemble_stats
 import LMR_utils as Utils
 
-LEGACY_CONFIG = False
-
 print '\n' + str(datetime.datetime.now()) + '\n'
 
-if not LEGACY_CONFIG:
+if not LMR_config.LEGACY_CONFIG:
     if len(sys.argv) > 1:
         yaml_file = sys.argv[1]
     else:
-        yaml_file = './config.yml'
+        yaml_file = os.path.join(LMR_config.SRC_DIR, 'config.yml')
 
     try:
         print 'Loading configuration: {}'.format(yaml_file)

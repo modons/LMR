@@ -199,8 +199,8 @@ def test_datadescr_initialize():
 
 def test_datadescr_file_not_found():
 
-    tmp = cfg._DEFAULT_DIR
-    cfg._DEFAULT_DIR = '/dir/not/right'
+    tmp = cfg.SRC_DIR
+    cfg.SRC_DIR = '/dir/not/right'
     with pytest.raises(IOError):
         cfg._DatasetDescriptors()
 

@@ -11,7 +11,6 @@ sys.path.append('../')
 import LMR_prior
 import LMR_proxy_pandas_rework
 import LMR_config
-import LMR_wrapper
 from LMR_utils import create_precalc_ye_filename
 
 # This script gives a method for pre-calculating ye values for our linear psm.
@@ -44,11 +43,13 @@ from LMR_utils import create_precalc_ye_filename
 #                override the setting of the prior "state_kind" in LMR_config.
 #                [ R. Tardif, U. of Washington ]
 
-if not LMR_wrapper.LEGACY_CONFIG:
+# If true it uses LMR_config defaults instead of config.yml update
+
+if not LMR_config.LEGACY_CONFIG:
     if len(sys.argv) > 1:
         yaml_file = sys.argv[1]
     else:
-        yaml_file = './config.yml'
+        yaml_file = os.path.join(LMR_config.SRC_DIR, 'config.yml')
 
     try:
         print 'Loading configuration: {}'.format(yaml_file)

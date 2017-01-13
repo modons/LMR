@@ -58,7 +58,11 @@ from os.path import join
 from copy import deepcopy
 import yaml
 
-_DEFAULT_DIR = '/home/disk/p/wperkins/Research/LMR/'
+# If true, uses only LMR_config.  No yaml loading
+LEGACY_CONFIG = False
+
+# Absolute path to LMR source code directory
+SRC_DIR = '/home/disk/p/wperkins/Research/LMR'
 
 # Class for distinction of configuration classes
 class ConfigGroup(object):
@@ -77,7 +81,7 @@ class _DatasetDescriptors(object):
 
     def __init__(self):
         print 'Loading dataset information from datasets.yml'
-        f = open(join(_DEFAULT_DIR, 'datasets.yml'), 'r')
+        f = open(join(SRC_DIR, 'datasets.yml'), 'r')
         self.datasets = yaml.load(f)
 
     # Returns information dictionary for requested dataset

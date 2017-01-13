@@ -8,13 +8,15 @@
 
 wrapper:
   iter_range:  !!python/tuple [0, 0]
-  param_search: null
+  param_search:
+    core.nens: [5, 10]
+    proxies.proxy_frac: [0.5, 0.75]
   multi_seed: null
 
 core:
   nexp: testdev_yaml_config_update
-#  lmr_path: /home/katabatic/wperkins/data/LMR
-  lmr_path: /home/disk/kalman3/rtardif/LMR
+  lmr_path: /home/katabatic/wperkins/data/LMR
+#  lmr_path: /home/disk/kalman3/rtardif/LMR
   datadir_output: /home/katabatic/wperkins/data/LMR/output/working
   archive_dir: /home/katabatic2/wperkins/LMR_output/testing
   online_reconstruction: False
@@ -59,8 +61,8 @@ proxies:
       'Speleothem_All'
       ]
     proxy_psm_type:
-      Tree ring_Width: linear_TorP
-      Tree ring_Density: bilinear
+      Tree ring_Width: linear
+      Tree ring_Density: linear
       Ice core_d18O: linear
       Ice core_d2H: linear
       Ice core_Accumulation: linear
