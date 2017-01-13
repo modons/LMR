@@ -1,0 +1,1510 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to LMReanalysis’s documentation! &mdash; LMReanalysis 2.0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '2.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="LMReanalysis 2.0.1 documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">LMReanalysis 2.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-lmreanalysis-s-documentation">
+<h1>Welcome to LMReanalysis&#8217;s documentation!<a class="headerlink" href="#welcome-to-lmreanalysis-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<span class="target" id="module-LMR_proxy_pandas_rework"></span><p>Module: LMR_proxy_pandas_rework.py</p>
+<dl class="docutils">
+<dt>Purpose: Module containing various classes associated with proxy types to be</dt>
+<dd><p class="first">assimilated in the LMR, as well as numerous functionalities for
+selection of proxy types/sites to be included in the reanalysis.</p>
+<p class="last">Rewritten by AndreP to incorporate features from the original
+LMR_proxy code using OOP and Pandas. Is used by the driver but not by
+verification scripts.</p>
+</dd>
+</dl>
+<p>Originator: Andre Perkins, U. of Washington.</p>
+<dl class="docutils">
+<dt>Revisions:</dt>
+<dd><ul class="first last simple">
+<li>Added capability to filter uploaded <em>NCDC proxies</em> according to the
+database they are included in (PAGES1, PAGES2, or LMR_FM). This
+information is found in the metadata, as extracted from the
+NCDC-templated text files.
+[ R. Tardif, U. Washington, March 2016 ]</li>
+<li>Added capability to filter out <em>NCDC proxies</em> listed in a blacklist.
+This is mainly used to prevent the assimilation of chronologies known
+to be duplicates.
+[ R. Tardif, U. Washington, March 2016 ]</li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="LMR_proxy_pandas_rework.BaseProxyObject">
+<em class="property">class </em><tt class="descclassname">LMR_proxy_pandas_rework.</tt><tt class="descname">BaseProxyObject</tt><big>(</big><em>config</em>, <em>pid</em>, <em>prox_type</em>, <em>start_yr</em>, <em>end_yr</em>, <em>lat</em>, <em>lon</em>, <em>elev</em>, <em>seasonality</em>, <em>values</em>, <em>time</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.BaseProxyObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class defining attributes and methods for descendant proxy objects.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module for current LMR run</p>
+</div></blockquote>
+<p><strong>pid -&gt; id</strong></p>
+<p><strong>prox_type -&gt; type</strong></p>
+<p><strong>start_yr</strong></p>
+<p><strong>end_yr</strong></p>
+<p><strong>lat</strong></p>
+<p><strong>lon</strong></p>
+<p><strong>elev</strong></p>
+<p><strong>values</strong></p>
+<p><strong>time</strong></p>
+<p><strong>psm_kwargs: dict(unpacked)</strong></p>
+<blockquote class="last">
+<div><p>Keyword arguments to be passed to the PSM</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>All proxy object classes should descend from the BaseProxyObject abstract
+class.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>id: str</td>
+<td>Proxy site id</td>
+</tr>
+<tr class="row-even"><td>type: str</td>
+<td>Proxy type</td>
+</tr>
+<tr class="row-odd"><td>start_yr: int</td>
+<td>Earliest year that data exists for this site</td>
+</tr>
+<tr class="row-even"><td>end_yr: int</td>
+<td>Latest year that data exists for this site</td>
+</tr>
+<tr class="row-odd"><td>values: pandas.DataFrame</td>
+<td>Proxy record with time (in years) as the index</td>
+</tr>
+<tr class="row-even"><td>lat: float</td>
+<td>Latitude of proxy site</td>
+</tr>
+<tr class="row-odd"><td>lon: float</td>
+<td>Longitude of proxy site</td>
+</tr>
+<tr class="row-even"><td>elev: float</td>
+<td>Elevation/depth of proxy site</td>
+</tr>
+<tr class="row-odd"><td>time: ndarray</td>
+<td>List of times for which proxy contains valid data</td>
+</tr>
+<tr class="row-even"><td>psm_obj: BasePSM like</td>
+<td>PSM for this proxy</td>
+</tr>
+<tr class="row-odd"><td>psm: function</td>
+<td>Exposed psm mapping function from the psm_obj</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_proxy_pandas_rework.BaseProxyObject.error">
+<tt class="descname">error</tt><big>(</big><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.BaseProxyObject.error" title="Permalink to this definition">¶</a></dt>
+<dd><p>error model for proxy data</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="LMR_proxy_pandas_rework.BaseProxyObject.get_psm_obj">
+<em class="property">static </em><tt class="descname">get_psm_obj</tt><big>(</big><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.BaseProxyObject.get_psm_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves PSM object class to be attached to this proxy</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="LMR_proxy_pandas_rework.BaseProxyObject.load_all">
+<em class="property">classmethod </em><tt class="descname">load_all</tt><big>(</big><em>config</em>, <em>data_range</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.BaseProxyObject.load_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load proxy objects from all sites matching filter criterion.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration for current LMR run</p>
+</div></blockquote>
+<p><strong>meta_src: optional</strong></p>
+<blockquote>
+<div><p>Source for proxy metadata</p>
+</div></blockquote>
+<p><strong>data_src: optional</strong></p>
+<blockquote>
+<div><p>Source for proxy record data (might be same as meta_src)</p>
+</div></blockquote>
+<p><strong>data_range: iterable</strong></p>
+<blockquote>
+<div><p>Two-item container holding beginning and end date of reconstruction</p>
+</div></blockquote>
+<p><strong>psm_kwargs: dict(unpacked)</strong></p>
+<blockquote>
+<div><p>Keyword arguments to be passed to the psm.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">dict</p>
+<blockquote>
+<div><p>Dictionary of proxy types (keys) with associated site ids (values)</p>
+</div></blockquote>
+<p>list</p>
+<blockquote class="last">
+<div><p>List of all proxy objects created</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>If source data not specified, it should attempt to load data using
+config file information.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="LMR_proxy_pandas_rework.BaseProxyObject.load_site">
+<em class="property">classmethod </em><tt class="descname">load_site</tt><big>(</big><em>config</em>, <em>site</em>, <em>data_range=None</em>, <em>meta_src=None</em>, <em>data_src=None</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.BaseProxyObject.load_site" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load proxy object from single site.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration for current LMR run</p>
+</div></blockquote>
+<p><strong>site: str</strong></p>
+<blockquote>
+<div><p>Key to identify which site to load from source data</p>
+</div></blockquote>
+<p><strong>meta_src: optional</strong></p>
+<blockquote>
+<div><p>Source for proxy metadata</p>
+</div></blockquote>
+<p><strong>data_src: optional</strong></p>
+<blockquote>
+<div><p>Source for proxy record data (might be same as meta_src)</p>
+</div></blockquote>
+<p><strong>data_range: iterable</strong></p>
+<blockquote>
+<div><p>Two-item container holding beginning and end date of reconstruction</p>
+</div></blockquote>
+<p><strong>psm_kwargs: dict(unpacked)</strong></p>
+<blockquote>
+<div><p>Keyword arguments to be passed to the psm.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">BaseProxyObject like</p>
+<blockquote class="last">
+<div><p>Proxy object instance at specified site</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>If source data not specified, it should attempt to load data using
+config file information.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="LMR_proxy_pandas_rework.ProxyManager">
+<em class="property">class </em><tt class="descclassname">LMR_proxy_pandas_rework.</tt><tt class="descname">ProxyManager</tt><big>(</big><em>config</em>, <em>data_range</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>High-level manager to handle loading proxies from multiple sources and
+randomly sampling the proxies.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module for current LMR run</p>
+</div></blockquote>
+<p><strong>data_range: list(int)</strong></p>
+<blockquote class="last">
+<div><p>A two int list defining the beginning and ending time of the
+reconstruction</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="31%" />
+<col width="69%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>all_proxies: list(BaseProxyObject like)</td>
+<td>A list of all proxy objects loaded for current reconstruction</td>
+</tr>
+<tr class="row-even"><td>all_ids_by_group: dict{str: list(str)}</td>
+<td>A dictionary holding list of proxy site ids for each proxy type loaded.</td>
+</tr>
+<tr class="row-odd"><td>ind_assim: list(int)</td>
+<td>List of indices (pretaining to all_proxies)to be assimilated during the reconstruction.</td>
+</tr>
+<tr class="row-even"><td>ind_eval: list(int)</td>
+<td>List of indices of proxies withheld for verification purposes.</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_proxy_pandas_rework.ProxyManager.proxy_obj_generator">
+<tt class="descname">proxy_obj_generator</tt><big>(</big><em>indexes</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyManager.proxy_obj_generator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator to iterate over proxy objects in list at specified indexes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>indexes: list(int)</strong></p>
+<blockquote>
+<div><p>List of indices pertaining to self.all_proxies</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">generator</p>
+<blockquote class="last">
+<div><p>A generator over all_proxies for each specified index</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_proxy_pandas_rework.ProxyManager.sites_assim_proxy_objs">
+<tt class="descname">sites_assim_proxy_objs</tt><big>(</big><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyManager.sites_assim_proxy_objs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator over ind_assim indices.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Yields:</th><td class="field-body"><p class="first">BaseProxyObject like</p>
+<blockquote class="last">
+<div><p>Proxy object from the all_proxies list.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_proxy_pandas_rework.ProxyManager.sites_eval_proxy_objs">
+<tt class="descname">sites_eval_proxy_objs</tt><big>(</big><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyManager.sites_eval_proxy_objs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator over ind_eval indices.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Yields:</th><td class="field-body"><p class="first">BaseProxyObject like</p>
+<blockquote class="last">
+<div><p>Proxy object from the all_proxies list.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="LMR_proxy_pandas_rework.ProxyPages">
+<em class="property">class </em><tt class="descclassname">LMR_proxy_pandas_rework.</tt><tt class="descname">ProxyPages</tt><big>(</big><em>config</em>, <em>pid</em>, <em>prox_type</em>, <em>start_yr</em>, <em>end_yr</em>, <em>lat</em>, <em>lon</em>, <em>elev</em>, <em>seasonality</em>, <em>values</em>, <em>time</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyPages" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class defining attributes and methods for descendant proxy objects.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module for current LMR run</p>
+</div></blockquote>
+<p><strong>pid -&gt; id</strong></p>
+<p><strong>prox_type -&gt; type</strong></p>
+<p><strong>start_yr</strong></p>
+<p><strong>end_yr</strong></p>
+<p><strong>lat</strong></p>
+<p><strong>lon</strong></p>
+<p><strong>elev</strong></p>
+<p><strong>values</strong></p>
+<p><strong>time</strong></p>
+<p><strong>psm_kwargs: dict(unpacked)</strong></p>
+<blockquote class="last">
+<div><p>Keyword arguments to be passed to the PSM</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>All proxy object classes should descend from the BaseProxyObject abstract
+class.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>id: str</td>
+<td>Proxy site id</td>
+</tr>
+<tr class="row-even"><td>type: str</td>
+<td>Proxy type</td>
+</tr>
+<tr class="row-odd"><td>start_yr: int</td>
+<td>Earliest year that data exists for this site</td>
+</tr>
+<tr class="row-even"><td>end_yr: int</td>
+<td>Latest year that data exists for this site</td>
+</tr>
+<tr class="row-odd"><td>values: pandas.DataFrame</td>
+<td>Proxy record with time (in years) as the index</td>
+</tr>
+<tr class="row-even"><td>lat: float</td>
+<td>Latitude of proxy site</td>
+</tr>
+<tr class="row-odd"><td>lon: float</td>
+<td>Longitude of proxy site</td>
+</tr>
+<tr class="row-even"><td>elev: float</td>
+<td>Elevation/depth of proxy site</td>
+</tr>
+<tr class="row-odd"><td>time: ndarray</td>
+<td>List of times for which proxy contains valid data</td>
+</tr>
+<tr class="row-even"><td>psm_obj: BasePSM like</td>
+<td>PSM for this proxy</td>
+</tr>
+<tr class="row-odd"><td>psm: function</td>
+<td>Exposed psm mapping function from the psm_obj</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_proxy_pandas_rework.ProxyPages.error">
+<tt class="descname">error</tt><big>(</big><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyPages.error" title="Permalink to this definition">¶</a></dt>
+<dd><p>error model for proxy data</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="LMR_proxy_pandas_rework.ProxyPages.load_all">
+<em class="property">classmethod </em><tt class="descname">load_all</tt><big>(</big><em>config</em>, <em>data_range</em>, <em>meta_src=None</em>, <em>data_src=None</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyPages.load_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>%%aug%%%%aug%%</p>
+<p>Expects meta_src, data_src to be pickled pandas DataFrame objects.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="LMR_proxy_pandas_rework.ProxyPages.load_all_annual_no_filtering">
+<em class="property">classmethod </em><tt class="descname">load_all_annual_no_filtering</tt><big>(</big><em>config</em>, <em>meta_src=None</em>, <em>data_src=None</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyPages.load_all_annual_no_filtering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method created to facilitate the loading of all possible proxy records
+that can be calibrated with annual resolution.</p>
+<p>Note: This is still subject to constraints from the PSM calibration (
+i.e. if there is an r_crit or not enough calibration data the proxy
+will not be loaded)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">proxy_objs: list(BaseProxyObject like)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="LMR_proxy_pandas_rework.ProxyPages.load_site">
+<em class="property">classmethod </em><tt class="descname">load_site</tt><big>(</big><em>config</em>, <em>site</em>, <em>data_range=None</em>, <em>meta_src=None</em>, <em>data_src=None</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.ProxyPages.load_site" title="Permalink to this definition">¶</a></dt>
+<dd><p>%%aug%%%%aug%%</p>
+<p>Expects meta_src, data_src to be pickled pandas DataFrame objects.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_proxy_pandas_rework.fix_lon">
+<tt class="descclassname">LMR_proxy_pandas_rework.</tt><tt class="descname">fix_lon</tt><big>(</big><em>lon</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.fix_lon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fixes negative longitude values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>lon: ndarray like or value</strong></p>
+<blockquote class="last">
+<div><p>Input longitude array or single value</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_proxy_pandas_rework.get_proxy_class">
+<tt class="descclassname">LMR_proxy_pandas_rework.</tt><tt class="descname">get_proxy_class</tt><big>(</big><em>proxy_key</em><big>)</big><a class="headerlink" href="#LMR_proxy_pandas_rework.get_proxy_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve proxy class type to be instantiated.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>proxy_key: str</strong></p>
+<blockquote>
+<div><p>Dict key to retrieve correct PSM class type.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">BaseProxyObject like:</p>
+<blockquote class="last">
+<div><p>Class type to be instantiated and attached to a proxy.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<span class="target" id="module-LMR_utils"></span><p>Module: LMR_utils.py</p>
+<dl class="docutils">
+<dt>Purpose: Contains miscellaneous &#8220;utility&#8221; functions used throughout the LMR code, </dt>
+<dd>including verification modules.</dd>
+<dt>Originators: Greg Hakim &amp; Robert Tardif | U. of Washington</dt>
+<dd><div class="first last line-block">
+<div class="line">March 2015</div>
+</div>
+</dd>
+<dt>Revisions: </dt>
+<dd><ul class="first last simple">
+<li>Added the get_distance function for more efficient calculation of distances
+between lat/lon points on the globe. [R. Tardif, U. of Washington, January 2016]</li>
+</ul>
+</dd>
+</dl>
+<dl class="exception">
+<dt id="LMR_utils.FlagError">
+<em class="property">exception </em><tt class="descclassname">LMR_utils.</tt><tt class="descname">FlagError</tt><a class="headerlink" href="#LMR_utils.FlagError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Error for exiting code sections</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.assimilated_proxies">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">assimilated_proxies</tt><big>(</big><em>workdir</em><big>)</big><a class="headerlink" href="#LMR_utils.assimilated_proxies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read the files written by LMR_driver_callable as written to directory workdir. Returns a dictionary with a count by proxy type.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.augment_docstr">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">augment_docstr</tt><big>(</big><em>func</em><big>)</big><a class="headerlink" href="#LMR_utils.augment_docstr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to mark augmented function docstrings.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.class_docs_fixer">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">class_docs_fixer</tt><big>(</big><em>cls</em><big>)</big><a class="headerlink" href="#LMR_utils.class_docs_fixer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to fix docstrings for subclasses</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.coefficient_efficiency">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">coefficient_efficiency</tt><big>(</big><em>ref</em>, <em>test</em>, <em>valid=None</em><big>)</big><a class="headerlink" href="#LMR_utils.coefficient_efficiency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the coefficient of efficiency for a test time series, with respect to a reference time series.</p>
+<p>Inputs:
+test:  test array
+ref:   reference array, of same size as test
+valid: fraction of valid data required to calculate the statistic</p>
+<p>Note: Assumes that the first dimension in test and ref arrays is time!!!</p>
+<p>Outputs:
+CE: CE statistic calculated following Nash &amp; Sutcliffe (1970)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.coefficient_efficiency_old">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">coefficient_efficiency_old</tt><big>(</big><em>ref</em>, <em>test</em><big>)</big><a class="headerlink" href="#LMR_utils.coefficient_efficiency_old" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the coefficient of efficiency for a test time series, with respect to a reference time series.</p>
+<p>Inputs:
+test: one-dimensional test array
+ref: one-dimensional reference array, of same size as test</p>
+<p>Outputs:
+CE: scalar CE score</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.create_precalc_ye_filename">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">create_precalc_ye_filename</tt><big>(</big><em>config</em><big>)</big><a class="headerlink" href="#LMR_utils.create_precalc_ye_filename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the filename to use for the precalculated Ye file from the provided
+configuration.  Uses the prior, psm, and proxy configuration to determine a
+unique name for the current experiment.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: Config</strong></p>
+<blockquote>
+<div><p>Instance of an LMR_config.Config object.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">str:</p>
+<blockquote class="last">
+<div><p>Filename string based on current configuration</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.crps">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">crps</tt><big>(</big><em>forecasts</em>, <em>observations</em><big>)</big><a class="headerlink" href="#LMR_utils.crps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to calculate the continuous ranked probability score
+of an ensemble of forecast timeseries against observations.</p>
+<p>Based on _crps.py in the properscoring package from TheClimateCorporation
+on Github</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>forecasts: ndarray</strong></p>
+<blockquote>
+<div><p>Forecast timeseries with trailing dimensions of (..., nens, ntimes)</p>
+</div></blockquote>
+<p><strong>observations: ndarray</strong></p>
+<blockquote>
+<div><p>Observations for verification with a single dimension of length ntimes</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">crps: ndarray</p>
+<blockquote class="last">
+<div><p>Continuous ranked probability score over nens and ntimes.  Has shape of
+the dimensions preceding nens (if any).</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.ensemble_stats">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">ensemble_stats</tt><big>(</big><em>workdir</em>, <em>y_assim</em><big>)</big><a class="headerlink" href="#LMR_utils.ensemble_stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the ensemble mean and variance for files in the input directory</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.get_distance">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">get_distance</tt><big>(</big><em>lon_pt</em>, <em>lat_pt</em>, <em>lon_ref</em>, <em>lat_ref</em><big>)</big><a class="headerlink" href="#LMR_utils.get_distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Vectorized calculation the great circle distances between lat-lon points 
+on the Earth (lat/lon are specified in decimal degrees)</p>
+<p>Input:
+lon_pt , lat_pt  : longitude, latitude of site w.r.t. which distances</p>
+<blockquote>
+<div>are to be calculated. Both should be scalars.</div></blockquote>
+<dl class="docutils">
+<dt>lon_ref, lat_ref <span class="classifier-delimiter">:</span> <span class="classifier">longitudes, latitudes of reference field</span></dt>
+<dd>(e.g. calibration dataset, reconstruction grid)
+May be scalar, 1D array.</dd>
+<dt>Output: Returns array containing distances between (lon_pt, lat_pt) and all other points</dt>
+<dd>in (lon_ref,lat_ref). Array has dimensions [dim(lon_ref),dim(lat_ref)].</dd>
+</dl>
+<p>Originator: R. Tardif, Atmospheric sciences, U. of Washington, January 2016</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.global_hemispheric_means">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">global_hemispheric_means</tt><big>(</big><em>field</em>, <em>lat</em><big>)</big><a class="headerlink" href="#LMR_utils.global_hemispheric_means" title="Permalink to this definition">¶</a></dt>
+<dd><p>compute global and hemispheric mean valuee for all times in the input (i.e. field) array
+input:  field[ntime,nlat,nlon] or field[nlat,nlon]</p>
+<blockquote>
+<div>lat[nlat,nlon] in degrees</div></blockquote>
+<dl class="docutils">
+<dt>output: gm <span class="classifier-delimiter">:</span> <span class="classifier">global mean of &#8220;field&#8221;</span></dt>
+<dd>nhm : northern hemispheric mean of &#8220;field&#8221;
+shm : southern hemispheric mean of &#8220;field&#8221;</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.haversine">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">haversine</tt><big>(</big><em>lon1</em>, <em>lat1</em>, <em>lon2</em>, <em>lat2</em><big>)</big><a class="headerlink" href="#LMR_utils.haversine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the great circle distance between two points 
+on the earth (specified in decimal degrees)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.load_precalculated_ye_vals">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">load_precalculated_ye_vals</tt><big>(</big><em>config</em>, <em>proxy_manager</em>, <em>sample_idxs</em><big>)</big><a class="headerlink" href="#LMR_utils.load_precalculated_ye_vals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to load a precalculated Ye file for the current
+experiment.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config.Config</strong></p>
+<blockquote>
+<div><p>Current experiment instance of the configuration object.</p>
+</div></blockquote>
+<p><strong>proxy_manager: LMR_proxy_pandas_rework.ProxyManager</strong></p>
+<blockquote>
+<div><p>Current experiment proxy manager</p>
+</div></blockquote>
+<p><strong>sample_idxs: list(int)</strong></p>
+<blockquote>
+<div><p>A list of the current sample indices used to create the prior ensemble.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">ye_all: ndarray</p>
+<blockquote class="last">
+<div><p>The array of Ye values for the current ensemble and all proxy records</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.rank_histogram">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">rank_histogram</tt><big>(</big><em>ensemble</em>, <em>value</em><big>)</big><a class="headerlink" href="#LMR_utils.rank_histogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the rank of a measurement in the contex of an ensemble.</p>
+<p>Input:
+* the observation (value)
+* the ensemble evaluated at the observation position (ensemble)</p>
+<p>Output:
+* the rank of the observation in the ensemble (rank)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.regrid_sphere">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">regrid_sphere</tt><big>(</big><em>nlat</em>, <em>nlon</em>, <em>Nens</em>, <em>X</em>, <em>ntrunc</em><big>)</big><a class="headerlink" href="#LMR_utils.regrid_sphere" title="Permalink to this definition">¶</a></dt>
+<dd><p>Truncate lat,lon grid to another resolution in spherical harmonic space. Triangular truncation</p>
+<p>Inputs:
+nlat            : number of latitudes
+nlon            : number of longitudes
+Nens            : number of ensemble members
+X               : data array of shape (nlat*nlon,Nens) 
+ntrunc          : triangular truncation (e.g., use 42 for T42)</p>
+<p>Outputs :
+lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
+lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
+X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.rmsef">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">rmsef</tt><big>(</big><em>predictions</em>, <em>targets</em><big>)</big><a class="headerlink" href="#LMR_utils.rmsef" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.smooth2D">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">smooth2D</tt><big>(</big><em>im</em>, <em>n=15</em><big>)</big><a class="headerlink" href="#LMR_utils.smooth2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Smooth a 2D array im by convolving with a Gaussian kernel of size n
+Input:
+im (2D array): Array of values to be smoothed
+n (int) : number of points to include in the smoothing
+Output:
+improc(2D array): smoothed array (same dimensions as the input array)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_utils.year_fix">
+<tt class="descclassname">LMR_utils.</tt><tt class="descname">year_fix</tt><big>(</big><em>t</em><big>)</big><a class="headerlink" href="#LMR_utils.year_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>pad the year with leading zeros for file I/O</p>
+</dd></dl>
+
+<span class="target" id="module-LMR_psms"></span><p>Module: LMR_psms.py</p>
+<dl class="docutils">
+<dt>Purpose: Module containing methods for various Proxy System Models (PSMs)</dt>
+<dd>Adapted from LMR_proxy and LMR_calibrate using OOP by Andre Perkins</dd>
+</dl>
+<p>Originator: Andre Perkins, U. of Washington</p>
+<dl class="docutils">
+<dt>Revisions: </dt>
+<dd><ul class="first last simple">
+<li>Use of new more efficient &#8220;get_distance&#8221; function to calculate the
+distance between proxy sites and analysis grid points.
+[R. Tardif, U. of Washington, February 2016]</li>
+<li>Added the &#8220;LinearPSM_TorP&#8221; class, allowing the use of
+temperature-calibrated <em>OR</em> precipitation-calibrated linear PSMs.
+For each proxy record to be assimilated, the selection of the PSM
+(i.e. T vs P) is perfomed on the basis of the smallest MSE of
+regression residuals.
+[R. Tardif, U. of Washington, April 2016]</li>
+<li>Added the &#8220;h_interpPSM&#8221; psm class for use of isotope-enabled GCM 
+data as prior: Ye values are taken as the prior isotope field either 
+at the nearest grid pt. or as the weighted-average of values at grid 
+points surrounding the assimilated isotope proxy site.
+[ R. Tardif, U. of Washington, June 2016 ]</li>
+<li>Added the &#8220;BilinearPSM&#8221; class for PSMs based on bivariate linear 
+regressions w/ temperature AND precipitation/PSDI as independent 
+variables.
+[ R. Tardif, Univ. of Washington, June 2016 ]</li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="LMR_psms.BasePSM">
+<em class="property">class </em><tt class="descclassname">LMR_psms.</tt><tt class="descname">BasePSM</tt><big>(</big><em>config</em>, <em>proxy_obj</em>, <em>**psm_kwargs</em><big>)</big><a class="headerlink" href="#LMR_psms.BasePSM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Proxy system model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module used for current LMR run.</p>
+</div></blockquote>
+<p><strong>proxy_obj: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object that this PSM is being attached to</p>
+</div></blockquote>
+<p><strong>psm_kwargs: dict (unpacked)</strong></p>
+<blockquote class="last">
+<div><p>Specfic arguments for the target PSM</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_psms.BasePSM.error">
+<tt class="descname">error</tt><big>(</big><big>)</big><a class="headerlink" href="#LMR_psms.BasePSM.error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Error model for given PSM.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="LMR_psms.BasePSM.get_kwargs">
+<em class="property">static </em><tt class="descname">get_kwargs</tt><big>(</big><em>config</em><big>)</big><a class="headerlink" href="#LMR_psms.BasePSM.get_kwargs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns keyword arguments required for instantiation of given PSM.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module used for current LMR run.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">kwargs: dict</p>
+<blockquote class="last">
+<div><p>Keyword arguments for given PSM</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_psms.BasePSM.psm">
+<tt class="descname">psm</tt><big>(</big><em>prior_obj</em><big>)</big><a class="headerlink" href="#LMR_psms.BasePSM.psm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maps a given state to observations for the given proxy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>prior_obj BasePriorObject</strong></p>
+<blockquote>
+<div><p>Prior to be mapped to observation space (Ye).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Ye:</p>
+<blockquote class="last">
+<div><p>Equivalent observation from prior</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="LMR_psms.BilinearPSM">
+<em class="property">class </em><tt class="descclassname">LMR_psms.</tt><tt class="descname">BilinearPSM</tt><big>(</big><em>config</em>, <em>proxy_obj</em>, <em>psm_data=None</em><big>)</big><a class="headerlink" href="#LMR_psms.BilinearPSM" title="Permalink to this definition">¶</a></dt>
+<dd><p>PSM based on bivariate linear regression w.r.t. temperature AND precipitation/moisture</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module used for current LMR run.</p>
+</div></blockquote>
+<p><strong>proxy_obj: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object that this PSM is being attached to</p>
+</div></blockquote>
+<p><strong>psm_data: dict</strong></p>
+<blockquote>
+<div><p>Pre-calibrated PSM dictionary containing current associated
+proxy site&#8217;s calibration information</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong></p>
+<blockquote class="last">
+<div><p>If PSM is below critical correlation threshold.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>lat: float</td>
+<td>Latitude of associated proxy site</td>
+</tr>
+<tr class="row-even"><td>lon: float</td>
+<td>Longitude of associated proxy site</td>
+</tr>
+<tr class="row-odd"><td>elev: float</td>
+<td>Elevation/depth of proxy sitex</td>
+</tr>
+<tr class="row-even"><td>corr: float</td>
+<td>Correlation of proxy record against calibration data</td>
+</tr>
+<tr class="row-odd"><td>slope: float</td>
+<td>Linear regression slope of proxy/calibration fit</td>
+</tr>
+<tr class="row-even"><td>intercept: float</td>
+<td>Linear regression y-intercept of proxy/calibration fit</td>
+</tr>
+<tr class="row-odd"><td>R: float</td>
+<td>Mean-squared error of proxy/calibration fit</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_psms.BilinearPSM.calibrate">
+<tt class="descname">calibrate</tt><big>(</big><em>C_T</em>, <em>C_P</em>, <em>proxy</em>, <em>diag_output=False</em>, <em>diag_output_figs=False</em><big>)</big><a class="headerlink" href="#LMR_psms.BilinearPSM.calibrate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calibrate given proxy record against observation data and set relevant
+PSM attributes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>C_T: calibration_master like</strong></p>
+<blockquote>
+<div><p>Calibration object containing temperature data, time, lat, lon info</p>
+</div></blockquote>
+<p><strong>C_P: calibration_master like</strong></p>
+<blockquote>
+<div><p>Calibration object containing precipitation/moisture data, time, lat, lon info</p>
+</div></blockquote>
+<p><strong>proxy: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object to fit to the calibration data</p>
+</div></blockquote>
+<p><strong>diag_output, diag_output_figs: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Diagnostic output flags for calibration method</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_psms.BilinearPSM.psm">
+<tt class="descname">psm</tt><big>(</big><em>Xb</em>, <em>X_state_info</em>, <em>X_coords</em><big>)</big><a class="headerlink" href="#LMR_psms.BilinearPSM.psm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maps a given state to observations for the given proxy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xb: ndarray</strong></p>
+<blockquote>
+<div><p>State vector to be mapped into observation space (stateDim x ensDim)</p>
+</div></blockquote>
+<p><strong>X_state_info: dict</strong></p>
+<blockquote>
+<div><p>Information pertaining to variables in the state vector</p>
+</div></blockquote>
+<p><strong>X_coords: ndarray</strong></p>
+<blockquote>
+<div><p>Coordinates for the state vector (stateDim x 2)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Ye:</p>
+<blockquote class="last">
+<div><p>Equivalent observation from prior</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="LMR_psms.LinearPSM">
+<em class="property">class </em><tt class="descclassname">LMR_psms.</tt><tt class="descname">LinearPSM</tt><big>(</big><em>config</em>, <em>proxy_obj</em>, <em>psm_data=None</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM" title="Permalink to this definition">¶</a></dt>
+<dd><p>PSM based on linear regression.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module used for current LMR run.</p>
+</div></blockquote>
+<p><strong>proxy_obj: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object that this PSM is being attached to</p>
+</div></blockquote>
+<p><strong>psm_data: dict</strong></p>
+<blockquote>
+<div><p>Pre-calibrated PSM dictionary containing current associated
+proxy site&#8217;s calibration information</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong></p>
+<blockquote class="last">
+<div><p>If PSM is below critical correlation threshold.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="23%" />
+<col width="77%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>lat: float</td>
+<td>Latitude of associated proxy site</td>
+</tr>
+<tr class="row-even"><td>lon: float</td>
+<td>Longitude of associated proxy site</td>
+</tr>
+<tr class="row-odd"><td>elev: float</td>
+<td>Elevation/depth of proxy sitex</td>
+</tr>
+<tr class="row-even"><td>corr: float</td>
+<td>Correlation of proxy record against calibration data</td>
+</tr>
+<tr class="row-odd"><td>slope: float</td>
+<td>Linear regression slope of proxy/calibration fit</td>
+</tr>
+<tr class="row-even"><td>intercept: float</td>
+<td>Linear regression y-intercept of proxy/calibration fit</td>
+</tr>
+<tr class="row-odd"><td>R: float</td>
+<td>Mean-squared error of proxy/calibration fit</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_psms.LinearPSM.basic_psm">
+<tt class="descname">basic_psm</tt><big>(</big><em>data</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM.basic_psm" title="Permalink to this definition">¶</a></dt>
+<dd><p>A PSM that doesn&#8217;t need to do the state unpacking steps...</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>data: ndarray</strong></p>
+<blockquote>
+<div><p>Data to be used in the psm calculation of estimated observations
+(Ye)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Ye: ndarray</p>
+<blockquote class="last">
+<div><p>Estimated observations from the proxy system model</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_psms.LinearPSM.calibrate">
+<tt class="descname">calibrate</tt><big>(</big><em>C</em>, <em>proxy</em>, <em>diag_output=False</em>, <em>diag_output_figs=False</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM.calibrate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calibrate given proxy record against observation data and set relevant
+PSM attributes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>C: calibration_master like</strong></p>
+<blockquote>
+<div><p>Calibration object containing data, time, lat, lon info</p>
+</div></blockquote>
+<p><strong>proxy: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object to fit to the calibration data</p>
+</div></blockquote>
+<p><strong>diag_output, diag_output_figs: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Diagnostic output flags for calibration method</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_psms.LinearPSM.get_close_grid_point_data">
+<tt class="descname">get_close_grid_point_data</tt><big>(</big><em>data</em>, <em>lon</em>, <em>lat</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM.get_close_grid_point_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts data along the sampling dimension that is closest to the
+grid point (lat/lon) of the current PSM object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>data: ndarray</strong></p>
+<blockquote>
+<div><p>Gridded data matching dimensions of (sample, lat, lon) or
+(sample, lat*lon).</p>
+</div></blockquote>
+<p><strong>lon: ndarray</strong></p>
+<blockquote>
+<div><p>Longitudes pertaining to the input data.  Can have shape as a single
+vector (lat), a grid (lat, lon), or a flattened grid (lat*lon).</p>
+</div></blockquote>
+<p><strong>lat: ndarray</strong></p>
+<blockquote>
+<div><p>Latitudes pertaining to the input data. Can have shape as a single
+vector (lon), a grid (lat, lon), or a flattened grid (lat*lon).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">tmp_dat: ndarray</p>
+<blockquote class="last">
+<div><p>Grid point data closes to the lat/lon of the current PSM object</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_psms.LinearPSM.psm">
+<tt class="descname">psm</tt><big>(</big><em>Xb</em>, <em>X_state_info</em>, <em>X_coords</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM.psm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maps a given state to observations for the given proxy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xb: ndarray</strong></p>
+<blockquote>
+<div><p>State vector to be mapped into observation space (stateDim x ensDim)</p>
+</div></blockquote>
+<p><strong>X_state_info: dict</strong></p>
+<blockquote>
+<div><p>Information pertaining to variables in the state vector</p>
+</div></blockquote>
+<p><strong>X_coords: ndarray</strong></p>
+<blockquote>
+<div><p>Coordinates for the state vector (stateDim x 2)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Ye:</p>
+<blockquote class="last">
+<div><p>Equivalent observation from prior</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="LMR_psms.LinearPSM_TorP">
+<em class="property">class </em><tt class="descclassname">LMR_psms.</tt><tt class="descname">LinearPSM_TorP</tt><big>(</big><em>config</em>, <em>proxy_obj</em>, <em>psm_data_T=None</em>, <em>psm_data_P=None</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM_TorP" title="Permalink to this definition">¶</a></dt>
+<dd><p>PSM based on linear regression w.r.t. temperature or precipitation</p>
+<dl class="docutils">
+<dt><a href="#id1"><span class="problematic" id="id2">**</span></a>Important note: This class assumes that all linear PSMs have been </dt>
+<dd>pre-calibrated w.r.t. to temperature and precipitation, 
+using the &#8220;LinearPSM&#8221; class defined above.
+No attempts at calibration are performed here! 
+The following code only assigns PSM linear regression 
+parameters to individual proxies from fits to temperature
+OR precipitation/moisture according to a measure of
+&#8220;goodness-of-fit&#8221; criteria (here, MSE of the resisduals).</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module used for current LMR run.</p>
+</div></blockquote>
+<p><strong>proxy_obj: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object that this PSM is being attached to</p>
+</div></blockquote>
+<p><strong>psm_data: dict</strong></p>
+<blockquote>
+<div><p>Pre-calibrated PSM dictionary containing current associated
+proxy site&#8217;s calibration information</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong></p>
+<blockquote class="last">
+<div><p>If PSM is below critical correlation threshold.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="79%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>sensitivity: string</td>
+<td>Indicates the sensitivity (temperature vs moisture) of the proxy record</td>
+</tr>
+<tr class="row-even"><td>lat: float</td>
+<td>Latitude of associated proxy site</td>
+</tr>
+<tr class="row-odd"><td>lon: float</td>
+<td>Longitude of associated proxy site</td>
+</tr>
+<tr class="row-even"><td>elev: float</td>
+<td>Elevation/depth of proxy site</td>
+</tr>
+<tr class="row-odd"><td>corr: float</td>
+<td>Correlation of proxy record against calibration data</td>
+</tr>
+<tr class="row-even"><td>slope: float</td>
+<td>Linear regression slope of proxy/calibration fit</td>
+</tr>
+<tr class="row-odd"><td>intercept: float</td>
+<td>Linear regression y-intercept of proxy/calibration fit</td>
+</tr>
+<tr class="row-even"><td>R: float</td>
+<td>Mean-squared error of proxy/calibration fit</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_psms.LinearPSM_TorP.calibrate">
+<tt class="descname">calibrate</tt><big>(</big><em>C</em>, <em>proxy</em>, <em>diag_output=False</em>, <em>diag_output_figs=False</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM_TorP.calibrate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calibrate given proxy record against observation data and set relevant
+PSM attributes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>C: calibration_master like</strong></p>
+<blockquote>
+<div><p>Calibration object containing data, time, lat, lon info</p>
+</div></blockquote>
+<p><strong>proxy: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object to fit to the calibration data</p>
+</div></blockquote>
+<p><strong>diag_output, diag_output_figs: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Diagnostic output flags for calibration method</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="LMR_psms.LinearPSM_TorP.psm">
+<tt class="descname">psm</tt><big>(</big><em>Xb</em>, <em>X_state_info</em>, <em>X_coords</em><big>)</big><a class="headerlink" href="#LMR_psms.LinearPSM_TorP.psm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maps a given state to observations for the given proxy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xb: ndarray</strong></p>
+<blockquote>
+<div><p>State vector to be mapped into observation space (stateDim x ensDim)</p>
+</div></blockquote>
+<p><strong>X_state_info: dict</strong></p>
+<blockquote>
+<div><p>Information pertaining to variables in the state vector</p>
+</div></blockquote>
+<p><strong>X_coords: ndarray</strong></p>
+<blockquote>
+<div><p>Coordinates for the state vector (stateDim x 2)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Ye:</p>
+<blockquote class="last">
+<div><p>Equivalent observation from prior</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="LMR_psms.get_psm_class">
+<tt class="descclassname">LMR_psms.</tt><tt class="descname">get_psm_class</tt><big>(</big><em>psm_type</em><big>)</big><a class="headerlink" href="#LMR_psms.get_psm_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve psm class type to be instantiated.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>psm_type: str</strong></p>
+<blockquote>
+<div><p>Dict key to retrieve correct PSM class type.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">BasePSM like:</p>
+<blockquote class="last">
+<div><p>Class type to be instantiated and attached to a proxy.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="LMR_psms.h_interpPSM">
+<em class="property">class </em><tt class="descclassname">LMR_psms.</tt><tt class="descname">h_interpPSM</tt><big>(</big><em>config</em>, <em>proxy_obj</em>, <em>R_data=None</em><big>)</big><a class="headerlink" href="#LMR_psms.h_interpPSM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Horizontal interpolator as a PSM.
+Interpolator is a distance-weighted average of surrounding gridpoint values, 
+with weights determined by exponentially-decaying function calculated using
+a user-defined influence radius.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>config: LMR_config</strong></p>
+<blockquote>
+<div><p>Configuration module used for current LMR run.</p>
+</div></blockquote>
+<p><strong>proxy_obj: BaseProxyObject like</strong></p>
+<blockquote>
+<div><p>Proxy object that this PSM is being attached to</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong></p>
+<blockquote class="last">
+<div><p>...</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="11%" />
+<col width="89%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>RadiusInfluence: float</td>
+<td>Distance-scale used the calculation of exponentially-decaying weights in interpolator (in km)</td>
+</tr>
+<tr class="row-even"><td>sensitivity: string</td>
+<td>Indicates the sensitivity (temperature vs moisture) of the proxy record Here set to &#8220;None&#8221; as this information is irrelevant, but given for compatibility with other PSM classes</td>
+</tr>
+<tr class="row-odd"><td>lat: float</td>
+<td>Latitude of associated proxy site</td>
+</tr>
+<tr class="row-even"><td>lon: float</td>
+<td>Longitude of associated proxy site</td>
+</tr>
+<tr class="row-odd"><td>elev: float</td>
+<td>Elevation/depth of proxy site</td>
+</tr>
+<tr class="row-even"><td>R: float</td>
+<td>Obs. error variance associated to proxy site</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<dl class="method">
+<dt id="LMR_psms.h_interpPSM.psm">
+<tt class="descname">psm</tt><big>(</big><em>Xb</em>, <em>X_state_info</em>, <em>X_coords</em><big>)</big><a class="headerlink" href="#LMR_psms.h_interpPSM.psm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maps a given state to observations for the given proxy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xb: ndarray</strong></p>
+<blockquote>
+<div><p>State vector to be mapped into observation space (stateDim x ensDim)</p>
+</div></blockquote>
+<p><strong>X_state_info: dict</strong></p>
+<blockquote>
+<div><p>Information pertaining to variables in the state vector</p>
+</div></blockquote>
+<p><strong>X_coords: ndarray</strong></p>
+<blockquote>
+<div><p>Coordinates for the state vector (stateDim x 2)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Ye:</p>
+<blockquote class="last">
+<div><p>Equivalent observation from prior</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to LMReanalysis&#8217;s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">LMReanalysis 2.0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2016, G. Hakim, R. Tardif, A. Perkins.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

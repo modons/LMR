@@ -49,14 +49,6 @@ coverage.xml
 *.log
 *.pot
 
-# Sphinx documentation
-docs/_build/
-
-#Ignore figures
-*.jpg
-*.pdf
-*.png
-
 #Data Files
 *.npy
 *.h5
@@ -73,7 +65,6 @@ scratch/*
 tests/data/*
 
 #Video Files
-*.gif
 *.avi
 *.mp4
 Figs/*
