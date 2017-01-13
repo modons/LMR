@@ -9,19 +9,20 @@
 wrapper:
   iter_range:  !!python/tuple [0, 0]
   param_search: null
-  multi_seed: [12, 34]
+  multi_seed: null
 
 core:
-  nexp: testdev_yaml_config
-  lmr_path: /home/katabatic/wperkins/data/LMR
+  nexp: testdev_yaml_config_update
+#  lmr_path: /home/katabatic/wperkins/data/LMR
+  lmr_path: /home/disk/kalman3/rtardif/LMR
   datadir_output: /home/katabatic/wperkins/data/LMR/output/working
-  archive_dir: /home/katabatic/wperkins/data/LMR/output/testing
+  archive_dir: /home/katabatic2/wperkins/LMR_output/testing
   online_reconstruction: False
   clean_start: True
   use_precalc_ye: False
-  recon_period: !!python/tuple [1960, 1970]
+  recon_period: !!python/tuple [1900, 1920]
   nens: 10
-  seed: null
+  seed: 0
   loc_rad: null
 
 proxies:
@@ -114,7 +115,6 @@ proxies:
       'South America'
       ]
     proxy_resolution: [1.0]
-    proxy_timeseries_kind: 'asis'
     database_filter: [
 #     'PAGES2',
 #     'LMR'
@@ -247,9 +247,8 @@ psm:
 
   linear:
     datatag_calib: GISTEMP
-
-    psm_r_crit: 0.2
-    min_data_req_frac: 1.0
+    pre_calib_datafile: null
+    psm_r_crit: 0.0
 
   linear_TorP:
     datatag_calib_T: GISTEMP
@@ -277,5 +276,4 @@ prior:
     tas_sfc_Amon: anom
     pr_sfc_Amon: anom
   detrend: False
-  state_kind: anom
   avgInterval: null

@@ -1011,37 +1011,6 @@ def psearch_list_cfg_update(param_str_list, val_list, cfg_dict=None):
     return cfg_dict, param_dir_str
 
 
-def set_cfg_attribute(key, value, cfg_object):
-    raise DeprecationWarning('Function no longer being updated.'
-                             ' Use psearch_list_cfg_update instead.')
-    attr_list = key.split('.')
-
-    while len(attr_list) > 1:
-        cfg_object = getattr(cfg_object, attr_list[0])
-        attr_list = attr_list[1:]
-
-    setattr(cfg_object, attr_list[-1], value)
-    try:
-        value_str = '{:g}'.format(value)
-    except ValueError as e:
-        value_str = '{}'.format(value)
-
-    return attr_list[-1] + value_str
-
-
-def set_paramsearch_attributes(sorted_keys, values, cfg_object):
-    raise DeprecationWarning('Function no longer being updated.'
-                             ' Use psearch_list_cfg_update instead.')
-    paramsearch_dir = []
-
-    for key, value in zip(sorted_keys, values):
-
-        param_str = set_cfg_attribute(key, value, cfg_object)
-        paramsearch_dir.append(param_str)
-
-    return '_'.join(paramsearch_dir)
-
-
 class FlagError(ValueError):
     """
     Error for exiting code sections
