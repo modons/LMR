@@ -8,15 +8,12 @@
 
 wrapper:
   iter_range:  !!python/tuple [0, 0]
-  param_search:
-    core.nens: [5, 10]
-    proxies.proxy_frac: [0.5, 0.75]
+  param_search: null
   multi_seed: null
 
 core:
-  nexp: testdev_yaml_config_update
+  nexp: testdev_template
   lmr_path: /home/katabatic/wperkins/data/LMR
-#  lmr_path: /home/disk/kalman3/rtardif/LMR
   datadir_output: /home/katabatic/wperkins/data/LMR/output/working
   archive_dir: /home/katabatic2/wperkins/LMR_output/testing
   online_reconstruction: False
@@ -126,7 +123,7 @@ proxies:
                       '72Devo01',  '72Devo05']
     proxy_order: [
       'Tree Rings_WoodDensity',
-#     'Tree Rings_WidthPages',
+      'Tree Rings_WidthPages',
       'Tree Rings_WidthPages2',
       'Tree Rings_WidthBreit',
       'Tree Rings_Isotopes',

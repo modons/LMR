@@ -73,3 +73,6 @@ tests/data/*
 Figs/*
 Archive/*
 *.nc
+
+# default configuration
+config.yml
