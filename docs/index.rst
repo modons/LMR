@@ -17,13 +17,27 @@ Originators: R. Tardif, W. A. Perkins, G. J. Hakim
 
 Where to start
 --------------
-* :ref: `Quick-start guide <quick>`
+* :ref:`Quick Start Guide <quick>`
+
+
+Introductory info
+-----------------
+
+.. toctree::
+   :maxdepth: 1
+
+   quick
+   configuration
+
 
 Contributing to docs
 --------------------
 Here are some resources to get you to help with docs
 
 
+
+Citations
+---------
 .. [Hakim2016] Hakim, G. J., Emile-Geay, J., Steig, E. J., Noone, D., Anderson,
  D. M., Tardif, R., … Perkins, W. A. (2016). The Last Millennium Climate
  Reanalysis Project: Framework and First Results. Journal of Geophysical
