@@ -3,11 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to the Last Millennium Reanalysis project documentation!
-================================================================
+Welcome to the LMR project documentation!
+=========================================
 
-The LMR code provides a framework for ensemble Kalman filter
-paleoclimate reconstructions from [Hakim2016]_.
+The Last Millennium reanalysis code provides a framework for ensemble Kalman
+filter paleoclimate reconstructions from [Hakim2016]_.
 
 Version 2.0
 
@@ -32,7 +32,21 @@ Introductory info
 
 Contributing to docs
 --------------------
-Here are some resources to get you to help with docs
+The documentation needs more work!  If you'd like to contribute please
+consider taking a bit of time to write on a topic.
+
+A few examples off information still needed are:
+
+* creating a proxy database
+* pre-calibrating observation models,
+* pre-calculating Ye values
+* running verification scripts.
+
+This list is by no means definitive.  If there's some usage of the LMR
+framework that's not described, write about it! The documentation itself is
+is written using reStructuredText format.
+`Here is a nice overview <http://www.sphinx-doc.org/en/1.5.1/rest.html>`_
+of different directives useful for writing a reST file.
 
 
 
