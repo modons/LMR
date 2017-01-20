@@ -45,8 +45,11 @@ A few examples off information still needed are:
 This list is by no means definitive.  If there's some usage of the LMR
 framework that's not described, write about it! The documentation itself is
 is written using reStructuredText format.
-`Here is a nice overview <http://www.sphinx-doc.org/en/1.5.1/rest.html>`_
-of different directives useful for writing a reST file.
+
+Resources
+^^^^^^^^^
+* `reST overview <http://www.sphinx-doc.org/en/1.5.1/rest.html>`_
+* `Sphinx tutorial <http://www.sphinx-doc.org/en/1.5.1/tutorial.html>`_
 
 
 
