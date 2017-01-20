@@ -45,8 +45,8 @@ prior:
     estimate during a reconstruction.
 
 .. note::
-If ``config.yml`` is not found or if any extraneous parameters (including misspellings)
-are found in the file, the reconstruction code will exit immediately.
+   If ``config.yml`` is not found or if any extraneous parameters (including misspellings)
+   are found in the file, the reconstruction code will exit immediately.
 
 Custom Configuration Files
 --------------------------
