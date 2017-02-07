@@ -12,7 +12,8 @@ Originator: Greg Hakim   | Dept. of Atmospheric Sciences, Univ. of Washington
                          | April 2015
  
 Revisions: 
-          - Adapted to OOP coding of proxy- and prior-related classes [A. Perkins, U. of Washington] 
+          - Adapted to OOP coding of proxy- and prior-related classes [A. Perkins, U. of Washington]
+          - Includes new parameter space search into iterations [A. Perkins, UW, Feb 2017]
 
 """
 import os
@@ -170,8 +171,11 @@ for iter_and_params in itertools.product(*param_iterables):
     print cmd
     os.system(cmd)
 
-    # copy the namelist file to archive directory
-    cmd = 'cp ./LMR_config.py ' + mc_arc_dir + '/'
+    # copy the configuration file to archive directory
+    if LMR_config.LEGACY_CONFIG:
+        cmd = 'cp ./LMR_config.py ' + mc_arc_dir + '/'
+    else:
+        cmd = 'cp ' + yaml_file + ' ' + mc_arc_dir + '/'
     print cmd
     os.system(cmd)
 
