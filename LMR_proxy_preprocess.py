@@ -80,10 +80,10 @@ def main():
         # NCDC proxy data ------------------------------------------------------------
         # ============================================================================
         
-        datadir = datadir+'NCDC/ToPandas_'+dbversion+'/'
+        datadir = datadir+'NCDC/ToPandas_'+ncdc_dbversion+'/'
 
-        meta_outfile = outdir + 'NCDC_'+dbversion+'_Metadata.df.pckl'
-        data_outfile = outdir + 'NCDC_'+dbversion+'_Proxies.df.pckl'
+        meta_outfile = outdir + 'NCDC_'+ncdc_dbversion+'_Metadata.df.pckl'
+        data_outfile = outdir + 'NCDC_'+ncdc_dbversion+'_Proxies.df.pckl'
 
         # Specify all proxy types & associated proxy measurements to look for & extract from the data files
         # This is to take into account all the possible different names found in the NCDC data files.
@@ -105,9 +105,10 @@ def main():
                 'Ice Cores_Accumulation'          : ['accum','accumu'],\
                 'Ice Cores_MeltFeature'           : ['MFP'],\
                 'Lake Cores_Varve'                : ['varve', 'varve_thickness', 'varve thickness'],\
-                'Lake Cores_BioMarkers'           : ['Uk37', 'TEX86'],\
+                'Lake Cores_BioMarkers'           : ['Uk37', 'TEX86', 'tex86'],\
                 'Lake Cores_GeoChem'              : ['Sr/Ca', 'Mg/Ca','Cl_cont'],\
                 'Marine Cores_d18O'               : ['d18O'],\
+                'Marine Cores_BioMarkers'         : ['tex86'],\
 #                'Speleothems_d18O'                : ['d18O'],\
 #                'Speleothems_d13C'                : ['d13C'],\
                 'Tree Rings_WidthBreit'           : ['trsgi'],\
@@ -243,8 +244,15 @@ def DADT_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     meta_sheet_name = 'Metadata'
     metadata = pd.read_excel(filename, meta_sheet_name)
-    metadata.to_pickle(metaout)
 
+    # add a "Databases" column and set to LMR
+    metadata.loc[:,'Databases'] = '[LMR]'
+
+    # add a "Seasonality" column and set to [1,2,3,4,5,6,7,8,9,10,11,12]
+    metadata.loc[:,'Seasonality'] = '[1,2,3,4,5,6,7,8,9,10,11,12]'
+
+    metadata.loc[:,'Elev'] = 0.0
+    
     nbrecords = len(metadata)
 
     # One proxy record per sheet, all named as DataXXX
@@ -257,15 +265,18 @@ def DADT_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
         # rounding age data to nearest year (Jess Tierney, pers. comm.)
         age = (pdata[pdata.columns[0]][1:]).astype('float').round()
         pdata[pdata.columns[0]][1:] = age
-
-
         
+
         # -- just for print out - looking into time axis for each record
         # age difference between consecutive data
         diff = np.diff(pdata[pdata.columns[0]][1:], 1)
+        
         print pdata.columns[1], ':', 'mean=', "{:7.1f}".format(np.mean(diff)), 'median=', "{:7.1f}".format(np.median(diff)),\
-                                            'min=', "{:7.1f}".format(np.min(diff)), 'max=', "{:7.1f}".format(np.max(diff))
+                                     'min=', "{:7.1f}".format(np.min(diff)), 'max=', "{:7.1f}".format(np.max(diff))
 
+        resolution = np.mean(diff) # take average difference as representative "resolution"
+        # update resolution info in the metadata
+        metadata.loc[i,'Resolution (yr)'] = int(resolution)
         
         if i == 0:
             df = pdata
@@ -293,6 +304,7 @@ def DADT_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     df = df.ix[1:]
     df.sort_index(inplace=True)
 
+    
     # Checkin for duplicate ages in proxy record. If present, calculate average (Jess Tierney, pers. comm.)
     df = df.astype(float)
     df_f = df.groupby(df.index).mean()
@@ -307,6 +319,26 @@ def DADT_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     # TODO: make sure year index is consecutive
     #write data to file
     df_f.to_pickle(dataout)
+
+
+    # Make sure ...
+    metadata['Archive type'] = metadata['Archive type'].astype(str)
+    
+    
+    # Add 'Youngest (C.E.)', 'Oldest (C.E.)' 'Elev' and 'Seasonality' info to metadata
+    sites = list(df_f)
+    for s in sites:
+        # 'Youngest' and 'Oldest' info based on the age data
+        values = df_f[s]
+        values = values[values.notnull()]
+        times = values.index.values
+        
+        meta_ind = metadata[metadata['Proxy ID'] == s].index        
+        metadata.loc[meta_ind,'Oldest (C.E.)'] = np.min(times)
+        metadata.loc[meta_ind,'Youngest (C.E.)'] = np.max(times)
+        
+    # write metadata to file
+    metadata.to_pickle(metaout)
 
 
 
@@ -397,12 +429,12 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
     
 
     # Possible header definitions of time in data files ...
-    time_defs = ['age', 'age_int',\
+    time_defs = ['age', 'age_int', 'year', \
                  'y_ad','Age_AD','age_AD','age_AD_ass','age_AD_int','Midpt_year','AD',\
                  'age_yb1950','yb_1950','yrb_1950',\
                  'kyb_1950',\
                  'yb_1989','age_yb1989',\
-                 'yb_2000','yr_b2k','yb_2k','ky_b2k','kyb_2000','kyb_2k','kab2k','ka_b2k',\
+                 'yb_2000','yr_b2k','yb_2k','ky_b2k','kyb_2000','kyb_2k','kab2k','ka_b2k','kyr_b2k',\
                  'ky_BP','kyr_BP','ka_BP','age_kaBP','yr_BP','calyr_BP','Age(yrBP)','age_calBP']
 
     filename = site
@@ -483,18 +515,23 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
             d['SiteName'] = colonReader('site_name', SiteInfo, SiteInfo_low, '\n')
             d['Location'] = colonReader('location', SiteInfo, SiteInfo_low, '\n')
 
-            #print SiteInfo
+            # get lat/lon info
+            try:
+                str_lst = ['northernmost_latitude', 'northernmost latitude'] # documented instances of this field property
+                d['NorthernmostLatitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))
+                str_lst = ['southernmost_latitude', 'southernmost latitude'] # documented instances of this field property
+                d['SouthernmostLatitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))
+                str_lst = ['easternmost_longitude', 'easternmost longitude'] # documented instances of this field property
+                d['EasternmostLongitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))
+                str_lst = ['westernmost_longitude', 'westernmost longitude'] # documented instances of this field property
+                d['WesternmostLongitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))
+            except (EmptyError,TypeError,ValueError) as err:
+                print '***',err.args
+                print '***ERROR:Valid values of lat/lon were not found! Skipping record...'
+                return (None, None)
 
-            str_lst = ['northernmost_latitude', 'northernmost latitude'] # documented instances of this field property
-            d['NorthernmostLatitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))  
-            str_lst = ['southernmost_latitude', 'southernmost latitude'] # documented instances of this field property
-            d['SouthernmostLatitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))
-            str_lst = ['easternmost_longitude', 'easternmost longitude'] # documented instances of this field property
-            d['EasternmostLongitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))
-            str_lst = ['westernmost_longitude', 'westernmost longitude'] # documented instances of this field property
-            d['WesternmostLongitude'] = float(colonReader(str_lst, SiteInfo, SiteInfo_low, '\n'))
+            # get elevation info
             elev = colonReader('elevation', SiteInfo, SiteInfo_low, '\n')
-            #if elev != 'nan' and len(elev)>0:
             if 'nan' not in elev and len(elev)>0:
                 elev_s = elev.split(' ')
                 # is elevation negative (depth)?
@@ -541,16 +578,22 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
             DataColl = fileContent[sline_begin:sline_end]
             DataColl_low = DataColl.lower()
 
-            d['CollectionName']       = colonReader('collection_name', DataColl, DataColl_low, '\n')
-            d['EarliestYear']         = float(colonReader('earliest_year', DataColl, DataColl_low, '\n'))
-            d['MostRecentYear']       = float(colonReader('most_recent_year', DataColl, DataColl_low, '\n'))
-            d['TimeUnit']             = colonReader('time_unit', DataColl, DataColl_low, '\n')
-            if not d['TimeUnit']:
-                d['TimeUnit']         = colonReader('time unit', DataColl, DataColl_low, '\n')
-            if d['TimeUnit'] not in time_defs:
-                print '***Time_Unit '+d['TimeUnit']+' not in recognized time definitions! Exiting!'
-                return
+            d['CollectionName'] = colonReader('collection_name', DataColl, DataColl_low, '\n')
+            if not d['CollectionName']: d['CollectionName'] = filename.split('/')[-1].rstrip('.txt')
 
+            EarliestYearStr   = colonReader('earliest_year', DataColl, DataColl_low, '\n')
+            MostRecentYearStr = colonReader('most_recent_year', DataColl, DataColl_low, '\n')
+            d['EarliestYear'] = None
+            d['MostRecentYear'] = None
+            if EarliestYearStr: d['EarliestYear'] = float(EarliestYearStr)
+            if EarliestYearStr: d['MostRecentYear'] = float(MostRecentYearStr)
+                
+            d['TimeUnit'] = colonReader('time_unit', DataColl, DataColl_low, '\n')
+            if not d['TimeUnit']: d['TimeUnit'] = colonReader('time unit', DataColl, DataColl_low, '\n')
+            if d['TimeUnit'] not in time_defs:
+                print '***Time_Unit *'+d['TimeUnit']+'* not in recognized time definitions! Exiting!'
+                return (None, None)
+            
             # Get Notes: information, if it exists
             notes = colonReader('notes', DataColl, DataColl_low, '\n')
             if notes: # not empty
@@ -696,7 +739,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
 
         except EmptyError, e:
             print e
-            return
+            return (None, None)
 
         # ===========================================================================
         # ===========================================================================
@@ -747,7 +790,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
         proxy_types_all = proxy_def.keys()
 
         # Restrict to those matching d['Archive']
-        proxy_types_keep = [s for s in proxy_types_all if d['Archive'] in s]
+        proxy_types_keep = [s for s in proxy_types_all if d['Archive'] in s or d['Archive'] in s.lower()]
 
         # Which columns contain the important data (time & proxy values) to be extracted?
         # Referencing variables (time/age & proxy data) with data column IDsx
@@ -867,16 +910,30 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
         #print 'TimeUnit:', d['TimeUnit']
         tdef = d['TimeUnit']
         tdef_parsed = tdef.split('_')
+        
         if len(tdef_parsed) == 2 and tdef_parsed[0] and tdef_parsed[1]:
             # tdef has expected structure ...
             if tdef_parsed[0] == 'yb' and is_number(tdef_parsed[1]):
                 time_raw = float(tdef_parsed[1]) - time_raw
-                d['EarliestYear'] = float(tdef_parsed[1]) - d['EarliestYear']
-                d['MostRecentYear'] = float(tdef_parsed[1]) - d['MostRecentYear']
+                #d['EarliestYear'] = float(tdef_parsed[1]) - d['EarliestYear']
+                #d['MostRecentYear'] = float(tdef_parsed[1]) - d['MostRecentYear']
             elif tdef_parsed[0] == 'kyb' and is_number(tdef_parsed[1]):
                 time_raw = float(tdef_parsed[1]) - 1000.0*time_raw
-                d['EarliestYear'] = float(tdef_parsed[1]) - 1000.0*d['EarliestYear']
-                d['MostRecentYear'] = float(tdef_parsed[1]) - 1000.0*d['MostRecentYear']
+                #d['EarliestYear'] = float(tdef_parsed[1]) - 1000.0*d['EarliestYear']
+                #d['MostRecentYear'] = float(tdef_parsed[1]) - 1000.0*d['MostRecentYear']
+            elif tdef_parsed[0] == 'calyr' and tdef_parsed[1] == 'BP':
+                time_raw = 1950.0 - time_raw
+                #d['EarliestYear'] = 1950.0 - d['EarliestYear']
+                #d['MostRecentYear'] = 1950.0 - d['MostRecentYear']
+            elif tdef_parsed[0] == 'kyr' and tdef_parsed[1] == 'BP':
+                time_raw = 1950.0 - 1000.*time_raw
+                #d['EarliestYear'] = 1950.0 - 1000.*d['EarliestYear']
+                #d['MostRecentYear'] = 1950.0 - 1000.*d['MostRecentYear']
+            elif tdef_parsed[0] == 'kyr' and tdef_parsed[1] == 'b2k':
+                time_raw = 2000.0 - 1000.*time_raw
+                #d['EarliestYear'] = 2000.0 - 1000.*d['EarliestYear']
+                #d['MostRecentYear'] = 2000.0 - 1000.*d['MostRecentYear']
+
             elif tdef_parsed[0] == 'y' and tdef_parsed[1] == 'ad':
                 pass # do nothing, time already in years_AD
             else:
@@ -890,7 +947,13 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
             #value = np.asarray([],dtype=np.float64)
             exit(1)
 
+        
+        # Making sure the tagged earliest and most recent years of the record are consistent with the data,
+        # already transformed in year CE, common to all records before inclusion in the pandas DF.
+        d['EarliestYear']   = np.min(time_raw)
+        d['MostRecentYear'] = np.max(time_raw)
 
+            
         # If subannual, average up to annual --------------------------------------------------------
 
         valid_frac = 0.5
@@ -984,7 +1047,8 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
             
             ind = proxy_types_in_file[key][1]
             proxy_units = d['DataColumn' + format(ind+1, '02') + '_Units']
-            proxy_measurement = key.split('_')[1]            
+            proxy_archive = key.split('_')[0]
+            proxy_measurement = key.split('_')[1]
             proxy_measurement = d['DataColumn' + format(ind+1, '02') + '_ShortName']
 
             if key == 'Tree Rings_WidthBreit': proxy_measurement = proxy_measurement + '_breit'
@@ -992,6 +1056,8 @@ def read_proxy_data_NCDCtxt(site, proxy_def):
 
             proxy_dict = {}
             proxy_dict[proxy_name] = {}
+
+            if d['Archive'] != proxy_archive: d['Archive'] = proxy_archive
             proxy_dict[proxy_name]['Archive']              = d['Archive']
             proxy_dict[proxy_name]['SiteName']             = d['SiteName']
             proxy_dict[proxy_name]['Location']             = d['Location']

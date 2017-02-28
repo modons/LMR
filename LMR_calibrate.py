@@ -2,10 +2,14 @@
 Module containing definitions pertaining to linear PSM calibration sources.
 
 Revisions:
-- Addition of the GPCC precipitation dataset as a possible calibration source.
+- Addition of the GPCC precipitation dataset as a possible calibration 
+  moisture source.
   [R. Tardif, U. of Washington, February 2016]
-- Addition of the Dai PDSI dataset as a possible calibration source.
+- Addition of the Dai PDSI dataset as a possible calibration
+  moisture source.
   [R. Tardif, U. of Washington, May 2016]
+- Addition of the SPEI dataset as a possible calibration moisture source.
+  [R. Tardif, U. of Washington, December 2016]
 
 """
 # -------------------------------------------------------------------------------
@@ -26,6 +30,8 @@ def calibration_assignment(icalib):
         calib_object = calibration_precip_GPCC()
     elif icalib == 'DaiPDSI':
         calib_object = calibration_precip_DaiPDSI()
+    elif icalib == 'SPEI':
+        calib_object = calibration_precip_SPEI()
     else:
         print 'Error in calibration data specification! Exiting ...'
         exit(1)
@@ -172,3 +178,27 @@ class calibration_precip_DaiPDSI(calibration_master):
                                                                                     self.calib_vars,
                                                                                     self.out_anomalies,
                                                                                     self.outfreq)
+
+
+# -------------------------------------------------------------------------------
+# *** SPEI class --------------------------------------------------
+# -------------------------------------------------------------------------------
+class calibration_precip_SPEI(calibration_master):
+
+    source = 'SPEI'
+    datafile_calib   = 'spei_monthly_v2.4_190001-201412.nc'
+
+    dataformat_calib = 'NCD'
+    calib_vars = ['spei']
+    out_anomalies = True
+    outfreq = 'monthly'
+    
+    # read the data
+    def read_calibration(self):
+        from load_gridded_data import read_gridded_data_SPEI
+
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_SPEI(self.datadir_calib,
+                                                                                 self.datafile_calib,
+                                                                                 self.calib_vars,
+                                                                                 self.out_anomalies,
+                                                                                 self.outfreq)

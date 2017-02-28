@@ -15,6 +15,8 @@ Revisions:
             [R. Tardif, U of Washington, May 2016]
           - Added function to upload the data from the TraCE21ka climate simulation.
             [R. Tardif, U of Washington, December 2016]
+          - Added function to upload the data from the TraCE21ka climate simulation.
+            [R. Tardif, U of Washington, December 2016]
 """
 from netCDF4 import Dataset, date2num, num2date
 from datetime import datetime, timedelta
@@ -669,7 +671,128 @@ def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,outfreq
 
 #==========================================================================================
 
-def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detrend=None):
+def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,outfreq):
+#==========================================================================================
+#
+# Reads the monthly data of Standardized Precipitation Evapotranspiration Index from
+# Begueria S., Vicente-Serrano S., Reig F., Latorre B. (2014) Standardized precipitation
+# evapotranspiration index (SPEI) revisited: Parameter fitting, evapotranspiration models,
+# tools, datasets and drought monitoring. International Journal of Climatology 34, 3001-3023.
+# SPEI gridded product obtained from the Consejo Superior de Investigaciones Cientificas
+# (CSIC) at http://sac.csic.es/spei/index.html
+#
+# Input: 
+#      - data_dir     : Full name of directory containing gridded 
+#                       data. (string)
+#      - data_file    : Name of file containing gridded data. (string)
+#
+#      - data_vars    : List of variable names to read. (string list)
+#                       Here should simply be ['spei'], as only SPEI
+#                       data are contained in the file.
+#
+#      - out_anomalies: Boolean indicating whether anomalies w.r.t. a referenced period
+#                       are to be calculated and provided as output
+#
+#      - outfreq      : string indicating whether to return monthly or annual averages
+#
+# Output: (numpy arrays)
+#      - time_yrs     : Array with years over which data is available.
+#                       dims: [nb_years]
+#      - lat          : Array containing the latitudes of gridded  data. 
+#                       dims: [lat]
+#      - lon          : Array containing the longitudes of gridded  data. 
+#                       dims: [lon]
+#      - value        : Array with the annually-averaged data calculated from monthly data 
+#                       dims: [time,lat,lon]
+# 
+#========================================================================================== 
+
+    nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
+
+    # Check if file exists
+    infile = data_dir+'/SPEI/'+data_file
+    if not os.path.isfile(infile):
+        print 'Error in specification of gridded dataset'
+        print 'File ', infile, ' does not exist! - Exiting ...'
+        exit(1)
+
+    # Sanity check on number of variables to read
+    if len(data_vars) > 1:
+        print 'Too many variables to read!'
+        print 'This file only contains surface PDSI (anomalies)'
+        print 'Exiting!'
+        exit(1)
+
+
+    data = Dataset(infile,'r')
+
+    lat   = data.variables['lat'][:]
+    lon   = data.variables['lon'][:]
+
+    indneg = np.where(lon < 0)[0]
+    if len(indneg) > 0: # if non-empty
+        lon[indneg] = 360.0 + lon[indneg]
+
+    # -----------------------------------------------------------------
+    # Time is in "days since 1900-1-1 0:0:0":convert to calendar years
+    # -----------------------------------------------------------------        
+    dateref = datetime(1900,1,1,0)
+    ntime = len(data.dimensions['time'])    
+    daysfromdateref = data.variables['time'][:]
+    dates = np.array([dateref + timedelta(days=int(i)) for i in daysfromdateref])
+
+    fillval = data.variables['spei']._FillValue
+    value = np.copy(data.variables['spei'])
+    value[value == fillval] = np.NAN
+
+    # Calculate anomalies w.r.t. reference period, if out_anomalies is set to True in class calibration_precip_DaiPDSI()
+    # in LMR_calibrate.py
+    if out_anomalies:
+        ref_period = [1951,1980] # same as GISTEMP temperature anomalies
+        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+        # loop over months
+        for i in range(12):
+            m = i+1
+            indsm = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            climo_month[i] = np.nanmean(value[indsm], axis=0)
+            value[indsm] = (value[indsm] - climo_month[i])
+    
+    if outfreq == 'annual':
+        # List years available in dataset and sort
+        years = list(set([d.year for d in dates])) # 'set' is used to get unique values in list
+        years.sort # sort the list
+        dates_annual = np.array([datetime(y,1,1,0,0) for y in years])
+
+        value_annual = np.empty([len(years), len(lat), len(lon)], dtype=float)
+        value_annual[:] = np.nan # initialize with nan's
+        
+        # Loop over years in dataset
+        for i in range(0,len(years)):        
+            # find indices in time array where "years[i]" appear
+            ind = [j for j, k in enumerate(dates) if k.year == years[i]]
+            # ---------------------------------------
+            # Calculate annual mean from monthly data
+            # Note: data has dims [time,lat,lon]
+            # ---------------------------------------
+            tmp = np.nanmean(value[ind],axis=0)
+            # apply check of max nb of nan values allowed
+            nancount = np.isnan(value[ind]).sum(axis=0)
+            tmp[nancount > nbmaxnan] = np.nan # put nan back if nb of nan's in current year above threshold
+            value_annual[i,:,:] = tmp
+        
+        dates_ret = dates_annual
+        value_ret = value_annual
+
+    else:
+        dates_ret = dates
+        value_ret = value
+
+    return dates_ret, lat, lon, value_ret
+
+
+#==========================================================================================
+
+def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detrend=None,var_info=None):
 #==========================================================================================
 #
 # Reads the monthly data from a CMIP5 model and return yearly averaged values
@@ -684,10 +807,13 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
 #                       (dict)
 #
 #      - outtimeavg   : List indicating the months over which to average the data.
-#                       (integer list)
+#                       (integer list or tuple of integer lists)
 #
 #      - detrend      : Boolean to indicate if detrending is to be applied to the prior
 #
+#      - var_info     : Dict. containing information about whether some state variables
+#                       represent temperature or moisture (used to extract proper 
+#                       seasonally-avg. data to be used in calculation of proxy estimates) 
 #
 # Output: 
 #      - datadict     : Master dictionary containing dictionaries, one for each state 
@@ -927,11 +1053,50 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         #       sequence of months.
         # ----------------------------------------------------------------
 
-        print 'Averaging over month sequence:', outtimeavg
+        # for compatibility with new definition possibly using a dict.
+        if type(outtimeavg) is dict:
+            outtimeavg_dict = outtimeavg
+            # check key - there should be only one...
+            outtimeavg_key = outtimeavg_dict.keys()[0]
+            # here, it should be 'annual'. No other definition allowed.
+            if outtimeavg_key == 'annual':
+                outtimeavg = outtimeavg_dict['annual']
+            else:
+                print('ERROR: only subannual or annual averaging is allowed here.' \
+                      ' It is defined as: %s' %outtimeavg_key)
+                raise SystemExit()
         
-        year_current = [m for m in outtimeavg if m>0 and m<=12]
-        year_before  = [abs(m) for m in outtimeavg if m < 0]        
-        year_follow  = [m-12 for m in outtimeavg if m > 12]
+        # outtimeavg is a tuple, or a list?
+        if type(outtimeavg) is tuple:
+            # Is var_info defined? 
+            if var_info:
+                # assign appropriate seasonality whether variable represents temperature or moisture
+                if vardef in var_info['temperature']:
+                    outtimeavg_var =  outtimeavg[0]
+                elif vardef in var_info['moisture']:
+                    outtimeavg_var =  outtimeavg[1]
+                else:
+                    # variable not representing temperature or moisture
+                    print('ERROR: outtimeavg is a tuple but variable is not' \
+                       ' temperature nor moisture...')
+                    raise SystemExit()
+            else:
+                print('ERROR: var_info undefined. outtimeavg is a tuple and info' \
+                       ' contained in this dict. is required to assign proper' \
+                       ' seasonality to temperature and moisture variables')
+                raise SystemExit()
+        elif type(outtimeavg) is list:
+            outtimeavg_var =  outtimeavg            
+        else:
+            print 'ERROR: outtimeavg has to be a list or a tuple of lists, but is:', outtimeavg
+            raise SystemExit()
+
+
+        print 'Averaging over month sequence:', outtimeavg_var
+        
+        year_current = [m for m in outtimeavg_var if m>0 and m<=12]
+        year_before  = [abs(m) for m in outtimeavg_var if m < 0]        
+        year_follow  = [m-12 for m in outtimeavg_var if m > 12]
         
         avgmonths = year_before + year_current + year_follow
         indsclimo = sorted([item-1 for item in avgmonths])
@@ -1556,11 +1721,13 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
 def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=None):
 #==========================================================================================
 #
-# Reads the monthly data from a CMIP5 model and return yearly averaged values
+# Reads the monthly data from the TraCE21ka climate model simulation and returns values of
+# specified model fields averaged over a user-specified period.
 #
 # Input: 
 #      - data_dir     : Full name of directory containing gridded 
 #                       data. (string)
+#
 #      - data_file    : Name of file containing gridded data. (string)
 #
 #      - data_vars    : Variables names to be read, and info on whether each
@@ -1569,10 +1736,15 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 #
 #      - outtimeavg   : Dictionary indicating the type of averaging (key) and associated
 #                       information on averaging period (integer list)
-#                       if the type is "annual": list of integers indicating the months of the year
-#                                                over which to average the data.
+#                       if the type is "annual": list of integers indicating the months of 
+#                                                the year over which to average the data.
+#                                                Requires availability of monthly data.
 #                       if type is "multiyear" : list of single integer indicating the length
-#                                                of averaging period (in years)
+#                                                of averaging period (in years).
+#                                                Requires availability of data with a
+#                                                resolution of at least the averaging
+#                                                interval.
+#
 #                       ex 1: outtimeavg = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]}
 #                       ex 2: outtimeavg = {'multiyear': [100]} -> 100yr average
 #
@@ -1861,13 +2033,12 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         #    specified sequence of months.
         #    Requires availability of monthly data.
         #
-        # 2) multiyear: Averaging available data over a time interval corresponding
-        #    to the specified number of years. 
+        # 2) multiyear: Averaging available data over a time interval 
+        #    corresponding to the specified number of years. 
         #    Requires availability of data with a resolution of at least the
         #    averaging interval.
         # ------------------------------------------------------------------------
 
-        
         if outtimeavg.keys()[0] == 'annual':
             print 'Averaging over month sequence:', outtimeavg['annual']
 

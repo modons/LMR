@@ -24,6 +24,10 @@ Revisions:
             [R. Tardif, U. of Washington, Nov 2016]
 
 """
+
+import numpy as np
+from random import sample, seed
+
 # -------------------------------------------------------------------------------
 # *** Prior source assignment  --------------------------------------------------
 # -------------------------------------------------------------------------------
@@ -66,19 +70,21 @@ class prior_master(object):
     # Populate the prior ensemble from gridded model/analysis data
     def populate_ensemble(self,prior_source, prior_cfg):
 
-        import numpy as np
-        from random import sample, seed
-
-
         # Load prior data from file(s) - multiple state variables
         self.read_prior()
 
+        Nens_max = len(self.prior_dict[self.prior_dict.keys()[0]]['years'])
+        if self.Nens and self.Nens > Nens_max:
+            raise SystemExit('ERROR in populate_ensemble! Specified ensemble size too large for available nb of states. '
+            'Max allowed with current configuration: %d' %Nens_max)
+
+        
         nbvars = len(self.statevars)
         # Check consistency between specified state variables and uploaded dictionary
         if len(self.prior_dict.keys()) != nbvars:
-            print 'Problem with load of prior state variables. Exiting!'
-            exit(1)
+            raise SystemExit('Problem with load of prior state variables. Exiting!')
 
+        
         # Defining content of state vector => dictionary: state_vect_content
         # NOTE: now assumes that dims of state variables are (lat,lon) only !!!
         state_vect_info = {}
@@ -90,13 +96,27 @@ class prior_master(object):
             dct = {}
             timedim.append(len(self.prior_dict[var]['years']))
             spacecoords = self.prior_dict[var]['spacecoords']
-            #print '==>', var, spacecoords
             if spacecoords:
                 #print 'spacecoords is not None: variable with space coordinates'
                 dim1, dim2 = spacecoords
-                ndim1 = len(self.prior_dict[var][dim1])
-                ndim2 = len(self.prior_dict[var][dim2])
+
+                # How are these defined? Check dims of arrays
+                if len(self.prior_dict[var][dim1].shape) == 2 and len(self.prior_dict[var][dim2].shape) == 2:
+                    # we have a field defined on an irregular lat/lon grid, requiring lat & lon
+                    # each be defined with a 2d array
+                    ndim1 = self.prior_dict[var][dim1].shape[0]
+                    ndim2 = self.prior_dict[var][dim1].shape[1]
+                
+                elif len(self.prior_dict[var][dim1].shape) == 1 and len(self.prior_dict[var][dim2].shape) == 1:
+                    # regular lat/lon array : lat and lon can be defined with 1d arrays
+                    ndim1 = len(self.prior_dict[var][dim1])
+                    ndim2 = len(self.prior_dict[var][dim2])
+
+                else:
+                    raise SystemExit('ERROR in populate_ensemble: Unrecognized info on spatial dimensions. Exiting!')
+
                 ndimtot = ndim1*ndim2
+                
                 dct['pos'] = (Nx,Nx+(ndimtot)-1)
                 dct['spacecoords'] = spacecoords
                 dct['spacedims'] = (ndim1,ndim2)
@@ -133,7 +153,7 @@ class prior_master(object):
         else:
             take_sample = True
 
-        # Array that will contain the prior ensemble
+        # Array that will contain the prior ensemble (state vector)
         Xb = np.zeros(shape=[Nx,self.Nens]) # no time dimension now...
         # ***NOTE: Following code assumes that data for a given year are located at same array time index across all state variables
 
@@ -156,9 +176,11 @@ class prior_master(object):
 
             indstart = state_vect_info[var]['pos'][0]
             indend   = state_vect_info[var]['pos'][1]
+
             try:
                 nbspacecoords = len(state_vect_info[var]['spacecoords'])
                 if nbspacecoords == 2:
+
                     # Loop over ensemble members
                     for i in range(0,self.Nens):
                         Xb[indstart:indend+1,i] = self.prior_dict[var]['value'][ind_ens[i],:,:].flatten()
@@ -168,11 +190,19 @@ class prior_master(object):
                     # load in the coord values from data dictionary 
                     coord1 = self.prior_dict[var][coordname1]
                     coord2 = self.prior_dict[var][coordname2]
-                    ndim1 = coord1.shape[0]
-                    ndim2 = coord2.shape[0]
 
-                    X_coord1 =  np.array([coord1,]*ndim2).transpose()
-                    X_coord2 =  np.array([coord2,]*ndim1)
+                    # check how coords are defined:
+                    # 1d (regular lat/lon grid) or 2d (irregular lat/lon grid)
+                    
+                    if len(coord1.shape) == 1 and len(coord2.shape) == 1:
+                        ndim1 = coord1.shape[0]
+                        ndim2 = coord2.shape[0]
+                        X_coord1 =  np.array([coord1,]*ndim2).transpose()
+                        X_coord2 =  np.array([coord2,]*ndim1)
+                    elif len(coord1.shape) == 2 and len(coord2.shape) == 2:
+                        ndim1, ndim2 = coord1.shape
+                        X_coord1 =  coord1
+                        X_coord2 =  coord2
 
                     Xb_coords[indstart:indend+1,0] = X_coord1.flatten()
                     Xb_coords[indstart:indend+1,1] = X_coord2.flatten()
@@ -193,6 +223,7 @@ class prior_master(object):
                 for i in range(0,self.Nens):
                     Xb[indstart:indend+1,i] = self.prior_dict[var]['value'][ind_ens[i]].flatten()
 
+        
         # Assign return variables
         self.ens    = Xb
         self.coords = Xb_coords
@@ -228,8 +259,8 @@ class prior_ccsm4_last_millenium(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend)
-
+                                                        self.detrend,
+                                                        self.statevars_info)
         return
 
 # class for the CCSM4 Pre-Industrial Control simulation
@@ -241,7 +272,8 @@ class prior_ccsm4_preindustrial_control(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend)
+                                                        self.detrend,
+                                                        self.statevars_info)
         return
 
 # class for the CCSM4 isotope-enabled control simulation (from D. Noone)
@@ -253,7 +285,8 @@ class prior_ccsm4_isotope_controlrun(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend)
+                                                        self.detrend,
+                                                        self.statevars_info)
         return
     
 # class for the MPI-ESM-P Last Millenniun simulation
@@ -265,7 +298,8 @@ class prior_mpi_esm_p_last_millenium(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend)
+                                                        self.detrend,
+                                                        self.statevars_info)
         return
 
 # class for the GFDL-CM3 Pre-Industrial Control simulation
@@ -277,7 +311,8 @@ class prior_gfdl_cm3_preindustrial_control(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend)
+                                                        self.detrend,
+                                                        self.statevars_info)
         return
 
 # class for NOAA's 20th century reanalysis (20CR)
@@ -289,7 +324,8 @@ class prior_20cr(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend)
+                                                        self.detrend,
+                                                        self.statevars_info)
         return
 
 # class for ECMWF's 20th century reanalysis (ERA20C)
@@ -301,7 +337,8 @@ class prior_era20c(prior_master):
                                                         self.prior_datafile,
                                                         self.statevars,
                                                         self.avgInterval,
-                                                        self.detrend)
+                                                        self.detrend,
+                                                        self.statevars_info)
         return
 
 # class for ECMWF's 20th century model ensemble (ERA20CM)

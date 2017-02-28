@@ -15,11 +15,30 @@ Revisions:
 import glob
 import os
 import numpy as np
+import re
 import cPickle
 from time import time
+from os.path import join
 from math import radians, cos, sin, asin, sqrt
 from scipy import signal
 from spharm import Spharmt, getspecindx, regrid
+
+def atoi(text):
+    try:
+        return int(text)
+    except ValueError:
+        return text
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    '''    
+    return [ atoi(c) for c in re.split('([-]?\d+)', text) ]
+
+def natural_sort(input):
+    return sorted(input, key=natural_keys)
+
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -97,8 +116,8 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
         Parameters
         ----------
         data: ndarray
-            Gridded data matching dimensions of (sample, lat, lon) or
-            (sample, lat*lon).
+            Gridded data matching dimensions of (sample, lat, lon) -> gridded form
+            or (lat*lon, sample) -> state vector form.
         lon_data: ndarray
             Longitudes pertaining to the input data.  Can have shape as a single
             vector (lat), a grid (lat, lon), or a flattened grid (lat*lon).
@@ -136,7 +155,7 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
     sorteddist = np.sort(workdist)
 
     # Find closest grid point with *valid* data.
-    # Impose max of search distance equal to twice the representsative distance
+    # Impose max of search distance equal to twice the representative distance
     # Start with min dist.
 
     distptmin = sorteddist[0]
@@ -156,7 +175,8 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
             if len(inds) == 2:
                 test_valid = np.isfinite(data[:,inds[0],inds[1]])
             elif len(inds) == 1:
-                test_valid = np.isfinite(data[:,inds])
+                #test_valid = np.isfinite(data[:,inds])
+                test_valid = np.isfinite(data[inds,:])
             else:
                 print 'ERROR in distance calc in get_data_closest_gridpt!'
                 raise SystemExit(1)            
@@ -171,7 +191,8 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
     if len(inds) == 2:
         pt_data = data[:,inds[0],inds[1]]
     elif len(inds) == 1:
-        pt_data = data[:,inds[0]]
+        #pt_data = data[:,inds[0]]
+        pt_data = data[inds[0],:]
     else:
         pass
 
@@ -230,28 +251,30 @@ def smooth2D(im, n=15):
     return(improc)
 
 def ensemble_stats(workdir, y_assim):
-
     """
     Compute the ensemble mean and variance for files in the input directory
 
+    Originator: Greg Hakim
+                University of Washington
+                May 2015
+    
+      Revised 16 June 2015 (GJH)
+      Revised 24 June 2015 (R Tardif, UW)
+              : func. renamed from ensemble_mean to ensemble_stats
+              : computes and output the ensemble variance as well
+              : now handles state vector possibly containing multiple variables
+      Revised 15 July 2015 (R Tardif, UW)
+              : extracts Ye's from augmented state vector (Ye=HXa), match with corresponding
+                proxy sites from master list of proxies and output to analysis_Ye.pckl file
+      Rrevised June 2016 (Michael Erb, USC)
+              : Fixed a bug wehre the analysis Ye values were not being
+                indexed by year properly in forming analysis_Ye.pckl
+      Revised February 2017 (R Tardif, UW)
+              : Added flexibility by getting rid of originally hard-coded features.
+              : Added use of new "natural_sort" function to sort filenames composed with negative years.
+
     """
-
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             May 2015
-    #
-    #             revised 16 June 2015 (GJH)
-    #             revised 24 June 2015 (R Tardif, UW)
-    #               : func. renamed from ensemble_mean to ensemble_stats
-    #               : computes and output the ensemble variance as well
-    #               : now handles state vector possibly containing multiple variables
-    #             revised 15 July 2015 (R Tardif, UW)
-    #               : extracts Ye's from augmented state vector (Ye=HXa), match with corresponding
-    #                 proxy sites from master list of proxies and output to analysis_Ye.pckl file
-    #             revised June 2016 (Michael Erb, USC)
-    #               : Fixed a bug wehre the analysis Ye values were not being
-    #                 indexed by year properly  in forming analysis_Ye.pckl
-
+    
     prior_filn = workdir + '/Xb_one.npz'
     
     # get the prior and basic info
@@ -268,9 +291,9 @@ def ensemble_stats(workdir, y_assim):
     # get a listing of the analysis files
     files = glob.glob(workdir+"/year*")
     # sorted
-    files.sort()
-
-    nyears = len(files)
+    #files.sort()
+    sfiles = natural_sort(files)    
+    nyears = len(sfiles)
 
     # loop on state variables 
     for var in state_info.keys():
@@ -296,16 +319,19 @@ def ensemble_stats(workdir, y_assim):
                 xam = np.zeros([nyears,ndim1,ndim2])
                 xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
                 k = -1
-                for f in files:
+                for f in sfiles:
                     k = k + 1
-                    i = f.find('year')
-                    year = f[i+4:i+8]
+                    i = f.rfind('year')
+                    fname_end = f[i+4:]
+                    ii = fname_end.rfind('.')
+                    year = fname_end[:ii]
                     years.append(year)
                     Xatmp = np.load(f)
                     Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
                     xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
                     xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
 
+                    
                 # form dictionary containing variables to save, including info on array dimensions
                 coordname1 = state_info[var]['spacecoords'][0]
                 coordname2 = state_info[var]['spacecoords'][1]
@@ -335,10 +361,12 @@ def ensemble_stats(workdir, y_assim):
             xam = np.zeros([nyears])
             xav = np.zeros([nyears],dtype=np.float64)
             k = -1
-            for f in files:
+            for f in sfiles:
                 k = k + 1
-                i = f.find('year')
-                year = f[i+4:i+8]
+                i = f.rfind('year')
+                fname_end = f[i+4:]
+                ii = fname_end.rfind('.')
+                year = fname_end[:ii]
                 years.append(year)
                 Xatmp = np.load(f)
                 Xa = Xatmp[ibeg:iend+1,:]
@@ -380,9 +408,11 @@ def ensemble_stats(workdir, y_assim):
 
     # Loop over **analysis** files & extract the Ye's
     years = []
-    for k, f in enumerate(files):
-        i = f.find('year')
-        year = f[i+4:i+8]
+    for k, f in enumerate(sfiles):
+        i = f.rfind('year')
+        fname_end = f[i+4:]
+        ii = fname_end.rfind('.')
+        year = fname_end[:ii]
         years.append(float(year))
         Xatmp = np.load(f)
         # Extract the Ye's from augmented state (beyond stateDim 'til end of
@@ -785,6 +815,11 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_avgPeriod = None
         calib_str = ''
         state_vars_for_ye = config.psm.h_interp.psm_required_variables
+
+    elif  psm_key == 'bayesreg_uk37':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_uk37.psm_required_variables
         
     else:
         raise ValueError('Unrecognized PSM key.')
@@ -797,7 +832,9 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_str = str(proxy_database)
     if proxy_str == 'NCDC':
         proxy_str = proxy_str + str(config.proxies.ncdc.dbversion)
-
+    elif proxy_str == 'NCDCdadt':
+        proxy_str = proxy_str + str(config.proxies.ncdcdadt.dbversion)
+        
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
                          sorted(state_vars_for_ye) + [prior_kind])
@@ -889,6 +926,8 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
                 pkind = 'anom'
             else:
                 raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
+        elif psm_key == 'bayesreg_uk37':
+            pkind = 'full'
         else:
             raise ValueError('Unrecognized PSM key.')
 
@@ -920,6 +959,88 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
     return ye_all, ye_all_coords
 
 
+def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample_idxs):
+    """
+    Convenience function to load a precalculated Ye file for the current
+    experiment.
+
+    Parameters
+    ----------
+    config: LMR_config.Config
+        Current experiment instance of the configuration object.
+    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+        Current experiment proxy manager
+    sample_idxs: list(int)
+        A list of the current sample indices used to create the prior ensemble.
+
+    Returns
+    -------
+    ye_all: ndarray
+        The array of Ye values for the current ensemble and all proxy records
+    """
+
+    begin_load = time()
+
+    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
+
+    num_proxies_assim = len(proxy_objs)
+    num_samples = len(sample_idxs)
+    ye_all = np.zeros((num_proxies_assim, num_samples))
+    ye_all_coords = np.zeros((num_proxies_assim, 2))
+
+    
+    #psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))
+    psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_objs]))    
+    precalc_files = {}
+    for psm_key in psm_keys:
+
+        pkind = None
+        if psm_key == 'linear':
+            pkind = config.psm.linear.psm_required_variables.values()[0]
+        elif psm_key == 'linear_TorP':
+            pkind = config.psm.linear_TorP.psm_required_variables.values()[0]
+        elif psm_key == 'bilinear':
+            pkind = config.psm.bilinear.psm_required_variables.values()[0]
+        elif psm_key == 'h_interp':
+            if config.proxies.proxy_timeseries_kind == 'asis':
+                pkind = 'full'
+            elif config.proxies.proxy_timeseries_kind == 'anom':
+                pkind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
+        else:
+            raise ValueError('Unrecognized PSM key.')
+
+        load_fname = create_precalc_ye_filename(config,psm_key,pkind)
+        print '  Loading file:', load_fname
+        # check if file exists
+        if not os.path.isfile(os.path.join(load_dir, load_fname)):
+            print ('  ERROR: File does not exist!'
+                   ' -- run the precalc file builder:'
+                   ' misc/build_ye_file.py'
+                   ' to generate the missing file')
+            raise SystemExit()
+        precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
+
+    
+    print '  Now extracting proxy type-dependent Ye values...'
+    #for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
+    for i, pobj in enumerate(proxy_objs):
+        psm_key = pobj.psm_obj.psm_key
+        pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
+        precalc_vals = precalc_files[psm_key]['ye_vals']
+        
+        pidx = pid_idx_map[pobj.id]
+        ye_all[i] = precalc_vals[pidx, sample_idxs]
+
+        ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
+
+    print '  Completed in ',  time() - begin_load, 'secs'
+        
+    return ye_all, ye_all_coords
+
+
+
 def validate_config(config):
     """
     Function to check for inconsistencies in the experiment 
@@ -936,11 +1057,13 @@ def validate_config(config):
         Boolean indicating if the configuration settings were validated or not.
     """
 
-    proxy_database = config.proxies.use_from[0]    
+    proxy_database = config.proxies.use_from[0]
     if proxy_database == 'NCDC':
         proxy_cfg = config.proxies.ncdc
     elif proxy_database == 'pages':
         proxy_cfg = config.proxies.pages
+    elif proxy_database == 'NCDCdadt':
+        proxy_cfg = config.proxies.ncdcdadt
     else:
         print 'ERROR in specification of proxy database.'
         raise SystemExit()

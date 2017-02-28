@@ -45,6 +45,13 @@ Revisions:
               generated using psm types assigned to individual proxy types
               as defined in the experiment configuration. 
               (R. Tardif - U. of Washington)
+   Feb. 2017:
+            - Modifications to temporal loop to allow the production of 
+              reconstructions at lower temporal resolution (i.e. other
+              than annual).
+            - Added possibility to by-pass the regridding (truncation of 
+              the state).
+              (R. Tardif - U. of Washington)
 
 """
 import numpy as np
@@ -76,6 +83,7 @@ def LMR_driver_callable(cfg=None):
     nexp = core.nexp
     workdir = core.datadir_output
     recon_period = core.recon_period
+    recon_timescale = core.recon_timescale
     online = core.online_reconstruction
     nens = core.nens
     loc_rad = core.loc_rad
@@ -83,7 +91,9 @@ def LMR_driver_callable(cfg=None):
     datadir_prior = prior.datadir_prior
     datafile_prior = prior.datafile_prior
     state_variables = prior.state_variables
-
+    state_variables_info = prior.state_variables_info
+    truncate = prior.truncate
+    
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # ==========================================================================
@@ -99,11 +109,10 @@ def LMR_driver_callable(cfg=None):
         
     begin_time = time()
 
-    # Define the number of years of the reconstruction (nb of assimilation
-    # times)
-    # Note: recon_period is defined in namelist
-    ntimes = recon_period[1] - recon_period[0] + 1
-    recon_times = np.arange(recon_period[0], recon_period[1]+1)
+    # Define the number of years of the reconstruction
+    # (nb of assimilation times)
+    recon_times = np.arange(recon_period[0], recon_period[1]+1,recon_timescale)
+    ntimes, = recon_times.shape
 
     # ==========================================================================
     # Load prior data ----------------------------------------------------------
@@ -122,6 +131,7 @@ def LMR_driver_callable(cfg=None):
     X.prior_datadir = datadir_prior
     X.prior_datafile = datafile_prior
     X.statevars = state_variables
+    X.statevars_info = state_variables_info
     X.Nens = nens
     # new option: detrending the prior
     X.detrend = prior.detrend
@@ -181,93 +191,101 @@ def LMR_driver_callable(cfg=None):
     # ==========================================================================
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
+    if truncate:
+    
+        # Handle state vector with multiple state variables
 
-    # Handle state vector with multiple state variables
+        # Declare dictionary w/ info on content of truncated state vector
+        new_state_info = {}
 
-    # Declare dictionary w/ info on content of truncated state vector
-    new_state_info = {}
+        # Transform every 2D state variable, one at a time
+        Nx = 0
+        for var in X.full_state_info.keys():
+            dct = {}
+            # variable indices in full state vector
+            ibeg_full = X.full_state_info[var]['pos'][0]
+            iend_full = X.full_state_info[var]['pos'][1]
+            # extract array corresponding to state variable "var"
+            var_array_full = Xb_one_full[ibeg_full:iend_full+1, :]
+            # corresponding spatial coordinates
+            coords_array_full = X.coords[ibeg_full:iend_full+1, :]
 
-    # Transform every 2D state variable, one at a time
-    Nx = 0
-    for var in X.full_state_info.keys():
-        dct = {}
-        # variable indices in full state vector
-        ibeg_full = X.full_state_info[var]['pos'][0]
-        iend_full = X.full_state_info[var]['pos'][1]
-        # extract array corresponding to state variable "var"
-        var_array_full = Xb_one_full[ibeg_full:iend_full+1, :]
-        # corresponding spatial coordinates
-        coords_array_full = X.coords[ibeg_full:iend_full+1, :]
+            # Are we truncating this variable? (i.e. is it a 2D lat/lon variable?)
+            if (X.full_state_info[var]['spacecoords'] and
+                'lat' in X.full_state_info[var]['spacecoords'] and
+                'lon' in X.full_state_info[var]['spacecoords']):
 
-        # Are we truncating this variable? (i.e. is it a 2D lat/lon variable?)
-        if (X.full_state_info[var]['spacecoords'] and
-            'lat' in X.full_state_info[var]['spacecoords'] and
-            'lon' in X.full_state_info[var]['spacecoords']):
+                print var, ' : 2D lat/lon variable, truncating this variable'
+                # lat/lon column indices in X.coords
+                ind_lon = X.full_state_info[var]['spacecoords'].index('lon')
+                ind_lat = X.full_state_info[var]['spacecoords'].index('lat')
+                nlat = X.full_state_info[var]['spacedims'][ind_lat]
+                nlon = X.full_state_info[var]['spacedims'][ind_lon]
 
-            print var, ' : 2D lat/lon variable, truncating this variable'
-            # lat/lon column indices in X.coords
-            ind_lon = X.full_state_info[var]['spacecoords'].index('lon')
-            ind_lat = X.full_state_info[var]['spacecoords'].index('lat')
-            nlat = X.full_state_info[var]['spacedims'][ind_lat]
-            nlon = X.full_state_info[var]['spacedims'][ind_lon]
+                # calculate the truncated fieldNtimes
+                [var_array_new, lat_new, lon_new] = \
+                    LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
+                nlat_new = np.shape(lat_new)[0]
+                nlon_new = np.shape(lat_new)[1]
 
-            # calculate the truncated fieldNtimes
-            [var_array_new, lat_new, lon_new] = \
-                LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
-            nlat_new = np.shape(lat_new)[0]
-            nlon_new = np.shape(lat_new)[1]
+                print ('=> Full array:      ' + str(np.min(var_array_full)) + ' ' +
+                       str(np.max(var_array_full)) + ' ' + str(np.mean(var_array_full)) +
+                       ' ' + str(np.std(var_array_full)))
+                print ('=> Truncated array: ' + str(np.min(var_array_new)) + ' ' +
+                       str(np.max(var_array_new)) + ' ' + str(np.mean(var_array_new)) +
+                       ' ' + str(np.std(var_array_new)))
 
-            print ('=> Full array:      ' + str(np.min(var_array_full)) + ' ' +
-                   str(np.max(var_array_full)) + ' ' + str(np.mean(var_array_full)) +
-                   ' ' + str(np.std(var_array_full)))
-            print ('=> Truncated array: ' + str(np.min(var_array_new)) + ' ' +
-                   str(np.max(var_array_new)) + ' ' + str(np.mean(var_array_new)) +
-                   ' ' + str(np.std(var_array_new)))
+                # corresponding indices in truncated state vector
+                ibeg_new = Nx
+                iend_new = Nx+(nlat_new*nlon_new)-1
+                # for new state info dictionary
+                dct['pos'] = (ibeg_new, iend_new)
+                dct['spacecoords'] = X.full_state_info[var]['spacecoords']
+                dct['spacedims'] = (nlat_new, nlon_new)
+                # updated dimension
+                new_dims = (nlat_new*nlon_new)
 
-            # corresponding indices in truncated state vector
-            ibeg_new = Nx
-            iend_new = Nx+(nlat_new*nlon_new)-1
-            # for new state info dictionary
-            dct['pos'] = (ibeg_new, iend_new)
-            dct['spacecoords'] = X.full_state_info[var]['spacecoords']
-            dct['spacedims'] = (nlat_new, nlon_new)
-            # updated dimension
-            new_dims = (nlat_new*nlon_new)
+                # array with new spatial coords
+                coords_array_new = np.zeros(shape=[new_dims, 2])
+                coords_array_new[:, 0] = lat_new.flatten()
+                coords_array_new[:, 1] = lon_new.flatten()
+                
+            else:
+                print var,\
+                    ' : not truncating this variable: no changes from full state'
+                var_array_new = var_array_full
+                coords_array_new = coords_array_full
+                # updated dimension
+                new_dims = var_array_new.shape[0]
+                ibeg_new = Nx
+                iend_new = Nx + new_dims - 1
+                dct['pos'] = (ibeg_new, iend_new)
+                dct['spacecoords'] = X.full_state_info[var]['spacecoords']
+                dct['spacedims'] = X.full_state_info[var]['spacedims']
 
-            # array with new spatial coords
-            coords_array_new = np.zeros(shape=[new_dims, 2])
-            coords_array_new[:, 0] = lat_new.flatten()
-            coords_array_new[:, 1] = lon_new.flatten()
+            # fill in new state info dictionary
+            new_state_info[var] = dct
 
-        else:
-            print var,\
-                ' : not truncating this variable: no changes from full state'
-            var_array_new = var_array_full
-            coords_array_new = coords_array_full
-            # updated dimension
-            new_dims = var_array_new.shape[0]
-            ibeg_new = Nx
-            iend_new = Nx + new_dims - 1
-            dct['pos'] = (ibeg_new, iend_new)
-            dct['spacecoords'] = X.full_state_info[var]['spacecoords']
-            dct['spacedims'] = X.full_state_info[var]['spacedims']
+            # if 1st time in loop over state variables, create Xb_one array as copy
+            # of var_array_new
+            if Nx == 0:
+                Xb_one = np.copy(var_array_new)
+                Xb_one_coords = np.copy(coords_array_new)
+            else:  # if not 1st time, append to existing array
+                Xb_one = np.append(Xb_one, var_array_new, axis=0)
+                Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
 
-        # fill in new state info dictionary
-        new_state_info[var] = dct
+            # updating dimension of new state vector
+            Nx = Nx + new_dims
 
-        # if 1st time in loop over state variables, create Xb_one array as copy
-        # of var_array_new
-        if Nx == 0:
-            Xb_one = np.copy(var_array_new)
-            Xb_one_coords = np.copy(coords_array_new)
-        else:  # if not 1st time, append to existing array
-            Xb_one = np.append(Xb_one, var_array_new, axis=0)
-            Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
+        X.trunc_state_info = new_state_info
 
-        # updating dimension of new state vector
-        Nx = Nx + new_dims
-
-    X.trunc_state_info = new_state_info
+    else: # no truncation: carry over full state to working array
+         X.trunc_state_info = X.full_state_info
+         Xb_one = Xb_one_full
+         Xb_one_coords = X.coords
+         
+         [Nx, _] = Xb_one.shape
 
     # Keep dimension of pre-augmented version of state vector
     [state_dim, _] = Xb_one.shape
@@ -325,16 +343,23 @@ def LMR_driver_callable(cfg=None):
     # Now doing surface air temperature only (var = tas_sfc_Amon)!
 
     # TODO: AP temporary fix for no TAS in state
-    if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
-        gmt_save = np.zeros([total_proxy_count+1,recon_period[1] - recon_period[0] + 1])
-        nhmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
-        shmt_save = np.zeros([total_proxy_count+1,recon_period[1]-recon_period[0]+1])
+    tas_var = [item for item in cfg.prior.state_variables.keys() if 'tas_sfc_' in item]
+    if tas_var:
+        gmt_save = np.zeros([total_proxy_count+1,ntimes])
+        nhmt_save = np.zeros([total_proxy_count+1,ntimes])
+        shmt_save = np.zeros([total_proxy_count+1,ntimes])
         # get state vector indices where to find surface air temperature
-        ibeg_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][0]
-        iend_tas = X.trunc_state_info['tas_sfc_Amon']['pos'][1]
+        ibeg_tas = X.trunc_state_info[tas_var[0]]['pos'][0]
+        iend_tas = X.trunc_state_info[tas_var[0]]['pos'][1]
         xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
+
+        nlat_new = X.trunc_state_info[tas_var[0]]['spacedims'][0]
+        nlon_new = X.trunc_state_info[tas_var[0]]['spacedims'][1]
         xbm_lalo = xbm.reshape(nlat_new, nlon_new)
-        [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo, lat_new[:, 0])
+        lat_coords = Xb_one_coords[ibeg_tas:iend_tas+1, 0]
+        lat_lalo = lat_coords.reshape(nlat_new, nlon_new)
+
+        [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo, lat_lalo[:, 0])
 
         # First row is prior GMT
         gmt_save[0, :] = gmt
@@ -349,12 +374,19 @@ def LMR_driver_callable(cfg=None):
     # Loop over years of the reconstruction
     # -------------------------------------
     lasttime = time()
-    for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1)):
+    for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1, recon_timescale)):
 
+        start_yr = int(t-recon_timescale/2)
+        end_yr = int(t+recon_timescale/2)
+        
         if verbose > 0:
-            print 'working on year: ' + str(t)
+            if start_yr == end_yr:
+                time_str = 'year: '+str(t)
+            else:
+                time_str = 'time period (yrs): ['+str(start_yr)+','+str(end_yr)+']'
+            print '\n==== Working on ' + time_str
 
-        ypad = '{:04d}'.format(t)
+        ypad = '{:07d}'.format(t)
         filen = join(workdir, 'year' + ypad + '.npy')
         if prior_check.exists(filen) and not core.clean_start:
             if verbose > 2:
@@ -369,21 +401,21 @@ def LMR_driver_callable(cfg=None):
         # Loop over proxies
         # -----------------
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
-            # Crude check if we have proxy ob for current time
+            # Check if we have proxy ob for current time interval
             try:
-                Y.values[t]
+                if Y.values[start_yr:end_yr].empty: raise KeyError()
+                nYobs = len(Y.values[start_yr:end_yr])
+                Yobs =  Y.values[start_yr:end_yr].mean()
             except KeyError:
                 # Make sure GMT spot filled from previous proxy
                 # TODO: AP temporary fix for no TAS in state
-                if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
+                if tas_var:
                     gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
-                continue
-
-            if verbose > 2:
-                print '--------------- Processing proxy: ' + Y.id
+                continue # skip to next loop iteration
 
             if verbose > 1:
-                print ''
+                print '--------------- Processing proxy: ' + Y.id
+            if verbose > 2:
                 print 'Site:', Y.id, ':', Y.type
                 print ' latitude, longitude: ' + str(Y.lat), str(Y.lon)
 
@@ -404,23 +436,27 @@ def LMR_driver_callable(cfg=None):
             # Define the ob error variance
             ob_err = Y.psm_obj.R
 
+            # if ob is an average of several values, adjust its ob error variance
+            if nYobs > 1: ob_err = ob_err/np.sqrt(nYobs)
+
+            
             # ------------------------------------------------------------------
             # Do the update (assimilation) -------------------------------------
             # ------------------------------------------------------------------
             if verbose > 2:
                 print ('updating time: ' + str(t) + ' proxy value : ' +
-                       str(Y.values[t]) + ' | mean prior proxy estimate: ' +
+                       str(Yobs) + ' | mean prior proxy estimate: ' +
                        str(Ye.mean()))
 
             # Update the state
-            Xa = enkf_update_array(Xb, Y.values[t], Ye, ob_err, loc)
+            Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc)
 
             # TODO: AP Temporary fix for no TAS in state
-            if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
+            if tas_var:
                 xam = Xa.mean(axis=1)
                 xam_lalo = xam[ibeg_tas:(iend_tas+1)].reshape(nlat_new, nlon_new)
                 [gmt, nhmt, shmt] = \
-                    LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
+                    LMR_utils.global_hemispheric_means(xam_lalo, lat_lalo[:, 0])
                 gmt_save[proxy_idx+1, yr_idx] = gmt
                 nhmt_save[proxy_idx+1, yr_idx] = nhmt
                 shmt_save[proxy_idx+1, yr_idx] = shmt
@@ -456,17 +492,17 @@ def LMR_driver_callable(cfg=None):
     # 3 July 2015: compute and save the GMT,NHMT,SHMT for the full ensemble
     # need to fix this so that every year is counted
     # TODO: AP temporary fix for no TAS
-    if 'tas_sfc_Amon' in cfg.prior.state_variables.keys():
+    if tas_var:
         gmt_ensemble = np.zeros([ntimes, nens])
         nhmt_ensemble = np.zeros([ntimes,nens])
         shmt_ensemble = np.zeros([ntimes,nens])
-        for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1)):
-            filen = join(workdir, 'year{:04d}'.format(yr))
+        for iyr, yr in enumerate(xrange(recon_period[0], recon_period[1]+1, recon_timescale)):
+            filen = join(workdir, 'year{:07d}'.format(yr))
             Xa = np.load(filen+'.npy')
             for k in xrange(nens):
                 xam_lalo = Xa[ibeg_tas:iend_tas+1, k].reshape(nlat_new,nlon_new)
                 [gmt, nhmt, shmt] = \
-                    LMR_utils.global_hemispheric_means(xam_lalo, lat_new[:, 0])
+                    LMR_utils.global_hemispheric_means(xam_lalo, lat_lalo[:, 0])
                 gmt_ensemble[iyr, k] = gmt
                 nhmt_ensemble[iyr, k] = nhmt
                 shmt_ensemble[iyr, k] = shmt
