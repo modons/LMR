@@ -291,7 +291,6 @@ def ensemble_stats(workdir, y_assim):
     # get a listing of the analysis files
     files = glob.glob(workdir+"/year*")
     # sorted
-    #files.sort()
     sfiles = natural_sort(files)    
     nyears = len(sfiles)
 
@@ -303,57 +302,64 @@ def ensemble_stats(workdir, y_assim):
         ibeg = state_info[var]['pos'][0]
         iend = state_info[var]['pos'][1]
 
-        # variable type (2D lat/lon, 2D lat/depth, time series etc ...)
+        # Determine variable type (2D lat/lon, 2D lat/depth, time series etc ...)
+        # Look for the 'vartype' entry in the state vector dict.
+        # Possibilities are: '2D:horizontal', '2D:meridional_vertical', '1D:time series'
+        if state_info[var]['vartype'] == '2D:horizontal': 
+            # 2D:horizontal variable
+            ndim1 = state_info[var]['spacedims'][0]
+            ndim2 = state_info[var]['spacedims'][1]
 
-        if state_info[var]['spacedims']: # var has spatial dimensions (not None)
-            if len(state_info[var]['spacecoords']) == 2: # 2D variable
-                ndim1 = state_info[var]['spacedims'][0]
-                ndim2 = state_info[var]['spacedims'][1]
-                
-                Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
-                xbm = np.mean(Xb,axis=2) # ensemble mean
-                xbv = np.var(Xb,axis=2,ddof=1)  # ensemble variance
+            # Prior
+            Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+            xbm = np.mean(Xb,axis=2)       # ensemble mean
+            xbv = np.var(Xb,axis=2,ddof=1) # ensemble variance
 
-                # process the **analysis** files
-                years = []
-                xam = np.zeros([nyears,ndim1,ndim2])
-                xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
-                k = -1
-                for f in sfiles:
-                    k = k + 1
-                    i = f.rfind('year')
-                    fname_end = f[i+4:]
-                    ii = fname_end.rfind('.')
-                    year = fname_end[:ii]
-                    years.append(year)
-                    Xatmp = np.load(f)
-                    Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
-                    xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
-                    xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
+            # Process the **analysis** (i.e. posterior) files
+            years = []
+            xam = np.zeros([nyears,ndim1,ndim2])
+            xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
+            k = -1
+            for f in sfiles:
+                k = k + 1
+                i = f.rfind('year')
+                fname_end = f[i+4:]
+                ii = fname_end.rfind('.')
+                year = fname_end[:ii]
+                years.append(year)
+                Xatmp = np.load(f)
+                Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
+                xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
 
-                    
-                # form dictionary containing variables to save, including info on array dimensions
-                coordname1 = state_info[var]['spacecoords'][0]
-                coordname2 = state_info[var]['spacecoords'][1]
-                dimcoord1 = 'n'+coordname1
-                dimcoord2 = 'n'+coordname2
 
-                coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
-                coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+            # form dictionary containing variables to save, including info on array dimensions
+            coordname1 = state_info[var]['spacecoords'][0]
+            coordname2 = state_info[var]['spacecoords'][1]
+            dimcoord1 = 'n'+coordname1
+            dimcoord2 = 'n'+coordname2
 
-                vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                         coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
-                vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                         coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
-    
-            else:
-                print 'ERROR in ensemble_stats: Variable of unrecognized dimensions! Exiting'
-                exit(1)
+            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+            coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
 
-        else: # var has no spatial dims
-            Xb = Xbtmp[ibeg:iend+1,:] # prior ensemble
-            xbm = np.mean(Xb,axis=1) # ensemble mean
-            xbv = np.var(Xb,axis=1)  # ensemble variance
+            vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
+
+
+        elif state_info[var]['vartype'] == '2D:meridional_vertical': 
+            # 2D:meridional_vertical variable
+
+            # soon ...
+            continue
+
+            
+        elif state_info[var]['vartype'] == '1D:time series': 
+            # 1D:time series variable (no spatial dims)
+            Xb = Xbtmp[ibeg:iend+1,:] # prior (full) ensemble
+            xbm = np.mean(Xb,axis=1)  # ensemble mean
+            xbv = np.var(Xb,axis=1)   # ensemble variance
 
             # process the **analysis** files
             years = []
@@ -378,23 +384,31 @@ def ensemble_stats(workdir, y_assim):
             vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
 
-            # ens to file
-            filen = workdir + '/ensemble_' + var
+            # (full) ensemble to file for this variable type
+            filen = workdir + '/ensemble_full_' + var
             print 'writing the new ensemble file' + filen
             np.savez(filen, **vars_to_save_ens)
 
+
+        else: 
+            print 'ERROR in ensemble_stats: Variable of unrecognized (space) dimensions! Skipping variable:', var
+            continue
+
+
+            
+
+        # --- Write data to files ---
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
         print 'writing the new ensemble mean file...' + filen
-        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbm=xbm, xam=xam)
         np.savez(filen, **vars_to_save_mean)
 
         # ens. variance to file
         filen = workdir + '/ensemble_variance_' + var
         print 'writing the new ensemble variance file...' + filen
-        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
         np.savez(filen, **vars_to_save_var)
 
+    
     # --------------------------------------------------------
     # Extract the analyzed Ye ensemble for diagnostic purposes
     # --------------------------------------------------------

@@ -140,11 +140,11 @@ class core(object):
     use_precalc_ye = True
 
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = (-20000, 2000)
+    recon_period = (0, 2000)
 
     # time interval of reconstructed fields (in years)
-    #recon_timescale = 1   # annual
-    recon_timescale = 100
+    recon_timescale = 1   # annual
+    #recon_timescale = 100
     
     nens = 100
 
@@ -165,6 +165,9 @@ class core(object):
     ##** END User Parameters **##
 
     def __init__(self, curr_iter=None):
+        # some checks
+        if type(self.recon_timescale) != 'int': self.recon_timescale = int(self.recon_timescale)
+
         self.nexp = self.nexp
         self.lmr_path = self.lmr_path
         self.online_reconstruction = self.online_reconstruction
@@ -215,8 +218,8 @@ class proxies(object):
     # Which proxy database to use ?
     # =============================
     #use_from = ['pages']
-    #use_from = ['NCDC']
-    use_from = ['NCDCdadt']
+    use_from = ['NCDC']
+    #use_from = ['NCDCdadt']
 
     proxy_frac = 1.0
     #proxy_frac = 0.75
@@ -1338,8 +1341,8 @@ class prior(object):
     datadir_prior = None
 
     # Prior data directory & model source
-    #prior_source = 'ccsm4_last_millenium'
-    #datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+    prior_source = 'ccsm4_last_millenium'
+    datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
     # or
     #prior_source     = 'ccsm4_preindustrial_control'
     #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
@@ -1362,8 +1365,8 @@ class prior(object):
     #prior_source     = 'era20cm'
     #datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
     # or
-    prior_source     = 'ccsm3_trace21ka'
-    datafile_prior   = '[vardef_template]_CCSM3_TraCE21ka.nc'
+    #prior_source     = 'ccsm3_trace21ka'
+    #datafile_prior   = '[vardef_template]_CCSM3_TraCE21ka.nc'
 
     
     dataformat_prior = 'NCD'
@@ -1372,7 +1375,7 @@ class prior(object):
     # dict defining variables to be included in state vector (keys)
     # and associated "kind", i.e. as anomalies ('anom') or full field ('full')
     state_variables = {
-    #    'tas_sfc_Amon'              : 'anom',
+        'tas_sfc_Amon'              : 'anom',
     #    'pr_sfc_Amon'               : 'anom',
     #    'scpdsi_sfc_Amon'           : 'anom',
     #    'psl_sfc_Amon'              : 'anom',
@@ -1391,7 +1394,7 @@ class prior(object):
     #    'ohcArctic_0-700m_Omon'     : 'anom',
     #    'd18O_sfc_Amon'             : 'full',
     #    'tos_sfc_Odec'              : 'full',
-        'tas_sfc_Adec'              : 'full',
+    #    'tas_sfc_Adec'              : 'full',
         }
 
     
@@ -1400,7 +1403,7 @@ class prior(object):
     detrend = False
 
     # Boolean: truncate prior?
-    truncate = False
+    truncate = True
 
     # Dict. defining which variables represent temperature or moisture.
     # To be modified only if a new temperature or moisture state variable is added. 

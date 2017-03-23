@@ -60,69 +60,22 @@ fsave = True
 #
 # current datasets
 #
-#nexp = 'testing_1000_75pct_ens_size_Nens_10'
-#nexp = 'testdev_150yr_75pct'
-#nexp = 'testdev_check_1000_75pct'
-#nexp = 'ReconDevTest_1000_testing_coral'
-#nexp = 'ReconDevTest_1000_testing_icecore'
-#nexp = 'testdev_1000_100pct_icecoreonly'
-#nexp = 'testdev_1000_100pct_mxdonly'
-#nexp = 'testdev_1000_100pct_sedimentonly'
-# ---
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 # ---
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 #nexp = 'production_mlost_ccsm4_pagesall_0.75'
 #nexp = 'production_cru_ccsm4_pagesall_0.75'
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
+nexp = 'test_trunc'
 # ---
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesCoralsSrCaD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesSpeleoD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesNoTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
-#nexp = 'testPslW500_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_ERA20C_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
-# ---
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPseason_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
-nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
 
 
 # override datadir
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
 
 # Directory where reanalysis data can be found
 datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model'
@@ -140,7 +93,7 @@ alpha = 0.5
 trange = [1880,2000] #works for nya = 0
 #trange = [1885,1995] #works for nya = 5
 #trange = [1890,1990] #works for nya = 10
-#trange = [1900,2000]
+trange = [1900,2000]
 
 # reference period over which mean is calculated & subtracted 
 # from all other datasets (in years CE)
@@ -302,14 +255,26 @@ vardict = {'tas_sfc_Amon': 'anom'}
 vardef = vardict.keys()[0]
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
-lat_ERA20C = dd[vardef]['lat']
-lon_ERA20C = dd[vardef]['lon']
-nlat_ERA20C = len(lat_ERA20C)
-nlon_ERA20C = len(lon_ERA20C)
+lats = dd[vardef]['lat']
+lons = dd[vardef]['lon']
+latshape = lats.shape
+lonshape = lons.shape
+if len(latshape) == 2 & len(lonshape) == 2:
+    # stored in 2D arrays
+    lat_ERA20C = np.unique(lats)
+    lon_ERA20C = np.unique(lons)
+    nlat_ERA20C, = lat_ERA20C.shape
+    nlon_ERA20C, = lon_ERA20C.shape
+else:
+    # stored in 1D arrays
+    lon_ERA20C = lons
+    lat_ERA20C = lats
+    nlat_ERA20C = len(lat_ERA20C)
+    nlon_ERA20C = len(lon_ERA20C)
 lon2d_ERA20C, lat2d_ERA20C = np.meshgrid(lon_ERA20C, lat_ERA20C)
+
 ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
 #ERA20C = dd[vardef]['value']                      # Anomalies
 
@@ -318,7 +283,6 @@ smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
 ref_mean_era = np.mean(ERA20C[smatch:ematch,:,:],axis=0)
 ERA20C = ERA20C - ref_mean_era
 
-
 # load 20th century reanalysis (TCR) reanalysis --------------------------------
 datadir = datadir_reanl+'/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
@@ -326,14 +290,26 @@ vardict = {'tas_sfc_Amon': 'anom'}
 vardef = vardict.keys()[0]
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])
-lat_TCR = dd[vardef]['lat']
-lon_TCR = dd[vardef]['lon']
-nlat_TCR = len(lat_TCR)
-nlon_TCR = len(lon_TCR)
+lats = dd[vardef]['lat']
+lons = dd[vardef]['lon']
+latshape = lats.shape
+lonshape = lons.shape
+if len(latshape) == 2 & len(lonshape) == 2:
+    # stored in 2D arrays
+    lat_TCR = np.unique(lats)
+    lon_TCR = np.unique(lons)
+    nlat_TCR, = lat_TCR.shape
+    nlon_TCR, = lon_TCR.shape
+else:
+    # stored in 1D arrays
+    lon_TCR = lons
+    lat_TCR = lats
+    nlat_TCR = len(lat_TCR)
+    nlon_TCR = len(lon_TCR)
 lon2d_TCR, lat2d_TCR = np.meshgrid(lon_TCR, lat_TCR)
+
 TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
 #TCR = dd[vardef]['value']                      # Anomalies
 

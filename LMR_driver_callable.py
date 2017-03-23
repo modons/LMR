@@ -375,7 +375,7 @@ def LMR_driver_callable(cfg=None):
     # -------------------------------------
     lasttime = time()
     for yr_idx, t in enumerate(xrange(recon_period[0], recon_period[1]+1, recon_timescale)):
-
+        
         start_yr = int(t-recon_timescale/2)
         end_yr = int(t+recon_timescale/2)
         
@@ -403,15 +403,17 @@ def LMR_driver_callable(cfg=None):
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
             # Check if we have proxy ob for current time interval
             try:
-                if Y.values[start_yr:end_yr].empty: raise KeyError()
-                nYobs = len(Y.values[start_yr:end_yr])
-                Yobs =  Y.values[start_yr:end_yr].mean()
+                Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+                if Yvals.empty: raise KeyError()
+                nYobs = len(Yvals)
+                Yobs =  Yvals.mean()
+                
             except KeyError:
                 # Make sure GMT spot filled from previous proxy
                 # TODO: AP temporary fix for no TAS in state
                 if tas_var:
                     gmt_save[proxy_idx+1, yr_idx] = gmt_save[proxy_idx, yr_idx]
-                continue # skip to next loop iteration
+                continue # skip to next loop iteration (proxy record)
 
             if verbose > 1:
                 print '--------------- Processing proxy: ' + Y.id
@@ -437,15 +439,14 @@ def LMR_driver_callable(cfg=None):
             ob_err = Y.psm_obj.R
 
             # if ob is an average of several values, adjust its ob error variance
-            if nYobs > 1: ob_err = ob_err/np.sqrt(nYobs)
-
+            if nYobs > 1: ob_err = ob_err/float(nYobs)
             
             # ------------------------------------------------------------------
             # Do the update (assimilation) -------------------------------------
             # ------------------------------------------------------------------
             if verbose > 2:
                 print ('updating time: ' + str(t) + ' proxy value : ' +
-                       str(Yobs) + ' | mean prior proxy estimate: ' +
+                       str(Yobs) + ' (nobs=' + str(nYobs) +') | mean prior proxy estimate: ' +
                        str(Ye.mean()))
 
             # Update the state

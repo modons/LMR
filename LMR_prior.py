@@ -27,6 +27,7 @@ Revisions:
 
 import numpy as np
 from random import sample, seed
+from copy import deepcopy
 
 # -------------------------------------------------------------------------------
 # *** Prior source assignment  --------------------------------------------------
@@ -120,13 +121,22 @@ class prior_master(object):
                 dct['pos'] = (Nx,Nx+(ndimtot)-1)
                 dct['spacecoords'] = spacecoords
                 dct['spacedims'] = (ndim1,ndim2)
+
+                if 'lat' in spacecoords and 'lon' in spacecoords:
+                    dct['vartype'] = '2D:horizontal'
+                elif 'lat' in spacecoords and 'lev' in spacecoords:
+                    dct['vartype'] = '2D:meridional_vertical'
+                else:
+                    raise SystemExit('ERROR in populate_ensemble: Unrecognized info on spatial dimensions. Exiting!')
+                    
             else:
                 #print 'spacecoords is None: variable is simple time series'
                 ndimtot = 1
                 dct['pos'] = (Nx,Nx+(ndimtot)-1)
                 dct['spacecoords'] = None
                 dct['spacedims'] = None
-
+                dct['vartype'] = '1D:time series'
+                
             # assign to master dictionary
             state_vect_info[var] = dct
 
@@ -193,7 +203,6 @@ class prior_master(object):
 
                     # check how coords are defined:
                     # 1d (regular lat/lon grid) or 2d (irregular lat/lon grid)
-                    
                     if len(coord1.shape) == 1 and len(coord2.shape) == 1:
                         ndim1 = coord1.shape[0]
                         ndim2 = coord2.shape[0]
@@ -223,6 +232,94 @@ class prior_master(object):
                 for i in range(0,self.Nens):
                     Xb[indstart:indend+1,i] = self.prior_dict[var]['value'][ind_ens[i]].flatten()
 
+
+        """ Code in development ... commented out for now ...
+        # ---------------------------------------------
+        # Check for missing values in arrays and delete
+        # corresponding entries from state vector.
+        # ---------------------------------------------
+
+        # nb of missing values along ensemble member axis (columns),
+        # for every data pt. in state vect.
+        state_isnan      = np.sum(np.isnan(Xb), axis=1)
+        # Tag data pt as missing if one or more ens. member has missing data
+        state_isnan_bool = np.greater(state_isnan,0)
+        # Binary version (0/1) of this array due to funkiness in array
+        # slicing with boolean arrays
+        state_isnan_binary = np.zeros([len(state_isnan)],dtype=np.int32)
+        state_isnan_binary[state_isnan_bool] = 1
+
+        # Total count of missinfg data pts.
+        totnbnan = np.sum(state_isnan_binary)
+
+        # If some missing values found, perform check per state variable
+        # and update info on state vector content. Otherwise leave unchanged.
+        if totnbnan > 0:
+            print('Eliminating missing values from state vector...')
+
+            print ' Xb before        :', Xb.shape
+            print ' Xb_coords before :', Xb_coords.shape
+
+            
+            Xb = np.delete(Xb, np.where(state_isnan_bool == True), axis=0)
+            Xb_coords = np.delete(Xb_coords, np.where(state_isnan_bool == True), axis=0)
+            
+            # Updating state_vector_info:
+            # ---------------------------
+            # order of variables in state vector
+            indbeg =  [state_vect_info[item]['pos'][0] for item in state_vect_info.keys()]
+
+            #sorted_vars = [k for k,v in state_vect_info.iteritems() if v['pos'][0] in np.sort(indbeg)] # <================= !?!?
+            sorted_vars = []
+            indbeg_sorted = np.sort(indbeg)
+            for i in range(len(indbeg)):
+                for v in state_vect_info.keys():
+                    if state_vect_info[v]['pos'][0] == indbeg_sorted[i]: sorted_vars.append(v)
+            
+            state_vect_info_orig = deepcopy(state_vect_info)
+
+            nbmissing = np.zeros([len(sorted_vars)],dtype=np.int32)
+            var_nb = 0
+            for var in sorted_vars:
+                #print '=>', var, state_vect_info_orig[var]['pos']
+                ibegin = state_vect_info_orig[var]['pos'][0]
+                iend  = state_vect_info_orig[var]['pos'][1]
+                #print '=>', ibegin, iend                
+                nbmissing[var_nb] = np.sum(state_isnan_binary[ibegin:iend+1])
+                #print '=>', var_nb, state_isnan_bool[ibegin:iend+1], state_isnan_binary[ibegin:iend+1], nbmissing
+                
+                if var_nb == 0:
+                    indstart_new = 0
+                else:
+                    # new start is end position of previous variable plus one
+                    indstart_new = state_vect_info[sorted_vars[var_nb-1]]['pos'][1]+1
+
+                nbelem = (iend - ibegin) - nbmissing[var_nb]
+                indend_new = indstart_new + nbelem
+
+                
+                #if nbmissing[var_nb] > 0:
+                    # what about spacedims ????
+                    # through the updated Xb_coords ?
+                    
+                toto = Xb_coords[indstart_new:indend_new+1]
+                print ' '
+                print '::>', var, toto.shape
+                tmplat = toto[:,0]
+                tmplon = toto[:,1]
+                print '::>', np.unique(tmplat).shape, np.unique(tmplon).shape
+                
+
+                state_vect_info[var]['pos'] = (indstart_new, indend_new)
+                    
+                var_nb += 1
+
+            print ' Xb after        :', Xb.shape
+            print ' Xb_coords after :', Xb_coords.shape
+            print ' state_vect_info (after)=', state_vect_info
+        
+        # RT ... ... ...
+        """
         
         # Assign return variables
         self.ens    = Xb

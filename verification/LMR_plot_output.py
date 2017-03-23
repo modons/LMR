@@ -26,19 +26,12 @@ sys.path.append('../')
 from LMR_plot_support import truncate_colormap
 from LMR_utils import global_hemispheric_means
 
-
+# ------------------------------------------------
 # --- Begin section of user-defined parameters ---
 
 #datadir = '/home/disk/kalman2/wperkins/LMR_output/archive'
 datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
-
-
-#exp = 'test'
-#exp = 'testDADT100yrs'
-exp = 'testDADT250yrs'
-#exp = 'testDADT500yrs3'
-#exp = 'testDADT250yrsAnom'
 
 # --
 #exp = 'production_mlost_ccsm4_pagesall_0.75'
@@ -46,10 +39,19 @@ exp = 'testDADT250yrs'
 #exp = 'production_mlost_era20cm_pagesall_0.75'
 #exp = 'production_gis_ccsm4_pagesall_0.75'
 # --
+#exp = 'test_notrunc'
+#exp = 'testDADT100yrs'
+#exp = 'testDADT250yrs'
+#exp = 'testDADT500yrs3'
+#exp = 'testDADT250yrsAnom'
+exp = 'testDADT250yrs150k'
+
+
 #year_range = [1800,2000]
 #year_range = [0,2000]
-year_range = [-20000,2000]
-#year_range = [-120000,2000]
+#year_range = [-20000,2000]
+year_range = [-120000,2000]
+
 
 # --
 iter_range = [0,0]
@@ -72,13 +74,14 @@ var_to_plot = 'tas_sfc_Adec'
 
 mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
 
+mapmin = -2.; mapmax = +2.; mapint = 0.5; cmap = plt.cm.bwr; cbarfmt = '%4.1f'# anomalies
 #mapmin = -6.; mapmax = +6.; mapint = 2.; cmap = plt.cm.bwr; cbarfmt = '%4.0f'# anomalies
-mapmin = 270.; mapmax = 300.; mapint = 2.; cmap = mapcolor; cbarfmt = '%4.0f' # full field
+#mapmin = 270.; mapmax = 300.; mapint = 2.; cmap = mapcolor; cbarfmt = '%4.0f' # full field
 
 make_movie = True
 
-# --- End section of user-defined parameters ---
-
+# ---- End section of user-defined parameters ----
+# ------------------------------------------------
 
 expdir = datadir + '/'+exp
 
@@ -258,7 +261,9 @@ if gmt_present:
     plt.close()
     #plt.show()
 
+    
 
+    
 
 # ======================================================
 # Plots of reconstructed spatial fields
@@ -457,5 +462,5 @@ if make_movie:
     os.system('ffmpeg -r 3 -i %s/fig_%s.png %s.mp4' %(figdir,'%06d', fname))
     
     # clean up temporary files
-    os.system('rm -f %s/fig_*.png' %(figdir))
+    #os.system('rm -f %s/fig_*.png' %(figdir))
 
