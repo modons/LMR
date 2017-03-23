@@ -19,6 +19,7 @@ Revisions:
             lats/lons defined using 2d arrays (on irregular grids), and added
             possibility of returning multiyear averages.
             [R. Tardif, U of Washington, March 2017]
+
 """
 from netCDF4 import Dataset, date2num, num2date
 from datetime import datetime, timedelta

@@ -45,7 +45,7 @@ Revisions:
               generated using psm types assigned to individual proxy types
               as defined in the experiment configuration. 
               (R. Tardif - U. of Washington)
-   Feb. 2017:
+ March. 2017:
             - Modifications to temporal loop to allow the production of 
               reconstructions at lower temporal resolution (i.e. other
               than annual).
