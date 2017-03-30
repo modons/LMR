@@ -1,0 +1,16 @@
+name: lmr
+
+channels:
+  - defaults
+  - ajdawson
+
+dependencies:
+  - python=2.*
+  - netCDF4
+  - numpy
+  - scipy
+  - matplotlib
+  - statsmodels
+  - pyspharm
+  - pyyaml
+  - pandas
