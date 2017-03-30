@@ -52,6 +52,9 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+# Configuration files
+config.yml
+
 #Ignore figures
 *.jpg
 *.pdf
