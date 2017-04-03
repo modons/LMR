@@ -444,7 +444,7 @@ class LinearPSM(BasePSM):
             
             
         # making sure calibration anomalies are unbiased (avg = 0) (NEW: RT 12/22/16)
-        reg_x = reg_x - np.nanmean(reg_x)
+        #reg_x = reg_x - np.nanmean(reg_x)
 
         
         # -------------------------
@@ -1254,8 +1254,8 @@ class BilinearPSM(BasePSM):
 
 
         # making sure calibration anomalies are unbiased (avg =0) (NEW: RT 12/22/16)
-        reg_x_T = reg_x_T - np.nanmean(reg_x_T)
-        reg_x_P = reg_x_P - np.nanmean(reg_x_P)
+        #reg_x_T = reg_x_T - np.nanmean(reg_x_T)
+        #reg_x_P = reg_x_P - np.nanmean(reg_x_P)
 
             
         # ---------------------------

@@ -45,14 +45,20 @@ Revisions:
               generated using psm types assigned to individual proxy types
               as defined in the experiment configuration. 
               (R. Tardif - U. of Washington)
- March. 2017:
+   Feb. 2017:
             - Modifications to temporal loop to allow the production of 
               reconstructions at lower temporal resolution (i.e. other
               than annual).
-            - Added possibility to by-pass the regridding (truncation of 
-              the state).
               (R. Tardif - U. of Washington)
-
+  March 2017:
+            - Added possibility to by-pass the regridding (truncation of the state).
+              (R. Tardif - U. of Washington)
+            - Added another option for regridding that works on gridded 
+              fields with missing values (masked grid points. e.g. ocean fields) 
+              (R. Tardif - U. of Washington)
+            - Replaced the hared-coded truncation resolution (T42) of spatial fields 
+              updated during the DA (i.e. reconstruction resolution) by a 
+              user-specified value set in the configuration.
 """
 import numpy as np
 from os.path import join
@@ -92,7 +98,9 @@ def LMR_driver_callable(cfg=None):
     datafile_prior = prior.datafile_prior
     state_variables = prior.state_variables
     state_variables_info = prior.state_variables_info
-    truncate = prior.truncate
+    regrid_method = prior.regrid_method
+    regrid_resolution = prior.regrid_resolution
+
     
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -142,6 +150,7 @@ def LMR_driver_callable(cfg=None):
     X.populate_ensemble(prior_source, prior)
     Xb_one_full = X.ens
 
+    
     # Prepare to check for files in the prior (work) directory (this object just
     # points to a directory)
     prior_check = np.DataSource(workdir)
@@ -191,10 +200,8 @@ def LMR_driver_callable(cfg=None):
     # ==========================================================================
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
-    if truncate:
-    
-        # Handle state vector with multiple state variables
-
+    if regrid_method:
+        
         # Declare dictionary w/ info on content of truncated state vector
         new_state_info = {}
 
@@ -202,6 +209,9 @@ def LMR_driver_callable(cfg=None):
         Nx = 0
         for var in X.full_state_info.keys():
             dct = {}
+
+            dct['vartype'] = X.full_state_info[var]['vartype']
+
             # variable indices in full state vector
             ibeg_full = X.full_state_info[var]['pos'][0]
             iend_full = X.full_state_info[var]['pos'][1]
@@ -211,10 +221,8 @@ def LMR_driver_callable(cfg=None):
             coords_array_full = X.coords[ibeg_full:iend_full+1, :]
 
             # Are we truncating this variable? (i.e. is it a 2D lat/lon variable?)
-            if (X.full_state_info[var]['spacecoords'] and
-                'lat' in X.full_state_info[var]['spacecoords'] and
-                'lon' in X.full_state_info[var]['spacecoords']):
 
+            if X.full_state_info[var]['vartype'] == '2D:horizontal':
                 print var, ' : 2D lat/lon variable, truncating this variable'
                 # lat/lon column indices in X.coords
                 ind_lon = X.full_state_info[var]['spacecoords'].index('lon')
@@ -223,11 +231,19 @@ def LMR_driver_callable(cfg=None):
                 nlon = X.full_state_info[var]['spacedims'][ind_lon]
 
                 # calculate the truncated fieldNtimes
-                [var_array_new, lat_new, lon_new] = \
-                    LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, 42)
+                if regrid_method == 'simple':
+                    [var_array_new, lat_new, lon_new] = \
+                        LMR_utils.regrid_simple(nens, var_array_full, coords_array_full, \
+                                                ind_lat, ind_lon, regrid_resolution)
+                elif regrid_method == 'spherical_harmonics':
+                    [var_array_new, lat_new, lon_new] = \
+                        LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, regrid_resolution)
+                else:
+                    raise (SystemExit('Exiting! Unrecognized regridding method.'))
+                
                 nlat_new = np.shape(lat_new)[0]
                 nlon_new = np.shape(lat_new)[1]
-
+                
                 print ('=> Full array:      ' + str(np.min(var_array_full)) + ' ' +
                        str(np.max(var_array_full)) + ' ' + str(np.mean(var_array_full)) +
                        ' ' + str(np.std(var_array_full)))
@@ -263,6 +279,7 @@ def LMR_driver_callable(cfg=None):
                 dct['spacecoords'] = X.full_state_info[var]['spacecoords']
                 dct['spacedims'] = X.full_state_info[var]['spacedims']
 
+            
             # fill in new state info dictionary
             new_state_info[var] = dct
 
@@ -274,6 +291,10 @@ def LMR_driver_callable(cfg=None):
             else:  # if not 1st time, append to existing array
                 Xb_one = np.append(Xb_one, var_array_new, axis=0)
                 Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
+
+            # making sure Xb_one has proper mask
+            Xb_one = np.ma.masked_invalid(Xb_one)
+            np.ma.set_fill_value(Xb_one, np.nan)
 
             # updating dimension of new state vector
             Nx = Nx + new_dims
@@ -289,8 +310,8 @@ def LMR_driver_callable(cfg=None):
 
     # Keep dimension of pre-augmented version of state vector
     [state_dim, _] = Xb_one.shape
-
-
+    
+    
     # ==========================================================================
     # Calculate all Ye's (for all sites in sites_assim) ------------------------
     # ==========================================================================
@@ -329,11 +350,13 @@ def LMR_driver_callable(cfg=None):
     else:
         Xb_one_aug = Xb_one
 
+    
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
+    np.savez(filen, Xb_one=Xb_one.filled(), Xb_one_aug=Xb_one_aug.filled(), stateDim=state_dim,
              Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
-
+    
+    
     # ==========================================================================
     # Loop over all years & proxies and perform assimilation -------------------
     # ==========================================================================
@@ -397,6 +420,7 @@ def LMR_driver_callable(cfg=None):
                 print 'Prior file ', filen, ' does not exist...'
             Xb = Xb_one_aug.copy()
 
+            
         # -----------------
         # Loop over proxies
         # -----------------
@@ -452,6 +476,7 @@ def LMR_driver_callable(cfg=None):
             # Update the state
             Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc)
 
+            
             # TODO: AP Temporary fix for no TAS in state
             if tas_var:
                 xam = Xa.mean(axis=1)
@@ -468,7 +493,7 @@ def LMR_driver_callable(cfg=None):
                 xbvar = Xb.var(axis=1, ddof=1)
                 xavar = Xa.var(ddof=1, axis=1)
                 vardiff = xavar - xbvar
-                print 'max change in variance:' + str(np.max(vardiff))
+                print 'min/max change in variance: ('+str(np.min(vardiff))+','+str(np.max(vardiff))+')'
                 print 'update took ' + str(thistime-lasttime) + 'seconds'
             lasttime = thistime
 
@@ -479,7 +504,8 @@ def LMR_driver_callable(cfg=None):
 
         # Dump Xa to file (use Xb in case no proxies assimilated for
         # current year)
-        np.save(filen, Xb)
+        #np.save(filen, Xb)
+        np.save(filen, Xb.filled())
 
     end_time = time() - begin_time
 

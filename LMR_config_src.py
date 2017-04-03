@@ -58,6 +58,13 @@ Revisions:
    proxies (uk37 from marine cores) and production of reconstructions at 
    lower temporal resolutions (i.e. other than annual).
    [ R. Tardif, Univ. of Washington, Jan-Feb 2017 ]
+ - Added flexibility to regridding capabilities: added option to by-pass 
+   the regridding, added new option using simple distance-weighted averaging
+   and replaced the hared-coded truncation resolution (T42) of spatial fields 
+   by a user-specified value. This value applies to both the simple
+   interpolation and the original spherical harmonic-based regridding.
+   [ R. Tardif, Univ. of Washington, March 2017 ]
+
 """
 
 from os.path import join
@@ -140,11 +147,15 @@ class core(object):
     use_precalc_ye = True
 
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = (0, 2000)
-
-    # time interval of reconstructed fields (in years)
-    recon_timescale = 1   # annual
+    #recon_period = (-20000, 2000)
+    #recon_period = (-150000, 2000)
+    recon_period = (1850, 2000)
+    
+    # time interval of reconstructed fields (in years). Note: should be of type integer
+    recon_timescale = 1    # annual
     #recon_timescale = 100
+    #recon_timescale = 250
+    #recon_timescale = 500
     
     nens = 100
 
@@ -167,7 +178,7 @@ class core(object):
     def __init__(self, curr_iter=None):
         # some checks
         if type(self.recon_timescale) != 'int': self.recon_timescale = int(self.recon_timescale)
-
+        
         self.nexp = self.nexp
         self.lmr_path = self.lmr_path
         self.online_reconstruction = self.online_reconstruction
@@ -217,8 +228,8 @@ class proxies(object):
     # =============================
     # Which proxy database to use ?
     # =============================
-    #use_from = ['pages']
-    use_from = ['NCDC']
+    use_from = ['pages']
+    #use_from = ['NCDC']
     #use_from = ['NCDCdadt']
 
     proxy_frac = 1.0
@@ -475,22 +486,22 @@ class proxies(object):
 
         # DO NOT CHANGE *FORMAT* BELOW
         proxy_order = [
-            'Tree Rings_WoodDensity',
-#            'Tree Rings_WidthPages',
-            'Tree Rings_WidthPages2',            
-            'Tree Rings_WidthBreit',
-            'Tree Rings_Isotopes',
-            'Corals and Sclerosponges_d18O',
-            'Corals and Sclerosponges_SrCa',
-            'Corals and Sclerosponges_Rates',
+#            'Tree Rings_WoodDensity',
+##            'Tree Rings_WidthPages',
+#            'Tree Rings_WidthPages2',            
+#            'Tree Rings_WidthBreit',
+#            'Tree Rings_Isotopes',
+#            'Corals and Sclerosponges_d18O',
+#            'Corals and Sclerosponges_SrCa',
+#            'Corals and Sclerosponges_Rates',
             'Ice Cores_d18O',
-            'Ice Cores_dD',
-            'Ice Cores_Accumulation',
-            'Ice Cores_MeltFeature',
-            'Lake Cores_Varve',
-            'Lake Cores_BioMarkers',
-            'Lake Cores_GeoChem',
-            'Marine Cores_d18O',
+#            'Ice Cores_dD',
+#            'Ice Cores_Accumulation',
+#            'Ice Cores_MeltFeature',
+#            'Lake Cores_Varve',
+#            'Lake Cores_BioMarkers',
+#            'Lake Cores_GeoChem',
+#            'Marine Cores_d18O',
             ]
 
         # Assignment of psm type per proxy type
@@ -652,8 +663,9 @@ class proxies(object):
 
         ##** BEGIN User Parameters **##
 
-        dbversion = 'v0.0.0'
-
+        #dbversion = 'v0.0.0'
+        dbversion = 'v0.0.1'
+        
         datadir_proxy = None
         datafile_proxy = 'DADT_%s_Proxies.df.pckl' %(dbversion)
         metafile_proxy = 'DADT_%s_Metadata.df.pckl' % (dbversion)
@@ -663,8 +675,8 @@ class proxies(object):
         regions = []
 
         # Restrict uploaded proxy records to those within specified
-        # temporal resolution. 
-        proxy_resolution = [(0.,2500.)]
+        # range of temporal resolutions. 
+        proxy_resolution = [(0.,5000.)]
 
         # Limit proxies to those included in the following list of databases
         # Note: Empty list = no restriction
@@ -800,14 +812,14 @@ class psm(object):
         datatag_calib = 'GISTEMP'
         datafile_calib = 'gistemp1200_ERSST.nc'
         # or
-        # datatag_calib = 'MLOST'
-        # datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+        #datatag_calib = 'MLOST'
+        #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
         # or
-        # datatag_calib = 'HadCRUT'
-        # datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
+        #datatag_calib = 'HadCRUT'
+        #datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
         # or
-        # datatag_calib = 'BerkeleyEarth'
-        # datafile_calib = 'Land_and_Ocean_LatLong1.nc'
+        #datatag_calib = 'BerkeleyEarth'
+        #datafile_calib = 'Land_and_Ocean_LatLong1.nc'
         # or
         #datatag_calib = 'GPCC'
         #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
@@ -1314,7 +1326,7 @@ class psm(object):
 
 class prior(object):
     """
-    Parameters for the ensDA prior
+    Parameters for the ensemble DA prior
 
     Attributes
     ----------
@@ -1325,15 +1337,38 @@ class prior(object):
     datafile_prior: str
         Name of prior file to use
     dataformat_prior: str
-        Datatype of prior container
-    state_variables: list(str)
-        List of variables to use in the state vector for the prior.
-    state_kind: str
-        Indicates whether the state is to be anomalies ('anom') or full field ('full').
+        Datatype of prior container ('NCD' for netCDF, 'TXT' for ascii files).
+        Note: Currently not used. 
+    state_variables: dict.
+       Dict. of the form {'var1': 'kind1', 'var2':'kind2', etc.} where 'var1', 'var2', etc.
+       (keys of the dict) are the names of the state variables to be included in the state
+       vector and 'kind1', 'kind2' etc. are the associated "kind" for each state variable
+       indicating whether anomalies ('anom') or full field ('full') are desired. 
     detrend: bool
-        Indicates whether to detrend the prior or not.
-    avgInterval: list(int)
-        List of integers indicating the months over which to average the prior.
+        Indicates whether to detrend the prior or not. Applies to ALL state variables.
+    avgInterval: dict OR list(int) 
+        dict of the form {'type':value} where 'type' indicates the type of averaging
+        ('annual' or 'multiyear'). 
+        If type = 'annual', the corresponding value is a 
+        list of integers indficsting the months of the year over which the averaging
+        is the be performed (ex. [6,7,8] for JJA).
+        If type = 'multiyear', the list is composed of a single integer indicating
+        the length of the averaging period, in number of years 
+        (ex. [100] for prior returned as 100-yr averages).
+        -OR-
+        List of integers indicating the months over which to average the annual prior.
+        (as 'annual' above).
+    regrid_method: str
+        String indicating the method used to regrid the prior to lower spatial resolution.
+        Allowed options are: 
+        1) None : Regridding NOT performed. 
+        2) 'spherical_harmonics' : Original regridding using pyspharm library.
+        3) 'simple': Regridding through simple inverse distance averaging of surrounding grid points.
+    regrid_resolution: int
+        Integer representing the triangular truncation of the lower resolution grid (e.g. 42 for T42).
+    state_variables_info: dict
+        Defines which variables represent temperature or moisture.
+        Should be modified only if a new temperature or moisture state variable is added. 
     """
 
     ##** BEGIN User Parameters **##
@@ -1376,11 +1411,15 @@ class prior(object):
     # and associated "kind", i.e. as anomalies ('anom') or full field ('full')
     state_variables = {
         'tas_sfc_Amon'              : 'anom',
+        'tos_sfc_Omon'              : 'anom',
     #    'pr_sfc_Amon'               : 'anom',
     #    'scpdsi_sfc_Amon'           : 'anom',
     #    'psl_sfc_Amon'              : 'anom',
-    #    'zg_500hPa_Amon'            : 'full',
-    #    'wap_500hPa_Amon'           : 'full',
+    #    'zg_500hPa_Amon'            : 'anom',
+    #    'wap_500hPa_Amon'           : 'anom',
+    #    'wap_700hPa_Amon'           : 'anom',
+    #    'wap_850hPa_Amon'           : 'anom',
+    #    'wap_1000hPa_Amon'          : 'anom',
     #    'AMOCindex_Omon'            : 'anom',
     #    'AMOC26Nmax_Omon'           : 'anom',
     #    'AMOC26N1000m_Omon'         : 'anom',
@@ -1392,9 +1431,13 @@ class prior(object):
     #    'ohcIndian_0-700m_Omon'     : 'anom',
     #    'ohcSouthern_0-700m_Omon'   : 'anom',
     #    'ohcArctic_0-700m_Omon'     : 'anom',
+    #    'ohc_0-700m_Omon'           : 'anom',
+    #    'sos_sfc_Omon'              : 'anom',        
     #    'd18O_sfc_Amon'             : 'full',
-    #    'tos_sfc_Odec'              : 'full',
     #    'tas_sfc_Adec'              : 'full',
+    #    'psl_sfc_Adec'              : 'full',
+    #    'tos_sfc_Odec'              : 'full',
+    #    'sos_sfc_Odec'              : 'full',
         }
 
     
@@ -1402,13 +1445,22 @@ class prior(object):
     # by default, considers the entire length of the simulation
     detrend = False
 
-    # Boolean: truncate prior?
-    truncate = True
-
+    # Method for regridding to lower resolution grid.
+    # Possible methods:
+    # 1) None : No regridding performed. 
+    # 2) 'spherical_harmonics': through spherical harmonics using pyspharm library.
+    #    Note: Does *NOT* handle fields with missing/masked values (e.g. ocean variables)
+    # 3) 'simple': through simple interpolation using distance-weighted averaging.
+    #    Note: fields with missing/masked values (e.g. ocean variables) allowed.
+    regrid_method = 'simple'
+    # resolution of truncated grid, based on triangular truncation (e.g., use 42 for T42))
+    regrid_resolution = 42
+    
     # Dict. defining which variables represent temperature or moisture.
     # To be modified only if a new temperature or moisture state variable is added. 
     state_variables_info = {'temperature': ['tas_sfc_Amon'],
                             'moisture': ['pr_sfc_Amon','scpdsi_sfc_Amon']}
+
     
     ##** END User Parameters **##
 
@@ -1420,6 +1472,7 @@ class prior(object):
         self.state_variables = self.state_variables
         self.state_variables_info = self.state_variables_info
         self.detrend = self.detrend
+        self.regrid_method = self.regrid_method
         self.seed = core.seed
 
         if self.datadir_prior is None:
@@ -1427,7 +1480,6 @@ class prior(object):
                                       self.prior_source)
         else:
             self.datadir_prior = self.datadir_prior
-
 
         if core.recon_timescale == 1:
             self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
@@ -1438,6 +1490,10 @@ class prior(object):
             print('ERROR in config.: unrecognized core.recon_timescale!')
             raise SystemExit()
 
+        if self.regrid_method
+            self.regrid_resolution = int(self.regrid_resolution)
+        else:
+            self.regrid_resolution = None
 
 class Config(object):
 

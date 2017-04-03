@@ -79,6 +79,10 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
     # full state
     Xa = np.add(xam[:,None], Xap)
 
+    # if masked array, making sure that fill_value = nan in the new array 
+    if np.ma.isMaskedArray(Xa): np.ma.set_fill_value(Xa, np.nan)
+
+    
     # Return the full state
     return Xa
 

@@ -21,6 +21,7 @@ from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
 from scipy import signal
+from scipy.spatial import cKDTree
 from spharm import Spharmt, getspecindx, regrid
 
 def atoi(text):
@@ -267,7 +268,7 @@ def ensemble_stats(workdir, y_assim):
               : extracts Ye's from augmented state vector (Ye=HXa), match with corresponding
                 proxy sites from master list of proxies and output to analysis_Ye.pckl file
       Rrevised June 2016 (Michael Erb, USC)
-              : Fixed a bug wehre the analysis Ye values were not being
+              : Fixed a bug where the analysis Ye values were not being
                 indexed by year properly in forming analysis_Ye.pckl
       Revised February 2017 (R Tardif, UW)
               : Added flexibility by getting rid of originally hard-coded features.
@@ -339,8 +340,8 @@ def ensemble_stats(workdir, y_assim):
             dimcoord1 = 'n'+coordname1
             dimcoord2 = 'n'+coordname2
 
-            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
-            coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
+            coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
 
             vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
@@ -395,7 +396,6 @@ def ensemble_stats(workdir, y_assim):
             continue
 
 
-            
 
         # --- Write data to files ---
         # ens. mean to file
@@ -407,6 +407,7 @@ def ensemble_stats(workdir, y_assim):
         filen = workdir + '/ensemble_variance_' + var
         print 'writing the new ensemble variance file...' + filen
         np.savez(filen, **vars_to_save_var)
+
 
     
     # --------------------------------------------------------
@@ -456,6 +457,102 @@ def ensemble_stats(workdir, y_assim):
     return
 
 
+def lon_lat_to_cartesian(lon, lat, R=6371.):
+    """
+
+    """
+    
+    lon_r = np.radians(lon)
+    lat_r = np.radians(lat)
+
+    x = R * np.cos(lat_r) * np.cos(lon_r)
+    y = R * np.cos(lat_r) * np.sin(lon_r)
+    z = R * np.sin(lat_r)
+
+    return x, y, z
+
+def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
+    """
+    Truncate lat,lon grid to another resolution using local distance-weighted averages. 
+
+    Inputs:
+    Nens            : number of ensemble members
+    X               : data array of shape (nlat*nlon,Nens) 
+    X_coords        : array of lat-lon coordinates of variable contained in X
+                      w/ shape (nlat*nlon,2)
+    ind_lat         : array index (column) at which X_ccords contains latitudes
+    ind_lon         : array index (column) at which X_ccords contains longitudes
+    ntrunc          : triangular truncation (e.g., use 42 for T42)
+
+    Outputs :
+    lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
+    lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
+    X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)
+    
+    Originator: Robert Tardif
+                University of Washington
+                March 2017
+    """
+        
+    # truncate to a lower resolution grid (triangular truncation)
+    ifix = np.remainder(ntrunc,2.0).astype(int)
+    nlat_new = ntrunc + ifix
+    nlon_new = int(nlat_new*1.5)
+
+    # create new lat,lon grid arrays
+    dlat = 90./((nlat_new-1)/2.)
+    dlon = 360./nlon_new
+    veclat = np.arange(-90.,90.+dlat,dlat)
+    veclon = np.arange(0.,360.,dlon)
+    blank = np.zeros([nlat_new,nlon_new])
+    lat_new = (veclat + blank.T).T  
+    lon_new = (veclon + blank)
+
+    # cartesian coords of target grid
+    xt,yt,zt = lon_lat_to_cartesian(lon_new.flatten(), lat_new.flatten())
+
+    # cartesian coords of source grid
+    lats = X_coords[:, ind_lat]
+    lons = X_coords[:, ind_lon]
+    xs,ys,zs = lon_lat_to_cartesian(lons, lats)
+
+    # cKDtree object of source grid
+    tree = cKDTree(zip(xs,ys,zs))
+
+    # inverse distance weighting (N pts)
+    N = 20
+    fracvalid = 0.7
+    d, inds = tree.query(zip(xt,yt,zt), k=N)
+    L = 200.
+    w = np.exp(-np.square(d)/np.square(L))
+
+    # transform each ensemble member, one at a time
+    X_new = np.zeros([nlat_new*nlon_new,Nens])
+    X_new[:] = np.nan
+    for k in range(Nens):
+        tmp = np.ma.masked_invalid(X[:,k][inds])
+        mask = tmp.mask
+
+        # apply tmp mask to weights array
+        w = np.ma.masked_where(np.ma.getmask(tmp),w)
+        
+        # compute weighted-average of surrounding data
+        datagrid = np.sum(w*tmp, axis=1)/np.sum(w, axis=1)
+
+        # keep track of valid data involved in averges  
+        nbvalid = np.sum(~mask,axis=1)
+        nonvalid = np.where(nbvalid < int(fracvalid*N))[0]
+
+        # make sure to mask grid points where too few valid data were used
+        datagrid[nonvalid] = np.nan
+        X_new[:,k] = datagrid
+
+    # make sure a masked array is returned
+    X_new = np.ma.masked_invalid(X_new)
+    
+    return X_new,lat_new,lon_new
+
+    
 def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
 
     """
@@ -472,11 +569,13 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
     lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
     X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)
+    
+    Originator: Greg Hakim
+                University of Washington
+                May 2015
     """
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             May 2015
 
+    
     # create the spectral object on the original grid
     specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
 
