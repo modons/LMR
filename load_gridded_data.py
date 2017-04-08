@@ -1002,23 +1002,34 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             varlatdim = len(varlat.shape)
             varlondim = len(varlon.shape)
 
-
+            # -----------------------------------------------------
             # Check if latitudes are defined in the [-90,90] domain
             # and if longitudes are in the [0,360] domain
+            # -----------------------------------------------------
+            # Latitudes:
             fliplat = None
-            if varlatdim == 2: # 2D lat array
-                if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
-                    fliplat = True
+
+            # check for monotonically increasing or decreasing values
+            monotone_increase = np.all(np.diff(varlat[:,0]) > 0)
+            monotone_decrease = np.all(np.diff(varlat[:,0]) < 0)
+            if not monotone_increase and not monotone_decrease:
+                # funky grid
+                fliplat = False
+                
+            if fliplat is None:
+                if varlatdim == 2: # 2D lat array
+                    if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
+                elif varlatdim == 1: # 1D lat array
+                    if varlat[0] > varlat[-1]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
                 else:
-                    fliplat = False
-            elif varlatdim == 1: # 1D lat array
-                if varlat[0] > varlat[-1]: # lat not as [-90,90] => array upside-down
-                    fliplat = True
-                else:
-                    fliplat = False
-            else:
-                print 'ERROR!'
-                raise SystemExit(1)
+                    print 'ERROR!'
+                    raise SystemExit(1)
 
             if fliplat:
                 varlat = np.flipud(varlat)
@@ -1029,6 +1040,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                     tmp = data_var[:,:,::-1]
                 data_var = tmp
 
+            # Longitudes:
             # Transform longitudes from [-180,180] domain to [0,360] domain if needed
             indneg = np.where(varlon < 0)
             if len(indneg) > 0: # if non-empty
