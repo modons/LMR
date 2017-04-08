@@ -34,6 +34,9 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
+# Sphinx documentation
+docs/_build/
+
 # Translations
 *.mo
 
@@ -48,14 +51,6 @@ coverage.xml
 # Django stuff:
 *.log
 *.pot
-
-# Sphinx documentation
-docs/_build/
-
-#Ignore figures
-*.jpg
-*.pdf
-*.png
 
 #Data Files
 *.npy
@@ -73,9 +68,11 @@ scratch/*
 tests/data/*
 
 #Video Files
-*.gif
 *.avi
 *.mp4
 Figs/*
 Archive/*
 *.nc
+
+# default configuration
+config.yml

@@ -135,7 +135,7 @@ class prior_master(object):
                 dct['pos'] = (Nx,Nx+(ndimtot)-1)
                 dct['spacecoords'] = None
                 dct['spacedims'] = None
-                dct['vartype'] = '1D:time series'
+                dct['vartype'] = '0D:time series'
                 
             # assign to master dictionary
             state_vect_info[var] = dct

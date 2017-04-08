@@ -572,7 +572,7 @@ class v_psm(object):
     ##** BEGIN User Parameters **##
 
     # ...
-    load_precalib = False # needed ?????????????????????????
+    load_precalib = False
     
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
     avgPeriod = 'annual'
@@ -585,7 +585,7 @@ class v_psm(object):
     # If set to True, refer back to the appropriate proxy class above
     # (proxy_psm_seasonality dict.) to set which proxy type(s) and associated seasons
     # will be considered. 
-    test_proxy_seasonality = True
+    test_proxy_seasonality = False
     
     ##** END User Parameters **##
 
@@ -642,10 +642,6 @@ class v_psm(object):
         #datafile_calib = 'spei_monthly_v2.4_190001-201412.nc'
                 
         pre_calib_datafile = None
-
-        #pre_calib_datafile = '/home/disk/kalman3/rtardif/LMR/PSM/sensitivity_test/PSMs_NCDC_v0.1.0_TRWbreit_DJFMAM_'+datatag_calib+'.pckl'
-        #pre_calib_datafile = '/home/disk/kalman3/rtardif/LMR/PSM/sensitivity_test/PSMs_NCDC_v0.1.0_TRWbreit_objseason_'+datatag_calib+'.pckl'
-        #pre_calib_datafile = '/home/disk/kalman3/rtardif/LMR/PSM/sensitivity_test/test.pckl'
         
         psm_r_crit = 0.0
 
@@ -748,10 +744,6 @@ class v_psm(object):
 
         pre_calib_datafile = None
         psm_r_crit = 0.0
-
-
-        #pre_calib_datafile = '/home/disk/kalman3/rtardif/LMR/PSM/sensitivity_test/PSMs_NCDC_v0.1.0_TRWbreit_objseason_'+datatag_calib_T+'_'+datatag_calib_P+'.pckl'
-        #pre_calib_datafile = '/home/disk/kalman3/rtardif/LMR/PSM/sensitivity_test/test.pckl'
 
         
         ##** END User Parameters **##

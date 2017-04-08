@@ -2,12 +2,14 @@
 Module: LMR_plot_output.py
 
 Purpose: Plotting results from the LMR paleoclimate reanalysis.
-         Now limited to plotting surface air temperature results.
 
 Originator: Robert Tardif - Univ. of Washington, Dept. of Atmospheric Sciences
             February 2017
 
-Revisions: None
+Revisions: 
+            - 
+
+
 
 """
 import sys
@@ -38,6 +40,7 @@ mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
 datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
 
+
 # --
 #exp = 'production_mlost_ccsm4_pagesall_0.75'
 #exp = 'production_mlost_era20c_pagesall_0.75'
@@ -46,11 +49,10 @@ datadir = '/home/disk/kalman3/rtardif/LMR/output'
 # --
 exp = 'test'
 
-
 year_range = [1800,2000]
 #year_range = [0,2000]
 #year_range = [-20000,2000]
-#year_range = [-120000,2000]
+#year_range = [-115000,2000]
 
 # --
 iter_range = [0,0]
@@ -75,6 +77,7 @@ var_to_plot = 'tas_sfc_Amon'
 #var_to_plot = 'tos_sfc_Omon'
 #var_to_plot = 'ohc_0-700m_Omon'
 #var_to_plot = 'sos_sfc_Omon'
+#var_to_plot = 'hfy_depthavg_Omon'
 # --
 #var_to_plot = 'tas_sfc_Adec'
 #var_to_plot = 'psl_sfc_Adec'
@@ -82,15 +85,18 @@ var_to_plot = 'tas_sfc_Amon'
 #var_to_plot = 'sos_sfc_Odec'
 
 
-mapmin = -2.; mapmax = +2.; mapint = 0.5; cmap = plt.cm.bwr; cbarfmt = '%4.1f'      # T anomalies
-#mapmin = -6.; mapmax = +6.; mapint = 2.; cmap = plt.cm.bwr; cbarfmt = '%4.0f'       # T anomalies(2)
-#mapmin = -.04; mapmax = +.04; mapint = .01; cmap = plt.cm.bwr; cbarfmt = '%4.2f'    # wap anomalies
-#mapmin = -2.e9; mapmax = +2.e9; mapint = 1.e9; cmap = plt.cm.bwr; cbarfmt = '%4.0e' # OHC anomalies 
-#mapmin = -.5; mapmax = +.5; mapint = 0.1; cmap = plt.cm.bwr; cbarfmt = '%4.1f'      # S anomalies
+mapmin = -2.; mapmax = +2.; mapint = 0.5; cmap = plt.cm.bwr; cbarfmt = '%4.1f'          # T anomalies
+#mapmin = -6.; mapmax = +6.; mapint = 2.; cmap = plt.cm.bwr; cbarfmt = '%4.0f'           # T anomalies(2)
+#mapmin = -.04; mapmax = +.04; mapint = .01; cmap = plt.cm.bwr; cbarfmt = '%4.2f'        # wap anomalies
+#mapmin = -2.e9; mapmax = +2.e9; mapint = 1.e9; cmap = plt.cm.bwr; cbarfmt = '%4.0e'     # OHC anomalies 
+#mapmin = -.5; mapmax = +.5; mapint = 0.1; cmap = plt.cm.bwr; cbarfmt = '%4.1f'          # S anomalies
+#mapmin = -1.e14; mapmax = +1.e14; mapint = 0.5e15; cmap = plt.cm.bwr; cbarfmt = '%4.0e' # hfy test
 # --
 #mapmin = 270.; mapmax = 300.; mapint = 2.; cmap = mapcolor; cbarfmt = '%4.0f'         # T full field
 #mapmin = 20.; mapmax = 40.; mapint = 5.; cmap = mapcolor; cbarfmt = '%4.0f'           # S full field
 #mapmin = 98000.; mapmax = 103000.; mapint = 1000.; cmap = mapcolor; cbarfmt = '%4.0f' # MSLP full field
+
+
 
 
 show_assimilated_proxies = True
@@ -284,9 +290,6 @@ if gmt_present:
     plt.savefig('%s/%s_GMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
     plt.close()
     #plt.show()
-
-    
-
     
 
 # ======================================================

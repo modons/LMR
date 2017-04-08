@@ -718,9 +718,9 @@ class LinearPSM_TorP(LinearPSM):
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
             # print 'PSM (temperature) not calibrated for:' + str((proxy, site))
-            logger.error(e)
-            logger.info('PSM (temperature) not calibrated for:' +
-                        str((proxy, site)))
+            print e
+            print ('PSM (temperature) not calibrated for:' +
+                   str((proxy, site)))
 
         # Try using pre-calibrated psm_data for **precipitation/moisture**
         try:
@@ -730,9 +730,9 @@ class LinearPSM_TorP(LinearPSM):
 
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
-            logger.error(e)
-            logger.info('PSM (moisture) not calibrated for:' +
-                        str((proxy, site)))
+            print e
+            print ('PSM (moisture) not calibrated for:' +
+                   str((proxy, site)))
 
         # Check if PSM is calibrated w.r.t. temperature and/or w.r.t.
         # precipitation/moisture. Assign proxy "sensitivity" based on
@@ -1006,10 +1006,10 @@ class BilinearPSM(BasePSM):
             
                 # Two calibration objects, temperature and precipitation/moisture
                 calib_obj_T = LMR_calibrate.calibration_assignment(datag_calib_T)
-                calib_obj_T.datadir_calib = config.psm.bilinear.datadir_calib
+                calib_obj_T.datadir_calib = config.psm.bilinear.datadir_calib_T
                 calib_obj_T.read_calibration()
                 calib_obj_P = LMR_calibrate.calibration_assignment(datag_calib_P)
-                calib_obj_P.datadir_calib = config.psm.bilinear.datadir_calib
+                calib_obj_P.datadir_calib = config.psm.bilinear.datadir_calib_P
                 calib_obj_P.read_calibration()
 
             self.calibrate(calib_obj_T, calib_obj_P, proxy_obj)
@@ -1468,8 +1468,9 @@ class h_interpPSM(BasePSM):
             self.R = R_data[(self.proxy, self.site)]
         except (KeyError, IOError) as e:
             # No obs. error variance file found
-            logger.error(e)
-            logger.info('Cannot find obs. error variance data for:' + str((self.proxy, self.site)))
+            print e
+            print ('Cannot find obs. error variance data for:' + str((
+                   self.proxy, self.site)))
 
 
     # TODO: Ideally prior state info and coordinates should all be in single obj

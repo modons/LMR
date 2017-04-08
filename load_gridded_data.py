@@ -891,11 +891,6 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         
         # put everything in lower case for homogeneity
         vardimnames = [item.lower() for item in vardimnames]
-
-
-        #print '==>', vardimnames
-        #exit(1) 
-
         
         # One of the dims has to be time! 
         if 'time' not in vardimnames:
@@ -941,7 +936,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         nbspacecoords = len(varspacecoordnames)
 
         if nbspacecoords == 0: # data => simple time series
-            vartype = '1D:time series'
+            vartype = '0D:time series'
             spacecoords = None
         elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
             # get rid of plev in list        
@@ -1056,7 +1051,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
 
 
         # if 1D:meridional (latitudinally-averaged) variable,
-        # TO DO ...
+        # TODO ...
         # ... ... ...
 
         
@@ -1064,7 +1059,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         kind = data_vars[vardef]
         
         # monthly climatology
-        if vartype == '1D:time series':
+        if vartype == '0D:time series':
             climo_month = np.zeros((12))
         elif '2D' in vartype:
             climo_month = np.zeros([12, vardims[1], vardims[2]], dtype=float)
@@ -1090,7 +1085,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         # Possibly detrend the prior
         if detrend:
             print 'Detrending the prior for variable: '+var_to_extract
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 xdim = data_var.shape[0]
                 xvar = range(xdim)
                 data_var_copy = np.copy(data_var)
@@ -1173,7 +1168,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         ntime = len(years)
         datesYears = np.array([datetime(y,1,1,0,0) for y in years])
         
-        if vartype == '1D:time series':
+        if vartype == '0D:time series':
             value = np.zeros([ntime], dtype=float) # vartype = '1D:time series' 
         elif vartype == '2D:horizontal':
             value = np.zeros([ntime, vardims[1], vardims[2]], dtype=float)
@@ -1186,7 +1181,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             tindsyrp1 = [k for k,d in enumerate(dates) if d.year == years[i]+1. and d.month in year_follow]
             indsyr = tindsyrm1+tindsyr+tindsyrp1
 
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 value[i] = np.nanmean(data_var[indsyr],axis=0)
             elif '2D' in vartype: 
                 if nbdims > 3:
@@ -1216,7 +1211,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             nbintervals = int(math.modf(years_range/avg_period)[1])
 
             years_avg = np.zeros([nbintervals],dtype=int)
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 value_avg = np.zeros([nbintervals], dtype=float)
             elif '2D' in vartype: 
                 value_avg = np.zeros([nbintervals, vardims[1], vardims[2]], dtype=float)
@@ -1376,7 +1371,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
         nbspacecoords = len(varspacecoordnames)
 
         if nbspacecoords == 0: # data => simple time series
-            vartype = '1D:time series'
+            vartype = '0D:time series'
             spacecoords = None
         elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
             # get rid of plev in list        
@@ -1456,7 +1451,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
         
         # Calculate anomalies?
         # monthly climatology
-        if vartype == '1D:time series':
+        if vartype == '0D:time series':
             climo_month = np.zeros((12))
         elif '2D' in vartype:
             climo_month = np.zeros([12, len(spacevar1), len(spacevar2)], dtype=float)
@@ -1482,7 +1477,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
         # Possibly detrend the prior
         if detrend:
             print 'Detrending the prior for variable: '+var_to_extract
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 xdim = data_var.shape[0]
                 xvar = range(xdim)
                 data_var_copy = np.copy(data_var)
@@ -1515,7 +1510,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
             ntime = len(years)
             dates = np.array([datetime(y,1,1,0,0) for y in years])
             
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 value = np.zeros([ntime], dtype=float) # vartype = '1D:time series' 
             elif vartype == '2D:horizontal':
                 value = np.zeros([ntime, len(spacevar1), len(spacevar2)], dtype=float)
@@ -1526,7 +1521,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
                 ind = [j for j, k in enumerate(years_all) if k == years[i]]
                 time_yrs[i] = years[i]
 
-                if vartype == '1D:time series':
+                if vartype == '0D:time series':
                     value[i] = np.nanmean(data_var[ind],axis=0)
                 elif '2D' in vartype: 
                     if nbdims > 3:
@@ -1692,7 +1687,7 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
         nbspacecoords = len(varspacecoordnames)
 
         if nbspacecoords == 0: # data => simple time series
-            vartype = '1D:time series'
+            vartype = '0D:time series'
             value = np.empty([len(years),nbmems], dtype=float)            
             spacecoords = None
         elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
@@ -1773,7 +1768,7 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
             # Calculate annual mean from monthly data
             # Note: assume data has dims [time,lat,lon]
             # -----------------------------------------
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 value[i,:] = np.nanmean(data[ind],axis=0)
             elif '2D' in vartype: 
                 if nbdims > 3:
@@ -1954,7 +1949,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         #print vardimnames, nbspacecoords, dictdims
 
         if nbspacecoords == 0: # data => simple time series
-            vartype = '1D:time series'
+            vartype = '0D:time series'
             value = np.empty([len(years)], dtype=float)
             spacecoords = None
         elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
@@ -2075,7 +2070,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             # monthly data?
             if time_resolution == monthly:
                 # monthly climatology
-                if vartype == '1D:time series':
+                if vartype == '0D:time series':
                     climo_month = np.zeros((12))
                 elif '2D' in vartype:
                     climo_month = np.zeros([12, vardims[1], vardims[2]], dtype=float)
@@ -2111,7 +2106,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         # --------------------------
         if detrend:
             print 'Detrending the prior for variable: '+var_to_extract
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 xdim = data_var.shape[0]
                 xvar = range(xdim)
                 data_var_copy = np.copy(data_var)
@@ -2165,8 +2160,8 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 ntime = len(years)
                 datesYears = years
         
-                if vartype == '1D:time series':
-                    value = np.zeros([ntime], dtype=float) # vartype = '1D:time series' 
+                if vartype == '0D:time series':
+                    value = np.zeros([ntime], dtype=float) # vartype = '0D:time series' 
                 elif vartype == '2D:horizontal':
                     value = np.zeros([ntime, vardims[1], vardims[2]], dtype=float)
                 # really initialize with missing values (NaNs)
@@ -2179,7 +2174,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                     tindsyrp1 = [k for k,d in enumerate(dates_years) if d == years[i]+1. and dates_months[k] in year_follow]
                     indsyr = tindsyrm1+tindsyr+tindsyrp1
 
-                    if vartype == '1D:time series':
+                    if vartype == '0D:time series':
                         value[i] = np.nanmean(data_var[indsyr],axis=0)
                     elif '2D' in vartype: 
                         if nbdims > 3:
@@ -2218,7 +2213,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             nbintervals = int(math.modf(years_range/avg_period)[1])
 
             datesYears = np.zeros([nbintervals])
-            if vartype == '1D:time series':
+            if vartype == '0D:time series':
                 value = np.zeros([nbintervals], dtype=float)
             elif '2D' in vartype: 
                 #value = np.zeros([nbintervals, vardims[1], vardims[2]], dtype=float)

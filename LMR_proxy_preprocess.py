@@ -55,8 +55,8 @@ def main():
     #ncdc_dbversion = 'v0.0.0' 
     ncdc_dbversion = 'v0.1.0' 
     # --
-    #proxy_data_source = 'DADT'
-    #dadt_dbversion = 'v0.0.0'
+    #proxy_data_source = 'DTDA'
+    #dtda_dbversion = 'v0.0.0'
 
     
     eliminate_duplicates = True
@@ -137,17 +137,17 @@ def main():
         ncdc_txt_to_dataframes(datadir, proxy_def, meta_outfile, data_outfile, eliminate_duplicates)
 
 
-    elif proxy_data_source == 'DADT':
+    elif proxy_data_source == 'DTDA':
         # ============================================================================
-        # DADT project proxy data ----------------------------------------------------
+        # DTDA project proxy data ----------------------------------------------------
         # ============================================================================
 
         take_average_out = False
 
-        fname = datadir + 'DADT_proxies_'+dadt_dbversion+'.xlsx'
-        meta_outfile = outdir + 'DADT_'+dadt_dbversion+'_Metadata.df.pckl'
-        outfile = outdir + 'DADT_'+dadt_dbversion+'_Proxies.df.pckl'
-        DADT_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
+        fname = datadir + 'DTDA_proxies_'+dtda_dbversion+'.xlsx'
+        meta_outfile = outdir + 'DTDA_'+dtda_dbversion+'_Metadata.df.pckl'
+        outfile = outdir + 'DTDA_'+dtda_dbversion+'_Proxies.df.pckl'
+        DTDA_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
 
 
         
@@ -241,10 +241,10 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
 
 # ===================================================================================
-# For DADT project proxy data ---------------------------------------------------------
+# For DTDA project proxy data -------------------------------------------------------
 # ===================================================================================
 
-def DADT_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
+def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     """
     Takes in Pages2K CSV and converts it to dataframe storage.  This increases
     size on disk due to the joining along the time index (lots of null values).
@@ -1209,9 +1209,9 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     # --
     #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vtest/Africa-LakeTanganyi.Tierney.2010_MODIFIED2.txt']
     #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vtest/shevenell2011-odp178-1098b_MODIFIED.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDADTtest/anderson2014-tn057-21.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDADTtest/hodell2003-ttn057-6.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDADTtest/fronval1997-hm94-34.txt']
+    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDTDAtest/anderson2014-tn057-21.txt']
+    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDTDAtest/hodell2003-ttn057-6.txt']
+    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDTDAtest/fronval1997-hm94-34.txt']
 
 
     nbsites = len(sites_data)
