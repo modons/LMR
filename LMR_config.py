@@ -399,6 +399,7 @@ class proxies(object):
 
         #dbversion = 'v0.0.0'
         dbversion = 'v0.1.0'
+        #dbversion = 'Pages2kv2'  # This uses the Pages2kv2 database, without any NCDC records!
         
         datadir_proxy = None
         datafile_proxy = 'NCDC_%s_Proxies.df.pckl' %(dbversion)
@@ -423,12 +424,15 @@ class proxies(object):
         proxy_order = [
             'Tree Rings_WoodDensity',
 #            'Tree Rings_WidthPages',
-            'Tree Rings_WidthPages2',            
+            'Tree Rings_WidthPages2',
             'Tree Rings_WidthBreit',
             'Tree Rings_Isotopes',
+            'Tree Rings_Temperature',
             'Corals and Sclerosponges_d18O',
             'Corals and Sclerosponges_SrCa',
             'Corals and Sclerosponges_Rates',
+            'Corals and Sclerosponges_Composite',
+            'Corals and Sclerosponges_Temperature',
             'Ice Cores_d18O',
             'Ice Cores_dD',
             'Ice Cores_Accumulation',
@@ -436,7 +440,15 @@ class proxies(object):
             'Lake Cores_Varve',
             'Lake Cores_BioMarkers',
             'Lake Cores_GeoChem',
+            'Lake Cores_Misc',
+            'Lake Cores_Temperature',
             'Marine Cores_d18O',
+            'Marine Cores_Temperature',
+            'Speleothems_d18O',
+            'bivalve_d18O',
+#            'borehole_Temperature',
+            'documents_Temperature',
+#            'hybrid_Temperature',
             ]
 
         # Assignment of psm type per proxy type
@@ -450,6 +462,8 @@ class proxies(object):
             'Corals and Sclerosponges_d18O' : 'linear',
             'Corals and Sclerosponges_SrCa' : 'linear',
             'Corals and Sclerosponges_Rates': 'linear',
+            'Corals and Sclerosponges_Composite': 'linear',
+            'Corals and Sclerosponges_Temperature': 'linear',
             'Ice Cores_d18O'                : 'linear',
             'Ice Cores_dD'                  : 'linear',
             'Ice Cores_Accumulation'        : 'linear',
@@ -457,13 +471,21 @@ class proxies(object):
             'Lake Cores_Varve'              : 'linear',
             'Lake Cores_BioMarkers'         : 'linear',
             'Lake Cores_GeoChem'            : 'linear',
+            'Lake Cores_Misc'               : 'linear',
+            'Lake Cores_Temperature'        : 'linear',
             'Marine Cores_d18O'             : 'linear',
+            'Marine Cores_Temperature'      : 'linear',
             'Tree Rings_WidthBreit'         : 'linear',
             'Tree Rings_WidthPages2'        : 'linear',
             'Tree Rings_WidthPages'         : 'linear',
             'Tree Rings_WoodDensity'        : 'linear',
             'Tree Rings_Isotopes'           : 'linear',
+            'Tree Rings_Temperature'        : 'linear',
             'Speleothems_d18O'              : 'linear',
+            'bivalve_d18O'                  : 'linear',
+            'borehole_Temperature'          : 'linear',
+            'documents_Temperature'         : 'linear',
+            'hybrid_Temperature'            : 'linear',
         }
          
         proxy_assim2 = {
@@ -474,19 +496,24 @@ class proxies(object):
                                                'd18O_4'],
             'Corals and Sclerosponges_SrCa' : ['Sr/Ca', 'Sr_Ca', 'Sr/Ca_norm',
                                                'Sr/Ca_anom', 'Sr/Ca_int'],
-            'Corals and Sclerosponges_Rates': ['ext','calc'],
+            'Corals and Sclerosponges_Rates': ['ext','calc','calcification'],
+            'Corals and Sclerosponges_Composite': ['composite'],
+            'Corals and Sclerosponges_Temperature': ['temperature'],
             'Ice Cores_d18O'                : ['d18O', 'delta18O', 'delta18o',
                                                'd18o', 'd18o_int', 'd18O_int',
                                                'd18O_norm', 'd18o_norm', 'dO18',
                                                'd18O_anom'],
             'Ice Cores_dD'                  : ['deltaD', 'delD', 'dD'],
             'Ice Cores_Accumulation'        : ['accum', 'accumu'],
-            'Ice Cores_MeltFeature'         : ['MFP'],
+            'Ice Cores_MeltFeature'         : ['MFP','melt'],
             'Lake Cores_Varve'              : ['varve', 'varve_thickness',
-                                               'varve thickness'],
+                                               'varve thickness','thickness'],
             'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'],
             'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca', 'Cl_cont'],
+            'Lake Cores_Misc'               : ['RABD660_670','X_radiograph_dark_layer','massacum'],
+            'Lake Cores_Temperature'        : ['temperature'],
             'Marine Cores_d18O'             : ['d18O'],
+            'Marine Cores_Temperature'      : ['temperature'],
             'Tree Rings_WidthBreit'         : ['trsgi_breit'],
             'Tree Rings_WidthPages2'        : ['trsgi'],
             'Tree Rings_WidthPages'         : ['TRW',
@@ -500,7 +527,12 @@ class proxies(object):
                                                'late_d',
                                                'MXD'],
             'Tree Rings_Isotopes'           : ['d18O'],
+            'Tree Rings_Temperature'        : ['temperature'],
             'Speleothems_d18O'              : ['d18O'],
+            'bivalve_d18O'                  : ['d18O'],
+            'borehole_Temperature'          : ['temperature'],
+            'documents_Temperature'         : ['temperature'],
+            'hybrid_Temperature'            : ['temperature'],
         }
 
         # A blacklist on proxy records, to prevent assimilation of specific
