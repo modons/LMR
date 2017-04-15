@@ -60,12 +60,12 @@ def main():
 
     # This option transforms all data to a Gaussian distribution.  It should only be used for
     # regressions, not physically-based PSMs.
-    gaussianize_data = True
+    gaussianize_data = False
     
     # Specify the type of year to use for data averaging.  Currently only affects Pages2k v2 proxies.
     # "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
-    #year_type = "calendar year"
-    year_type = "tropical year"
+    year_type = "calendar year"
+    #year_type = "tropical year"
     # *** End pages2k v2.0.0 options ***
 
     # datadir: directory where the original proxy datafiles are located
