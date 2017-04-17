@@ -121,34 +121,31 @@ class core(object):
 
     ##** BEGIN User Parameters **##
 
-    #nexp = 'test'
-    nexp = 'test_prod_pages2kv2_only'
+    nexp = 'test'
 
     #lmr_path = '/home/disk/ice4/nobackup/hakim/lmr'
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    #lmr_path = '/home/disk/kalman3/rtardif/LMR'
-    lmr_path = '/home/scec-00/lmr/erbm/LMR'
+    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    #lmr_path = '/home/scec-00/lmr/erbm/LMR'
     online_reconstruction = False
     clean_start = True
     use_precalc_ye = True
     # TODO: More pythonic to make last time a non-inclusive edge
-    #recon_period = (1800, 2000)
-    recon_period = (0, 2000)
+    recon_period = (1800, 2000)
     nens = 100
     seed = None
     loc_rad = None
 
     #datadir_output = '/home/disk/ice4/hakim/svnwork/lmr/trunk/data'
     #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
-    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
-    datadir_output = '/home/scec-00/lmr/erbm/LMR/tmp_output'
+    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    #datadir_output = '/home/scec-00/lmr/erbm/LMR/tmp_output'
     
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
     #archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
-    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
-    archive_dir = '/home/scec-00/lmr/erbm/LMR/archive_output'
+    #archive_dir = '/home/scec-00/lmr/erbm/LMR/archive_output'
 
     ##** END User Parameters **##
 
@@ -194,8 +191,8 @@ class proxies(object):
     #use_from = ['pages']
     use_from = ['NCDC']
 
-    proxy_frac = 1.0
-    #proxy_frac = 0.75
+    #proxy_frac = 1.0
+    proxy_frac = 0.75
 
     # type of proxy timeseries to return: 'anom' for anomalies
     # (temporal mean removed) or asis' to keep unchanged
@@ -403,8 +400,8 @@ class proxies(object):
         ##** BEGIN User Parameters **##
 
         #dbversion = 'v0.0.0'
-        #dbversion = 'v0.1.0'
-        dbversion = 'Pages2kv2'  # This uses the Pages2kv2 database, without any NCDC records!
+        dbversion = 'v0.1.0'
+        #dbversion = 'Pages2kv2'  # This uses the Pages2kv2 database, without any NCDC records!
         
         datadir_proxy = None
         datafile_proxy = 'NCDC_%s_Proxies.df.pckl' %(dbversion)

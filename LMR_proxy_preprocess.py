@@ -48,35 +48,33 @@ def main():
     # 
 
     #proxy_data_source = 'PAGES2K'
-    #proxy_data_source = 'NCDC'
+    #proxy_data_source = 'PAGES2Kv2'
+    proxy_data_source = 'NCDC'
     # version of the NCDC proxy db to process
     #dbversion = 'v0.0.0' 
-    #dbversion = 'v0.1.0' 
+    dbversion = 'v0.1.0' 
 
     eliminate_duplicates = True
 
-    # *** Begin pages2k v2.0.0 options ***
-    proxy_data_source = 'PAGES2Kv2'
-
+    # *** Begin pages2k v2.0.0 options.  These two options only work for the "PAGES2Kv2" dataset above. ***
     # This option transforms all data to a Gaussian distribution.  It should only be used for
     # regressions, not physically-based PSMs.
     gaussianize_data = False
     
-    # Specify the type of year to use for data averaging.  Currently only affects Pages2k v2 proxies.
-    # "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
+    # Specify the type of year to use for data averaging. "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
     year_type = "calendar year"
     #year_type = "tropical year"
     # *** End pages2k v2.0.0 options ***
 
     # datadir: directory where the original proxy datafiles are located
     #datadir = '/home/chaos2/wperkins/data/LMR/proxies/'
-    #datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
-    datadir = '/home/scec-00/lmr/erbm/LMR/data/proxies/'
+    datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    #datadir = '/home/scec-00/lmr/erbm/LMR/data/proxies/'
     
     # outdir: directory where the proxy database files will be created
     #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py 
-    #outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
-    outdir  = '/home/scec-00/lmr/erbm/LMR/data/proxies/'
+    outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    #outdir  = '/home/scec-00/lmr/erbm/LMR/data/proxies/'
 
     # 
     # Section for User-defined options: end
