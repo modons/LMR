@@ -64,7 +64,8 @@ class v_core(object):
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HadCRUT...) and proxies.
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    #lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    lmr_path = '/home/scec-00/lmr/erbm/LMR'
 
     calib_period = (1850, 2010)
 
@@ -269,8 +270,8 @@ class v_proxies(object):
         ##** BEGIN User Parameters **##
         
         #dbversion = 'v0.0.0'
-        dbversion = 'v0.1.0'
-        #dbversion = 'Pages2kv2'  # This uses the Pages2kv2 database, without any NCDC records!
+        #dbversion = 'v0.1.0'
+        dbversion = 'Pages2kv2'  # This uses the Pages2kv2 database, without any NCDC records!
         
         datadir_proxy = None
         datafile_proxy = 'NCDC_%s_Proxies.df.pckl' %(dbversion)

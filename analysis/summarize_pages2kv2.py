@@ -4,12 +4,12 @@
 #  1) Produces a list of all proxy types and units.
 #  2) Produces individual figures of all 692 proxy records, along with metadata.
 #
-# Note: You'll need to make the preprocessed and PSM files before using this.
-# Also, change the "data_directory" and "output_directory" to point to the
+# Note: You'll need to make the preprocessed files and a PSM file before using
+# this.  Also, change the "data_directory" and "output_directory" to point to the
 # appropriate places on your machine.
 #
 #    author: Michael P. Erb
-#    date  : 2/13/2017
+#    date  : 4/17/2017
 #================================================================================
 
 import numpy as np
@@ -71,7 +71,7 @@ for i in range(0,len(metadata_pages2k['NCDC ID'])):
     for offset, key in enumerate(metadata_pages2k):
         plt.text(0,-.3-.1*offset,key+":",transform=ax.transAxes)
         plt.text(.3,-.3-.1*offset,metadata_pages2k[key][i],transform=ax.transAxes)
-    plt.text(0,-.4-.1*offset,"LMR can compute GISTEMP PSM:",transform=ax.transAxes)
+    plt.text(0,-.4-.1*offset,"Proxy is in given PSM file:",transform=ax.transAxes)
     plt.text(.3,-.4-.1*offset,has_psm,transform=ax.transAxes)
     if save_instead_of_plot:
         plt.savefig(output_directory+metadata_pages2k['Archive type'][i].replace(" ","_")+"_"+metadata_pages2k['NCDC ID'][i]+"_record"+str(i)+".jpg")

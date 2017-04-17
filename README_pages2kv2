@@ -69,14 +69,15 @@ Notes
                Lake Cores -             RABD660_670 :   1
                Lake Cores - X_radiograph_dark_layer :   1
                Lake Cores -                massacum :   1
-               Lake Cores -             temperature :  34
+               Lake Cores -             temperature :  33
                Lake Cores -               thickness :   6
              Marine Cores -                    d18O :   1
              Marine Cores -             temperature :  57
               Speleothems -                    d18O :   4
-               Tree Rings -                     MXD :  54
+               Tree Rings -                     MXD :  55
                Tree Rings -                 density :   5
-               Tree Rings -             temperature :   7
+               Tree Rings -             temperature :   6
+               Tree Rings -            temperature1 :   1
                Tree Rings -                   trsgi : 348
                   bivalve -                    d18O :   1
                  borehole -             temperature :   3
