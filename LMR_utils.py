@@ -17,6 +17,7 @@ import os
 import numpy as np
 import re
 import cPickle
+import collections
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
@@ -305,7 +306,7 @@ def ensemble_stats(workdir, y_assim):
 
         # Determine variable type (2D lat/lon, 2D lat/depth, time series etc ...)
         # Look for the 'vartype' entry in the state vector dict.
-        # Possibilities are: '2D:horizontal', '2D:meridional_vertical', '1D:time series'
+        # Possibilities are: '2D:horizontal', '2D:meridional_vertical', '0D:time series'
         if state_info[var]['vartype'] == '2D:horizontal': 
             # 2D:horizontal variable
             ndim1 = state_info[var]['spacedims'][0]
@@ -356,8 +357,8 @@ def ensemble_stats(workdir, y_assim):
             continue
 
             
-        elif state_info[var]['vartype'] == '1D:time series': 
-            # 1D:time series variable (no spatial dims)
+        elif state_info[var]['vartype'] == '0D:time series': 
+            # 0D:time series variable (no spatial dims)
             Xb = Xbtmp[ibeg:iend+1,:] # prior (full) ensemble
             xbm = np.mean(Xb,axis=1)  # ensemble mean
             xbv = np.var(Xb,axis=1)   # ensemble variance
@@ -682,12 +683,12 @@ def coefficient_efficiency(ref,test,valid=None):
         dims = dims_ref[1:3]
     elif len(dims_ref) == 2: # 2D: time + 1D spatial
         dims = dims_ref[1:2]
-    elif len(dims_ref) == 1: # 1D: time series
+    elif len(dims_ref) == 1: # 0D: time series
         dims = 1
     else:
         print 'Problem with input array dimension! Exiting...'
         exit(1)
-    #print 'dims CE: ', dims
+
     CE = np.zeros(dims)
 
     # error
@@ -714,6 +715,41 @@ def coefficient_efficiency(ref,test,valid=None):
 
     return CE
 
+def crps(forecasts, observations):
+    """
+    Function to calculate the continuous ranked probability score
+    of an ensemble of forecast timeseries against observations.
+
+    Based on _crps.py in the properscoring package from TheClimateCorporation
+    on Github
+
+    Parameters
+    ----------
+    forecasts: ndarray
+        Forecast timeseries with trailing dimensions of (..., nens, ntimes)
+    observations: ndarray
+        Observations for verification with a single dimension of length ntimes
+
+    Returns
+    -------
+    crps: ndarray
+        Continuous ranked probability score over nens and ntimes.  Has shape of
+        the dimensions preceding nens (if any).
+
+    """
+    # Calculate the mean absolute error of the ensemble-mean forecast
+    fcast_error = abs(forecasts - observations)
+    mean_error = fcast_error.mean(axis=-2)
+
+    # Calculate the mean forecast ensemble difference (spread)
+    fcast_diff = np.expand_dims(forecasts, -3) - np.expand_dims(forecasts, -2)
+    fcast_dist = abs(fcast_diff).mean(axis=(-3, -2))
+
+    # Calculate the CRPS (cumulative over all times)
+    crps = mean_error - 0.5 * fcast_dist
+    crps = crps.sum(axis=-1)
+
+    return crps
 
 def rmsef(predictions, targets):
     """
@@ -945,8 +981,8 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_str = str(proxy_database)
     if proxy_str == 'NCDC':
         proxy_str = proxy_str + str(config.proxies.ncdc.dbversion)
-    elif proxy_str == 'NCDCdadt':
-        proxy_str = proxy_str + str(config.proxies.ncdcdadt.dbversion)
+    elif proxy_str == 'NCDCdtda':
+        proxy_str = proxy_str + str(config.proxies.ncdcdtda.dbversion)
         
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
@@ -1175,8 +1211,8 @@ def validate_config(config):
         proxy_cfg = config.proxies.ncdc
     elif proxy_database == 'pages':
         proxy_cfg = config.proxies.pages
-    elif proxy_database == 'NCDCdadt':
-        proxy_cfg = config.proxies.ncdcdadt
+    elif proxy_database == 'NCDCdtda':
+        proxy_cfg = config.proxies.ncdcdtda
     else:
         print 'ERROR in specification of proxy database.'
         raise SystemExit()
@@ -1261,6 +1297,56 @@ def validate_config(config):
     
     
     return proceed_ok
+
+
+def _param_str_to_update_dict(param_str, value):
+    split_params = param_str.split('.')
+    try:
+        value_str = '{:g}'.format(value)
+    except ValueError as e:
+        value_str = '{}'.format(value)
+    param_dir_str = split_params[-1] + '-' + value_str
+
+    while split_params:
+        curr_param = split_params.pop()
+        update_dict = {curr_param: value}
+        value = update_dict
+
+    return update_dict, param_dir_str
+
+
+def nested_dict_update(orig_dict, update_dict):
+    for key, val in update_dict.iteritems():
+        if isinstance(val, collections.Mapping):
+            res = nested_dict_update(orig_dict.get(key, {}), val)
+            orig_dict[key] = res
+        else:
+            orig_dict[key] = val
+    return orig_dict
+
+
+def param_cfg_update(param_str, val, cfg_dict=None):
+
+    if cfg_dict is None:
+        cfg_dict = {}
+
+    update_dict, _ = _param_str_to_update_dict(param_str, val)
+    return nested_dict_update(cfg_dict, update_dict)
+
+
+def psearch_list_cfg_update(param_str_list, val_list, cfg_dict=None):
+
+    if cfg_dict is None:
+        cfg_dict = {}
+
+    param_dir_str = []
+    for param_str, val in zip(param_str_list, val_list):
+        update_dict, dir_str = _param_str_to_update_dict(param_str, val)
+        param_dir_str.append(dir_str)
+        cfg_dict = nested_dict_update(cfg_dict, update_dict)
+
+    param_dir_str = '_'.join(param_dir_str)
+    return cfg_dict, param_dir_str
 
 
 class FlagError(ValueError):

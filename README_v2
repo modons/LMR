@@ -1,4 +1,5 @@
-Last Millennium Reanalysis (LMR) project codebase release 2.0 
+
+Last Millennium Reanalysis (LMR) project codebase release 2.0
 
 Originators: R. Tardif, W. A. Perkins, G. J. Hakim
              University of Washington
@@ -10,7 +11,7 @@ These are instructions for running version 2 ("v2") of the Last Millennium Reana
 
 You must read and understand the version 1 instructions (README) before proceeding.
 
-1) Build "LMR-ready" PAGES2K (used in v1) or NCDC proxy database for assimilation (this builds the Pandas dataframes)
+1) Build "LMR-ready" NCDC proxy database for assimilation (this builds the Pandas dataframes)
 
    Module: LMR_proxy_preprocess.py
    ------
@@ -32,7 +33,7 @@ You must read and understand the version 1 instructions (README) before proceedi
      . For proxy_data_source = 'NCDC': This is the directory where subdirectories
        NCDC/ToPandas_<<dbversion>> are located. 
        The <<datadir>>/NCDC/ToPandas_<<dbversion>> directory should contain all 
-       the NCDC-templated .txt files corresponding to the proxy records the user 
+       the NCDC-templated .txt files corresponding to the proxy records the user
        wants to include in the database of proxies to be assimilated. 
 
    - outdir: Directory where the .pckl files containing the Pandas dataframes 
@@ -60,14 +61,15 @@ You must read and understand the version 1 instructions (README) before proceedi
        the data (proxy and calibration dataset for PSM calibration.
        Ex. (1850,2000)
 
-     - psm_type: dictionary defining the type of PSM to calibrate per proxy database.
-       Either 'linear' or 'bilinear'
-
    * In class v_proxies:
-     - use_from: List defining the proxy database to use. 
+     - use_from: List defining the proxy database to 
        Either ['pages'] or ['NCDC']
 
-   * In classes _ncdc & _pages:
+   * In class _ncdc:
+     - dbversion: Version of the proxy database for which to calibrate the 
+       linear PSMs. ex: v0.1.0
+       Note: Only relevant if use_from is set to ['NCDC']
+
      - proxy_resolution: List defining the temporal resoluton of proxy 
        records for which to calibrate a linear PSM. Keep as [1.0] for now. 
      
@@ -76,13 +78,10 @@ You must read and understand the version 1 instructions (README) before proceedi
        Expected values are: 'asis' (keep data as provided in the pandas dataframe file) 
        or 'anom' (temporal mean removed)
 
-   * In classes _ncdc only:
-     - dbversion: Version of the proxy database for which to calibrate the 
-       linear PSMs. ex: v0.1.0
-       Note: Only relevant if use_from is set to ['NCDC']
-
-
    * In class v_psm:
+     - use_psm: dictionary defining the type of PSM to calibrate per proxy database.
+       Either 'linear' or 'bilinear'
+
      - avgPeriod: String defining the averaging period over which the calibration is
        to be performed. Either 'annual' or 'season' are allowed. 
 
@@ -128,9 +127,6 @@ You must read and understand the version 1 instructions (README) before proceedi
    directory in your <<lmr_path>> directory.
 
 
-   NOTE: To use the pre-calculated Ye values in a reconstruction, make sure you have set
-         use_precalc_ye = True
-         in the class core(object) section in the LMR_config.py
-
 4) Run the experiment:
 python LMR_wrapper.py
+

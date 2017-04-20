@@ -22,8 +22,7 @@ rtol = 1e-4
 atol = 1e-6
 
 #base_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
-base_dir = '/home/disk/kalman3/rtardif/LMR/output'
-
+base_dir = '/home/katabatic2/wperkins/LMR_output/testing'
 # sim_dir1 = 'testdev_production_comparison_1900_1960_seed0_nens10/r0/'
 # sim_dir2 = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens/r0/'
 #sim_dir1 = 'testdev_precalcye_pages_linearTorP_no_tas/r0/'
@@ -31,8 +30,11 @@ base_dir = '/home/disk/kalman3/rtardif/LMR/output'
 # --
 #sim_dir1 = 'test_ncdc_bilinear_precalc_tp/r0'
 #sim_dir1 = 'test_ncdc_bilinear_precalc_t/r0'
-sim_dir1 = 'test_ncdc_bilinear_precalc_p/r0'
-sim_dir2 = 'test_ncdc_bilinear_noprecalc_tp/r0'
+# sim_dir1 = 'test_ncdc_bilinear_precalc_p/r0'
+# sim_dir2 = 'test_ncdc_bilinear_noprecalc_tp/r0'
+
+sim_dir1 = 'testdev_yaml_config_update/r0'
+sim_dir2 = 'reference_pages/r0'
 
 
 dir1 = path.join(base_dir, sim_dir1)
