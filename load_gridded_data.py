@@ -938,6 +938,13 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         if nbspacecoords == 0: # data => simple time series
             vartype = '0D:time series'
             spacecoords = None
+        elif nbspacecoords == 1: # data => 1D data
+            if 'lat' in varspacecoordnames:
+                # latitudinally-averaged  variable
+                vartype = '1D:meridional' 
+                spacecoords = ('lat',)
+                spacevar1 = data.variables['lat'][:]
+                
         elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
             # get rid of plev in list        
             varspacecoordnames = [item for item in varspacecoordnames if item != 'plev'] 
@@ -969,6 +976,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         ntime = len(data.dimensions['time'])
         dates = time_yrs
 
+        
         # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
         if vartype == '2D:horizontal':
 
@@ -1045,7 +1053,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             indneg = np.where(varlon < 0)
             if len(indneg) > 0: # if non-empty
                 varlon[indneg] = 360.0 + varlon[indneg]
-                
+
             # Back into right arrays
             if indlon == 0:
                 spacevar1 = varlon
@@ -1054,28 +1062,125 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                 spacevar2 = varlon
                 spacevar1 = varlat
 
-        
-                
         # if 2D:meridional_vertical variable
-        #if vartype == '2D:meridional_vertical':
-        #    value = np.zeros([ntime, len(spacevar1), len(spacevar2)], dtype=float)
-        # TODO ...
+        elif vartype == '2D:meridional_vertical':
+
+            vardims = data_var.shape
+            
+            # which dim is lat and which is lev?
+            indlat = spacecoords.index('lat')
+            indlev = spacecoords.index('lev')
+            print 'indlat=', indlat, ' inlev=', indlev
+
+            if indlev == 0:
+                vlev = spacevar1
+                vlat = spacevar2
+                nlat = vardims[2]
+                nlev = vardims[1]
+            elif indlev == 1:
+                vlev = spacevar2
+                vlat = spacevar1
+                nlat = vardims[1]
+                nlev = vardims[2]
+
+            # are coordinates defined as 1d or 2d array?
+            spacevardims = len(vlat.shape)
+            if spacevardims == 1:
+                varlat = np.array([vlat,]*nlev).transpose()
+                varlev = np.array([vlev,]*nlat)
+            else:
+                varlat = vlat
+                varlev = vlev
+
+            varlatdim = len(varlat.shape)
+            varlevdim = len(varlev.shape)
 
 
-        # if 1D:meridional (latitudinally-averaged) variable,
-        # TODO ...
-        # ... ... ...
+            # Check if latitudes are defined in the [-90,90] domain
+            fliplat = None
+
+            # check for monotonically increasing or decreasing values
+            monotone_increase = np.all(np.diff(varlat[:,0]) > 0)
+            monotone_decrease = np.all(np.diff(varlat[:,0]) < 0)
+            if not monotone_increase and not monotone_decrease:
+                # funky grid
+                fliplat = False
+                
+            if fliplat is None:
+                if varlatdim == 2: # 2D lat array
+                    if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
+                elif varlatdim == 1: # 1D lat array
+                    if varlat[0] > varlat[-1]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
+                else:
+                    print 'ERROR!'
+                    raise SystemExit(1)
+
+            if fliplat:
+                varlat = np.flipud(varlat)
+                # flip data variable
+                if indlat == 0:
+                    tmp = data_var[:,::-1,:]
+                else:
+                    tmp = data_var[:,:,::-1]
+                data_var = tmp
+
+            # Back into right arrays
+            if indlev == 0:
+                spacevar1 = varlev
+                spacevar2 = varlat
+            elif indlev == 1:
+                spacevar2 = varlev
+                spacevar1 = varlat
 
         
+        # if 1D:meridional (latitudinally-averaged) variable
+        elif vartype == '1D:meridional':
+
+            vardims = data_var.shape
+            
+            # which dim is lat?
+            indlat = spacecoords.index('lat')
+            print 'indlat=', indlat
+            
+            # Check if latitudes are defined in the [-90,90] domain
+            fliplat = None
+            # check for monotonically increasing or decreasing values
+            monotone_increase = np.all(np.diff(spacevar1) > 0)
+            monotone_decrease = np.all(np.diff(spacevar1) < 0)
+            if not monotone_increase and not monotone_decrease:
+                # funky grid
+                fliplat = False
+
+            if fliplat is None:
+                if spacevar1[0] > spacevar1[-1]: # lat not as [-90,90] => array upside-down
+                    fliplat = True
+
+            if fliplat:
+                spacevar1 = np.flipud(spacevar1)
+                tmp = data_var[:,::-1]
+                data_var = tmp
+            
+
+
+        # ====== other data processing ======
+            
         # Calculate anomalies?
         kind = data_vars[vardef]
         
         # monthly climatology
         if vartype == '0D:time series':
             climo_month = np.zeros((12))
+        elif vartype == '1D:meridional':
+            climo_month = np.zeros([12, vardims[1]], dtype=float)
         elif '2D' in vartype:
             climo_month = np.zeros([12, vardims[1], vardims[2]], dtype=float)
-
+        
         if not kind or kind == 'anom':
             print 'Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...'
             # loop over months
@@ -1097,24 +1202,39 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         # Possibly detrend the prior
         if detrend:
             print 'Detrending the prior for variable: '+var_to_extract
+
+            data_var_copy = np.copy(data_var)
+
             if vartype == '0D:time series':
                 xdim = data_var.shape[0]
                 xvar = range(xdim)
-                data_var_copy = np.copy(data_var)
                 slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy)
                 trend = slope*np.squeeze(xvar) + intercept
                 data_var = data_var_copy - trend
+            elif vartype == '1D:meridional':
+                [xdim,dim1] = data_var.shape
+                xvar = range(xdim)
+                # loop over grid points
+                for i in range(dim1):
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy[:,i])
+                    if np.isfinite(slope) and np.isfinite(intercept):
+                        trend = slope*np.squeeze(xvar) + intercept
+                        data_var[:,i] = data_var_copy[:,i] - trend
+                    else:
+                        data_var[:,i] = np.nan
             elif '2D' in vartype: 
-                data_var_copy = np.copy(data_var)
                 [xdim,dim1,dim2] = data_var.shape
                 xvar = range(xdim)
                 # loop over grid points
                 for i in range(dim1):
                     for j in range(dim2):
                         slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy[:,i,j])
-                        trend = slope*np.squeeze(xvar) + intercept
-                        data_var[:,i,j] = data_var_copy[:,i,j] - trend
-
+                        if np.isfinite(slope) and np.isfinite(intercept):
+                            trend = slope*np.squeeze(xvar) + intercept
+                            data_var[:,i,j] = data_var_copy[:,i,j] - trend
+                        else:
+                            data_var[:,i,j] = np.nan
+                        
             print var_to_extract, ': Global(monthly/detrend): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
 
 
@@ -1181,8 +1301,10 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         datesYears = np.array([datetime(y,1,1,0,0) for y in years])
         
         if vartype == '0D:time series':
-            value = np.zeros([ntime], dtype=float) # vartype = '1D:time series' 
-        elif vartype == '2D:horizontal':
+            value = np.zeros([ntime], dtype=float) 
+        elif vartype == '1D:meridional':
+            value = np.zeros([ntime, vardims[1]], dtype=float)
+        elif '2D' in vartype:
             value = np.zeros([ntime, vardims[1], vardims[2]], dtype=float)
 
 
@@ -1195,6 +1317,8 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
 
             if vartype == '0D:time series':
                 value[i] = np.nanmean(data_var[indsyr],axis=0)
+            elif vartype == '1D:meridional':
+                value[i,:] = np.nanmean(data_var[indsyr],axis=0)
             elif '2D' in vartype: 
                 if nbdims > 3:
                     value[i,:,:] = np.nanmean(np.squeeze(data_var[indsyr]),axis=0)
@@ -1225,6 +1349,8 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             years_avg = np.zeros([nbintervals],dtype=int)
             if vartype == '0D:time series':
                 value_avg = np.zeros([nbintervals], dtype=float)
+            elif vartype == '1D:meridional':
+                value_avg = np.zeros([nbintervals, vardims[1]], dtype=float)
             elif '2D' in vartype: 
                 value_avg = np.zeros([nbintervals, vardims[1], vardims[2]], dtype=float)
             # really initialize with missing values (NaNs)
@@ -1250,7 +1376,10 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         d['value']   = value
         d['climo']   = climo
         d['spacecoords'] = spacecoords
-        if '2D' in vartype:
+
+        if vartype == '1D:meridional':
+            d[spacecoords[0]] = spacevar1
+        elif '2D' in vartype:
             d[spacecoords[0]] = spacevar1
             d[spacecoords[1]] = spacevar2
 
