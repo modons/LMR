@@ -89,16 +89,21 @@ class prior_master(object):
         # Defining content of state vector => dictionary: state_vect_content
         # NOTE: now assumes that dims of state variables are (lat,lon) only !!!
         state_vect_info = {}
-
+        
         # Loop over state variables
         Nx = 0
         timedim = []
         for var in self.prior_dict.keys():
+
+            vartype = self.prior_dict[var]['vartype']
+
             dct = {}
             timedim.append(len(self.prior_dict[var]['years']))
+
             spacecoords = self.prior_dict[var]['spacecoords']
-            if spacecoords:
-                #print 'spacecoords is not None: variable with space coordinates'
+
+            if '2D' in vartype:
+
                 dim1, dim2 = spacecoords
 
                 # How are these defined? Check dims of arrays
@@ -107,7 +112,7 @@ class prior_master(object):
                     # each be defined with a 2d array
                     ndim1 = self.prior_dict[var][dim1].shape[0]
                     ndim2 = self.prior_dict[var][dim1].shape[1]
-                
+                    
                 elif len(self.prior_dict[var][dim1].shape) == 1 and len(self.prior_dict[var][dim2].shape) == 1:
                     # regular lat/lon array : lat and lon can be defined with 1d arrays
                     ndim1 = len(self.prior_dict[var][dim1])
@@ -128,9 +133,18 @@ class prior_master(object):
                     dct['vartype'] = '2D:meridional_vertical'
                 else:
                     raise SystemExit('ERROR in populate_ensemble: Unrecognized info on spatial dimensions. Exiting!')
-                    
+                
+            elif vartype == '1D:meridional':
+                dim1,  = spacecoords
+                ndim1 = self.prior_dict[var][dim1].shape[0]
+                ndimtot = ndim1
+                dct['pos'] = (Nx,Nx+(ndimtot)-1)
+                dct['spacecoords'] = spacecoords
+                dct['spacedims'] = (ndim1,)
+                dct['vartype'] = vartype
+                
             else:
-                #print 'spacecoords is None: variable is simple time series'
+                # variable is simple time series'
                 ndimtot = 1
                 dct['pos'] = (Nx,Nx+(ndimtot)-1)
                 dct['spacecoords'] = None
@@ -148,13 +162,12 @@ class prior_master(object):
         print 'State vector information:'
         print 'Nx =', Nx
         print 'state_vect_info=', state_vect_info
-
+        
         # time dimension consistent across variables?
         if all(x == timedim[0] for x in timedim):
             ntime = timedim[0]
         else:
-            print 'ERROR: time dimension not consistent across all state variables. Exiting!'
-            exit(1)
+            raise SystemExit('ERROR im populate_ensemble: time dimension not consistent across all state variables. Exiting!')
 
         # If Nens is None, use all of prior with no random sampling
         if self.Nens is None:
@@ -184,13 +197,12 @@ class prior_master(object):
 
         for var in self.prior_dict.keys():
 
+            vartype = self.prior_dict[var]['vartype']
+            
             indstart = state_vect_info[var]['pos'][0]
             indend   = state_vect_info[var]['pos'][1]
 
-            try:
-                nbspacecoords = len(state_vect_info[var]['spacecoords'])
-                if nbspacecoords == 2:
-
+            if '2D' in vartype:
                     # Loop over ensemble members
                     for i in range(0,self.Nens):
                         Xb[indstart:indend+1,i] = self.prior_dict[var]['value'][ind_ens[i],:,:].flatten()
@@ -222,17 +234,30 @@ class prior_master(object):
                     del X_coord1
                     del X_coord2
 
-                else:
-                    print 'ERROR: variable of unrecognized spatial dimensions... Exiting!'
-                    exit(1)
+            elif vartype == '1D:meridional':
+                # Loop over ensemble members
+                for i in range(0,self.Nens):
+                    Xb[indstart:indend+1,i] = self.prior_dict[var]['value'][ind_ens[i],:].flatten()
 
-            except:
-                # No spacecoords: time series
+                    # get the name of the spatial coordinate for state variable 'var'
+                    coordname1, = state_vect_info[var]['spacecoords']
+                    # load in the coord values from data dictionary 
+                    X_coord1 = self.prior_dict[var][coordname1]
+
+                    Xb_coords[indstart:indend+1,0] = X_coord1.flatten()
+
+                    # Some cleanup
+                    del X_coord1                    
+
+            elif vartype == '0D:time series':
                 # Loop over ensemble members
                 for i in range(0,self.Nens):
                     Xb[indstart:indend+1,i] = self.prior_dict[var]['value'][ind_ens[i]].flatten()
+                
+            else:
+                raise SystemExit('ERROR im populate_ensemble: variable of unrecognized spatial dimensions. Exiting!')
 
-
+        
         # Returning state vector Xb as masked array
         Xb_mask = np.ma.masked_invalid(Xb)
 

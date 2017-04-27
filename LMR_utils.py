@@ -351,12 +351,85 @@ def ensemble_stats(workdir, y_assim):
 
 
         elif state_info[var]['vartype'] == '2D:meridional_vertical': 
-            # 2D:meridional_vertical variable
 
-            # soon ...
-            continue
+            ndim1 = state_info[var]['spacedims'][0]
+            ndim2 = state_info[var]['spacedims'][1]
 
-            
+            # Prior
+            Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+            xbm = np.mean(Xb,axis=2)       # ensemble mean
+            xbv = np.var(Xb,axis=2,ddof=1) # ensemble variance
+
+            # Process the **analysis** (i.e. posterior) files
+            years = []
+            xam = np.zeros([nyears,ndim1,ndim2])
+            xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
+            k = -1
+            for f in sfiles:
+                k = k + 1
+                i = f.rfind('year')
+                fname_end = f[i+4:]
+                ii = fname_end.rfind('.')
+                year = fname_end[:ii]
+                years.append(year)
+                Xatmp = np.load(f)
+                Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
+                xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
+
+
+            # form dictionary containing variables to save, including info on array dimensions
+            coordname1 = state_info[var]['spacecoords'][0]
+            coordname2 = state_info[var]['spacecoords'][1]
+            dimcoord1 = 'n'+coordname1
+            dimcoord2 = 'n'+coordname2
+
+            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
+            coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
+
+            vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
+
+
+        elif state_info[var]['vartype'] == '1D:meridional': 
+
+            ndim1 = state_info[var]['spacedims'][0]
+
+            # Prior
+            Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,nens))
+            xbm = np.mean(Xb,axis=1)       # ensemble mean
+            xbv = np.var(Xb,axis=1,ddof=1) # ensemble variance
+
+            # Process the **analysis** (i.e. posterior) files
+            years = []
+            xam = np.zeros([nyears,ndim1])
+            xav = np.zeros([nyears,ndim1],dtype=np.float64)
+            k = -1
+            for f in sfiles:
+                k = k + 1
+                i = f.rfind('year')
+                fname_end = f[i+4:]
+                ii = fname_end.rfind('.')
+                year = fname_end[:ii]
+                years.append(year)
+                Xatmp = np.load(f)
+                Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,nens))
+                xam[k,:] = np.mean(Xa,axis=1)       # ensemble mean
+                xav[k,:] = np.var(Xa,axis=1,ddof=1) # ensemble variance
+
+            # form dictionary containing variables to save, including info on array dimensions
+            coordname1 = state_info[var]['spacecoords'][0]
+            dimcoord1 = 'n'+coordname1
+
+            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0]))
+
+            vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
+                                     coordname1:coord1, 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
+                                     coordname1:coord1, 'xbv':xbv, 'xav':xav}
+        
         elif state_info[var]['vartype'] == '0D:time series': 
             # 0D:time series variable (no spatial dims)
             Xb = Xbtmp[ibeg:iend+1,:] # prior (full) ensemble

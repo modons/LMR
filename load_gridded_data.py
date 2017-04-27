@@ -1071,6 +1071,9 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         elif vartype == '2D:meridional_vertical':
 
             vardims = data_var.shape
+
+
+            print '::vardims=', vardims
             
             # which dim is lat and which is lev?
             indlat = spacecoords.index('lat')
@@ -1090,9 +1093,16 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
 
             # are coordinates defined as 1d or 2d array?
             spacevardims = len(vlat.shape)
+            
             if spacevardims == 1:
-                varlat = np.array([vlat,]*nlev).transpose()
-                varlev = np.array([vlev,]*nlat)
+                if indlev == 0:
+                    varlev = np.array([vlev,]*nlat).transpose()
+                    varlat = np.array([vlat,]*nlev)
+                    
+                else:
+                    varlat = np.array([vlat,]*nlev).transpose()
+                    varlev = np.array([vlev,]*nlat)
+
             else:
                 varlat = vlat
                 varlev = vlev
@@ -1100,7 +1110,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             varlatdim = len(varlat.shape)
             varlevdim = len(varlev.shape)
 
-
+            
             # Check if latitudes are defined in the [-90,90] domain
             fliplat = None
 
@@ -1113,10 +1123,16 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                 
             if fliplat is None:
                 if varlatdim == 2: # 2D lat array
-                    if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
-                        fliplat = True
+                    if indlat == 0:
+                        if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
+                            fliplat = True
+                        else:
+                            fliplat = False
                     else:
-                        fliplat = False
+                        if varlat[0,0] > varlat[0,-1]: # lat not as [-90,90] => array upside-down
+                            fliplat = True
+                        else:
+                            fliplat = False
                 elif varlatdim == 1: # 1D lat array
                     if varlat[0] > varlat[-1]: # lat not as [-90,90] => array upside-down
                         fliplat = True

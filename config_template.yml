@@ -262,7 +262,7 @@ proxies:
     metafile_proxy: 'DTDA_{}_Metadata.df.pckl'
     dataformat_proxy: 'DF'
     regions: []
-    proxy_resolution: [(0.,5000.)]
+    proxy_resolution: [!!python/tuple [0.,5000.]]
     database_filter: []
     proxy_blacklist: []
     proxy_order: [
@@ -356,6 +356,7 @@ prior:
 #    sos_sfc_Odec: full
 
   detrend: False
+  # regridding options: null, simple or spherical_harmonics
   regrid_method: simple
   regrid_resolution: 42
   state_variables_info:
