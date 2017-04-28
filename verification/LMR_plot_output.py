@@ -29,14 +29,15 @@ from LMR_utils import global_hemispheric_means
 
 # --- Begin section of user-defined parameters ---
 
+datadir = '/Users/hakim/data/LMR/archive'
 #datadir = '/home/disk/kalman2/wperkins/LMR_output/archive'
-datadir = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
 
 
-#exp = 'test'
+exp = 'dadt_test'
 #exp = 'testDADT100yrs'
-exp = 'testDADT250yrs'
+#exp = 'testDADT250yrs'
 #exp = 'testDADT500yrs3'
 #exp = 'testDADT250yrsAnom'
 
@@ -52,7 +53,7 @@ year_range = [-20000,2000]
 #year_range = [-120000,2000]
 
 # --
-iter_range = [0,0]
+iter_range = [0,1]
 #iter_range = [0,100]
 
 # ==== for GMT timeseries plot:
@@ -75,7 +76,8 @@ mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
 #mapmin = -6.; mapmax = +6.; mapint = 2.; cmap = plt.cm.bwr; cbarfmt = '%4.0f'# anomalies
 mapmin = 270.; mapmax = 300.; mapint = 2.; cmap = mapcolor; cbarfmt = '%4.0f' # full field
 
-make_movie = True
+#make_movie = True
+make_movie = False
 
 # --- End section of user-defined parameters ---
 

@@ -52,13 +52,18 @@ Revisions:
    See proxy_psm_type dictionaries in the "proxies" class below.
    [ R. Tardif, Univ. of Washington, August 2016 ]
  - Addition of filters for selecting the set of proxy records available for
-   assimilation on data availability over reconstruction period.
+   assimilation based on data availability over reconstruction period.
    [ R. Tardif, Univ. of Washington, October 2016 ]
-
+ - Added features associated with the use of low-resolution marine
+   proxies (uk37 from marine cores) and production of reconstructions at 
+   lower temporal resolutions (i.e. other than annual).
+   [ R. Tardif, Univ. of Washington, Jan-Feb 2017 ]
 """
 
 from os.path import join
 from copy import deepcopy
+
+#import matlab.engine
 
 class wrapper(object):
     """
@@ -76,7 +81,7 @@ class wrapper(object):
     ##** BEGIN User Parameters **##
 
     multi_seed = None
-    iter_range = (0, 0)
+    iter_range = (0, 1)
 
     ##** END User Parameters **##
 
@@ -124,28 +129,40 @@ class core(object):
 
     ##** BEGIN User Parameters **##
 
-    nexp = 'test'
+    nexp = 'dadt_test'
 
+    lmr_path = '/Users/hakim/data/LMR'
     #lmr_path = '/home/disk/ice4/nobackup/hakim/lmr'
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    #lmr_path = '/home/disk/kalman3/rtardif/LMR'
+
     online_reconstruction = False
     clean_start = True
     use_precalc_ye = True
+
     # TODO: More pythonic to make last time a non-inclusive edge
-    recon_period = (1800, 2000)
-    nens = 100
+    recon_period = (-20000, 2000)
+
+    # time interval of reconstructed fields (in years)
+    #recon_timescale = 1   # annual
+    recon_timescale = 250
+    
+    nens = 75
+
     seed = None
+
     loc_rad = None
 
+    datadir_output = '/Users/hakim/data/LMR/output'
     #datadir_output = '/home/disk/ice4/hakim/svnwork/lmr/trunk/data'
     #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
-    datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
+    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     
+    archive_dir = '/Users/hakim/data/LMR/archive'
     #archive_dir = '/home/disk/kalman3/hakim/LMR/'
     #archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
-    archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
+    #archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
 
     ##** END User Parameters **##
@@ -201,10 +218,11 @@ class proxies(object):
     # Which proxy database to use ?
     # =============================
     #use_from = ['pages']
-    use_from = ['NCDC']
+    #use_from = ['NCDC']
+    use_from = ['NCDCdadt']
 
-    #proxy_frac = 1.0
-    proxy_frac = 0.75
+    proxy_frac = 1.0
+    #proxy_frac = 0.75
 
     # type of proxy timeseries to return: 'anom' for anomalies
     # (temporal mean removed) or asis' to keep unchanged
@@ -265,6 +283,8 @@ class proxies(object):
         proxy_type_mapping: dict{(str,str): str}
             Maps proxy type and measurement to our proxy type keys.
             (e.g. {('Tree ring', 'TRW'): 'Tree ring_Width'} )
+        proxy_psm_type: dict{str:str}
+            Association between proxy type and psm type.
         simple_filters: dict{'str': Iterable}
             List mapping Pages2k metadata sheet columns to a list of values
             to filter by.
@@ -282,7 +302,7 @@ class proxies(object):
 
         proxy_resolution = [1.0]
 
-        # DO NOT CHANGE FORMAT BELOW
+        # DO NOT CHANGE *FORMAT* BELOW
 
         proxy_order = [
             'Tree ring_Width',
@@ -422,6 +442,8 @@ class proxies(object):
         proxy_type_mapping: dict{(str,str): str}
             Maps proxy type and measurement to our proxy type keys.
             (e.g. {('Tree ring', 'TRW'): 'Tree ring_Width'} )
+        proxy_psm_type: dict{str:str}
+            Association between proxy type and psm type.
         simple_filters: dict{'str': Iterable}
             List mapping proxy metadata sheet columns to a list of values
             to filter by.
@@ -451,7 +473,7 @@ class proxies(object):
         #database_filter = ['PAGES2']
         #database_filter = ['LMR','PAGES2']
 
-        # DO NOT CHANGE FORMAT BELOW
+        # DO NOT CHANGE *FORMAT* BELOW
         proxy_order = [
             'Tree Rings_WoodDensity',
 #            'Tree Rings_WidthPages',
@@ -577,6 +599,142 @@ class proxies(object):
 
             self.simple_filters = {'Resolution (yr)': self.proxy_resolution}
 
+            
+
+    # --------------------------------
+    # proxies specific to DADT project
+    # --------------------------------
+    class _ncdcdadt(object):
+        """
+        Parameters for NCDCdadt proxy class
+
+        Notes
+        -----
+        proxy_type_mappings and simple_filters are creating during instance
+        creation.
+
+        Attributes
+        ----------
+        datadir_proxy: str
+            Absolute path to proxy data *or* None if using default lmr_path
+        datafile_proxy: str
+            proxy records filename
+        metafile_proxy: str
+            proxy metadata filename
+        dataformat_proxy: str
+            File format of the proxy data
+        regions: list(str)
+            List of proxy data regions (data keys) to use.
+        proxy_resolution: list(float or tuple)
+            List of proxy time resolutions to use. 
+            If tuple, indicates a *range* of resolutions. 
+        database_filter: list(str)
+            List of databases from which to limit the selection of proxies.
+            Use [] (empty list) if no restriction, or ['db_name1', db_name2'] to
+            limit to proxies contained in "db_name1" OR "db_name2".
+            Possible choices are: 'PAGES1', 'PAGES2', 'LMR'
+        proxy_order: list(str):
+            Order of assimilation by proxy type key
+        proxy_assim2: dict{ str: list(str)}
+            Proxy types to be assimilated.
+            Uses dictionary with structure {<<proxy type>>: [.. list of
+            measuremant tags ..] where "proxy type" is written as
+            "<<archive type>>_<<measurement type>>"
+        proxy_type_mapping: dict{(str,str): str}
+            Maps proxy type and measurement to our proxy type keys.
+            (e.g. {('Tree ring', 'TRW'): 'Tree ring_Width'} )
+        proxy_psm_type: dict{str:str}
+            Association between proxy type and psm type.
+        simple_filters: dict{'str': Iterable}
+            List mapping proxy metadata sheet columns to a list of values
+            to filter by.
+        """
+
+        ##** BEGIN User Parameters **##
+
+        dbversion = 'v0.0.0'
+
+        datadir_proxy = None
+        datafile_proxy = 'DADT_%s_Proxies.df.pckl' %(dbversion)
+        metafile_proxy = 'DADT_%s_Metadata.df.pckl' % (dbversion)
+        dataformat_proxy = 'DF'
+
+        # This is not activated with yet...
+        regions = []
+
+        # Restrict uploaded proxy records to those within specified
+        # temporal resolution. 
+        proxy_resolution = [(0.,2500.)]
+
+        # Limit proxies to those included in the following list of databases
+        # Note: Empty list = no restriction
+        #       If list has more than one element, only records contained in ALL
+        #       databases listed will be retained.
+        database_filter = []
+
+        # DO NOT CHANGE *FORMAT* BELOW
+
+        proxy_order = [
+        #    'Marine Cores_uk37',
+            'Marine sediments_uk37',
+            ]
+
+        # Assignment of psm type per proxy type
+        # Choices are: 'linear', 'h_interp', 'bayesreg_uk37', 'bayesreg_tex86'
+        #  The linear PSM can be used on *all* proxies.
+        #  The h_interp forward model is to be used for isotope proxies when
+        #  the prior is taken from an isotope-enabled GCM output. 
+        proxy_psm_type = {
+            'Marine Cores_uk37'             : 'bayesreg_uk37',
+            'Marine sediments_uk37'         : 'bayesreg_uk37',
+        }
+        
+        proxy_assim2 = {
+            'Marine Cores_uk37'             : ['uk37', 'UK37'],
+            'Marine sediments_uk37'         : ['UK37'],
+        }
+
+        # A blacklist on proxy records, to prevent assimilation of specific
+        # chronologies known to be duplicates.
+        proxy_blacklist = []
+        
+        
+        ##** END User Parameters **##
+
+        def __init__(self):
+            if self.datadir_proxy is None:
+                self.datadir_proxy = join(core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = self.datadir_proxy
+
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)
+
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = list(self.regions)
+            self.proxy_resolution = self.proxy_resolution
+            self.proxy_timeseries_kind = proxies.proxy_timeseries_kind
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_psm_type = deepcopy(self.proxy_psm_type)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.database_filter = list(self.database_filter)
+            self.proxy_blacklist = list(self.proxy_blacklist)
+            self.proxy_availability_filter = proxies.proxy_availability_filter
+            self.proxy_availability_fraction = proxies.proxy_availability_fraction
+            
+            self.proxy_type_mapping = {}
+            for ptype, measurements in self.proxy_assim2.iteritems():
+                # Fetch proxy type name that occurs before underscore
+                type_name = ptype.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = ptype
+
+            self.simple_filters = {'Resolution (yr)': self.proxy_resolution}
+
+
+    
     # Initialize subclasses with all attributes
     def __init__(self, **kwargs):
         self.use_from = self.use_from
@@ -584,7 +742,7 @@ class proxies(object):
         self.seed = core.seed
         self.pages = self._pages(**kwargs)
         self.ncdc = self._ncdc(**kwargs)
-
+        self.ncdcdadt = self._ncdcdadt(**kwargs)
 
 class psm(object):
     """
@@ -597,10 +755,15 @@ class psm(object):
     """
 
     ##** BEGIN User Parameters **##
-    
+
+    # Averaging period for the PSM: 'annual' or 'season'
     avgPeriod = 'annual'
     #avgPeriod = 'season'
 
+    # If avgPeriod = 'season', use seasonality from proxy metadata or objectively derived on the basis of psm calibration?
+    season_source = 'proxy_metadata'
+    #season_source = 'psm_calib'
+    
     # Mapping of calibration sources w/ climate variable
     # To be modified only if a new calibration source is added. 
     all_calib_sources = {'temperature': ['GISTEMP', 'MLOST', 'HadCRUT', 'BerkeleyEarth'], 'moisture': ['GPCC','DaiPDSI']}
@@ -649,8 +812,8 @@ class psm(object):
         #datatag_calib = 'GPCC'
         #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
-        #datatag_calib_P = 'DaiPDSI'
-        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+        #datatag_calib = 'DaiPDSI'
+        #datafile_calib = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 
         
         dataformat_calib = 'NCD'
@@ -666,14 +829,30 @@ class psm(object):
             self.datafile_calib = self.datafile_calib
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
-            self.avgPeriod = psm.avgPeriod
 
-            if '-'.join(proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+            if '-'.join(proxies.use_from) == 'pages' and 'season' in psm.avgPeriod:
                 print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
                 print '       No seasonality metadata provided in that dataset. Exiting!'
                 print '       Change avgPeriod to "annual" in your configuration.'
                 raise SystemExit()
-            
+
+            try:
+                if psm.avgPeriod == 'annual':
+                    self.avgPeriod = psm.avgPeriod
+                elif psm.avgPeriod == 'season' and psm.season_source:
+                    if psm.season_source == 'proxy_metadata':
+                        self.avgPeriod = psm.avgPeriod+'META'
+                    elif psm.season_source == 'psm_calib':
+                        self.avgPeriod = psm.avgPeriod+'PSM'
+                    else:
+                        print('ERROR: unrecognized psm.season_source attribute!')
+                        raise SystemExit()
+                else:
+                    self.avgPeriod = psm.avgPeriod
+            except:
+                self.avgPeriod = psm.avgPeriod
+
+
             if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
             else:
@@ -789,13 +968,29 @@ class psm(object):
             self.datafile_calib_P = self.datafile_calib_P
             self.dataformat_calib = self.dataformat_calib
             self.psm_r_crit = self.psm_r_crit
-            self.avgPeriod = psm.avgPeriod
 
-            if '-'.join(proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+            if '-'.join(proxies.use_from) == 'pages' and 'season' in psm.avgPeriod:
                 print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
                 print '       No seasonality metadata provided in that dataset. Exiting!'
                 print '       Change avgPeriod to "annual" in your configuration.'
                 raise SystemExit()
+
+            try:
+                if psm.avgPeriod == 'annual':
+                    self.avgPeriod = psm.avgPeriod
+                elif psm.avgPeriod == 'season' and psm.season_source:
+                    if psm.season_source == 'proxy_metadata':
+                        self.avgPeriod = psm.avgPeriod+'META'
+                    elif psm.season_source == 'psm_calib':
+                        self.avgPeriod = psm.avgPeriod+'PSM'
+                    else:
+                        print('ERROR: unrecognized psm.season_source attribute!')
+                        raise SystemExit()
+                else:
+                    self.avgPeriod = psm.avgPeriod
+            except:
+                self.avgPeriod = psm.avgPeriod
+
             
             if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
@@ -921,14 +1116,30 @@ class psm(object):
             self.datafile_calib_P = self.datafile_calib_P
             self.dataformat_calib_P = self.dataformat_calib_P
             self.psm_r_crit = self.psm_r_crit
-            self.avgPeriod = psm.avgPeriod
 
-            if '-'.join(proxies.use_from) == 'pages' and self.avgPeriod == 'season':
+            if '-'.join(proxies.use_from) == 'pages' and 'season' in psm.avgPeriod:
                 print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
                 print '       No seasonality metadata provided in that dataset. Exiting!'
                 print '       Change avgPeriod to "annual" in your configuration.'
                 raise SystemExit()
-                        
+
+            try:
+                if psm.avgPeriod == 'annual':
+                    self.avgPeriod = psm.avgPeriod
+                elif psm.avgPeriod == 'season' and psm.season_source:
+                    if psm.season_source == 'proxy_metadata':
+                        self.avgPeriod = psm.avgPeriod+'META'
+                    elif psm.season_source == 'psm_calib':
+                        self.avgPeriod = psm.avgPeriod+'PSM'
+                    else:
+                        print('ERROR: unrecognized psm.season_source attribute!')
+                        raise SystemExit()
+                else:
+                    self.avgPeriod = psm.avgPeriod
+            except:
+                self.avgPeriod = psm.avgPeriod
+
+            
             if self.datadir_calib is None:
                 self.datadir_calib = join(core.lmr_path, 'data', 'analyses')
             else:
@@ -1030,15 +1241,75 @@ class psm(object):
             else:
                 raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
                                  ' Unable to assign kind to psm_required_variables'
-                                 ' in h_interp psm class.')                
+                                 ' in h_interp psm class.')
             self.psm_required_variables = {'d18O_sfc_Amon': psm_var_kind}
+
+
+    class _bayesreg_uk37(object):
+        """
+        Parameters for the Bayesian regression PSM for uk37 proxies.
+
+        Attributes
+        ----------
+        radius_influence : real
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
+        datadir_obsError: str
+            Absolute path to obs. error variance data
+        filename_obsError: str
+            Filename for obs. error variance data
+        dataformat_obsError: str
+            String indicating the format of the file containing obs. error
+            variance data
+            Note: note currently used by code. For info purpose only.
+        datafile_obsError: str
+            Absolute path/filename of obs. error variance data
+        """
+
+        ##** BEGIN User Parameters **##
+        
+        datadir_BayesRegressionData = None
+        filename_BayesRegressionData = None
+        
+        dataformat_BayesRegressionData = 'MAT' # a .mat Matlab file
+
+        
+        ##** END User Parameters **##
+
+        def __init__(self):
+
+            if self.datadir_BayesRegressionData is None:
+                self.datadir_BayesRegressionData = join(core.lmr_path, 'PSM')
+            else:
+                self.datadir_BayesRegressionData = self.datadir_BayesRegressionData
+            
+            if self.filename_BayesRegressionData is None:
+                self.filename_BayesRegressionData = 'PSM_bayes_posterior_UK37.mat'
+            else:
+                self.filename_BayesRegressionData = self.filename_BayesRegressionData
+
+            self.datafile_BayesRegressionData = join(self.datadir_BayesRegressionData,
+                                              self.filename_BayesRegressionData)
     
+            # define state variable needed to calculate Ye's
+            self.psm_required_variables = {'tos_sfc_Odec': 'full'}
+
+            # matlab engine as python object, needed for calculations
+            # of the forward model.
+            #self.MatlabEng = matlab.engine.start_matlab('-nojvm')
+
+            self.datadir_BayesRegressionData = self.datadir_BayesRegressionData
+            self.datafile_BayesRegressionData = self.datafile_BayesRegressionData
+            self.dataformat_BayesRegressionData = self.dataformat_BayesRegressionData
+
+
     # Initialize subclasses with all attributes 
     def __init__(self, **kwargs):
         self.linear = self._linear(**kwargs)
         self.linear_TorP = self._linear_TorP(**kwargs)
         self.bilinear = self._bilinear(**kwargs)
         self.h_interp = self._h_interp(**kwargs)
+        self.bayesreg_uk37 = self._bayesreg_uk37(**kwargs)
 
 
 class prior(object):
@@ -1070,8 +1341,8 @@ class prior(object):
     datadir_prior = None
 
     # Prior data directory & model source
-    prior_source = 'ccsm4_last_millenium'
-    datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
+    #prior_source = 'ccsm4_last_millenium'
+    #datafile_prior = '[vardef_template]_CCSM4_past1000_085001-185012.nc'
     # or
     #prior_source     = 'ccsm4_preindustrial_control'
     #datafile_prior   = '[vardef_template]_CCSM4_piControl_080001-130012.nc
@@ -1093,15 +1364,19 @@ class prior(object):
     # or
     #prior_source     = 'era20cm'
     #datafile_prior   = '[vardef_template]_ERA20CM_190001-201012.nc'
+    # or
+    prior_source     = 'ccsm3_trace21ka'
+    datafile_prior   = '[vardef_template]_CCSM3_TraCE21ka.nc'
 
+    
     dataformat_prior = 'NCD'
 
 
     # dict defining variables to be included in state vector (keys)
     # and associated "kind", i.e. as anomalies ('anom') or full field ('full')
     state_variables = {
-        'tas_sfc_Amon'              : 'anom',
-        'pr_sfc_Amon'               : 'anom',
+    #    'tas_sfc_Amon'              : 'anom',
+    #    'pr_sfc_Amon'               : 'anom',
     #    'scpdsi_sfc_Amon'           : 'anom',
     #    'psl_sfc_Amon'              : 'anom',
     #    'zg_500hPa_Amon'            : 'full',
@@ -1118,6 +1393,8 @@ class prior(object):
     #    'ohcSouthern_0-700m_Omon'   : 'anom',
     #    'ohcArctic_0-700m_Omon'     : 'anom',
     #    'd18O_sfc_Amon'             : 'full',
+    #    'tos_sfc_Odec'              : 'full',
+        'tas_sfc_Adec'              : 'full',
         }
 
     
@@ -1125,7 +1402,13 @@ class prior(object):
     # by default, considers the entire length of the simulation
     detrend = False
 
-    avgInterval = None
+    # Boolean: truncate prior?
+    truncate = False
+
+    # Dict. defining which variables represent temperature or moisture.
+    # To be modified only if a new temperature or moisture state variable is added. 
+    state_variables_info = {'temperature': ['tas_sfc_Amon'],
+                            'moisture': ['pr_sfc_Amon','scpdsi_sfc_Amon']}
     
     ##** END User Parameters **##
 
@@ -1135,6 +1418,7 @@ class prior(object):
         self.datafile_prior = self.datafile_prior
         self.dataformat_prior = self.dataformat_prior
         self.state_variables = self.state_variables
+        self.state_variables_info = self.state_variables_info
         self.detrend = self.detrend
         self.seed = core.seed
 
@@ -1144,10 +1428,16 @@ class prior(object):
         else:
             self.datadir_prior = self.datadir_prior
 
-        if self.avgInterval is None:
-            self.avgInterval = [1,2,3,4,5,6,7,8,9,10,11,12] # annual (calendar) as default
+
+        if core.recon_timescale == 1:
+            self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
+        elif core.recon_timescale > 1:
+            # new format for CCSM3 TraCE21ka:
+            self.avgInterval = {'multiyear': [core.recon_timescale]}            
         else:
-            self.avgInterval = self.avgInterval
+            print('ERROR in config.: unrecognized core.recon_timescale!')
+            raise SystemExit()
+
 
 class Config(object):
 
