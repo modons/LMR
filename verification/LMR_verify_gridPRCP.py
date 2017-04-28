@@ -313,14 +313,26 @@ for var in verif_vars:
     datafile = vardef +'_20CR_185101-201112.nc'
     
     dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
     rtime = dd[vardef]['years']
     TCR_time = np.array([d.year for d in rtime])
-    lat_TCR = dd[vardef]['lat']
-    lon_TCR = dd[vardef]['lon']
-    nlat_TCR = len(lat_TCR)
-    nlon_TCR = len(lon_TCR)
+    lats = dd[vardef]['lat']
+    lons = dd[vardef]['lon']
+    latshape = lats.shape
+    lonshape = lons.shape
+    if len(latshape) == 2 & len(lonshape) == 2:
+        # stored in 2D arrays
+        lat_TCR = np.unique(lats)
+        lon_TCR = np.unique(lons)
+        nlat_TCR, = lat_TCR.shape
+        nlon_TCR, = lon_TCR.shape
+    else:
+        # stored in 1D arrays
+        lon_TCR = lons
+        lat_TCR = lats
+        nlat_TCR = len(lat_TCR)
+        nlon_TCR = len(lon_TCR)
     lon2_TCR, lat2_TCR = np.meshgrid(lon_TCR, lat_TCR)
+
     TCRfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
     TCR = dd[vardef]['value']                           # Anomalies
 
@@ -344,14 +356,26 @@ for var in verif_vars:
     datafile = vardef +'_ERA20C_190001-201012.nc'
     
     dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
     rtime = dd[vardef]['years']
     ERA_time = np.array([d.year for d in rtime])
-    lat_ERA = dd[vardef]['lat']
-    lon_ERA = dd[vardef]['lon']
-    nlat_ERA = len(lat_ERA)
-    nlon_ERA = len(lon_ERA)
+    lats = dd[vardef]['lat']
+    lons = dd[vardef]['lon']
+    latshape = lats.shape
+    lonshape = lons.shape
+    if len(latshape) == 2 & len(lonshape) == 2:
+        # stored in 2D arrays
+        lat_ERA20C = np.unique(lats)
+        lon_ERA20C = np.unique(lons)
+        nlat_ERA20C, = lat_ERA20C.shape
+        nlon_ERA20C, = lon_ERA20C.shape
+    else:
+        # stored in 1D arrays
+        lon_ERA20C = lons
+        lat_ERA20C = lats
+        nlat_ERA20C = len(lat_ERA20C)
+        nlon_ERA20C = len(lon_ERA20C)
     lon2_ERA, lat2_ERA = np.meshgrid(lon_ERA, lat_ERA)
+
     ERAfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
     ERA = dd[vardef]['value']                           # Anomalies
 

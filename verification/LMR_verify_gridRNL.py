@@ -67,39 +67,7 @@ datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model/'
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesCoralsSrCaD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesSpeleoD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesNoTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
-# ---
-#nexp = 'testPslW700_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_ERA20C_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
-# ---
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPseason_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
-nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
-
-
-# -- hansi --
-# using soft-linked directory located in /home/disk/ekman3/rtardif/LMR/output
-#nexp = 'hansi_winds'
+nexp = 'test'
 
 # Definition of variables to verify
 #                        kind   name     variable long name        bounds   units   mult. factor
@@ -244,14 +212,26 @@ for var in verif_vars:
     datafile = vardef +'_20CR_185101-201112.nc'
     
     dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
     rtime = dd[vardef]['years']
     TCR_time = np.array([d.year for d in rtime])
-    lat_TCR = dd[vardef]['lat']
-    lon_TCR = dd[vardef]['lon']
-    nlat_TCR = len(lat_TCR)
-    nlon_TCR = len(lon_TCR)
-    lon2_TCR, lat2_TCR = np.meshgrid(lon_TCR, lat_TCR)
+    lats = dd[vardef]['lat']
+    lons = dd[vardef]['lon']
+    latshape = lats.shape
+    lonshape = lons.shape
+    if len(latshape) == 2 & len(lonshape) == 2:
+        # stored in 2D arrays
+        lat_TCR = np.unique(lats)
+        lon_TCR = np.unique(lons)
+        nlat_TCR, = lat_TCR.shape
+        nlon_TCR, = lon_TCR.shape
+    else:
+        # stored in 1D arrays
+        lon_TCR = lons
+        lat_TCR = lats
+        nlat_TCR = len(lat_TCR)
+        nlon_TCR = len(lon_TCR)
+    lon2d_TCR, lat2d_TCR = np.meshgrid(lon_TCR, lat_TCR)
+
     #TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
     TCR = dd[vardef]['value']                        # Anomalies
 
@@ -263,14 +243,26 @@ for var in verif_vars:
     datafile = var+'_ERA20C_190001-201012.nc'
 
     dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
     rtime = dd[vardef]['years']
     ERA20C_time = np.array([d.year for d in rtime])
-    lat_ERA20C = dd[vardef]['lat']
-    lon_ERA20C = dd[vardef]['lon']
-    nlat_ERA20C = len(lat_ERA20C)
-    nlon_ERA20C = len(lon_ERA20C)
+    lats = dd[vardef]['lat']
+    lons = dd[vardef]['lon']
+    latshape = lats.shape
+    lonshape = lons.shape
+    if len(latshape) == 2 & len(lonshape) == 2:
+        # stored in 2D arrays
+        lat_ERA20C = np.unique(lats)
+        lon_ERA20C = np.unique(lons)
+        nlat_ERA20C, = lat_ERA20C.shape
+        nlon_ERA20C, = lon_ERA20C.shape
+    else:
+        # stored in 1D arrays
+        lon_ERA20C = lons
+        lat_ERA20C = lats
+        nlat_ERA20C = len(lat_ERA20C)
+        nlon_ERA20C = len(lon_ERA20C)
     lon2_ERA20C, lat2_ERA20C = np.meshgrid(lon_ERA20C, lat_ERA20C)
+
     #ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
     ERA20C = dd[vardef]['value']                        # Anomalies
 

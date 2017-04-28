@@ -17,10 +17,12 @@ import os
 import numpy as np
 import re
 import cPickle
+import collections
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
 from scipy import signal
+from scipy.spatial import cKDTree
 from spharm import Spharmt, getspecindx, regrid
 
 def atoi(text):
@@ -267,7 +269,7 @@ def ensemble_stats(workdir, y_assim):
               : extracts Ye's from augmented state vector (Ye=HXa), match with corresponding
                 proxy sites from master list of proxies and output to analysis_Ye.pckl file
       Rrevised June 2016 (Michael Erb, USC)
-              : Fixed a bug wehre the analysis Ye values were not being
+              : Fixed a bug where the analysis Ye values were not being
                 indexed by year properly in forming analysis_Ye.pckl
       Revised February 2017 (R Tardif, UW)
               : Added flexibility by getting rid of originally hard-coded features.
@@ -291,7 +293,6 @@ def ensemble_stats(workdir, y_assim):
     # get a listing of the analysis files
     files = glob.glob(workdir+"/year*")
     # sorted
-    #files.sort()
     sfiles = natural_sort(files)    
     nyears = len(sfiles)
 
@@ -303,57 +304,137 @@ def ensemble_stats(workdir, y_assim):
         ibeg = state_info[var]['pos'][0]
         iend = state_info[var]['pos'][1]
 
-        # variable type (2D lat/lon, 2D lat/depth, time series etc ...)
+        # Determine variable type (2D lat/lon, 2D lat/depth, time series etc ...)
+        # Look for the 'vartype' entry in the state vector dict.
+        # Possibilities are: '2D:horizontal', '2D:meridional_vertical', '0D:time series'
+        if state_info[var]['vartype'] == '2D:horizontal': 
+            # 2D:horizontal variable
+            ndim1 = state_info[var]['spacedims'][0]
+            ndim2 = state_info[var]['spacedims'][1]
 
-        if state_info[var]['spacedims']: # var has spatial dimensions (not None)
-            if len(state_info[var]['spacecoords']) == 2: # 2D variable
-                ndim1 = state_info[var]['spacedims'][0]
-                ndim2 = state_info[var]['spacedims'][1]
-                
-                Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
-                xbm = np.mean(Xb,axis=2) # ensemble mean
-                xbv = np.var(Xb,axis=2,ddof=1)  # ensemble variance
+            # Prior
+            Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+            xbm = np.mean(Xb,axis=2)       # ensemble mean
+            xbv = np.var(Xb,axis=2,ddof=1) # ensemble variance
 
-                # process the **analysis** files
-                years = []
-                xam = np.zeros([nyears,ndim1,ndim2])
-                xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
-                k = -1
-                for f in sfiles:
-                    k = k + 1
-                    i = f.rfind('year')
-                    fname_end = f[i+4:]
-                    ii = fname_end.rfind('.')
-                    year = fname_end[:ii]
-                    years.append(year)
-                    Xatmp = np.load(f)
-                    Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
-                    xam[k,:,:] = np.mean(Xa,axis=2) # ensemble mean
-                    xav[k,:,:] = np.var(Xa,axis=2,ddof=1)  # ensemble variance
+            # Process the **analysis** (i.e. posterior) files
+            years = []
+            xam = np.zeros([nyears,ndim1,ndim2])
+            xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
+            k = -1
+            for f in sfiles:
+                k = k + 1
+                i = f.rfind('year')
+                fname_end = f[i+4:]
+                ii = fname_end.rfind('.')
+                year = fname_end[:ii]
+                years.append(year)
+                Xatmp = np.load(f)
+                Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
+                xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
 
-                    
-                # form dictionary containing variables to save, including info on array dimensions
-                coordname1 = state_info[var]['spacecoords'][0]
-                coordname2 = state_info[var]['spacecoords'][1]
-                dimcoord1 = 'n'+coordname1
-                dimcoord2 = 'n'+coordname2
 
-                coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
-                coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],[state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]])
+            # form dictionary containing variables to save, including info on array dimensions
+            coordname1 = state_info[var]['spacecoords'][0]
+            coordname2 = state_info[var]['spacecoords'][1]
+            dimcoord1 = 'n'+coordname1
+            dimcoord2 = 'n'+coordname2
 
-                vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                         coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
-                vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                         coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
-    
-            else:
-                print 'ERROR in ensemble_stats: Variable of unrecognized dimensions! Exiting'
-                exit(1)
+            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
+            coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
 
-        else: # var has no spatial dims
-            Xb = Xbtmp[ibeg:iend+1,:] # prior ensemble
-            xbm = np.mean(Xb,axis=1) # ensemble mean
-            xbv = np.var(Xb,axis=1)  # ensemble variance
+            vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
+
+
+        elif state_info[var]['vartype'] == '2D:meridional_vertical': 
+
+            ndim1 = state_info[var]['spacedims'][0]
+            ndim2 = state_info[var]['spacedims'][1]
+
+            # Prior
+            Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+            xbm = np.mean(Xb,axis=2)       # ensemble mean
+            xbv = np.var(Xb,axis=2,ddof=1) # ensemble variance
+
+            # Process the **analysis** (i.e. posterior) files
+            years = []
+            xam = np.zeros([nyears,ndim1,ndim2])
+            xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
+            k = -1
+            for f in sfiles:
+                k = k + 1
+                i = f.rfind('year')
+                fname_end = f[i+4:]
+                ii = fname_end.rfind('.')
+                year = fname_end[:ii]
+                years.append(year)
+                Xatmp = np.load(f)
+                Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
+                xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
+
+
+            # form dictionary containing variables to save, including info on array dimensions
+            coordname1 = state_info[var]['spacecoords'][0]
+            coordname2 = state_info[var]['spacecoords'][1]
+            dimcoord1 = 'n'+coordname1
+            dimcoord2 = 'n'+coordname2
+
+            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
+            coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
+
+            vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
+
+
+        elif state_info[var]['vartype'] == '1D:meridional': 
+
+            ndim1 = state_info[var]['spacedims'][0]
+
+            # Prior
+            Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,nens))
+            xbm = np.mean(Xb,axis=1)       # ensemble mean
+            xbv = np.var(Xb,axis=1,ddof=1) # ensemble variance
+
+            # Process the **analysis** (i.e. posterior) files
+            years = []
+            xam = np.zeros([nyears,ndim1])
+            xav = np.zeros([nyears,ndim1],dtype=np.float64)
+            k = -1
+            for f in sfiles:
+                k = k + 1
+                i = f.rfind('year')
+                fname_end = f[i+4:]
+                ii = fname_end.rfind('.')
+                year = fname_end[:ii]
+                years.append(year)
+                Xatmp = np.load(f)
+                Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,nens))
+                xam[k,:] = np.mean(Xa,axis=1)       # ensemble mean
+                xav[k,:] = np.var(Xa,axis=1,ddof=1) # ensemble variance
+
+            # form dictionary containing variables to save, including info on array dimensions
+            coordname1 = state_info[var]['spacecoords'][0]
+            dimcoord1 = 'n'+coordname1
+
+            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0]))
+
+            vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
+                                     coordname1:coord1, 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
+                                     coordname1:coord1, 'xbv':xbv, 'xav':xav}
+        
+        elif state_info[var]['vartype'] == '0D:time series': 
+            # 0D:time series variable (no spatial dims)
+            Xb = Xbtmp[ibeg:iend+1,:] # prior (full) ensemble
+            xbm = np.mean(Xb,axis=1)  # ensemble mean
+            xbv = np.var(Xb,axis=1)   # ensemble variance
 
             # process the **analysis** files
             years = []
@@ -378,23 +459,31 @@ def ensemble_stats(workdir, y_assim):
             vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
 
-            # ens to file
-            filen = workdir + '/ensemble_' + var
+            # (full) ensemble to file for this variable type
+            filen = workdir + '/ensemble_full_' + var
             print 'writing the new ensemble file' + filen
             np.savez(filen, **vars_to_save_ens)
 
+
+        else: 
+            print 'ERROR in ensemble_stats: Variable of unrecognized (space) dimensions! Skipping variable:', var
+            continue
+
+
+
+        # --- Write data to files ---
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
         print 'writing the new ensemble mean file...' + filen
-        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbm=xbm, xam=xam)
         np.savez(filen, **vars_to_save_mean)
 
         # ens. variance to file
         filen = workdir + '/ensemble_variance_' + var
         print 'writing the new ensemble variance file...' + filen
-        #np.savez(filen, nlat=nlat, nlon=nlon, nens=nens, years=years, lat=lat, lon=lon, xbv=xbv, xav=xav)
         np.savez(filen, **vars_to_save_var)
 
+
+    
     # --------------------------------------------------------
     # Extract the analyzed Ye ensemble for diagnostic purposes
     # --------------------------------------------------------
@@ -442,6 +531,102 @@ def ensemble_stats(workdir, y_assim):
     return
 
 
+def lon_lat_to_cartesian(lon, lat, R=6371.):
+    """
+
+    """
+    
+    lon_r = np.radians(lon)
+    lat_r = np.radians(lat)
+
+    x = R * np.cos(lat_r) * np.cos(lon_r)
+    y = R * np.cos(lat_r) * np.sin(lon_r)
+    z = R * np.sin(lat_r)
+
+    return x, y, z
+
+def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
+    """
+    Truncate lat,lon grid to another resolution using local distance-weighted averages. 
+
+    Inputs:
+    Nens            : number of ensemble members
+    X               : data array of shape (nlat*nlon,Nens) 
+    X_coords        : array of lat-lon coordinates of variable contained in X
+                      w/ shape (nlat*nlon,2)
+    ind_lat         : array index (column) at which X_ccords contains latitudes
+    ind_lon         : array index (column) at which X_ccords contains longitudes
+    ntrunc          : triangular truncation (e.g., use 42 for T42)
+
+    Outputs :
+    lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
+    lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
+    X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)
+    
+    Originator: Robert Tardif
+                University of Washington
+                March 2017
+    """
+        
+    # truncate to a lower resolution grid (triangular truncation)
+    ifix = np.remainder(ntrunc,2.0).astype(int)
+    nlat_new = ntrunc + ifix
+    nlon_new = int(nlat_new*1.5)
+
+    # create new lat,lon grid arrays
+    dlat = 90./((nlat_new-1)/2.)
+    dlon = 360./nlon_new
+    veclat = np.arange(-90.,90.+dlat,dlat)
+    veclon = np.arange(0.,360.,dlon)
+    blank = np.zeros([nlat_new,nlon_new])
+    lat_new = (veclat + blank.T).T  
+    lon_new = (veclon + blank)
+
+    # cartesian coords of target grid
+    xt,yt,zt = lon_lat_to_cartesian(lon_new.flatten(), lat_new.flatten())
+
+    # cartesian coords of source grid
+    lats = X_coords[:, ind_lat]
+    lons = X_coords[:, ind_lon]
+    xs,ys,zs = lon_lat_to_cartesian(lons, lats)
+
+    # cKDtree object of source grid
+    tree = cKDTree(zip(xs,ys,zs))
+
+    # inverse distance weighting (N pts)
+    N = 20
+    fracvalid = 0.7
+    d, inds = tree.query(zip(xt,yt,zt), k=N)
+    L = 200.
+    w = np.exp(-np.square(d)/np.square(L))
+
+    # transform each ensemble member, one at a time
+    X_new = np.zeros([nlat_new*nlon_new,Nens])
+    X_new[:] = np.nan
+    for k in range(Nens):
+        tmp = np.ma.masked_invalid(X[:,k][inds])
+        mask = tmp.mask
+
+        # apply tmp mask to weights array
+        w = np.ma.masked_where(np.ma.getmask(tmp),w)
+        
+        # compute weighted-average of surrounding data
+        datagrid = np.sum(w*tmp, axis=1)/np.sum(w, axis=1)
+
+        # keep track of valid data involved in averges  
+        nbvalid = np.sum(~mask,axis=1)
+        nonvalid = np.where(nbvalid < int(fracvalid*N))[0]
+
+        # make sure to mask grid points where too few valid data were used
+        datagrid[nonvalid] = np.nan
+        X_new[:,k] = datagrid
+
+    # make sure a masked array is returned
+    X_new = np.ma.masked_invalid(X_new)
+    
+    return X_new,lat_new,lon_new
+
+    
 def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
 
     """
@@ -458,11 +643,13 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     lat_new : 2D latitude array on the new grid (nlat_new,nlon_new)
     lon_new : 2D longitude array on the new grid (nlat_new,nlon_new)
     X_new   : truncated data array of shape (nlat_new*nlon_new, Nens)
+    
+    Originator: Greg Hakim
+                University of Washington
+                May 2015
     """
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             May 2015
 
+    
     # create the spectral object on the original grid
     specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
 
@@ -569,12 +756,12 @@ def coefficient_efficiency(ref,test,valid=None):
         dims = dims_ref[1:3]
     elif len(dims_ref) == 2: # 2D: time + 1D spatial
         dims = dims_ref[1:2]
-    elif len(dims_ref) == 1: # 1D: time series
+    elif len(dims_ref) == 1: # 0D: time series
         dims = 1
     else:
         print 'Problem with input array dimension! Exiting...'
         exit(1)
-    #print 'dims CE: ', dims
+
     CE = np.zeros(dims)
 
     # error
@@ -601,6 +788,41 @@ def coefficient_efficiency(ref,test,valid=None):
 
     return CE
 
+def crps(forecasts, observations):
+    """
+    Function to calculate the continuous ranked probability score
+    of an ensemble of forecast timeseries against observations.
+
+    Based on _crps.py in the properscoring package from TheClimateCorporation
+    on Github
+
+    Parameters
+    ----------
+    forecasts: ndarray
+        Forecast timeseries with trailing dimensions of (..., nens, ntimes)
+    observations: ndarray
+        Observations for verification with a single dimension of length ntimes
+
+    Returns
+    -------
+    crps: ndarray
+        Continuous ranked probability score over nens and ntimes.  Has shape of
+        the dimensions preceding nens (if any).
+
+    """
+    # Calculate the mean absolute error of the ensemble-mean forecast
+    fcast_error = abs(forecasts - observations)
+    mean_error = fcast_error.mean(axis=-2)
+
+    # Calculate the mean forecast ensemble difference (spread)
+    fcast_diff = np.expand_dims(forecasts, -3) - np.expand_dims(forecasts, -2)
+    fcast_dist = abs(fcast_diff).mean(axis=(-3, -2))
+
+    # Calculate the CRPS (cumulative over all times)
+    crps = mean_error - 0.5 * fcast_dist
+    crps = crps.sum(axis=-1)
+
+    return crps
 
 def rmsef(predictions, targets):
     """
@@ -832,8 +1054,8 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_str = str(proxy_database)
     if proxy_str == 'NCDC':
         proxy_str = proxy_str + str(config.proxies.ncdc.dbversion)
-    elif proxy_str == 'NCDCdadt':
-        proxy_str = proxy_str + str(config.proxies.ncdcdadt.dbversion)
+    elif proxy_str == 'NCDCdtda':
+        proxy_str = proxy_str + str(config.proxies.ncdcdtda.dbversion)
         
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
@@ -1062,8 +1284,8 @@ def validate_config(config):
         proxy_cfg = config.proxies.ncdc
     elif proxy_database == 'pages':
         proxy_cfg = config.proxies.pages
-    elif proxy_database == 'NCDCdadt':
-        proxy_cfg = config.proxies.ncdcdadt
+    elif proxy_database == 'NCDCdtda':
+        proxy_cfg = config.proxies.ncdcdtda
     else:
         print 'ERROR in specification of proxy database.'
         raise SystemExit()
@@ -1148,6 +1370,56 @@ def validate_config(config):
     
     
     return proceed_ok
+
+
+def _param_str_to_update_dict(param_str, value):
+    split_params = param_str.split('.')
+    try:
+        value_str = '{:g}'.format(value)
+    except ValueError as e:
+        value_str = '{}'.format(value)
+    param_dir_str = split_params[-1] + '-' + value_str
+
+    while split_params:
+        curr_param = split_params.pop()
+        update_dict = {curr_param: value}
+        value = update_dict
+
+    return update_dict, param_dir_str
+
+
+def nested_dict_update(orig_dict, update_dict):
+    for key, val in update_dict.iteritems():
+        if isinstance(val, collections.Mapping):
+            res = nested_dict_update(orig_dict.get(key, {}), val)
+            orig_dict[key] = res
+        else:
+            orig_dict[key] = val
+    return orig_dict
+
+
+def param_cfg_update(param_str, val, cfg_dict=None):
+
+    if cfg_dict is None:
+        cfg_dict = {}
+
+    update_dict, _ = _param_str_to_update_dict(param_str, val)
+    return nested_dict_update(cfg_dict, update_dict)
+
+
+def psearch_list_cfg_update(param_str_list, val_list, cfg_dict=None):
+
+    if cfg_dict is None:
+        cfg_dict = {}
+
+    param_dir_str = []
+    for param_str, val in zip(param_str_list, val_list):
+        update_dict, dir_str = _param_str_to_update_dict(param_str, val)
+        param_dir_str.append(dir_str)
+        cfg_dict = nested_dict_update(cfg_dict, update_dict)
+
+    param_dir_str = '_'.join(param_dir_str)
+    return cfg_dict, param_dir_str
 
 
 class FlagError(ValueError):

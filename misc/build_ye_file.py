@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import os
+import yaml
 from itertools import izip
 
 import timeit
@@ -8,7 +9,6 @@ import timeit
 sys.path.append('../')
 
 import LMR_prior
-import LMR_psms
 import LMR_proxy_pandas_rework
 import LMR_config
 from LMR_utils import create_precalc_ye_filename
@@ -49,8 +49,37 @@ from LMR_utils import create_precalc_ye_filename
                 seasonal/annual) + activation of use of the "bayesreg_uk37" forward 
                 model used for marine sediment alkenone proxies. 
                 [ R. Tardif, U. of Washington ]
-
+ -  March 2017: Introduced use of config.yml simplified configuration file.
+                [ A. Perkins, U. of Washington ]
 """
+
+# If true it uses LMR_config defaults instead of config.yml update
+
+if not LMR_config.LEGACY_CONFIG:
+    if len(sys.argv) > 1:
+        yaml_file = sys.argv[1]
+    else:
+        yaml_file = os.path.join(LMR_config.SRC_DIR, 'config.yml')
+
+    try:
+        print 'Loading configuration: {}'.format(yaml_file)
+        f = open(yaml_file, 'r')
+        yml_dict = yaml.load(f)
+        update_result = LMR_config.update_config_class_yaml(yml_dict,
+                                                            LMR_config)
+
+        # Check that all yml params match value in LMR_config
+        if update_result:
+            raise SystemExit(
+                'Extra or mismatching values found in the configuration yaml'
+                ' file.  Please fix or remove them.\n  Residual parameters:\n '
+                '{}'.format(update_result))
+
+    except IOError as e:
+        raise SystemExit(
+            ('Could not locate {}.  If use of legacy LMR_config usage is '
+             'desired then please change LEGACY_CONFIG to True'
+             'in LMR_wrapper.py.').format(yaml_file))
 
 cfg = LMR_config.Config()
 
