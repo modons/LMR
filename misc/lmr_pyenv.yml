@@ -1,7 +1,7 @@
 name: lmr
 
 channels:
-  - defaults
+  - conda-forge
   - ajdawson
 
 dependencies:
