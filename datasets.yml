@@ -214,7 +214,7 @@ ccsm3_trace21ka:
     multiple_vars: True
     template: '[vardef_template]'
     available_vars: ['tas_sfc_Adec', 'psl_sfc_Adec',
-                     'tos_sfc_Odec',sos_sfc_Odec']
+                     'tos_sfc_Odec', 'sos_sfc_Odec']
 
   datadir: null
   datafile: '[vardef_template]_CCSM3_TraCE21ka.nc'

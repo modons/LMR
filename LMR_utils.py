@@ -18,7 +18,7 @@ import numpy as np
 import re
 import cPickle
 import collections
-import ESMPy as ESMF
+import ESMF
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
@@ -652,20 +652,20 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens,
                          pole_dim=1,
                          coord_sys=ESMF.CoordSys.SPH_DEG,
                          coord_typekind=ESMF.TypeKind.R8,
-                         staggerloc=ESMF.StaggerLoc.Center)
+                         staggerloc=ESMF.StaggerLoc.CENTER)
 
     new_lat, new_lon = generate_latlon(target_nlat, target_nlon)
-    new_grid_x_cen = grid.get_coords(x)
+    new_grid_x_cen = new_grid.get_coords(x)
     new_grid_x_cen[:] = new_lon.T
-    new_grid_y_cen = grid.get_coords(y)
+    new_grid_y_cen = new_grid.get_coords(y)
     new_grid_y_cen[:] = new_lat.T
 
-    if method is 'bilinear':
+    if method == 'bilinear':
         use_method = ESMF.RegridMethod.BILINEAR
-    elif method is 'conserve':
+    elif method == 'conserve':
         # TODO implement adding corners, will require lat/lon bound coord info
         use_method = ESMF. RegridMethod.CONSERVE
-    elif method is 'patch':
+    elif method == 'patch':
         use_method = ESMF.RegridMethod.PATCH
     else:
         raise ValueError('Regridding method \'{}\''
@@ -676,12 +676,12 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens,
     dst_field = ESMF.Field(new_grid, name='dst',
                            staggerloc=ESMF.StaggerLoc.CENTER)
 
-    regrid_output = np.zeros(target_nlat * target_nlon, X_nens)
+    regrid_output = np.zeros((target_nlat * target_nlon, X_nens))
     regridder = ESMF.Regrid(src_field, dst_field, regrid_method=use_method)
 
     # Regrid each ensemble member
     for k in xrange(X_nens):
-        grid_data = X[:,k].reshape(target_nlat, target_nlon)
+        grid_data = X[:,k].reshape(X_nlat, X_nlon)
         src_field.data[:] = grid_data.T
 
         regridder(src_field, dst_field)

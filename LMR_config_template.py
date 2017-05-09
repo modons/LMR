@@ -95,7 +95,7 @@ class _YamlStorage(object):
     and a convenience function for returning loaded information.
     """
 
-    def __init__self(self, filename):
+    def __init__(self, filename):
         print 'Loading information from {}'.format(filename)
         try:
             f = open(join(SRC_DIR, filename), 'r')
@@ -1071,7 +1071,7 @@ class psm(ConfigGroup):
             super(self.__class__, self).__init__(**kwargs)
 
             self.datatag_calib_T = self.datatag_calib_T
-            dataset_descr_T = _DataInfo.get_dataset_dict(self.datatag_calib_T)
+            dataset_descr_T = _DataInfo.get_info(self.datatag_calib_T)
             self.datainfo_calib_T = dataset_descr_T['info']
             self.datadir_calib_T = dataset_descr_T['datadir']
             self.datafile_calib_T = dataset_descr_T['datafile']
@@ -1079,7 +1079,7 @@ class psm(ConfigGroup):
 
             
             self.datatag_calib_P = self.datatag_calib_P
-            dataset_descr_P = _DataInfo.get_dataset_dict(self.datatag_calib_P)
+            dataset_descr_P = _DataInfo.get_info(self.datatag_calib_P)
             self.datainfo_calib_P = dataset_descr_P['info']
             self.datadir_calib_P = dataset_descr_P['datadir']
             self.datafile_calib_P = dataset_descr_P['datafile']
@@ -1215,14 +1215,14 @@ class psm(ConfigGroup):
             super(self.__class__, self).__init__(**kwargs)
 
             self.datatag_calib_T = self.datatag_calib_T
-            dataset_descr_T = _DataInfo.get_dataset_dict(self.datatag_calib_T)
+            dataset_descr_T = _DataInfo.get_info(self.datatag_calib_T)
             self.datainfo_calib_T = dataset_descr_T['info']
             self.datadir_calib_T = dataset_descr_T['datadir']
             self.datafile_calib_T = dataset_descr_T['datafile']
             self.dataformat_calib_T = dataset_descr_T['dataformat']
 
             self.datatag_calib_P = self.datatag_calib_P
-            dataset_descr_P = _DataInfo.get_dataset_dict(self.datatag_calib_P)
+            dataset_descr_P = _DataInfo.get_info(self.datatag_calib_P)
             self.datainfo_calib_P = dataset_descr_P['info']
             self.datadir_calib_P = dataset_descr_P['datadir']
             self.datafile_calib_P = dataset_descr_P['datafile']
@@ -1566,7 +1566,7 @@ class prior(ConfigGroup):
 
         self.prior_source = self.prior_source
 
-        dataset_descr = _DataInfo.get_dataset_dict(self.prior_source)
+        dataset_descr = _DataInfo.get_info(self.prior_source)
         self.datainfo_prior = dataset_descr['info']
         self.datadir_prior = dataset_descr['datadir']
         self.datafile_prior = dataset_descr['datafile']
@@ -1597,9 +1597,9 @@ class prior(ConfigGroup):
             print('ERROR in config.: unrecognized core.recon_timescale!')
             raise SystemExit()
         
-        if self.regrid_method is not 'esmpy':
+        if self.regrid_method != 'esmpy':
             self.regrid_resolution = int(self.regrid_resolution)
-        elif self.regrid_method is 'esmpy':
+        elif self.regrid_method == 'esmpy':
             self.regrid_resolution = None
             self.esmpy_interp_method = self.esmpy_interp_method
             self.esmpy_grid_def = _GridDefinitions.get_info(self.esmpy_regrid_to)
