@@ -109,8 +109,9 @@ class _DatasetDescriptors(object):
 try:
     _DataInfo = _DatasetDescriptors()
 except IOError as e:
-    raise SystemExit('Could not load datasets.yml file.  File is required for'
-                     ' locating dataset specific files.  Exiting...')
+    raise SystemExit('Could not load datasets.yml file when initializing the '
+                     '_DatasetDescriptor in LMR_config.py. File is required '
+                     ' for locating dataset specific files.  Exiting...')
 
 
 class constants:
