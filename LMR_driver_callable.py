@@ -238,6 +238,23 @@ def LMR_driver_callable(cfg=None):
                 elif regrid_method == 'spherical_harmonics':
                     [var_array_new, lat_new, lon_new] = \
                         LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, regrid_resolution)
+                elif regrid_method == 'esmpy':
+                    target_grid = prior.esmpy_grid_def
+
+                    lat_2d = coords_array_full[:, ind_lat].reshape(nlat, nlon)
+                    lon_2d = coords_array_full[:, ind_lon].reshape(nlat, nlon)
+
+                    [var_array_new,
+                     lat_new,
+                     lon_new] = LMR_utils.regrid_esmpy(target_grid['nlat'],
+                                                       target_grid['nlon'],
+                                                       nens,
+                                                       var_array_full,
+                                                       lat_2d,
+                                                       lon_2d,
+                                                       nlat,
+                                                       nlon,
+                                                       method=prior.esmpy_interp_method)
                 else:
                     raise (SystemExit('Exiting! Unrecognized regridding method.'))
                 

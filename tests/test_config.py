@@ -224,7 +224,7 @@ def test_datadescr_null_datadir():
     cfg_update = {'psm': {'linear': {'datatag_calib': 'GISTEMP'}}}
     cfg_obj = cfg.Config(**cfg_update)
 
-    path = os.path.join(cfg_obj.core.lmr_path, 'data', 'analyses', 'GISTEMP')
+    path = os.path.join(cfg_obj.core.lmr_path, 'data', 'analyses')
     assert cfg_obj.psm.linear.datadir_calib == path
 
 
