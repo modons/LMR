@@ -18,6 +18,7 @@ import numpy as np
 import re
 import cPickle
 import collections
+import ESMPy as ESMF
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
@@ -626,6 +627,77 @@ def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
     
     return X_new,lat_new,lon_new
 
+
+def regrid_esmpy(target_nlat, target_nlon, X_nens,
+                 X, X_lat2D, X_lon2D, X_nlat, X_nlon,
+                 method='bilinear'):
+
+    # Create grid for the input state data
+    grid = ESMF.Grid(max_index=np.array((X_nlon, X_nlat)),
+                     num_peri_dims=1,
+                     pole_dim=1,
+                     coord_sys=ESMF.CoordSys.SPH_DEG,
+                     coord_typekind=ESMF.TypeKind.R8,
+                     staggerloc=ESMF.StaggerLoc.CENTER)
+
+    [x,y] = (0, 1)
+    grid_x_center = grid.get_coords(x)
+    grid_x_center[:] = X_lon2D.T
+    grid_y_center = grid.get_coords(y)
+    grid_y_center[:] = X_lat2D.T
+
+    # Create new grid
+    new_grid = ESMF.Grid(max_index=np.array((target_nlon, target_nlat)),
+                         num_peri_dims=1,
+                         pole_dim=1,
+                         coord_sys=ESMF.CoordSys.SPH_DEG,
+                         coord_typekind=ESMF.TypeKind.R8,
+                         staggerloc=ESMF.StaggerLoc.Center)
+
+    new_lat, new_lon = generate_latlon(target_nlat, target_nlon)
+    new_grid_x_cen = grid.get_coords(x)
+    new_grid_x_cen[:] = new_lon.T
+    new_grid_y_cen = grid.get_coords(y)
+    new_grid_y_cen[:] = new_lat.T
+
+    if method is 'bilinear':
+        use_method = ESMF.RegridMethod.BILINEAR
+    elif method is 'conserve':
+        # TODO implement adding corners, will require lat/lon bound coord info
+        use_method = ESMF. RegridMethod.CONSERVE
+    elif method is 'patch':
+        use_method = ESMF.RegridMethod.PATCH
+    else:
+        raise ValueError('Regridding method \'{}\''
+                         ' in regrid_esmpy does not exist.'.format(method))
+
+    # create src and dst fields
+    src_field = ESMF.Field(grid, name='src', staggerloc=ESMF.StaggerLoc.CENTER)
+    dst_field = ESMF.Field(new_grid, name='dst',
+                           staggerloc=ESMF.StaggerLoc.CENTER)
+
+    regrid_output = np.zeros(target_nlat * target_nlon, X_nens)
+    regridder = ESMF.Regrid(src_field, dst_field, regrid_method=use_method)
+
+    # Regrid each ensemble member
+    for k in xrange(X_nens):
+        grid_data = X[:,k].reshape(target_nlat, target_nlon)
+        src_field.data[:] = grid_data.T
+
+        regridder(src_field, dst_field)
+
+        out_data = dst_field.data[:].T
+        regrid_output[:, k] = out_data.flatten()
+
+    # Clean up objects
+    src_field.destroy()
+    dst_field.destroy()
+    grid.destroy()
+    new_grid.destroy()
+    regridder.destroy()
+
+    return regrid_output, new_lat, new_lon
+
     
 def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
 
@@ -679,6 +751,35 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
         X_new[:,k] = vectmp
 
     return X_new,lat_new,lon_new
+
+
+def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360)):
+    """
+    Generate regularly spaced latitude and longitude arrays
+
+    TODO: Add output for bounds, shift lats so they can be (-90,0,90)
+    Parameters
+    ----------
+    nlats: int
+    nlons
+    lat_bnd
+    lon_bnd
+
+    Returns
+    -------
+
+    """
+    xs = np.linspace(lon_bnd[0], lon_bnd[1], nlons+1)
+    lon_corner = np.array([xs[:-1], xs[1:]])
+    lon_center = lon_corner.sum(axis=0) / 2.
+
+    ys = np.linspace(lat_bnd[0], lat_bnd[1], nlats+1)
+    lat_corner = np.array([ys[:-1], ys[1:]])
+    lat_center = lat_corner.sum(axis=0) / 2.
+
+    lon_center_2d, lat_center_2d = np.meshgrid(lon_center, lat_center)
+
+    return lat_center_2d, lon_center_2d
 
 
 def assimilated_proxies(workdir):

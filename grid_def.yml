@@ -1,0 +1,9 @@
+# This file keeps some simple grid definitions to use for ESMpy regridding
+
+t42:
+  nlat: 44
+  nlon: 66
+
+reg_4x5deg:
+  nlat: 45
+  nlat: 72

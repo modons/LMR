@@ -76,3 +76,4 @@ Archive/*
 
 # default configuration
 config.yml
+LMR_config.py
