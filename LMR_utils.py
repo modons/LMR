@@ -646,6 +646,8 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens,
     grid_y_center = grid.get_coords(y)
     grid_y_center[:] = X_lat2D.T
 
+    #
+
     # Create new grid
     new_grid = ESMF.Grid(max_index=np.array((target_nlon, target_nlat)),
                          num_peri_dims=1,
@@ -676,12 +678,14 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens,
     dst_field = ESMF.Field(new_grid, name='dst',
                            staggerloc=ESMF.StaggerLoc.CENTER)
 
-    regrid_output = np.zeros((target_nlat * target_nlon, X_nens))
+    regrid_output = np.empty((target_nlat * target_nlon, X_nens))
+    regrid_output[:] = np.nan
     regridder = ESMF.Regrid(src_field, dst_field, regrid_method=use_method)
 
     # Regrid each ensemble member
     for k in xrange(X_nens):
         grid_data = X[:,k].reshape(X_nlat, X_nlon)
+
         src_field.data[:] = grid_data.T
 
         regridder(src_field, dst_field)
@@ -780,6 +784,15 @@ def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360)):
     lon_center_2d, lat_center_2d = np.meshgrid(lon_center, lat_center)
 
     return lat_center_2d, lon_center_2d
+
+
+def calculate_latlon_bnds(lats, lons):
+    dlat = abs(lats[1] - lats[0]) / 2.
+    dlon = abs(lons[1] - lons[0]) / 2.
+
+
+
+
 
 
 def assimilated_proxies(workdir):
