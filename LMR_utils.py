@@ -646,7 +646,20 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens,
     grid_y_center = grid.get_coords(y)
     grid_y_center[:] = X_lat2D.T
 
-    #
+    # check for masked values
+    try:
+        X.mask
+        masked_regrid = True
+    except AttributeError:
+        masked_regrid = False
+
+    if masked_regrid:
+        print 'Mask detected.  Adding mask to src ESMF grid'
+        grid_mask = grid.add_item(ESMF.GridItem.MASK)
+        X_mask = X[:, 0].mask.astype(np.int16)
+        X_mask = X_mask.reshape(X_nlat, X_nlon)
+        grid_mask[:] = X_mask.T
+        mask_values = np.array([1])
 
     # Create new grid
     new_grid = ESMF.Grid(max_index=np.array((target_nlon, target_nlat)),
@@ -661,6 +674,9 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens,
     new_grid_x_cen[:] = new_lon.T
     new_grid_y_cen = new_grid.get_coords(y)
     new_grid_y_cen[:] = new_lat.T
+
+    new_grid_mask = new_grid.add_item(ESMF.GridItem.MASK)
+    new_grid_mask[:] = 0
 
     if method == 'bilinear':
         use_method = ESMF.RegridMethod.BILINEAR
@@ -680,18 +696,22 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens,
 
     regrid_output = np.empty((target_nlat * target_nlon, X_nens))
     regrid_output[:] = np.nan
-    regridder = ESMF.Regrid(src_field, dst_field, regrid_method=use_method)
+    regridder = ESMF.Regrid(src_field, dst_field, regrid_method=use_method,
+                            src_mask_values=mask_values,
+                            unmapped_action=ESMF.UnmappedAction.IGNORE)
 
     # Regrid each ensemble member
     for k in xrange(X_nens):
         grid_data = X[:,k].reshape(X_nlat, X_nlon)
-
         src_field.data[:] = grid_data.T
 
         regridder(src_field, dst_field)
 
         out_data = dst_field.data[:].T
         regrid_output[:, k] = out_data.flatten()
+
+    if masked_regrid:
+        regrid_output = np.ma.masked_invalid(regrid_output)
 
     # Clean up objects
     src_field.destroy()
@@ -787,8 +807,19 @@ def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360)):
 
 
 def calculate_latlon_bnds(lats, lons):
+    assert lats.ndim == 1, 'Expected 1D array for input lats.'
+    assert lons.ndim == 1, 'Expected 1D array for input lons.'
+
+    # Note: assumes lats are monotonic increase with index
     dlat = abs(lats[1] - lats[0]) / 2.
     dlon = abs(lons[1] - lons[0]) / 2.
+
+    lat_bnds = np.zeros(len(lats)+1)
+    lon_bnds = np.zeros(len(lons))
+
+
+
+
 
 
 
