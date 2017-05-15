@@ -693,6 +693,9 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
     grid.add_coords(staggerloc=ESMF.StaggerLoc.CORNER)
     grid_x_corner = grid.get_coords(x, staggerloc=ESMF.StaggerLoc.CORNER)
     grid_x_corner[:] = lon_bnds[:, None]
+    # Cutoff last element because grid assumed periodic, this might be
+    # erroneous if we aren't using full global grids.
+    grid_x_corner[:] = lon_bnds[:-1, None]
     grid_y_corner = grid.get_coords(y, staggerloc=ESMF.StaggerLoc.CORNER)
     grid_y_corner[:] = lat_bnds[None, :]
 
@@ -911,10 +914,16 @@ def calculate_latlon_bnds(lats, lons):
     """
     if lats.ndim != 1 or lons.ndim != 1:
         raise ValueError('Expected 1D-array for input lats and lons.')
+    if np.any(np.diff(lats) < 0) or np.any(np.diff(lons) < 0):
+        raise ValueError('Expected monotonic value increase with index for '
+                         'input lats and lons.')
 
     # Note: assumes lats are monotonic increase with index
     dlat = abs(lats[1] - lats[0]) / 2.
     dlon = abs(lons[1] - lons[0]) / 2.
+
+    if not (np.all(np.diff(lats) == dlat*2) and np.all(np.diff(lons) == dlon*2)):
+        raise ValueError('Input lat or lon array is irregularly spaced.')
 
     lat_bnds = np.zeros(len(lats)+1)
     lon_bnds = np.zeros(len(lons)+1)
@@ -924,10 +933,10 @@ def calculate_latlon_bnds(lats, lons):
     if lat_bnds[0] < -90:
         lat_bnds[0] = -90.
     if lat_bnds[-1] > 90:
-        lat_bnds[0] = 90.
+        lat_bnds[-1] = 90.
 
     lon_bnds[:-1] = lons - dlon
-    lon_bnds[-1] = lons + dlon
+    lon_bnds[-1] = lons[-1] + dlon
 
     return lat_bnds, lon_bnds
 
