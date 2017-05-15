@@ -727,7 +727,8 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
     new_grid_y_cen[:] = new_lat.T
     new_grid.add_coords(staggerloc=ESMF.StaggerLoc.CORNER)
     new_grid_x_cor = new_grid.get_coords(x, staggerloc=ESMF.StaggerLoc.CORNER)
-    new_grid_x_cor[:] = new_lon_bnds[:, None]
+    # Cut off last element of lon_bnds because grid assumed periodic
+    new_grid_x_cor[:] = new_lon_bnds[:-1, None]
     new_grid_y_cor = new_grid.get_coords(y, staggerloc=ESMF.StaggerLoc.CORNER)
     new_grid_y_cor[:] = new_lat_bnds[None, :]
 
@@ -831,22 +832,47 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     return X_new,lat_new,lon_new
 
 
-def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360),
-                    ret_bnds=False):
+def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360)):
     """
-    Generate regularly spaced latitude and longitude arrays
+    Generate regularly spaced latitude and longitude arrays where each point 
+    is the center of the respective grid cell.
     
     Parameters
     ----------
     nlats: int
-    nlons
-    lat_bnd
-    lon_bnd
+        Number of latitude points
+    nlons: int
+        Number of longitude points
+    lat_bnd: tuple(float), optional
+        Bounding latitudes for gridcell edges (not centers).  Accepts values 
+        in range of [-90, 90].
+    lon_bnd: tuple(float), optional
+        Bounding longitudes for gridcell edges (not centers).  Accepts values 
+        in range of [-180, 360].
 
     Returns
     -------
+    lat_center_2d:
+        Array of central latitide points (nlat x nlon)
+    lon_center_2d:
+        Array of central longitude points (nlat x nlon)
+    lat_corner:
+        Array of latitude boundaries for all grid cells (nlat+1)
+    lon_corner:
+        Array of longitude boundaries for all grid cells (nlon+1)   
 
     """
+    if len(lat_bnd) != 2 or len(lon_bnd) != 2:
+        raise ValueError('Bound tuples must be of length 2')
+    if np.any(np.diff(lat_bnd) < 0) or np.any(np.diff(lon_bnd) < 0):
+        raise ValueError('Lower bounds must be less than upper bounds.')
+    if np.any(abs(np.array(lat_bnd)) > 90):
+        raise ValueError('Latitude bounds must be between -90 and 90')
+    if np.any(abs(np.diff(lon_bnd)) > 360):
+        raise ValueError('Longitude bound difference must not exceed 360')
+    if np.any(np.array(lon_bnd) < -180) or np.any(np.array(lon_bnd) > 360):
+        raise ValueError('Longitude bounds must be between -180 and 360')
+
     lon_corner = np.linspace(lon_bnd[0], lon_bnd[1], nlons+1)
     lon_center = np.array([lon_corner[:-1], lon_corner[1:]])
     lon_center = lon_center.sum(axis=0) / 2.
@@ -857,10 +883,7 @@ def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360),
 
     lon_center_2d, lat_center_2d = np.meshgrid(lon_center, lat_center)
 
-    if ret_bnds:
-        return lat_center_2d, lon_center_2d, lat_corner, lon_corner
-    else:
-        return lat_center_2d, lon_center_2d
+    return lat_center_2d, lon_center_2d, lat_corner, lon_corner
 
 
 def calculate_latlon_bnds(lats, lons):
@@ -869,22 +892,32 @@ def calculate_latlon_bnds(lats, lons):
     
     Parameters
     ----------
-    lats
-    lons
+    lats: ndarray
+        Regularly spaced latitudes.  Must be 1-dimensional and monotonically 
+        increase with index.
+    lons:  ndarray
+        Regularly spaced longitudes.  Must be 1-dimensional and monotonically 
+        increase with index.
 
     Returns
     -------
+    lat_bnds:
+        Array of latitude boundaries for each input latitude of length 
+        len(lats)+1.
+    lon_bnds:
+        Array of longitude boundaries for each input longitude of length
+        len(lons)+1.
 
     """
-    assert lats.ndim == 1, 'Expected 1D array for input lats.'
-    assert lons.ndim == 1, 'Expected 1D array for input lons.'
+    if lats.ndim != 1 or lons.ndim != 1:
+        raise ValueError('Expected 1D-array for input lats and lons.')
 
     # Note: assumes lats are monotonic increase with index
     dlat = abs(lats[1] - lats[0]) / 2.
     dlon = abs(lons[1] - lons[0]) / 2.
 
     lat_bnds = np.zeros(len(lats)+1)
-    lon_bnds = np.zeros(len(lons))
+    lon_bnds = np.zeros(len(lons)+1)
 
     lat_bnds[:-1] = lats[:] - dlat
     lat_bnds[-1] = lats[-1] + dlat
@@ -893,7 +926,8 @@ def calculate_latlon_bnds(lats, lons):
     if lat_bnds[-1] > 90:
         lat_bnds[0] = 90.
 
-    lon_bnds[:] = lons - dlon
+    lon_bnds[:-1] = lons - dlon
+    lon_bnds[-1] = lons + dlon
 
     return lat_bnds, lon_bnds
 
