@@ -81,6 +81,10 @@ LEGACY_CONFIG = False
 # Absolute path to LMR source code directory
 SRC_DIR = '/home/disk/ekman/rtardif/codes/LMR/pyLMR'
 
+# Control logging output. (0 = none; 1 = most important; 2 = many; 3 = a lot;
+#   >=4 all)
+LOG_LEVEL = 2
+
 # Class for distinction of configuration classes
 class ConfigGroup(object):
 

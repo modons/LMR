@@ -84,7 +84,7 @@ def LMR_driver_callable(cfg=None):
 
     # verbose controls print comments (0 = none; 1 = most important;
     #  2 = many; 3 = a lot; >=4 = all)
-    verbose = 1
+    verbose = cfg.LOG_LEVEL
 
     nexp = core.nexp
     workdir = core.datadir_output
