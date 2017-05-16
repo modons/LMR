@@ -1,6 +1,7 @@
 name: lmr
 
 channels:
+  - conda
   - conda-forge
   - ajdawson
 
@@ -14,3 +15,6 @@ dependencies:
   - pyspharm
   - pyyaml
   - pandas
+  - pytest
+  - ipython
+  - ESMPy
