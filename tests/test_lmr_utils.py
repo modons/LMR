@@ -85,6 +85,7 @@ def test_generate_latlon_bnd_limits():
     with pytest.raises(ValueError):
         Utils.generate_latlon(5, 5, lon_bnd=(14, 361))
 
+
 def test_generate_latlon_output_shp():
     nlats = 4
     nlons = 5
@@ -102,9 +103,19 @@ def test_generate_latlon_center_corner():
                                                      lon_bnd=(0, 180))
 
     np.testing.assert_equal(lats[:, 0], [-33.75, -11.25, 11.25, 33.75])
-    np.testing.assert_equal(lons[0], [18, 54, 90, 126, 162])
+    np.testing.assert_equal(lons[0], [0, 36, 72, 108, 144])
     np.testing.assert_equal(clats, [-45, -22.5, 0, 22.5, 45])
-    np.testing.assert_equal(clons, [0, 36, 72, 108, 144, 180])
+    np.testing.assert_equal(clons, [-18, 18, 54, 90, 126, 162])
+
+
+def test_generate_latlon_include_lat_endpts():
+    lats, lons, clats, clons = Utils.generate_latlon(3, 5, include_endpts=True)
+    np.testing.assert_equal(lats[:, 0], [-90, 0, 90])
+    assert clats[0] == -90
+    assert clats[-1] == 90
+
+    lats, lons, clats, clons = Utils.generate_latlon(4, 5, include_endpts=True)
+    np.testing.assert_equal(lats[:, 0], [-90, -30, 30, 90])
 
 
 def test_calc_latlon_bnd_1d_input():

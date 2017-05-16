@@ -576,13 +576,16 @@ def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
     nlon_new = int(nlat_new*1.5)
 
     # create new lat,lon grid arrays
-    dlat = 90./((nlat_new-1)/2.)
-    dlon = 360./nlon_new
-    veclat = np.arange(-90.,90.+dlat,dlat)
-    veclon = np.arange(0.,360.,dlon)
-    blank = np.zeros([nlat_new,nlon_new])
-    lat_new = (veclat + blank.T).T  
-    lon_new = (veclon + blank)
+    # Note: AP - According to github.com/jswhit/pyspharm documentation the
+    #  latitudes will not include the equator or poles when nlats is even.
+    # TODO: Decide whether this should be tied to spherical regridding grids
+    if nlat_new % 2 == 0:
+        include_poles = False
+    else:
+        include_poles = True
+
+    lat_new, lon_new, _, _ = generate_latlon(nlat_new, nlon_new,
+                                             include_endpts=include_poles)
 
     # cartesian coords of target grid
     xt,yt,zt = lon_lat_to_cartesian(lon_new.flatten(), lat_new.flatten())
@@ -816,13 +819,15 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
 
     # create new lat,lon grid arrays
-    dlat = 90./((nlat_new-1)/2.)
-    dlon = 360./nlon_new
-    veclat = np.arange(-90.,90.+dlat,dlat)
-    veclon = np.arange(0.,360.,dlon)
-    blank = np.zeros([nlat_new,nlon_new])
-    lat_new = (veclat + blank.T).T  
-    lon_new = (veclon + blank)
+    # Note: AP - According to github.com/jswhit/pyspharm documentation the
+    #  latitudes will not include the equator or poles when nlats is even.
+    if nlat_new % 2 == 0:
+        include_poles = False
+    else:
+        include_poles = True
+
+    lat_new, lon_new, _, _ = generate_latlon(nlat_new, nlon_new,
+                                             include_endpts=include_poles)
 
     # transform each ensemble member, one at a time
     X_new = np.zeros([nlat_new*nlon_new,Nens])
@@ -835,7 +840,8 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     return X_new,lat_new,lon_new
 
 
-def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360)):
+def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360),
+                    include_endpts=False):
     """
     Generate regularly spaced latitude and longitude arrays where each point 
     is the center of the respective grid cell.
@@ -852,6 +858,8 @@ def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360)):
     lon_bnd: tuple(float), optional
         Bounding longitudes for gridcell edges (not centers).  Accepts values 
         in range of [-180, 360].
+    include_endpts: bool
+        Include the poles in the latitude array.  
 
     Returns
     -------
@@ -876,15 +884,16 @@ def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360)):
     if np.any(np.array(lon_bnd) < -180) or np.any(np.array(lon_bnd) > 360):
         raise ValueError('Longitude bounds must be between -180 and 360')
 
-    lon_corner = np.linspace(lon_bnd[0], lon_bnd[1], nlons+1)
-    lon_center = np.array([lon_corner[:-1], lon_corner[1:]])
-    lon_center = lon_center.sum(axis=0) / 2.
+    lon_center = np.linspace(lon_bnd[0], lon_bnd[1], nlons, endpoint=False)
 
-    lat_corner = np.linspace(lat_bnd[0], lat_bnd[1], nlats+1)
-    lat_center = np.array([lat_corner[:-1], lat_corner[1:]])
-    lat_center = lat_center.sum(axis=0) / 2.
+    if include_endpts:
+        lat_center = np.linspace(lat_bnd[0], lat_bnd[1], nlats)
+    else:
+        tmp = np.linspace(lat_bnd[0], lat_bnd[1], nlats+1)
+        lat_center = (tmp[:-1] + tmp[1:]) / 2.
 
     lon_center_2d, lat_center_2d = np.meshgrid(lon_center, lat_center)
+    lat_corner, lon_corner = calculate_latlon_bnds(lat_center, lon_center)
 
     return lat_center_2d, lon_center_2d, lat_corner, lon_corner
 
@@ -922,7 +931,12 @@ def calculate_latlon_bnds(lats, lons):
     dlat = abs(lats[1] - lats[0]) / 2.
     dlon = abs(lons[1] - lons[0]) / 2.
 
-    if not (np.all(np.diff(lats) == dlat*2) and np.all(np.diff(lons) == dlon*2)):
+    # Check that inputs are regularly spaced
+    lat_space = np.diff(lats)
+    lon_space = np.diff(lons)
+
+    if not (np.all(abs(lat_space - dlat*2.) < 1e-5)
+            and np.all(abs(lon_space - dlon*2) < 1e-5)):
         raise ValueError('Input lat or lon array is irregularly spaced.')
 
     lat_bnds = np.zeros(len(lats)+1)
