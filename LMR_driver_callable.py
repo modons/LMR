@@ -310,8 +310,9 @@ def LMR_driver_callable(cfg=None):
                 Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
 
             # making sure Xb_one has proper mask
-            Xb_one = np.ma.masked_invalid(Xb_one)
-            np.ma.set_fill_value(Xb_one, np.nan)
+            if np.any(np.isnan(Xb_one)):
+                Xb_one = np.ma.masked_invalid(Xb_one)
+                np.ma.set_fill_value(Xb_one, np.nan)
 
             # updating dimension of new state vector
             Nx = Nx + new_dims
@@ -370,7 +371,15 @@ def LMR_driver_callable(cfg=None):
     
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    np.savez(filen, Xb_one=Xb_one.filled(), Xb_one_aug=Xb_one_aug.filled(), stateDim=state_dim,
+    try:
+        out_Xb_one = Xb_one.filled()
+        out_Xb_one_aug = Xb_one_aug.filled()
+    except AttributeError as e:
+        out_Xb_one = Xb_one
+        out_Xb_one_aug = Xb_one_aug
+
+    np.savez(filen, Xb_one=out_Xb_one, Xb_one_aug=out_Xb_one_aug,
+             stateDim=state_dim,
              Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
     
     
@@ -522,7 +531,10 @@ def LMR_driver_callable(cfg=None):
         # Dump Xa to file (use Xb in case no proxies assimilated for
         # current year)
         #np.save(filen, Xb)
-        np.save(filen, Xb.filled())
+        try:
+            np.save(filen, Xb.filled())
+        except AttributeError as e:
+            np.save(filen, Xb)
 
     end_time = time() - begin_time
 
