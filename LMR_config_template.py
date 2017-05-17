@@ -947,7 +947,7 @@ class psm(ConfigGroup):
 
             self.datatag_calib = self.datatag_calib
 
-            dataset_descr = _DataInfo.get_dataset_dict(self.datatag_calib)
+            dataset_descr = _DataInfo.get_info(self.datatag_calib)
             self.datainfo_calib = dataset_descr['info']
             self.datadir_calib = dataset_descr['datadir']
             self.datafile_calib = dataset_descr['datafile']
@@ -1628,6 +1628,10 @@ class Config(ConfigGroup):
     """
     
     def __init__(self, **kwargs):
+        self.LEGACY_CONFIG = LEGACY_CONFIG
+        self.SRC_DIR = SRC_DIR
+        self.LOG_LEVEL = LOG_LEVEL
+
         self.wrapper = wrapper(**kwargs.pop('wrapper', {}))
         self.core = core(**kwargs.pop('core', {}))
         lmr_path = self.core.lmr_path
