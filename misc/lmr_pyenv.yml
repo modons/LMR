@@ -2,7 +2,6 @@ name: lmr
 
 channels:
   - conda
-  - conda-forge
   - ajdawson
 
 dependencies:
@@ -17,4 +16,4 @@ dependencies:
   - pandas
   - pytest
   - ipython
-  - ESMPy
+  - jpeg=8*
