@@ -1606,7 +1606,7 @@ class prior(ConfigGroup):
         elif self.regrid_method == 'esmpy':
             self.regrid_resolution = None
             self.esmpy_interp_method = self.esmpy_interp_method
-            self.esmpy_grid_def = _GridDefinitions.get_info(self.esmpy_regrid_to)
+            self.esmpy_grid_def = _GridDef.get_info(self.esmpy_regrid_to)
         else:
             self.regrid_resolution = None
 
