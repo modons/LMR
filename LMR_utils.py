@@ -695,7 +695,6 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
     lat_bnds, lon_bnds = calculate_latlon_bnds(X_lat2D[:,0], X_lon2D[0])
     grid.add_coords(staggerloc=ESMF.StaggerLoc.CORNER)
     grid_x_corner = grid.get_coords(x, staggerloc=ESMF.StaggerLoc.CORNER)
-    grid_x_corner[:] = lon_bnds[:, None]
     # Cutoff last element because grid assumed periodic, this might be
     # erroneous if we aren't using full global grids.
     grid_x_corner[:] = lon_bnds[:-1, None]
@@ -716,6 +715,8 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
         X_mask = X_mask.reshape(X_nlat, X_nlon)
         grid_mask[:] = X_mask.T
         mask_values = np.array([1])
+    else:
+        mask_values = None
 
     # Create new grid
     new_grid = ESMF.Grid(max_index=np.array((target_nlon, target_nlat)),
