@@ -17,3 +17,4 @@ dependencies:
   - pytest
   - ipython
   - jpeg=8*
+  - basemap
