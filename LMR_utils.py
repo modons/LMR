@@ -676,6 +676,19 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
 
     """
 
+    lons_1D = X_lon2D[0]
+    lon_diff_negative = np.diff(lons_1D) < 0
+    if lon_diff_negative.sum() > 1:
+        raise ValueError('Expected monotonic value increase with index '
+                         '(excluding cyclic point) for input longitudes.')
+    # adjust cyclinc longitude point to boundaries if necessary
+    elif lon_diff_negative.sum() == 1:
+        cyclic_idx_start, = np.where(lon_diff_negative)
+        lon_shift = -(cyclic_idx_start+1)
+        X_lon2D = np.roll(X_lon2D, lon_shift, axis=1)
+    else:
+        lon_shift = None
+
     # Create grid for the input state data
     grid = ESMF.Grid(max_index=np.array((X_nlon, X_nlat)),
                      num_peri_dims=1,
@@ -702,17 +715,17 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
     grid_y_corner[:] = lat_bnds[None, :]
 
     # check for masked values
-    try:
-        X.mask
-        masked_regrid = True
-    except AttributeError:
-        masked_regrid = False
+    masked_regrid = hasattr(X, 'mask')
 
     if masked_regrid:
         print 'Mask detected.  Adding mask to src ESMF grid'
         grid_mask = grid.add_item(ESMF.GridItem.MASK)
         X_mask = X[:, 0].mask.astype(np.int16)
         X_mask = X_mask.reshape(X_nlat, X_nlon)
+
+        if lon_shift:
+            X_mask = np.roll(X_mask, lon_shift, axis=1)
+
         grid_mask[:] = X_mask.T
         mask_values = np.array([1])
     else:
@@ -766,6 +779,10 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
     # Regrid each ensemble member
     for k in xrange(X_nens):
         grid_data = X[:,k].reshape(X_nlat, X_nlon)
+
+        if lon_shift:
+            grid_data = np.roll(grid_data, lon_shift, axis=1)
+
         src_field.data[:] = grid_data.T
 
         regridder(src_field, dst_field)
@@ -926,7 +943,7 @@ def calculate_latlon_bnds(lats, lons):
         raise ValueError('Expected 1D-array for input lats and lons.')
     if np.any(np.diff(lats) < 0) or np.any(np.diff(lons) < 0):
         raise ValueError('Expected monotonic value increase with index for '
-                         'input lats and lons.')
+                         'input latitudes and longitudes')
 
     # Note: assumes lats are monotonic increase with index
     dlat = abs(lats[1] - lats[0]) / 2.
@@ -936,22 +953,21 @@ def calculate_latlon_bnds(lats, lons):
     lat_space = np.diff(lats)
     lon_space = np.diff(lons)
 
-    if not (np.all(abs(lat_space - dlat*2.) < 1e-5)
-            and np.all(abs(lon_space - dlon*2) < 1e-5)):
-        raise ValueError('Input lat or lon array is irregularly spaced.')
-
     lat_bnds = np.zeros(len(lats)+1)
     lon_bnds = np.zeros(len(lons)+1)
 
-    lat_bnds[:-1] = lats[:] - dlat
-    lat_bnds[-1] = lats[-1] + dlat
+    lat_bnds[1:-1] = lats[:-1] + lat_space/2.
+    lat_bnds[0] = lats[0] - lat_space[0]/2.
+    lat_bnds[-1] = lats[-1] + lat_space[-1]/2.
+
     if lat_bnds[0] < -90:
         lat_bnds[0] = -90.
     if lat_bnds[-1] > 90:
         lat_bnds[-1] = 90.
 
-    lon_bnds[:-1] = lons - dlon
-    lon_bnds[-1] = lons[-1] + dlon
+    lon_bnds[1:-1] = lons[:-1] + lon_space/2.
+    lon_bnds[0] = lons[0] - lon_space[0]/2.
+    lon_bnds[-1] = lons[-1] + lon_space[-1]/2.
 
     return lat_bnds, lon_bnds
 

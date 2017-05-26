@@ -131,16 +131,22 @@ def test_calc_latlon_bnd_monotonic():
     with pytest.raises(ValueError):
         _ = Utils.calculate_latlon_bnds(test_data[::-1], test_data)
     with pytest.raises(ValueError):
-        _ = Utils.calculate_latlon_bnds(test_data, test_data[::-1]) 
+        _ = Utils.calculate_latlon_bnds(test_data, test_data[::-1])
 
 
 def test_calc_latlon_bnd_regular_grid():
-    bad_data = np.array([1, 2, 3, 5, 8, 13, 21], dtype=np.float32)
-    good_data = np.arange(10)
-    with pytest.raises(ValueError):
-        _ = Utils.calculate_latlon_bnds(good_data, bad_data)
-    with pytest.raises(ValueError):
-        _ = Utils.calculate_latlon_bnds(bad_data, good_data)
+    irregular_data = np.array([1, 2, 3, 5, 8, 13, 21], dtype=np.float32)
+    regular_data = np.arange(10)
+    irreg_bnds = [0.5, 1.5, 2.5, 4, 6.5, 10.5, 17, 25]
+    reg_bnds = np.arange(11) - 0.5
+
+    lat_bnds, lon_bnds = Utils.calculate_latlon_bnds(regular_data, irregular_data)
+    np.testing.assert_equal(lat_bnds, reg_bnds)
+    np.testing.assert_equal(lon_bnds, irreg_bnds)
+
+    lat_bnds, lon_bnds = Utils.calculate_latlon_bnds(irregular_data, regular_data)
+    np.testing.assert_equal(lat_bnds, irreg_bnds)
+    np.testing.assert_equal(lon_bnds, reg_bnds)
 
 
 def test_calc_latlon_bnd_bounds():
