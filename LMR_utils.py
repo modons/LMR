@@ -771,7 +771,6 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
                            staggerloc=ESMF.StaggerLoc.CENTER)
 
     regrid_output = np.empty((target_nlat * target_nlon, X_nens))
-    regrid_output[:] = np.nan
     regridder = ESMF.Regrid(src_field, dst_field, regrid_method=use_method,
                             src_mask_values=mask_values,
                             unmapped_action=ESMF.UnmappedAction.IGNORE)
@@ -788,6 +787,12 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
         regridder(src_field, dst_field)
 
         out_data = dst_field.data[:].T
+
+        # Check for masked values on new grid
+        if masked_regrid:
+            out_mask = out_data == 0.0  # if it's exactly zero, it's masked
+            out_data[out_mask] = np.nan
+
         regrid_output[:, k] = out_data.flatten()
 
     if masked_regrid:
