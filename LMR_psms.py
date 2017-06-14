@@ -198,7 +198,7 @@ class LinearPSM(BasePSM):
                 self.seasonality = psm_site_data['Seasonality']
             
         except KeyError as e:
-            raise ValueError('Could not find proxy in pre-calibration file... '
+            raise ValueError('Proxy in database but not found in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
         except IOError as e:
             # No precalibration found, have to do it for this proxy
@@ -478,7 +478,7 @@ class LinearPSM(BasePSM):
             nobs = 0
 
             
-        if nobs < 10:  # skip rest if insufficient overlapping data
+        if nobs < 25:  # skip rest if insufficient overlapping data
             raise(ValueError('Insufficent observation/calibration overlap'
                              ' to calibrate psm.'))
 
@@ -783,7 +783,7 @@ class LinearPSM_TorP(LinearPSM):
             self.intercept = psm_site_data_P['PSMintercept']
             self.R = psm_site_data_P['PSMmse']
         else:
-            raise ValueError('Could not find proxy in pre-calibration file... '
+            raise ValueError('Proxy in database but not found in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
 
         
@@ -985,7 +985,7 @@ class BilinearPSM(BasePSM):
                 self.seasonality = psm_site_data['Seasonality']
             
         except KeyError as e:
-            raise ValueError('Could not find proxy in pre-calibration file... '
+            raise ValueError('Proxy in database but not found in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
         except IOError as e:
             # No precalibration found, have to do it for this proxy
@@ -1284,12 +1284,14 @@ class BilinearPSM(BasePSM):
         # Perform the regression
         try:
             regress = sm.ols(formula="y ~ Temperature + Moisture", data=df).fit()
+            #regress = sm.ols(formula="y ~ Temperature * Moisture", data=df).fit() # w/ interaction term
+            #regress = sm.ols(formula="y ~ Temperature + Moisture +Temperature:Moisture", data=df).fit() # w/ interaction term            
             # number of data points used in the regression
             nobs = int(regress.nobs)
         except:
             nobs = 0
             
-        if nobs < 10:  # skip rest if insufficient overlapping data
+        if nobs < 25:  # skip rest if insufficient overlapping data
             raise(ValueError('Insufficent observation/calibration overlap'
                              ' to calibrate psm.'))
 

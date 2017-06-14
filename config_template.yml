@@ -117,7 +117,7 @@ proxies:
       Speleothem_All: [ 'Lamina thickness' ]
 
   ncdc:
-    dbversion: 'v0.1.0'
+    dbversion: 'v0.2.0'
     datadir_proxy: null
     datafile_proxy: 'NCDC_{}_Proxies.df.pckl'
     metafile_proxy: 'NCDC_{}_Metadata.df.pckl'
@@ -133,17 +133,15 @@ proxies:
       ]
     proxy_resolution: [1.0]
     database_filter: [
-#     'PAGES2',
+#     'PAGES2kv2',
 #     'LMR'
       ]
-    proxy_blacklist: ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
-                      '09japa01a', '10guad01a', '99aust01a', '99fpol01a',
-                      '72Devo01',  '72Devo05']
+    proxy_blacklist: []
+
     proxy_order: [
-      'Tree Rings_WoodDensity',
-#      'Tree Rings_WidthPages',
       'Tree Rings_WidthPages2',
       'Tree Rings_WidthBreit',
+      'Tree Rings_WoodDensity',
       'Tree Rings_Isotopes',
       'Corals and Sclerosponges_d18O',
       'Corals and Sclerosponges_SrCa',
@@ -155,7 +153,10 @@ proxies:
       'Lake Cores_Varve',
       'Lake Cores_BioMarkers',
       'Lake Cores_GeoChem',
-      'Marine Cores_d18O'
+      'Lake Cores_Misc',
+      'Marine Cores_d18O',
+      'Speleothems_d18O',
+      'Bivalve_d18O'
       ]
     proxy_psm_type:
       Corals and Sclerosponges_d18O:  linear
@@ -168,13 +169,14 @@ proxies:
       Lake Cores_Varve:               linear
       Lake Cores_BioMarkers:          linear
       Lake Cores_GeoChem:             linear
+      Lake Cores_Misc:                linear
       Marine Cores_d18O:              linear
-      Tree Rings_WidthBreit:          linear
       Tree Rings_WidthPages2:         linear
-      Tree Rings_WidthPages:          linear
+      Tree Rings_WidthBreit:          linear
       Tree Rings_WoodDensity:         linear
       Tree Rings_Isotopes:            linear
       Speleothems_d18O:               linear
+      Bivalve_d18O:                   linear
     proxy_assim2:
       Corals and Sclerosponges_d18O: [
         'd18O',
@@ -197,7 +199,10 @@ proxies:
         ]
       Corals and Sclerosponges_Rates: [
         'ext',
-        'calc'
+        'calc',
+        'calcification',
+        'calcification rate',
+        'composite'
         ]
       Ice Cores_d18O: [
         'd18O',
@@ -220,8 +225,9 @@ proxies:
         'accum',
         'accumu'
         ]
-      Ice Cores_MeltFeature: ['MFP']
+      Ice Cores_MeltFeature: ['MFP','melt']
       Lake Cores_Varve: [
+        'thickness',
         'varve',
         'varve_thickness',
         'varve thickness'
@@ -235,15 +241,16 @@ proxies:
         'Mg/Ca',
         'Cl_cont'
         ]
+      Lake Cores_Misc: [
+        'RABD660_670',
+        'X_radiograph_dark_layer',
+        'massacum'
+        ]
       Marine Cores_d18O: ['d18O']
       Speleothems_d18O: ['d18O']
+      Bivalve_d18O: ['d18O']
       Tree Rings_WidthBreit: ['trsgi_breit']
       Tree Rings_WidthPages2: ['trsgi']
-      Tree Rings_WidthPages: [
-        'TRW',
-        'ERW',
-        'LRW'
-        ]
       Tree Rings_WoodDensity: [
         'max_d',
         'min_d',
@@ -254,6 +261,7 @@ proxies:
         'MXD'
         ]
       Tree Rings_Isotopes: ['d18O']
+
 
   ncdcdtda:
     dbversion: 'v0.0.1'

@@ -128,8 +128,34 @@ def find_date_indices(time,stime,etime):
     # input: time: an array of time values
     #        stime: the starting time
     #        etime: the ending time
+
+    # initialize returned variables
+    begin_index = None
+    end_index = None
     
     smatch = np.where(time==stime)
     ematch = np.where(time==etime)
 
-    return smatch[0], ematch[0]
+    # make sure valid integers are returned
+    if type(smatch) is tuple:
+        smatch = smatch[0]
+        ematch = ematch[0]
+        
+    if type(smatch) is np.ndarray:
+        try:
+            smatch = smatch[0]
+        except IndexError:
+            pass
+        try:
+            ematch = ematch[0]
+        except IndexError:
+            pass
+
+    
+    if isinstance(smatch,(int,np.integer)):
+        begin_index = smatch
+    if isinstance(ematch,(int,np.integer)):
+        end_index = ematch
+
+    return begin_index, end_index
+

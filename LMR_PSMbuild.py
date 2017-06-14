@@ -48,6 +48,10 @@
    based on the quality of the fit to calibration data. 
    [ R. Tardif, Univ. of Washington, December 2016 ]
 
+ - Adjustments to proxy types considered for new merged (PAGES2kv2 and NCDC)
+   proxy datasets.   
+   [ R. Tardif, Univ. of Washington, May 2017 ]
+
 """
 import os
 import numpy as np
@@ -93,7 +97,7 @@ class v_core(object):
     #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
 
-    calib_period = (1850, 2010)
+    calib_period = (1850, 2015)
 
     # PSM type to calibrate: 'linear' or 'bilinear'
     psm_type = 'linear'
@@ -362,9 +366,18 @@ class v_proxies(object):
         """
 
         ##** BEGIN User Parameters **##
-        
+
+        # db version:
+        #  v0.0.0: initial collection of NCDC-templated proxies, including PAGES2k2013 trees
+        #  v0.1.0: updated collection of NCDC-templated proxies, without PAGES2k2013 trees
+        #          but with an early version of the PAGES2k2017 (phase2) proxies converted
+        #          in NCDC-templated text files.
+        #  v0.2.0: merge of v0.1.0 NCDC proxies (w/o the NCDC-templated PAGES2k phase2) with
+        #          published version (2.0.0) of the PAGES2k2017 proxies contained in a pickle
+        #          file exported directly from the LiPD database. 
         #dbversion = 'v0.0.0'
-        dbversion = 'v0.1.0'
+        #dbversion = 'v0.1.0'
+        dbversion = 'v0.2.0' 
         
         datadir_proxy = None
         datafile_proxy = 'NCDC_%s_Proxies.df.pckl' %(dbversion)
@@ -389,7 +402,7 @@ class v_proxies(object):
 
         # DO NOT CHANGE FORMAT BELOW
         proxy_order = [
-#            'Tree Rings_WidthPages',
+#old        'Tree Rings_WidthPages',
             'Tree Rings_WidthPages2',
             'Tree Rings_WidthBreit',
             'Tree Rings_WoodDensity',
@@ -404,40 +417,49 @@ class v_proxies(object):
             'Lake Cores_Varve',
             'Lake Cores_BioMarkers',
             'Lake Cores_GeoChem',
+            'Lake Cores_Misc',
             'Marine Cores_d18O',
+            'Marine Cores_tex86',
+            'Marine Cores_uk37',
+            'Bivalve_d18O',
+            'Speleothems_d18O',
             ]
 
         proxy_assim2 = {
+            'Bivalve_d18O'                  : ['d18O'],
             'Corals and Sclerosponges_d18O' : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm',
                                                'd18o_avg','d18o_ave','dO18','d18O_4'],
+            'Corals and Sclerosponges_Rates': ['ext','calc','calcification','calcification rate','composite'],
+            'Corals and Sclerosponges_SrCa' : ['Sr/Ca','Sr_Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],\
             'Corals and Sclerosponges_d14C' : ['d14C','d14c','ac_d14c'],
             'Corals and Sclerosponges_d13C' : ['d13C','d13c','d13c_ave','d13c_ann_ave','d13C_int'],
-            'Corals and Sclerosponges_SrCa' : ['Sr/Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
             'Corals and Sclerosponges_Sr'   : ['Sr'],
             'Corals and Sclerosponges_BaCa' : ['Ba/Ca'],
             'Corals and Sclerosponges_CdCa' : ['Cd/Ca'],
             'Corals and Sclerosponges_MgCa' : ['Mg/Ca'],
             'Corals and Sclerosponges_UCa'  : ['U/Ca','U/Ca_anom'],
             'Corals and Sclerosponges_Pb'   : ['Pb'],
-            'Corals and Sclerosponges_Rates': ['ext','calc'],
             'Ice Cores_d18O'                : ['d18O','delta18O','delta18o','d18o','dO18',
                                                'd18o_int','d18O_int',
                                                'd18O_norm','d18o_norm',
                                                'd18O_anom'],
-            'Ice Cores_dD'                  : ['deltaD','delD'],
+            'Ice Cores_dD'                  : ['deltaD','delD','dD'],
             'Ice Cores_Accumulation'        : ['accum','accumu'],
-            'Ice Cores_MeltFeature'         : ['MFP'],
-            'Lake Cores_Varve'              : ['varve', 'varve_thickness', 'varve thickness'],
-            'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'], 
+            'Ice Cores_MeltFeature'         : ['MFP','melt'],
+            'Lake Cores_Varve'              : ['varve', 'varve_thickness', 'varve thickness','thickness'],
+            'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86', 'tex86'],
             'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca', 'Cl_cont'],
+            'Lake Cores_Misc'               : ['RABD660_670','X_radiograph_dark_layer','massacum'],
             'Marine Cores_d18O'             : ['d18O'],
+            'Marine Cores_tex86'            : ['tex86'],
+            'Marine Cores_uk37'             : ['uk37','UK37'],
             'Speleothems_d18O'              : ['d18O'],
             'Speleothems_d13C'              : ['d13C'],
             'Tree Rings_WidthBreit'         : ['trsgi_breit'],
             'Tree Rings_WidthPages2'        : ['trsgi'], 
-            'Tree Rings_WidthPages'         : ['TRW',
-                                               'ERW',
-                                               'LRW'],
+#old         'Tree Rings_WidthPages'         : ['TRW',
+#old                                            'ERW',
+#old                                            'LRW'],
             'Tree Rings_WoodDensity'        : ['max_d',
                                                'min_d',
                                                'early_d',
@@ -458,6 +480,9 @@ class v_proxies(object):
         #       DJF    = [-12,1,2]
         #       DJFMAM = [-12,1,2,3,4,5]
         proxy_psm_seasonality = {
+            'Bivalve_d18O'                 : {'flag':False,
+                                               'seasons_T': [],
+                                               'seasons_M': []},
             'Corals and Sclerosponges_d18O' : {'flag':False,
                                                'seasons_T': [],
                                                'seasons_M': []},
@@ -488,7 +513,16 @@ class v_proxies(object):
             'Lake Cores_GeoChem'            : {'flag':False,
                                                'seasons_T': [],
                                                'seasons_M': []},
+            'Lake Cores_Misc'               : {'flag':False,
+                                               'seasons_T': [],
+                                               'seasons_M': []},
             'Marine Cores_d18O'             : {'flag':False,
+                                               'seasons_T': [],
+                                               'seasons_M': []},
+            'Marine Cores_tex86'            : {'flag':False,
+                                               'seasons_T': [],
+                                               'seasons_M': []},
+            'Marine Cores_uk37'             : {'flag':False,
                                                'seasons_T': [],
                                                'seasons_M': []},
             'Tree Rings_WidthBreit'         : {'flag':True,
@@ -497,9 +531,9 @@ class v_proxies(object):
             'Tree Rings_WidthPages2'        : {'flag':True,
                                                'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
                                                'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
-            'Tree Rings_WidthPages'         : {'flag':True,
-                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
-                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
+#            'Tree Rings_WidthPages'         : {'flag':True,
+#                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
+#                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
             'Tree Rings_WoodDensity'        : {'flag':True,
                                                'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
                                                'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
@@ -511,7 +545,6 @@ class v_proxies(object):
                                                'seasons_M': []}
         }
 
-        
         
         def __init__(self):
             if self.datadir_proxy is None:
@@ -575,8 +608,8 @@ class v_psm(object):
     load_precalib = False
     
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
-    avgPeriod = 'annual'
-    #avgPeriod = 'season'
+    #avgPeriod = 'annual'
+    avgPeriod = 'season'
 
     # Boolean flag indicating whether PSMs are to be calibrated using objectively-derived
     # proxy seasonality instead of using the "seasonality" metadata included in the data
@@ -624,7 +657,7 @@ class v_psm(object):
         #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
         # or
         datatag_calib = 'GISTEMP'
-        datafile_calib = 'gistemp1200_ERSST.nc'
+        datafile_calib = 'gistemp1200_ERSSTv4.nc'
         # or
         #datatag_calib = 'HadCRUT'
         #datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
@@ -896,15 +929,8 @@ def main():
     for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
         sitetag = (Y.type,Y.id)
 
-        #if sitetag != ('Tree Rings_WidthBreit', 'northamerica_usa_az544B:trsgi_breit'): continue
-        #if sitetag != ('Tree Rings_WidthBreit', 'asia_russ106wB:trsgi_breit'): continue
-        #if sitetag != ('Tree Rings_WidthBreit', 'asia_indi003B:trsgi_breit'): continue
-        #if sitetag != ('Tree Rings_WidthBreit', 'asia_indi012B:trsgi_breit'): continue
-        #if sitetag != ('Tree Rings_WidthBreit', 'northamerica_canada_cana005B:trsgi_breit'): continue
-        
         print ' '
         print sitetag
-
 
         # -----------------------------------------------------
         # Prep: defining seasons to be tested, depending on the

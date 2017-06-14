@@ -141,6 +141,8 @@ def LMR_driver_callable(cfg=None):
     X.statevars = state_variables
     X.statevars_info = state_variables_info
     X.Nens = nens
+    # Use a specified reference period for state variable anomalies 
+    X.anom_reference = prior.anom_reference
     # new option: detrending the prior
     X.detrend = prior.detrend
     print 'detrend:', X.detrend
@@ -291,11 +293,13 @@ def LMR_driver_callable(cfg=None):
             else:  # if not 1st time, append to existing array
                 Xb_one = np.append(Xb_one, var_array_new, axis=0)
                 Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
-
-            # making sure Xb_one has proper mask
-            Xb_one = np.ma.masked_invalid(Xb_one)
-            np.ma.set_fill_value(Xb_one, np.nan)
-
+            
+            # making sure Xb_one has proper mask, if it contains
+            # at least one invalid value
+            if np.isnan(Xb_one).any():        
+                Xb_one = np.ma.masked_invalid(Xb_one)
+                np.ma.set_fill_value(Xb_one, np.nan)
+            
             # updating dimension of new state vector
             Nx = Nx + new_dims
 
@@ -353,9 +357,13 @@ def LMR_driver_callable(cfg=None):
     
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    np.savez(filen, Xb_one=Xb_one.filled(), Xb_one_aug=Xb_one_aug.filled(), stateDim=state_dim,
-             Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
-    
+    if np.ma.isMaskedArray(Xb_one):
+        np.savez(filen, Xb_one=Xb_one.filled(), Xb_one_aug=Xb_one_aug.filled(), stateDim=state_dim,
+                 Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
+    else:
+        np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
+                 Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
+        
     
     # ==========================================================================
     # Loop over all years & proxies and perform assimilation -------------------
@@ -504,8 +512,10 @@ def LMR_driver_callable(cfg=None):
 
         # Dump Xa to file (use Xb in case no proxies assimilated for
         # current year)
-        #np.save(filen, Xb)
-        np.save(filen, Xb.filled())
+        if np.ma.isMaskedArray(Xb):
+            np.save(filen, Xb.filled())        
+        else:
+            np.save(filen, Xb)
 
     end_time = time() - begin_time
 

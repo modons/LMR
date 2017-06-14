@@ -539,7 +539,9 @@ class proxies(ConfigGroup):
         ##** BEGIN User Parameters **##
 
         #dbversion = 'v0.0.0'
-        dbversion = 'v0.1.0'
+        #dbversion = 'v0.1.0'
+        dbversion = 'v0.2.0'
+
         
         datadir_proxy = None
         datafile_proxy = 'NCDC_{}_Proxies.df.pckl'
@@ -555,17 +557,18 @@ class proxies(ConfigGroup):
         # Limit proxies to those included in the following list of databases
         # Note: Empty list = no restriction
         #       If list has more than one element, only records contained in ALL
-        #       databases listed will be retained.
+        #       databases listed will be retained. Possibilities are:
+        #       database_filter = ['PAGES2']                   # for db v0.1.0
+        #       database_filter = ['LMR','Breits','PAGES2']    # for db v0.1.0
+        #       database_filter = ['LMR','Breits','PAGES2kv2'] # for db v0.2.0
         database_filter = []
-        #database_filter = ['PAGES2']
-        #database_filter = ['LMR','PAGES2']
-
+        
         # DO NOT CHANGE *FORMAT* BELOW
         proxy_order = [
-            'Tree Rings_WoodDensity',
-#            'Tree Rings_WidthPages',
-            'Tree Rings_WidthPages2',            
+#old            'Tree Rings_WidthPages',
+            'Tree Rings_WidthPages2',
             'Tree Rings_WidthBreit',
+            'Tree Rings_WoodDensity',
             'Tree Rings_Isotopes',
             'Corals and Sclerosponges_d18O',
             'Corals and Sclerosponges_SrCa',
@@ -577,7 +580,10 @@ class proxies(ConfigGroup):
             'Lake Cores_Varve',
             'Lake Cores_BioMarkers',
             'Lake Cores_GeoChem',
+            'Lake Cores_Misc',
             'Marine Cores_d18O',
+            'Bivalve_d18O',
+            'Speleothems_d18O',
             ]
 
         # Assignment of psm type per proxy type
@@ -588,6 +594,7 @@ class proxies(ConfigGroup):
         #  The h_interp forward model is to be used for isotope proxies when
         #  the prior is taken from an isotope-enabled GCM output. 
         proxy_psm_type = {
+            'Bivalve_d18O'                  : 'linear',
             'Corals and Sclerosponges_d18O' : 'linear',
             'Corals and Sclerosponges_SrCa' : 'linear',
             'Corals and Sclerosponges_Rates': 'linear',
@@ -598,16 +605,18 @@ class proxies(ConfigGroup):
             'Lake Cores_Varve'              : 'linear',
             'Lake Cores_BioMarkers'         : 'linear',
             'Lake Cores_GeoChem'            : 'linear',
+            'Lake Cores_Misc'               : 'linear',
             'Marine Cores_d18O'             : 'linear',
             'Tree Rings_WidthBreit'         : 'linear',
             'Tree Rings_WidthPages2'        : 'linear',
-            'Tree Rings_WidthPages'         : 'linear',
+#old            'Tree Rings_WidthPages'         : 'linear',
             'Tree Rings_WoodDensity'        : 'linear',
             'Tree Rings_Isotopes'           : 'linear',
             'Speleothems_d18O'              : 'linear',
         }
          
         proxy_assim2 = {
+            'Bivalve_d18O'                  : ['d18O'],
             'Corals and Sclerosponges_d18O' : ['d18O', 'delta18O', 'd18o',
                                                'd18O_stk', 'd18O_int',
                                                'd18O_norm', 'd18o_avg',
@@ -615,24 +624,26 @@ class proxies(ConfigGroup):
                                                'd18O_4'],
             'Corals and Sclerosponges_SrCa' : ['Sr/Ca', 'Sr_Ca', 'Sr/Ca_norm',
                                                'Sr/Ca_anom', 'Sr/Ca_int'],
-            'Corals and Sclerosponges_Rates': ['ext','calc'],
+            'Corals and Sclerosponges_Rates': ['ext','calc','calcification','calcification rate',
+                                               'composite'],
             'Ice Cores_d18O'                : ['d18O', 'delta18O', 'delta18o',
                                                'd18o', 'd18o_int', 'd18O_int',
                                                'd18O_norm', 'd18o_norm', 'dO18',
                                                'd18O_anom'],
             'Ice Cores_dD'                  : ['deltaD', 'delD', 'dD'],
             'Ice Cores_Accumulation'        : ['accum', 'accumu'],
-            'Ice Cores_MeltFeature'         : ['MFP'],
+            'Ice Cores_MeltFeature'         : ['MFP','melt'],
             'Lake Cores_Varve'              : ['varve', 'varve_thickness',
-                                               'varve thickness'],
-            'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'],
+                                               'varve thickness', 'thickness'],
+            'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86','tex86'],
             'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca', 'Cl_cont'],
+            'Lake Cores_Misc'               : ['RABD660_670','X_radiograph_dark_layer','massacum'],
             'Marine Cores_d18O'             : ['d18O'],
             'Tree Rings_WidthBreit'         : ['trsgi_breit'],
             'Tree Rings_WidthPages2'        : ['trsgi'],
-            'Tree Rings_WidthPages'         : ['TRW',
-                                              'ERW',
-                                              'LRW'],
+#old            'Tree Rings_WidthPages'         : ['TRW',
+#old                                              'ERW',
+#old                                              'LRW'],
             'Tree Rings_WoodDensity'        : ['max_d',
                                                'min_d',
                                                'early_d',
@@ -645,12 +656,11 @@ class proxies(ConfigGroup):
         }
 
         # A blacklist on proxy records, to prevent assimilation of specific
-        # chronologies known to be duplicates.
-        # proxy_blacklist = []
-        proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
-                           '09japa01a', '10guad01a', '99aust01a', '99fpol01a',
-                           '72Devo01',  '72Devo05']
-
+        # chronologies known to be duplicates or to have errors.
+        #proxy_blacklist = ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
+        #                   '09japa01a', '10guad01a', '99aust01a', '99fpol01a',
+        #                   '72Devo01',  '72Devo05'] # for db v0.1.0
+        proxy_blacklist = []
         
         ##** END User Parameters **##
 
@@ -1499,6 +1509,10 @@ class prior(ConfigGroup):
     #    'sos_sfc_Odec'              : 'full',
         }
 
+    # The reference period (in year CE) for calculation of anomalies
+    # ** Valid for prior ccsm3_trace21ka only for now. Use None for all others **
+    # Options: None or tuple indicating the reference period
+    anom_reference = None
     
     # boolean : detrend prior?
     # by default, considers the entire length of the simulation
@@ -1539,6 +1553,8 @@ class prior(ConfigGroup):
         self.state_variables_info = deepcopy(self.state_variables_info)
         self.detrend = self.detrend
         self.regrid_method = self.regrid_method
+        self.anom_reference = self.anom_reference
+
         
         if seed is None:
             seed = core.seed

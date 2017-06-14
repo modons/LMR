@@ -29,6 +29,7 @@ from scipy import stats
 from netCDF4 import Dataset
 from datetime import datetime, timedelta
 import cPickle
+import warnings
 
 import pandas as pd
 
@@ -52,6 +53,8 @@ def truncate_colormap(cmap, minval=0.0,maxval=1.0,n=100):
 # =============================================================================
 
 
+warnings.filterwarnings('ignore')
+
 ##################################
 # START:  set user parameters here
 ##################################
@@ -66,7 +69,7 @@ etime = 2000
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
 #     MCset = (90,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
-MCset = (0,1)
+MCset = (0,7)
 
 # define the running time mean 
 #nsyrs = 31 # 31-> 31-year running mean--nsyrs must be odd!
@@ -90,29 +93,7 @@ fsave = True
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesCoralsSrCaD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesSpeleoD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesNoTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
-#nexp = 'testPslW500_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_ERA20C_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'test_ncdc_v0.1.0'
-#nexp = 'test_V2proto'
-#nexp = 'test_V2proto_TorP'
-nexp = 'test_final_precalcYeSeason'
+nexp = 'test'
 
 # specify directories for LMR data
 #datadir_output = './data/'
@@ -146,17 +127,17 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-print '--------------------------------------------------'
-print 'verification of global-mean 2m air temperature'
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('verification of global-mean 2m air temperature')
+print('--------------------------------------------------')
 
 workdir = datadir_output + '/' + nexp
 
 # get directory and information for later use
 
-print '--------------------------------------------------'
-print 'working directory: '+workdir
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('working directory: %s' % workdir)
+print('--------------------------------------------------')
 
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
@@ -165,13 +146,12 @@ dirs = glob.glob(workdir+"/r*")
 
 ptypes,nrecords = assimilated_proxies(workdir+'/r0/')
 
-print '--------------------------------------------------'
-print 'Assimilated proxies by type:'
-for pt in ptypes.keys():
-    print pt + ': ' + str(ptypes[pt])
-                
-print 'Total: ' + str(nrecords)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('Assimilated proxies by type:')
+for pt in sorted(ptypes.keys()):
+    print('%40s : %s' % (pt, str(ptypes[pt])))                
+print('%40s : %s' % ('Total',str(nrecords)))
+print('--------------------------------------------------')
 
 # ==========================================
 # load GISTEMP, HadCRU, BerkeleyEarth, MLOST
@@ -241,8 +221,8 @@ dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
-lat_ERA20C = dd[vardef]['lat']
-lon_ERA20C = dd[vardef]['lon']
+lat_ERA20C = dd[vardef]['lat'][:,0]
+lon_ERA20C = dd[vardef]['lon'][0,:]
 nlat_ERA20C = len(lat_ERA20C)
 nlon_ERA20C = len(lon_ERA20C)
 ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
@@ -272,8 +252,8 @@ dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])
-lat_TCR = dd[vardef]['lat']
-lon_TCR = dd[vardef]['lon']
+lat_TCR = dd[vardef]['lat'][:,0]
+lon_TCR = dd[vardef]['lon'][0,:]
 nlat_TCR = len(lat_TCR)
 nlon_TCR = len(lon_TCR)
 TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
@@ -297,9 +277,9 @@ for i in xrange(0,len(TCR_time)):
 # read LMR GMT data computed during DA
 #
 
-print '--------------------------------------------------'
-print 'reading LMR GMT data...'
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('reading LMR GMT data...')
+print('--------------------------------------------------')
 kk = -1
 if iplot:
     fig = plt.figure()
@@ -314,9 +294,9 @@ else:
     dirset = dirs
 niters = len(dirset)
 
-print '--------------------------------------------------'
-print 'niters = ' + str(niters)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('niters = %s' % str(niters))
+print('--------------------------------------------------')
 
 # NEW---"grand ensemble approach"---collect all iterations into a superensemble
 first = True
@@ -536,19 +516,19 @@ gtc = str(float('%.2f' % gis_tcr_corr[0,1]))
 gec = str(float('%.2f' % gis_era_corr[0,1]))
 gcc = str(float('%.2f' % gis_cru_corr[0,1]))
 gbc = str(float('%.2f' % gis_be_corr[0,1]))
-print '--------------------------------------------------'
-print 'annual-mean correlations: '
-print 'LMR_TCR   correlation: ' + ltc
-print 'LMR_ERA   correlation: ' + lec
-print 'LMR_GIS   correlation: ' + lgc
-print 'LMR_CRU   correlation: ' + lcc
-print 'LMR_BE    correlation: ' + lbc
-print 'LMR_MLOST correlation: ' + lmc
-print 'GIS_TCR   correlation: ' + gtc
-print 'GIS_ERA   correlation: ' + gec
-print 'GIS_CRU   correlation: ' + gcc
-print 'GIS_BE    correlation: ' + gbc
-print 'LMR_consensus correlation: ' + loc
+print('--------------------------------------------------')
+print('annual-mean correlations: ')
+print('LMR_TCR       correlation: %s' % ltc)
+print('LMR_ERA       correlation: %s' % lec)
+print('LMR_GIS       correlation: %s' % lgc)
+print('LMR_CRU       correlation: %s' % lcc)
+print('LMR_BE        correlation: %s' % lbc)
+print('LMR_MLOST     correlation: %s' % lmc)
+print('GIS_TCR       correlation: %s' % gtc)
+print('GIS_ERA       correlation: %s' % gec)
+print('GIS_CRU       correlation: %s' % gcc)
+print('GIS_BE        correlation: %s' % gbc)
+print('LMR_consensus correlation: %s' % loc)
 print '--------------------------------------------------'
 
 
@@ -563,20 +543,20 @@ tgce = str(float('%.2f' % tcr_gis_ce))
 egce = str(float('%.2f' % era_gis_ce))
 bgce = str(float('%.2f' % be_gis_ce))
 cgce = str(float('%.2f' % cru_gis_ce))
-print '--------------------------------------------------'
-print 'coefficient of efficiency: '
-print 'LMR-TCR CE  : ' + str(ltce)
-print 'LMR-ERA CE  : ' + str(lece)
-print 'LMR-GIS CE  : ' + str(lgce)
-print 'LMR-CRU CE  : ' + str(lcce)
-print 'LMR-BE CE   : ' + str(lbce)
-print 'LMR-MLOST CE: ' + str(lmce)
-print 'LMR-CON CE  : ' + str(loce)
-print 'TCR-GIS CE  : ' + str(tgce)
-print 'ERA-GIS CE  : ' + str(egce)
-print 'BE-CRU CE   : ' + str(bgce)
-print 'GIS-CRU CE  : ' + str(cgce)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('coefficient of efficiency: ')
+print('LMR-TCR CE  : %s' % str(ltce))
+print('LMR-ERA CE  : %s' % str(lece))
+print('LMR-GIS CE  : %s' % str(lgce))
+print('LMR-CRU CE  : %s' % str(lcce))
+print('LMR-BE CE   : %s' % str(lbce))
+print('LMR-MLOST CE: %s' % str(lmce))
+print('LMR-CON CE  : %s' % str(loce))
+print('TCR-GIS CE  : %s' % str(tgce))
+print('ERA-GIS CE  : %s' % str(egce))
+print('BE-CRU CE   : %s' % str(bgce))
+print('GIS-CRU CE  : %s' % str(cgce))
+print('--------------------------------------------------')
 
 #
 # spread--error
@@ -584,9 +564,9 @@ print '--------------------------------------------------'
 lg_err = lmr_gm[lmr_smatch:lmr_ematch] - gis_gm[gis_smatch:gis_ematch]
 svar = gmt_save[:,lmr_smatch:lmr_ematch].var(0,ddof=1)
 calib = lg_err.var(0,ddof=1)/svar.mean(0)
-print '--------------------------------------------------'
-print 'ensemble calibration: ' + str(calib)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('ensemble calibration: %s' % str(calib))
+print('--------------------------------------------------')
 
 # ========================================================
 # plots
@@ -635,7 +615,7 @@ if iplot:
     plt.legend(loc=2)
 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_annual.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_annual.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -730,28 +710,26 @@ lmr_con_ce = coefficient_efficiency(con_gm[ind_con],lmr_gm[ind_lmr])
 lsconsc  = str(float('%.2f' % ls_con_corr[0,1]))
 lsconsce = str(float('%.2f' % ls_con_ce))
 
-
-print '--------------------------------------------------'
-print str(nsyrs)+'-year-smoothed correlations...'
-print 'smoothed lmr-gis correlation =   ' + lsgsc
-print 'smoothed lmr-cru correlation =   ' + lscsc
-print 'smoothed lmr-be correlation =    ' + lsbsc
-print 'smoothed lmr-mlost correlation = ' + lsmsc
-print 'smoothed lmr-tcr correlation =   ' + lstsc
-print 'smoothed lmr-era correlation =   ' + lsesc
-print 'smoothed lmr-con correlation =   ' + lsconsc
-print '--------------------------------------------------'
-print '--------------------------------------------------'
-print str(nsyrs)+'-year-smoothed CE...'
-print 'smoothed lmr-gis CE =   ' + lsgsce
-print 'smoothed lmr-cru CE =   ' + lscsce
-print 'smoothed lmr-be CE =    ' + lsbsce
-print 'smoothed lmr-mlost CE = ' + lsmsce
-print 'smoothed lmr-tcr CE =   ' + lstsce
-print 'smoothed lmr-era CE =   ' + lsesce
-print 'smoothed lmr-con CE =   ' + lsconsce
-print '--------------------------------------------------'
-
+print('--------------------------------------------------')
+print('%s-year-smoothed correlations:' % str(nsyrs))
+print('smoothed lmr-gis correlation =   %s' % lsgsc)
+print('smoothed lmr-cru correlation =   %s' % lscsc)
+print('smoothed lmr-be correlation =    %s' % lsbsc)
+print('smoothed lmr-mlost correlation = %s' % lsmsc)
+print('smoothed lmr-tcr correlation =   %s' % lstsc)
+print('smoothed lmr-era correlation =   %s' % lsesc)
+print('smoothed lmr-con correlation =   %s' % lsconsc)
+print('--------------------------------------------------')
+print('--------------------------------------------------')
+print('%s-year-smoothed CE:' % str(nsyrs))
+print('smoothed lmr-gis CE =   %s' % lsgsce)
+print('smoothed lmr-cru CE =   %s' % lscsce)
+print('smoothed lmr-be CE =    %s' % lsbsce)
+print('smoothed lmr-mlost CE = %s' % lsmsce)
+print('smoothed lmr-tcr CE =   %s' % lstsce)
+print('smoothed lmr-era CE =   %s' % lsesce)
+print('smoothed lmr-con CE =   %s' % lsconsce)
+print('--------------------------------------------------')
 
 if iplot:
     fig = plt.figure()
@@ -804,7 +782,7 @@ if iplot:
     plt.legend(loc=2)
 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -813,9 +791,9 @@ if iplot:
 # detrend and verify the detrended signal
 # =======================================
 
-print '--------------------------------------------------'
-print 'verification of detrended data'
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('verification of detrended data')
+print('--------------------------------------------------')
 
 verif_yrs = np.arange(stime,etime+1,1)
 
@@ -858,12 +836,12 @@ lgcd   =  str(float('%.2f' % lmr_gis_ce_detrend))
 error_trend = lmr_trend[ind_lmr] - gis_trend
 error_detrend = lmr_gm_detrend[ind_lmr] - gis_gm_detrend
 check = np.corrcoef(error_trend,error_detrend)
-print 'correlaton between trend and detrend errors = ' + str(check[0,1])
-print 'check error variances...'
-print 'trend error: ' + str(np.var(error_trend))
-print 'detrend error: ' + str(np.var(error_detrend))
-print 'detrend error + trend error: ' + str(np.var(error_trend)+np.var(error_detrend))
-print 'full error : ' + str(np.var(error_trend+error_detrend))
+print('correlaton between trend and detrend errors = %s' % str(check[0,1]))
+print('check error variances...')
+print('trend error: %s' % str(np.var(error_trend)))
+print('detrend error: %s' % str(np.var(error_detrend)))
+print('detrend error + trend error: %s' % str(np.var(error_trend)+np.var(error_detrend)))
+print('full error : %s' % str(np.var(error_trend+error_detrend)))
 
 # for CRU
 # overlaping years within verification interval
@@ -994,8 +972,8 @@ mlosts =  str(float('%.2f' % (mlost_slope*100.)))
 tcrs   =  str(float('%.2f' % (tcr_slope*100.)))
 eras   =  str(float('%.2f' % (era_slope*100.)))
 
-print 'r:  ' + str(lgrf) + ' ' + str(lgrd)
-print 'ce: ' + str(lgcf) + ' ' + str(lgcd)
+print('r:  %s %s' % (str(lgrf), str(lgrd)))
+print('ce: %s %s' % (str(lgcf), str(lgcd)))
 
 # plots
 
@@ -1048,17 +1026,17 @@ if iplot:
     plt.text(txl,tyl-5*off,'(LMR,ERA-20C) : r full= ' + lerf.ljust(4,' ') + ' r detrend= ' + lerd.ljust(4,' ') + ' CE full= ' + lecf.ljust(5,' ') + ' CE detrend= ' + lecd.ljust(5,' '), fontsize=12, family='monospace')
     
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
 """
 # rank histograms
 # loop over all years; send ensemble and a verification value
-print ' '
-print np.shape(gmt_save)
-print lmr_smatch
-print len(lmr_gm_copy)
+print(' ')
+print(np.shape(gmt_save))
+print(lmr_smatch)
+print(len(lmr_gm_copy))
 rank = []
 for yr in range(len(lmr_gm_copy)):
     rankval = rank_histogram(gmt_save[lmr_smatch+yr:lmr_smatch+yr+1,:,:],gis_gm_copy[yr])
@@ -1070,7 +1048,7 @@ if iplot:
     plt.hist(rank,nbins)
     if fsave:
         fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_rank_histogram.png'
-        print fname
+        print(fname)
         plt.savefig(fname)
 """
 
@@ -1350,6 +1328,6 @@ gmt_verification_stats['stat_metadata'] = stat_metadata
 
 # dump the dictionary to a pickle file
 spfile = nexp+'_'+str(niters)+'_iters_gmt_verification.pckl'
-print 'writing statistics to pickle file: ' + spfile
+print('writing statistics to pickle file: %s' % spfile)
 outfile = open(spfile,'w')
 cPickle.dump(gmt_verification_stats,outfile)
