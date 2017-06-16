@@ -658,8 +658,7 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
     X_nlon: int
         number of longitude points in the source grid
     method: str
-        Regridding method to use. Valid options include 'bilinear', 'patch', 
-        and 'conserve'
+        Regridding method to use. Valid options include 'bilinear' and 'patch'
 
     Returns
     -------    
@@ -757,8 +756,10 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
 
     if method == 'bilinear':
         use_method = ESMF.RegridMethod.BILINEAR
-    elif method == 'conserve':
-        use_method = ESMF. RegridMethod.CONSERVE
+    # Note: Removed because conservative regridding does not work for irreg
+    # grids currently (discovered with rotated pole ocean grids)
+    # elif method == 'conserve':
+    #     use_method = ESMF. RegridMethod.CONSERVE
     elif method == 'patch':
         use_method = ESMF.RegridMethod.PATCH
     else:
