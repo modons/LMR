@@ -656,8 +656,9 @@ class ProxyNCDC(BaseProxyObject):
             # set mask to True for proxies matching all databases found in dbase_filters
             for i in range(len(meta_src[database_col])):      
                 if meta_src[database_col][i]:
-                    #dbase_mask[i] = set(meta_src[database_col][i]).isdisjoint(dbase_filters) # old code
-                    dbase_mask[i] = set(dbase_filters).issubset(meta_src[database_col][i])
+                    #dbase_mask[i] = set(meta_src[database_col][i]).isdisjoint(dbase_filters) # oldold code
+                    #dbase_mask[i] = set(dbase_filters).issubset(meta_src[database_col][i]) # old code
+                    dbase_mask[i] = bool(set(meta_src[database_col][i]).intersection(set(dbase_filters)))
                 else:
                     dbase_mask[i] = False
         else:
@@ -912,8 +913,9 @@ class ProxyNCDCdtda(BaseProxyObject):
             # set mask to True for proxies matching all databases found in dbase_filters
             for i in range(len(meta_src[database_col])):      
                 if meta_src[database_col][i]:
-                    #dbase_mask[i] = set(meta_src[database_col][i]).isdisjoint(dbase_filters) # old code
-                    dbase_mask[i] = set(dbase_filters).issubset(meta_src[database_col][i])
+                    #dbase_mask[i] = set(meta_src[database_col][i]).isdisjoint(dbase_filters) # oldold code
+                    #dbase_mask[i] = set(dbase_filters).issubset(meta_src[database_col][i]) # old code
+                    dbase_mask[i] = bool(set(meta_src[database_col][i]).intersection(set(dbase_filters)))                    
                 else:
                     dbase_mask[i] = False
         else:

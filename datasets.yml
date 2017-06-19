@@ -9,7 +9,7 @@ GISTEMP:
     available_vars: [tempanomaly]
 
   datadir: null
-  datafile: gistemp1200_ERSST.nc
+  datafile: gistemp1200_ERSSTv4.nc
   dataformat: NCD
 
 MLOST:
@@ -213,8 +213,8 @@ ccsm3_trace21ka:
   info:
     multiple_vars: True
     template: '[vardef_template]'
-    available_vars: ['tas_sfc_Adec', 'psl_sfc_Adec',
-                     'tos_sfc_Odec',sos_sfc_Odec']
+    available_vars: ['tas_sfc_Amon', 'tas_sfc_Adec', 'psl_sfc_Adec',
+                     'ts_sfc_Adec', 'tos_sfc_Odec', 'sos_sfc_Odec']
 
   datadir: null
   datafile: '[vardef_template]_CCSM3_TraCE21ka.nc'

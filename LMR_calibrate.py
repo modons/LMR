@@ -54,7 +54,7 @@ class calibration_master(object):
 class calibration_GISTEMP(calibration_master):
 
     source = 'GISTEMP'
-    datafile_calib   = 'gistemp1200_ERSST.nc'
+    datafile_calib   = 'gistemp1200_ERSSTv4.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'

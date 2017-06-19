@@ -11,6 +11,9 @@ Revisions:
           - Added the get_distance function for more efficient calculation of distances
             between lat/lon points on the globe. [R. Tardif, U. of Washington, January 2016]
 
+          - 
+
+
 """
 import glob
 import os
@@ -18,10 +21,11 @@ import numpy as np
 import re
 import cPickle
 import collections
+import copy
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
-from scipy import signal
+from scipy import signal, special
 from scipy.spatial import cKDTree
 from spharm import Spharmt, getspecindx, regrid
 
@@ -621,8 +625,10 @@ def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
         datagrid[nonvalid] = np.nan
         X_new[:,k] = datagrid
 
-    # make sure a masked array is returned
-    X_new = np.ma.masked_invalid(X_new)
+    # make sure a masked array is returned, if at
+    # least one invalid data is found
+    if np.isnan(X_new).any():
+        X_new = np.ma.masked_invalid(X_new)
     
     return X_new,lat_new,lon_new
 
@@ -1261,6 +1267,30 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
         
     return ye_all, ye_all_coords
 
+
+def gaussianize(X):
+    """
+    Transforms a (proxy) timeseries to Gaussian distribution.
+
+    Originator: Michael Erb, Univ. of Southern California - April 2017
+
+    """
+
+    #n = X.shape[0]
+    n = X[~np.isnan(X)].shape[0]  # This line counts only elements with data.
+
+    #Xn = np.empty((n,))
+    Xn = copy.deepcopy(X)  # This line retains the data type of the original data variable.
+    Xn[:] = np.NAN
+    nz = np.logical_not(np.isnan(X))
+
+    index = np.argsort(X[nz])
+    rank = np.argsort(index)
+
+    CDF = 1.*(rank+1)/(1.*n) -1./(2*n)
+    Xn[nz] = np.sqrt(2)*special.erfinv(2*CDF -1)
+
+    return Xn
 
 
 def validate_config(config):

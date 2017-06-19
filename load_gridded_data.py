@@ -1974,7 +1974,7 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
 
 #==========================================================================================
 
-def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=None):
+def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=None,anom_ref=None):
 #==========================================================================================
 #
 # Reads the monthly data from the TraCE21ka climate model simulation and returns values of
@@ -2005,6 +2005,8 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 #                       ex 2: outtimeavg = {'multiyear': [100]} -> 100yr average
 #
 #      - detrend      : Boolean to indicate if detrending is to be applied to the prior
+#
+#      - anom_ref     : Reference period (in year CE) used in calculating anomaliesx
 #
 #
 # Output: 
@@ -2350,25 +2352,49 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 dates_years = np.array([math.modf(item)[1] for item in dates])
                 tmp = np.array([abs(math.modf(item)[0]) for item in dates])
                 dates_months = np.rint((tmp/monthly)+1.)
+
+                # indices corresponding to reference period   
+                if anom_ref:                    
+                    indsyr = [j for j,v in enumerate(dates_years) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
+                    # overlap?
+                    if len(indsyr) == 0:
+                        raise SystemExit('ERROR in anomaly calculation: No overlap between prior simulation and specified reference period. Exiting!')
+                else:
+                    # indices over entire length of the simulation
+                    indsyr = [j for j,v in enumerate(dates_years)]
+
                 # loop over months
                 for i in range(12):
                     m = i+1.
-                    indsm = [j for j,v in enumerate(dates_months) if v == m]
-                    climo_month[i] = np.nanmean(data_var[indsm], axis=0)
-                    data_var[indsm] = (data_var[indsm] - climo_month[i])
+                    indsm_ref = [j for j,v in enumerate(dates_months[indsyr]) if v == m]
+                    climo_month[i] = np.nanmean(data_var[indsm_ref], axis=0)
+                    indsm_all = [j for j,v in enumerate(dates_months) if v == m]
+                    data_var[indsm_all] = (data_var[indsm_all] - climo_month[i])
+                climo = climo_month
             else:
                 # other than monthly data
-                climo = np.nanmean(data_var,axis=0)
-                data_var = (data_var - climo)
+                # indices corresponding to reference period                
+                if anom_ref:
+                    indsyr = [j for j,v in enumerate(dates) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
+                    # overlap?
+                    if len(indsyr) > 0:
+                        climo = np.nanmean(data_var[indsyr],axis=0)
+                    else:
+                        raise SystemExit('ERROR in anomaly calculation: No overlap between prior simulation and specified reference period. Exiting!')
+                else:
+                    # anomalies w.r.t. mean over entire length of the simulation
+                    climo = np.nanmean(data_var,axis=0)
 
+                # calculate anomalies
+                data_var = (data_var - climo)
+                
         elif kind == 'full':
             print 'Full field provided as the prior'
             # Calculating climo nevertheless. Needed as output.
             climo = np.nanmean(data_var,axis=0)
             # do nothing else...
         else:
-            print 'ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...'
-            raise SystemExit()
+            raise SystemExit('ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...')
 
         print var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)        
 

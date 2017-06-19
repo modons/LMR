@@ -72,8 +72,8 @@ class prior_master(object):
     def populate_ensemble(self,prior_source, prior_cfg):
 
         # Load prior data from file(s) - multiple state variables
-        self.read_prior()
-
+        self.read_prior()        
+        
         Nens_max = len(self.prior_dict[self.prior_dict.keys()[0]]['years'])
         if self.Nens and self.Nens > Nens_max:
             raise SystemExit('ERROR in populate_ensemble! Specified ensemble size too large for available nb of states. '
@@ -257,17 +257,40 @@ class prior_master(object):
             else:
                 raise SystemExit('ERROR im populate_ensemble: variable of unrecognized spatial dimensions. Exiting!')
 
-        
-        # Returning state vector Xb as masked array
-        Xb_mask = np.ma.masked_invalid(Xb)
 
-        # Set fill_value to np.nan
-        np.ma.set_fill_value(Xb_mask, np.nan)
+            """
+            # RT dev ... ... ...
+            # if anom_reference period is defined, re-centering sample around a mean of zero ? ...
+            
+            print self.prior_dict[var]['climo'].shape
+            print self.prior_dict[var]['value'][ind_ens[0]].shape
+
+
+            print np.mean(Xb[indstart:indend+1,:], axis=1)
+
+            sample_mean = np.mean(Xb[indstart:indend+1,:], axis=1)
+            
+            Xb[indstart:indend+1,:] = Xb[indstart:indend+1,:] - sample_mean[:,np.newaxis]
+
+            print np.mean(Xb[indstart:indend+1,:], axis=1)
+            
+            exit(1)
+            # RT dev ... ... ...
+            """
         
-        # array indices of masked & valid elements
-        inds_mask = np.nonzero(Xb_mask.mask)
-        inds_valid = np.nonzero(~Xb_mask.mask)
+        # Returning state vector Xb as masked array, if it contains
+        # at least one invalid value
+        if np.isnan(Xb).any():        
+            Xb_mask = np.ma.masked_invalid(Xb)
+            # Set fill_value to np.nan
+            np.ma.set_fill_value(Xb_mask, np.nan)
         
+            # array indices of masked & valid elements
+            inds_mask = np.nonzero(Xb_mask.mask)
+            inds_valid = np.nonzero(~Xb_mask.mask)
+
+        else:
+            Xb_mask = Xb            
         
         # Assign return variables
         #self.ens    = Xb
@@ -406,5 +429,6 @@ class prior_ccsm3_trace21ka(prior_master):
                                                       self.prior_datafile,
                                                       self.statevars,
                                                       self.avgInterval,
-                                                      self.detrend)
+                                                      self.detrend,
+                                                      self.anom_reference)        
         return

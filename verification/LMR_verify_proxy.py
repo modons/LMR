@@ -363,10 +363,10 @@ class v_proxies(object):
         
         # DO NOT CHANGE FORMAT BELOW
         proxy_order = [
-            'Tree Rings_WoodDensity',
         #    'Tree Rings_WidthPages',
             'Tree Rings_WidthPages2',
             'Tree Rings_WidthBreit',
+            'Tree Rings_WoodDensity',
             'Tree Rings_Isotopes',
             'Corals and Sclerosponges_d18O',
             'Corals and Sclerosponges_SrCa',
@@ -378,8 +378,10 @@ class v_proxies(object):
             'Lake Cores_Varve',
             'Lake Cores_BioMarkers',
             'Lake Cores_GeoChem',
+            'Lake Cores_Misc',
             'Marine Cores_d18O',
-#            'Speleothems_d18O',
+            'Speleothems_d18O',
+            'Bivalve_d18O',
             ]
 
         # Assignment of psm type per proxy type
@@ -400,32 +402,35 @@ class v_proxies(object):
             'Lake Cores_Varve'              : 'linear',
             'Lake Cores_BioMarkers'         : 'linear',
             'Lake Cores_GeoChem'            : 'linear',
+            'Lake Cores_Misc'               : 'linear',
             'Marine Cores_d18O'             : 'linear',
             'Tree Rings_WidthBreit'         : 'linear',
             'Tree Rings_WidthPages2'        : 'linear',
-            'Tree Rings_WidthPages'         : 'linear',
+#            'Tree Rings_WidthPages'         : 'linear',
             'Tree Rings_WoodDensity'        : 'linear',
             'Tree Rings_Isotopes'           : 'linear',
             'Speleothems_d18O'              : 'linear',
+            'Bivalve_d18O'                  : 'linear',            
         }
         
         proxy_assim2 = {
             'Corals and Sclerosponges_d18O' : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm',
                                                'd18o_avg','d18o_ave','dO18','d18O_4'],
             'Corals and Sclerosponges_SrCa' : ['Sr/Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
-            'Corals and Sclerosponges_Rates': ['ext','calc'],
+            'Corals and Sclerosponges_Rates': ['ext','calc','calcification','calcification rate', 'composite'],
             'Ice Cores_d18O'                : ['d18O','delta18O','delta18o','d18o','dO18',
                                                'd18o_int','d18O_int',
                                                'd18O_norm','d18o_norm',
                                                'd18O_anom'],
-            'Ice Cores_dD'                  : ['deltaD','delD'],
+            'Ice Cores_dD'                  : ['deltaD','delD','dD'],
             'Ice Cores_Accumulation'        : ['accum','accumu'],
-            'Ice Cores_MeltFeature'         : ['MFP'],
-            'Lake Cores_Varve'              : ['varve', 'varve_thickness', 'varve thickness'],
+            'Ice Cores_MeltFeature'         : ['MFP','melt'],
+            'Lake Cores_Varve'              : ['varve', 'varve_thickness', 'varve thickness','thickness'],
             'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'],
             'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca','Cl_cont'],
             'Marine Cores_d18O'             : ['d18O'],
             'Speleothems_d18O'              : ['d18O'],
+            'Bivalve_d18O'                  : ['d18O'],
             'Tree Rings_WidthBreit'         : ['trsgi_breit'],
             'Tree Rings_WidthPages2'        : ['trsgi'], 
             'Tree Rings_WidthPages'         : ['TRW',
@@ -494,6 +499,8 @@ class v_psm(object):
 
     # Keep this as annual, as it is assumed that LMR output is annual
     avgPeriod = 'annual'
+    #avgPeriod = 'seasonMETA'
+    #avgPeriod = 'seasonPSM'
     
     # Mapping of calibration sources w/ climate variable
     # To be modified only if a new calibration source is added. 
