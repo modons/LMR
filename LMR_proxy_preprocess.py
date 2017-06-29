@@ -845,7 +845,7 @@ def colonReader(string, fCon, fCon_low, end):
 
 # ===================================================================================
 
-def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None):
+def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=False):
 #====================================================================================
 # Purpose: Reads data from a selected site (chronology) in NCDC proxy dataset
 # 
@@ -1449,6 +1449,11 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None):
         # If subannual, average up to annual --------------------------------------------------------
         time_annual, data_annual, proxy_resolution = compute_annual_means(time_raw,data_raw,valid_frac,year_type)
         
+        # If gaussianize_data is set to true, transform the proxy data to Gaussian.
+        # This option should only be used when using regressions, not physically-based PSMs.
+        if gaussianize_data == True:
+            data_annual = gaussianize(data_annual)
+        
         # update to yearRange given availability of annual data
         yearRange = (int('%.0f' %time_annual[0]),int('%.0f' %time_annual[-1]))
         
@@ -1552,7 +1557,7 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
     nbsites_valid = 0
     for file_site in sites_data:
 
-        proxy_list, duplicate_list = read_proxy_data_NCDCtxt(file_site,proxy_def,year_type)
+        proxy_list, duplicate_list = read_proxy_data_NCDCtxt(file_site,proxy_def,year_type,gaussianize_data)
 
         if proxy_list: # if returned list is not empty
             # extract data from list and populate the master proxy dictionary
