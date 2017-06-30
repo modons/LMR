@@ -1276,21 +1276,46 @@ def gaussianize(X):
 
     """
 
-    #n = X.shape[0]
-    n = X[~np.isnan(X)].shape[0]  # This line counts only elements with data.
+    # Give every record at least one dimensions, or else the code will crash.
+    X = np.atleast_1d(X)
 
-    #Xn = np.empty((n,))
-    Xn = copy.deepcopy(X)  # This line retains the data type of the original data variable.
+    # Make a blank copy of the array, retaining the data type of the original data variable.
+    Xn = copy.deepcopy(X)
     Xn[:] = np.NAN
-    nz = np.logical_not(np.isnan(X))
 
-    index = np.argsort(X[nz])
+    if len(X.shape) == 1:
+        Xn = gaussianize_single(X)
+    else:
+        for i in range(X.shape[1]):
+            Xn[:,i] = gaussianize_single(X[:,i])
+
+    return Xn
+
+
+def gaussianize_single(X_single):
+    """
+    Transforms a single (proxy) timeseries to Gaussian distribution.
+
+    Originator: Michael Erb, Univ. of Southern California - April 2017
+
+    """
+
+    # Count only elements with data.
+    n = X_single[~np.isnan(X_single)].shape[0]
+
+    # Create a blank copy of the array.
+    Xn_single = copy.deepcopy(X_single)
+    Xn_single[:] = np.NAN
+
+    nz = np.logical_not(np.isnan(X_single))
+
+    index = np.argsort(X_single[nz])
     rank = np.argsort(index)
 
     CDF = 1.*(rank+1)/(1.*n) -1./(2*n)
-    Xn[nz] = np.sqrt(2)*special.erfinv(2*CDF -1)
+    Xn_single[nz] = np.sqrt(2)*special.erfinv(2*CDF -1)
 
-    return Xn
+    return Xn_single
 
 
 def validate_config(config):
