@@ -526,20 +526,20 @@ class v_proxies(object):
                                                'seasons_T': [],
                                                'seasons_M': []},
             'Tree Rings_WidthBreit'         : {'flag':True,
-                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
-                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
+                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]],
+                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]]},
             'Tree Rings_WidthPages2'        : {'flag':True,
-                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
-                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
+                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]],
+                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]]},
 #            'Tree Rings_WidthPages'         : {'flag':True,
-#                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
-#                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
+#                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]],
+#                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]]},
             'Tree Rings_WoodDensity'        : {'flag':True,
-                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
-                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
+                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]],
+                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]]},
             'Tree Rings_Isotopes'           : {'flag':True,
-                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]],
-                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
+                                               'seasons_T': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]],
+                                               'seasons_M': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[3,4,5,6,7,8],[6,7,8,9,10,11],[-12,1,2],[-9,-10,-11,-12,1,2],[-12,1,2,3,4,5]]},
             'Speleothems_d18O'              : {'flag':False,
                                                'seasons_T': [],
                                                'seasons_M': []}
@@ -608,8 +608,8 @@ class v_psm(object):
     load_precalib = False
     
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
-    #avgPeriod = 'annual'
-    avgPeriod = 'season'
+    avgPeriod = 'annual'
+    #avgPeriod = 'season'
 
     # Boolean flag indicating whether PSMs are to be calibrated using objectively-derived
     # proxy seasonality instead of using the "seasonality" metadata included in the data
@@ -752,11 +752,11 @@ class v_psm(object):
         # -----------------------------
         # Choice between:
         #
-        #datatag_calib_T = 'GISTEMP'
-        #datafile_calib_T = 'gistemp1200_ERSST.nc'
+        datatag_calib_T = 'GISTEMP'
+        datafile_calib_T = 'gistemp1200_ERSSTv4.nc'
         # or
-        datatag_calib_T = 'MLOST'
-        datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
+        #datatag_calib_T = 'MLOST'
+        #datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
         # or 
         #datatag_calib_T = 'HadCRUT'
         #datafile_calib_T = 'HadCRUT.4.4.0.0.median.nc'
@@ -766,11 +766,11 @@ class v_psm(object):
 
         # calibration w.r.t. precipitation/moisture
         # ----------------------------------------
-        #datatag_calib_P = 'GPCC'
-        #datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
+        datatag_calib_P = 'GPCC'
+        datafile_calib_P = 'GPCC_precip.mon.flux.1x1.v6.nc'
         # or
-        datatag_calib_P = 'DaiPDSI'
-        datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
+        #datatag_calib_P = 'DaiPDSI'
+        #datafile_calib_P = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
         # or
         #datatag_calib_P = 'SPEI'
         #datafile_calib_P = 'spei_monthly_v2.4_190001-201412.nc'
@@ -932,6 +932,7 @@ def main():
         print ' '
         print sitetag
 
+        
         # -----------------------------------------------------
         # Prep: defining seasons to be tested, depending on the
         # chosen configuration 
@@ -940,8 +941,8 @@ def main():
             # override any proxy seasonality metadata with calendar year
             seasons = [[1,2,3,4,5,6,7,8,9,10,11,12]]
             if psm_type == 'bilinear':
-                seasons_T = seasons
-                seasons_M = seasons
+                seasons_T = seasons[:]
+                seasons_M = seasons[:]
 
         elif 'season' in calib_avgPeriod:
             # try to determine seasonality objectively ?
@@ -951,20 +952,29 @@ def main():
                 if psm_type == 'linear':
                     # if linear, calibrating against temperature or moisture ?
                     if datatag_calib == 'DaiPDSI' or datatag_calib == 'GPCC':
-                        seasons = proxy_psm_seasonality[Y.type]['seasons_M']
+                        seasons = proxy_psm_seasonality[Y.type]['seasons_M'][:]
                     else:
-                        seasons = proxy_psm_seasonality[Y.type]['seasons_T']
-                
-                elif psm_type == 'bilinear':
-                    seasons_T = proxy_psm_seasonality[Y.type]['seasons_T']
-                    seasons_M = proxy_psm_seasonality[Y.type]['seasons_M']
+                        seasons = proxy_psm_seasonality[Y.type]['seasons_T'][:]
 
+                    # If not part of list already, insert entry from metadata at beginning of list
+                    if Y.seasonality not in seasons:
+                        seasons.insert(0, Y.seasonality)
+
+                    
+                elif psm_type == 'bilinear':
+                    seasons_T = proxy_psm_seasonality[Y.type]['seasons_T'][:]
+                    seasons_M = proxy_psm_seasonality[Y.type]['seasons_M'][:]
+
+                    # insert entry from metadata at beginning of list
+                    seasons_T.insert(0, Y.seasonality)
+                    seasons_M.insert(0, Y.seasonality)
+                    
             else:
                 # revert back to proxy metadata
                 seasons = [Y.seasonality]
                 if psm_type == 'bilinear':
-                    seasons_T = seasons
-                    seasons_M = seasons
+                    seasons_T = seasons[:]
+                    seasons_M = seasons[:]
 
         else: 
             print '...blah blah blah...'
@@ -996,12 +1006,14 @@ def main():
                     # Calibrate the statistical forward model (psm)
                     test_psm_obj = psm_obj(Cfg, Y, calib_obj=C)
                 
-                    print '=>', "{:2d}".format(i), "{:40s}".format(s), "{:12.4f}".format(test_psm_obj.slope), "{:12.4f}".format(test_psm_obj.intercept), \
-                        "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R)
+                    print '=>', "{:2d}".format(i), "{:45s}".format(s), "{:12.4f}".format(test_psm_obj.slope), "{:12.4f}".format(test_psm_obj.intercept), \
+                        "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R), '(', "{:10.5f}".format(test_psm_obj.R2adj), ')'
                 
                     # BIC used as the selection criterion
-                    metric[i] = test_psm_obj.BIC
-                
+                    #metric[i] = test_psm_obj.BIC
+                    # Adjusted R-squared used as the selection criterion
+                    metric[i] = test_psm_obj.R2adj
+                    
                     test_psm_obj_dict[str(s)] =  test_psm_obj
                 
                 except:
@@ -1039,7 +1051,9 @@ def main():
                             "{:12.4f}".format(test_psm_obj.intercept), "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R)
                 
                         # BIC used as the selection criterion
-                        metric[i] = test_psm_obj.BIC
+                        #metric[i] = test_psm_obj.BIC
+                        # Adjusted R-squared used as the selection criterion
+                        metric[i] = test_psm_obj.R2adj
 
                         # Associated pair of seasonalities (as tuple of lists)
                         # and psm object
@@ -1063,15 +1077,17 @@ def main():
             continue
         
         # Select the "seasonal" model (psm)
-        # criterion: min of metric, if BIC
-        #print '==>', metric
+        # criterion: min of metric if BIC, max if adjusted R-squared
         indmin = np.argmin(metric)
-        #print '==>', seasons[indmin]
-        
-        select_psm_obj = test_psm_obj_dict[str(seasons[indmin])]
+        indmax = np.argmax(metric)        
+        #select_psm_obj = test_psm_obj_dict[str(seasons[indmin])]
+        #Y.seasonality = seasons[indmin] # a list if linear psm, a tuple of lists if bilinear
+        select_psm_obj = test_psm_obj_dict[str(seasons[indmax])]
+        Y.seasonality = seasons[indmax] # a list if linear psm, a tuple of lists if bilinear
+
         Y.psm_obj = select_psm_obj
         Y.psm = Y.psm_obj.psm
-        Y.seasonality = seasons[indmin] # a list if linear psm, a tuple of lists if bilinear
+
         
         # Load proxy object in dictionary
         # -------------------------------
@@ -1096,6 +1112,7 @@ def main():
             psm_dict[sitetag]['PSMslope']     = Y.psm_obj.slope
             psm_dict[sitetag]['PSMintercept'] = Y.psm_obj.intercept
             psm_dict[sitetag]['fitBIC']       = Y.psm_obj.BIC
+            psm_dict[sitetag]['fitR2adj']     = Y.psm_obj.R2adj
             
             # diagnostic information
             # ----------------------
@@ -1114,6 +1131,7 @@ def main():
             psm_dict[sitetag]['PSMslope_moisture']    = Y.psm_obj.slope_moisture
             psm_dict[sitetag]['PSMintercept']         = Y.psm_obj.intercept
             psm_dict[sitetag]['fitBIC']               = Y.psm_obj.BIC
+            psm_dict[sitetag]['fitR2adj']             = Y.psm_obj.R2adj            
             
             # diagnostic information
             # ----------------------

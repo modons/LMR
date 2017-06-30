@@ -7,9 +7,11 @@ Originator: Robert Tardif - Univ. of Washington, Dept. of Atmospheric Sciences
             February 2017
 
 Revisions: 
-            - 
-
-
+            - Added option to make 2d maps of selected variable for individual years and create animation 
+              of the reconstruction.
+              [R. Tardif, U. of Washington - May 2017]
+            - Now plots the time series of NH and SH mean temperatures. 
+              [R. Tardif, U. of Washington - June 2017]
 
 """
 import sys
@@ -70,10 +72,10 @@ make_movie = True
 
 # ==== for GMT timeseries plot:
 # -- anomalies --
-pltymin = -1.5; pltymax = 1.5; ylabel = 'Global mean temperature anomaly (K)'
-#pltymin = -6.0; pltymax = 6.0; ylabel = 'Global mean temperature anomaly (K)'
+pltymin = -1.5; pltymax = 1.5; ylabel = 'Temperature anomaly (K)'
+#pltymin = -6.0; pltymax = 6.0; ylabel = 'Temperature anomaly (K)'
 # -- full field --
-#pltymin = 276.; pltymax = 290.; ylabel = 'Global mean temperature (K)'
+#pltymin = 276.; pltymax = 290.; ylabel = 'Temperature (K)'
 
 #infile = 'gmt'
 infile = 'gmt_ensemble'
@@ -168,13 +170,21 @@ if make_gmt_plot:
 
 
         # Declare arrays
-        recon_years = np.zeros([nbiters,nbtimes])
-        recon_gmt   = np.zeros([nbiters,nens,nbtimes])
-        prior_gmt   = np.zeros([nbiters,nens,nbtimes])
+        recon_years  = np.zeros([nbiters,nbtimes])
+        recon_gmt    = np.zeros([nbiters,nens,nbtimes])
+        recon_nhmt   = np.zeros([nbiters,nens,nbtimes])
+        recon_shmt   = np.zeros([nbiters,nens,nbtimes])
+        prior_gmt    = np.zeros([nbiters,nens,nbtimes])
+        prior_nhmt   = np.zeros([nbiters,nens,nbtimes])
+        prior_shmt   = np.zeros([nbiters,nens,nbtimes])
         # init. with nan's
-        recon_gmt[:] = np.nan
+        recon_gmt[:]  = np.nan
+        recon_nhmt[:] = np.nan
+        recon_shmt[:] = np.nan
         prior_gmt[:] = np.nan
-
+        prior_nhmt[:] = np.nan
+        prior_shmt[:] = np.nan
+        
         # Read-in the data : loop over MC iters
         citer = 0
         for d in list_iters:
@@ -182,19 +192,27 @@ if make_gmt_plot:
             # File of global mean values
             fname = d+'/'+infile+'.npz'
             gmt_data = np.load(fname)
-            recon_gmt_data = gmt_data[file_to_read]
 
             recon_years[citer,:] = gmt_data['recon_times']
 
             if infile == 'gmt':
+                recon_gmt_data = gmt_data[file_to_read]
                 [nbproxy, nbtimes] = recon_gmt_data.shape
                 # Final reconstruction
                 recon_gmt[citer,0,:] = recon_gmt_data[nbproxy-1]
 
             elif infile == 'gmt_ensemble':
                 # Full ensemble reconstruction
+                # Global mean
+                recon_gmt_data = gmt_data[file_to_read]
                 recon_gmt[citer,:,:] = recon_gmt_data.T # flip time/nens dims
-
+                # NH mean
+                recon_data = gmt_data['nhmt_ensemble']
+                recon_nhmt[citer,:,:] = recon_data.T # flip time/nens dims
+                # SH mean
+                recon_data = gmt_data['shmt_ensemble']
+                recon_shmt[citer,:,:] = recon_data.T # flip time/nens dims
+                
             else:
                 print 'Unrecognized option for infile. Exiting.'
                 SystemExit(1)
@@ -223,54 +241,129 @@ if make_gmt_plot:
                 # here, gmt,nhmt and shmt contain the prior ensemble: dims = [nens] 
                 [gmt,nhmt,shmt] = global_hemispheric_means(tas_lalo, lat_lalo[:, 0])
 
-                prior_gmt[citer,:,:] = np.repeat(gmt[:,np.newaxis],nbtimes,1)
-
+                prior_gmt[citer,:,:]  = np.repeat(gmt[:,np.newaxis],nbtimes,1)
+                prior_nhmt[citer,:,:] = np.repeat(nhmt[:,np.newaxis],nbtimes,1)
+                prior_shmt[citer,:,:] = np.repeat(shmt[:,np.newaxis],nbtimes,1)                
+                
             citer = citer + 1
 
 
         if nbiters > 1:
             # Reshaping arrays for easier calculation of stats over the "grand" ensemble (MC iters + DA ensemble members)
-            tmpp = prior_gmt.transpose(2,0,1).reshape(nbtimes,-1)
-            tmpr = recon_gmt.transpose(2,0,1).reshape(nbtimes,-1)
+            gmpp = prior_gmt.transpose(2,0,1).reshape(nbtimes,-1)
+            gmpr = recon_gmt.transpose(2,0,1).reshape(nbtimes,-1)
+
+            nhmpp = prior_nhmt.transpose(2,0,1).reshape(nbtimes,-1)
+            nhmpr = recon_nhmt.transpose(2,0,1).reshape(nbtimes,-1)
+
+            shmpp = prior_shmt.transpose(2,0,1).reshape(nbtimes,-1)
+            shmpr = recon_shmt.transpose(2,0,1).reshape(nbtimes,-1)
+
         else:
-            tmpp = np.squeeze(prior_gmt).transpose()
-            tmpr = np.squeeze(recon_gmt).transpose()
+            gmpp = np.squeeze(prior_gmt).transpose()
+            gmpr = np.squeeze(recon_gmt).transpose()
+
+            nhmpp = np.squeeze(prior_nhmt).transpose()
+            nhmpr = np.squeeze(recon_nhmt).transpose()
+
+            shmpp = np.squeeze(prior_shmt).transpose()
+            shmpr = np.squeeze(recon_shmt).transpose()
 
 
         # Prior
-        prior_gmt_ensmean    = np.mean(tmpp,axis=1)
-        prior_gmt_ensmin     = np.amin(tmpp,axis=1)
-        prior_gmt_ensmax     = np.amax(tmpp,axis=1)
-        prior_gmt_enssprd    = np.std(tmpp,axis=1)
-        prior_gmt_enslowperc = np.percentile(tmpp,5,axis=1)
-        prior_gmt_ensuppperc = np.percentile(tmpp,95,axis=1)        
-        # Posterior
-        recon_gmt_ensmean    = np.mean(tmpr,axis=1)
-        recon_gmt_ensmin     = np.amin(tmpr,axis=1)
-        recon_gmt_ensmax     = np.amax(tmpr,axis=1)
-        recon_gmt_enssprd    = np.std(tmpr,axis=1)
-        recon_gmt_enslowperc = np.percentile(tmpr,5,axis=1)
-        recon_gmt_ensuppperc = np.percentile(tmpr,95,axis=1)
+        prior_gmt_ensmean    = np.mean(gmpp,axis=1)
+        prior_gmt_ensmin     = np.amin(gmpp,axis=1)
+        prior_gmt_ensmax     = np.amax(gmpp,axis=1)
+        prior_gmt_enssprd    = np.std(gmpp,axis=1)
+        prior_gmt_enslowperc = np.percentile(gmpp,5,axis=1)
+        prior_gmt_ensuppperc = np.percentile(gmpp,95,axis=1)
 
+        prior_nhmt_ensmean    = np.mean(nhmpp,axis=1)
+        prior_nhmt_ensmin     = np.amin(nhmpp,axis=1)
+        prior_nhmt_ensmax     = np.amax(nhmpp,axis=1)
+        prior_nhmt_enssprd    = np.std(nhmpp,axis=1)
+        prior_nhmt_enslowperc = np.percentile(nhmpp,5,axis=1)
+        prior_nhmt_ensuppperc = np.percentile(nhmpp,95,axis=1)
+
+        prior_shmt_ensmean    = np.mean(shmpp,axis=1)
+        prior_shmt_ensmin     = np.amin(shmpp,axis=1)
+        prior_shmt_ensmax     = np.amax(shmpp,axis=1)
+        prior_shmt_enssprd    = np.std(shmpp,axis=1)
+        prior_shmt_enslowperc = np.percentile(shmpp,5,axis=1)
+        prior_shmt_ensuppperc = np.percentile(shmpp,95,axis=1)
+        
+        # Posterior
+        recon_gmt_ensmean    = np.mean(gmpr,axis=1)
+        recon_gmt_ensmin     = np.amin(gmpr,axis=1)
+        recon_gmt_ensmax     = np.amax(gmpr,axis=1)
+        recon_gmt_enssprd    = np.std(gmpr,axis=1)
+        recon_gmt_enslowperc = np.percentile(gmpr,5,axis=1)
+        recon_gmt_ensuppperc = np.percentile(gmpr,95,axis=1)
+
+        recon_nhmt_ensmean    = np.mean(nhmpr,axis=1)
+        recon_nhmt_ensmin     = np.amin(nhmpr,axis=1)
+        recon_nhmt_ensmax     = np.amax(nhmpr,axis=1)
+        recon_nhmt_enssprd    = np.std(nhmpr,axis=1)
+        recon_nhmt_enslowperc = np.percentile(nhmpr,5,axis=1)
+        recon_nhmt_ensuppperc = np.percentile(nhmpr,95,axis=1)
+
+        recon_shmt_ensmean    = np.mean(shmpr,axis=1)
+        recon_shmt_ensmin     = np.amin(shmpr,axis=1)
+        recon_shmt_ensmax     = np.amax(shmpr,axis=1)
+        recon_shmt_enssprd    = np.std(shmpr,axis=1)
+        recon_shmt_enslowperc = np.percentile(shmpr,5,axis=1)
+        recon_shmt_ensuppperc = np.percentile(shmpr,95,axis=1)
+        
+        
         # => plot +/- spread in the various realizations
         #recon_gmt_upp = recon_gmt_ensmean + recon_gmt_enssprd
         #recon_gmt_low = recon_gmt_ensmean - recon_gmt_enssprd
         #prior_gmt_upp = prior_gmt_ensmean + prior_gmt_enssprd
         #prior_gmt_low = prior_gmt_ensmean - prior_gmt_enssprd
+        #
+        #recon_nhmt_upp = recon_nhmt_ensmean + recon_nhmt_enssprd
+        #recon_nhmt_low = recon_nhmt_ensmean - recon_nhmt_enssprd
+        #prior_nhmt_upp = prior_nhmt_ensmean + prior_nhmt_enssprd
+        #prior_nhmt_low = prior_nhmt_ensmean - prior_nhmt_enssprd
+        #
+        #recon_shmt_upp = recon_shmt_ensmean + recon_shmt_enssprd
+        #recon_shmt_low = recon_shmt_ensmean - recon_shmt_enssprd
+        #prior_shmt_upp = prior_shmt_ensmean + prior_shmt_enssprd
+        #prior_shmt_low = prior_shmt_ensmean - prior_shmt_enssprd        
 
         # => plot +/- min-max among the various realizations
         #recon_gmt_upp = recon_gmt_ensmax
         #recon_gmt_low = recon_gmt_ensmin
         #prior_gmt_upp = prior_gmt_ensmax
         #prior_gmt_low = prior_gmt_ensmin
-
+        #
+        #recon_nhmt_upp = recon_nhmt_ensmax
+        #recon_nhmt_low = recon_nhmt_ensmin
+        #prior_nhmt_upp = prior_nhmt_ensmax
+        #prior_nhmt_low = prior_nhmt_ensmin
+        #
+        #recon_shmt_upp = recon_shmt_ensmax
+        #recon_shmt_low = recon_shmt_ensmin
+        #prior_shmt_upp = prior_shmt_ensmax
+        #prior_shmt_low = prior_shmt_ensmin
+        
         # => plot +/- 5-95 percentiles among the various realizations
         recon_gmt_low = recon_gmt_enslowperc
         recon_gmt_upp = recon_gmt_ensuppperc
         prior_gmt_low = prior_gmt_enslowperc
         prior_gmt_upp = prior_gmt_ensuppperc
 
+        recon_nhmt_low = recon_nhmt_enslowperc
+        recon_nhmt_upp = recon_nhmt_ensuppperc
+        prior_nhmt_low = prior_nhmt_enslowperc
+        prior_nhmt_upp = prior_nhmt_ensuppperc
 
+        recon_shmt_low = recon_shmt_enslowperc
+        recon_shmt_upp = recon_shmt_ensuppperc
+        prior_shmt_low = prior_shmt_enslowperc
+        prior_shmt_upp = prior_shmt_ensuppperc
+        
+        
         # -----------------------------------------------
         # Plotting time series of global mean temperature
         # -----------------------------------------------
@@ -298,6 +391,56 @@ if make_gmt_plot:
         plt.close()
         #plt.show()
 
+        # -------------------------------------------
+        # Plotting time series of NH mean temperature
+        # -------------------------------------------
+
+        #fig = plt.figure(figsize=[10,6])
+        fig = plt.figure()
+
+        p1 = plt.plot(recon_years[0,:],recon_nhmt_ensmean,'-b',linewidth=2, label='Posterior')
+        plt.fill_between(recon_years[0,:], recon_nhmt_low, recon_nhmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        xmin,xmax,ymin,ymax = plt.axis()
+        p2 = plt.plot(recon_years[0,:],prior_nhmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        plt.fill_between(recon_years[0,:], prior_nhmt_low, prior_nhmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
+
+        p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
+        plt.suptitle(exp, fontsize=12)
+        plt.title('NH mean temperature', fontsize=12,fontweight='bold')
+        plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
+        plt.ylabel(ylabel,fontsize=12,fontweight='bold')
+        plt.axis((year_range[0],year_range[1],pltymin,pltymax))
+        plt.legend( loc='lower right', numpoints = 1,fontsize=12)
+
+        plt.savefig('%s/%s_NHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+        plt.close()
+        #plt.show()
+
+        # -------------------------------------------
+        # Plotting time series of SH mean temperature
+        # -------------------------------------------
+
+        #fig = plt.figure(figsize=[10,6])
+        fig = plt.figure()
+
+        p1 = plt.plot(recon_years[0,:],recon_shmt_ensmean,'-b',linewidth=2, label='Posterior')
+        plt.fill_between(recon_years[0,:], recon_shmt_low, recon_shmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        xmin,xmax,ymin,ymax = plt.axis()
+        p2 = plt.plot(recon_years[0,:],prior_shmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        plt.fill_between(recon_years[0,:], prior_shmt_low, prior_shmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
+
+        p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
+        plt.suptitle(exp, fontsize=12)
+        plt.title('SH mean temperature', fontsize=12,fontweight='bold')
+        plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
+        plt.ylabel(ylabel,fontsize=12,fontweight='bold')
+        plt.axis((year_range[0],year_range[1],pltymin,pltymax))
+        plt.legend( loc='lower right', numpoints = 1,fontsize=12)
+
+        plt.savefig('%s/%s_SHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+        plt.close()
+        #plt.show()
+        
 
 if make_map_plots:    
 

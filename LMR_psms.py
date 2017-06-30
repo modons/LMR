@@ -575,9 +575,11 @@ class LinearPSM(BasePSM):
         self.SSE = SSE
 
         # Model information
-        self.AIC = regress.aic
-        self.BIC = regress.bic
-
+        self.AIC   = regress.aic
+        self.BIC   = regress.bic
+        self.R2    = regress.rsquared
+        self.R2adj = regress.rsquared_adj
+        
         # Extra diagnostics
         self.calib_time = time_common
         self.calib_refer_values = reg_xa
@@ -753,20 +755,26 @@ class LinearPSM_TorP(LinearPSM):
         if (proxy, site) in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
             # calibrated for temperature AND for precipitation, check relative goodness of fit 
             # and assign "sensitivity" & corresponding PSM parameters according to best fit.
-            if psm_site_data_T['PSMmse'] < psm_site_data_P['PSMmse']:
-                # smaller residual errors w.r.t. temperature
+
+            # ... based on PSMmse (variance of residuals)
+            #if psm_site_data_T['PSMmse'] < psm_site_data_P['PSMmse']:
+            # ... based on PSMcorrel
+            if abs(psm_site_data_T['PSMcorrel']) >= abs(psm_site_data_P['PSMcorrel']):
+                # smaller residual errors / or stronger correlation w.r.t. temperature
                 self.sensitivity = 'temperature'
                 self.corr = psm_site_data_T['PSMcorrel']
                 self.slope = psm_site_data_T['PSMslope']
                 self.intercept = psm_site_data_T['PSMintercept']
                 self.R = psm_site_data_T['PSMmse']
+                self.seasonality = psm_site_data_T['Seasonality']
             else:
-                # smaller residual errors w.r.t. precipitation/moisture
+                # smaller residual errors / or stronger correlation  w.r.t. precipitation/moisture
                 self.sensitivity = 'moisture'
                 self.corr = psm_site_data_P['PSMcorrel']
                 self.slope = psm_site_data_P['PSMslope']
                 self.intercept = psm_site_data_P['PSMintercept']
                 self.R = psm_site_data_P['PSMmse']
+                self.seasonality = psm_site_data_P['Seasonality']
 
         elif (proxy, site) in psm_data_T.keys() and (proxy, site) not in psm_data_P.keys():
             # calibrated for temperature and NOT for precipitation, assign as "temperature" sensitive
@@ -775,6 +783,7 @@ class LinearPSM_TorP(LinearPSM):
             self.slope = psm_site_data_T['PSMslope']
             self.intercept = psm_site_data_T['PSMintercept']
             self.R = psm_site_data_T['PSMmse']
+            self.seasonality = psm_site_data_T['Seasonality']            
         elif (proxy, site) not in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
             # calibrated for precipitation/moisture and NOT for temperature, assign as "moisture" sensitive
             self.sensitivity = 'moisture'
@@ -782,6 +791,7 @@ class LinearPSM_TorP(LinearPSM):
             self.slope = psm_site_data_P['PSMslope']
             self.intercept = psm_site_data_P['PSMintercept']
             self.R = psm_site_data_P['PSMmse']
+            self.seasonality = psm_site_data_P['Seasonality']            
         else:
             raise ValueError('Proxy in database but not found in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
@@ -1311,9 +1321,11 @@ class BilinearPSM(BasePSM):
         self.SSE = SSE
 
         # Model information
-        self.AIC = regress.aic
-        self.BIC = regress.bic
-
+        self.AIC   = regress.aic
+        self.BIC   = regress.bic
+        self.R2    = regress.rsquared
+        self.R2adj = regress.rsquared_adj
+        
         # Extra diagnostics
         # ... add here ...
         

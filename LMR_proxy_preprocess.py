@@ -23,7 +23,11 @@ Purpose: Takes proxy data in their native format (.xlsx file for PAGES or collec
             - Improved detection & treatment of missing data, now using tags found
               (or not) in each data file.
               [R. Tardif, U. of Washington, March 2017]
-            - ... 
+            - Added functionalities related to the merging of proxies coming from two
+              sources (PAGES2k phase 2 data contained in a single compressed pickle file
+              and "in-house" collections contained in NCDC-templated text files). 
+              The possibility to "gaussianize" records and to calculate annual averages
+              on "tropical year" (Apr to Mar) or calendar year have also been implemented.
               [R. Tardif, U. of Washington, Michael Erb, USC, May 2017]
 """
 import glob
@@ -304,6 +308,8 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
     years = list(set(years_all)) # 'set' is used to get unique values in list
     years = sorted(years) # sort the list
 
+    years = np.insert(years,0,years[0]-1) # M. Erb
+    
     # bounds, for calendar year : [years_beg,years_end[
     years_beg = np.asarray(years,dtype=np.float64) # inclusive lower bound
     years_end = years_beg + 1.                     # exclusive upper bound

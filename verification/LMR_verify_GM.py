@@ -67,9 +67,9 @@ etime = 2000
 # or over a custom selection ( MCset = (begin,end) )
 # ex. MCset = (0,0)    -> only the first MC run
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
-#     MCset = (90,100) -> the 80th to 100th MC runs (21 realizations)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
-MCset = (0,7)
+#MCset = (0,0)
 
 # define the running time mean 
 #nsyrs = 31 # 31-> 31-year running mean--nsyrs must be odd!
@@ -158,7 +158,7 @@ print('--------------------------------------------------')
 # ==========================================
 
 # load GISTEMP
-datafile_calib   = 'gistemp1200_ERSST.nc'
+datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
 [gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
 GIS_time = np.array([d.year for d in gtime])

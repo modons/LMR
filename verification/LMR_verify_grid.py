@@ -110,7 +110,7 @@ ref_period = [1900, 1999] # 20th century
 # or over a custom selection ( MCset = (begin,end) )
 # ex. MCset = (0,0)    -> only the first MC run
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
-#     MCset = (90,100) -> the 80th to 100th MC runs (21 realizations)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
 MCset = (0,0)
 
@@ -332,7 +332,7 @@ datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
 # load GISTEMP -----------------------------------------------------------------
 # Note: Anomalies w.r.t. 1951-1980 mean
-datafile_calib   = 'gistemp1200_ERSST.nc'
+datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
 [gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
 GIS_time = np.array([d.year for d in gtime])
