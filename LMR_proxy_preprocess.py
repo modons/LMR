@@ -587,7 +587,9 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         pages2k_data = pickle.load(f)
         f.close()
     else:
-        raise SystemExit('ERROR: Option to include PAGES2kv2 data enabled but specified file could not be found!')
+        raise SystemExit(('ERROR: Option to include PAGES2kv2 proxies enabled'
+                         ' but corresponding data file could not be found!'
+                         ' Please place file {} in directory {}').format(pages2kv2_file,datadir))
 
     
     # Summary of the uploaded data

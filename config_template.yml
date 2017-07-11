@@ -35,12 +35,12 @@ core:
   recon_timescale: 1
 #  recon_timescale: 250
   nens: 100
-  seed: 0
+  seed: null
   loc_rad: null
 
 proxies:
-  use_from: [pages]
-#  use_from: [NCDC]
+#  use_from: [pages]
+  use_from: [NCDC]
 #  use_from: [NCDCdtda]  
   proxy_frac: 1.0
   proxy_timeseries_kind: asis
