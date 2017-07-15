@@ -13,9 +13,6 @@ Revisions:
 """
 
 import matplotlib
-# need to do this when running remotely, and to suppress figures
-matplotlib.use('Agg')
-
 import sys
 import csv
 import glob, os, fnmatch
@@ -79,8 +76,20 @@ nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
 #iplot = False
 iplot = True
 
+# Open interactive windows of figures
+interactive = False
+
+if interactive:
+    plt.ion()
+else:
+    # need to do this when running remotely, and to suppress figures
+    matplotlib.use('Agg')
+
 # option to save figures to a file
-fsave = True
+fsave = False
+
+# save statistics file
+stat_save = True
 
 # file specification
 #
@@ -98,9 +107,9 @@ nexp = 'test'
 # specify directories for LMR data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
 datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+# datadir_output = '/home/katabatic2/wperkins/LMR_output/testing'
 
 # Directory where historical griddded data products can be found
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
@@ -239,8 +248,9 @@ era_shm = np.zeros([len(ERA20C_time)])
 # Loop over years in dataset
 for i in xrange(0,len(ERA20C_time)): 
     # compute the global & hemispheric mean temperature
-    [era_gm[i],era_nhm[i],era_shm[i]] = global_hemispheric_means(ERA20C[i,:,:],lat_ERA20C)
-
+    [era_gm[i],
+     era_nhm[i],
+     era_shm[i]] = global_hemispheric_means(ERA20C[i,:, :], lat_ERA20C[:, 0])
 
 # load NOAA's 20th century reanalysis (TCR) reanalysis --------------------------------
 datadir = datadir_reanl+'/20cr'
@@ -270,7 +280,8 @@ tcr_shm = np.zeros([len(TCR_time)])
 # Loop over years in dataset
 for i in xrange(0,len(TCR_time)): 
     # compute the global & hemispheric mean temperature
-    [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],lat_TCR)
+    [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],
+                                                                 lat_TCR[:,0])
 
 
 #
@@ -787,6 +798,8 @@ if iplot:
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
 
+
+
 # =======================================
 # detrend and verify the detrended signal
 # =======================================
@@ -1275,59 +1288,61 @@ plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
 #
 # NEW 9/15/16 dictionary for objective verification
 #
+if stat_save:
+    gmt_verification_stats = {}
+    stat_vars = ['stime','etime',
+                 'ltc','lec','lgc','lcc','lbc','lmc','loc',
+                 'ltce','lece','lgce','lcce','lbce','lmce','loce',
+                 'lgrd','lgcd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
+                 'lmrs','gs','crus','bes','mlosts','tcrs','eras']
 
-gmt_verification_stats = {}
-stat_vars = ['stime','etime',
-             'ltc','lec','lgc','lcc','lbc','lmc','loc',
-             'ltce','lece','lgce','lcce','lbce','lmce','loce',
-             'lgrd','lgcd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
-             'lmrs','gs','crus','bes','mlosts','tcrs','eras']
+    stat_metadata = {'stime':"starting year of verification time period",
+                     'etime':"ending year of verification time period",
+                     'ltc':'LMR_TCR correlation',
+                     'lec':'LMR_ERA correlation',
+                     'lgc':'LMR_GIS correlation',
+                     'lcc':'LMR_CRU correlation',
+                     'lbc':'LMR_BE correlation',
+                     'lmc':'LMR_MLOST correlation',
+                     'loc':'LMR_consensus correlation',
+                     'ltce':'LMR_TCR coefficient of efficiency',
+                     'lece':'LMR_ERA coefficient of efficiency',
+                     'lgce':'LMR_GIS coefficient of efficiency',
+                     'lcce':'LMR_CRU coefficient of efficiency',
+                     'lbce':'LMR_BE coefficient of efficiency',
+                     'lmce':'LMR_MLOST coefficient of efficiency',
+                     'loce':'LMR_consensus coefficient of efficiency',
+                     'ltrd':'LMR_TCR detrended correlation',
+                     'lerd':'LMR_ERA detrended correlation',
+                     'lgrd':'LMR_GIS detrended correlation',
+                     'lcrd':'LMR_CRU detrended correlation',
+                     'lbrd':'LMR_BE detrended correlation',
+                     'lmrd':'LMR_MLOST detrended correlation',
+                     'ltcd':'LMR_TCR detrended coefficient of efficiency',
+                     'lecd':'LMR_ERA detrended coefficient of efficiency',
+                     'lgcd':'LMR_GIS detrended coefficient of efficiency',
+                     'lccd':'LMR_CRU detrended coefficient of efficiency',
+                     'lbcd':'LMR_BE detrended coefficient of efficiency',
+                     'lmcd':'LMR_MLOST detrended coefficient of efficiency',
+                     'lmrs':'LMR trend (K/100 years)',
+                     'gs':'GIS trend (K/100 years)',
+                     'crus':'CRU trend (K/100 years)',
+                     'bes':'BE trend (K/100 years)',
+                     'mlosts':'MLOST trend (K/100 years)',
+                     'tcrs':'TCR trend (K/100 years)',
+                     'eras':'ERA trend (K/100 years)',
+                     'stat_metadata':'metdata'
+                     }
 
-stat_metadata = {'stime':"starting year of verification time period",
-                 'etime':"ending year of verification time period",
-                 'ltc':'LMR_TCR correlation',
-                 'lec':'LMR_ERA correlation',
-                 'lgc':'LMR_GIS correlation',
-                 'lcc':'LMR_CRU correlation',
-                 'lbc':'LMR_BE correlation',
-                 'lmc':'LMR_MLOST correlation',
-                 'loc':'LMR_consensus correlation',
-                 'ltce':'LMR_TCR coefficient of efficiency',
-                 'lece':'LMR_ERA coefficient of efficiency',
-                 'lgce':'LMR_GIS coefficient of efficiency',
-                 'lcce':'LMR_CRU coefficient of efficiency',
-                 'lbce':'LMR_BE coefficient of efficiency',
-                 'lmce':'LMR_MLOST coefficient of efficiency',
-                 'loce':'LMR_consensus coefficient of efficiency',
-                 'ltrd':'LMR_TCR detrended correlation',
-                 'lerd':'LMR_ERA detrended correlation',
-                 'lgrd':'LMR_GIS detrended correlation',
-                 'lcrd':'LMR_CRU detrended correlation',
-                 'lbrd':'LMR_BE detrended correlation',
-                 'lmrd':'LMR_MLOST detrended correlation',
-                 'ltcd':'LMR_TCR detrended coefficient of efficiency',
-                 'lecd':'LMR_ERA detrended coefficient of efficiency',
-                 'lgcd':'LMR_GIS detrended coefficient of efficiency',
-                 'lccd':'LMR_CRU detrended coefficient of efficiency',
-                 'lbcd':'LMR_BE detrended coefficient of efficiency',
-                 'lmcd':'LMR_MLOST detrended coefficient of efficiency',
-                 'lmrs':'LMR trend (K/100 years)',
-                 'gs':'GIS trend (K/100 years)',
-                 'crus':'CRU trend (K/100 years)',
-                 'bes':'BE trend (K/100 years)',
-                 'mlosts':'MLOST trend (K/100 years)',
-                 'tcrs':'TCR trend (K/100 years)',
-                 'eras':'ERA trend (K/100 years)',
-                 'stat_metadata':'metdata'
-                 }
+    for var in stat_vars:
+        gmt_verification_stats[var] = locals()[var]
 
-for var in stat_vars:
-    gmt_verification_stats[var] = locals()[var]
+    gmt_verification_stats['stat_metadata'] = stat_metadata
+    # dump the dictionary to a pickle file
+    spfile = nexp + '_' + str(niters) + '_iters_gmt_verification.pckl'
+    print 'writing statistics to pickle file: ' + spfile
+    outfile = open(spfile, 'w')
+    cPickle.dump(gmt_verification_stats, outfile)
 
-gmt_verification_stats['stat_metadata'] = stat_metadata
-
-# dump the dictionary to a pickle file
-spfile = nexp+'_'+str(niters)+'_iters_gmt_verification.pckl'
-print('writing statistics to pickle file: %s' % spfile)
-outfile = open(spfile,'w')
-cPickle.dump(gmt_verification_stats,outfile)
+if interactive:
+    plt.show(block=True)

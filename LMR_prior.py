@@ -258,6 +258,7 @@ class prior_master(object):
                 raise SystemExit('ERROR im populate_ensemble: variable of unrecognized spatial dimensions. Exiting!')
 
 
+
             """
             # RT dev ... ... ...
             # if anom_reference period is defined, re-centering sample around a mean of zero ? ...
@@ -280,21 +281,22 @@ class prior_master(object):
         
         # Returning state vector Xb as masked array, if it contains
         # at least one invalid value
-        if np.isnan(Xb).any():        
-            Xb_mask = np.ma.masked_invalid(Xb)
+
+        if np.any(np.isnan(Xb)):
+            # Returning state vector Xb as masked array
+            Xb_res = np.ma.masked_invalid(Xb)
+
             # Set fill_value to np.nan
-            np.ma.set_fill_value(Xb_mask, np.nan)
+            np.ma.set_fill_value(Xb_res, np.nan)
         
             # array indices of masked & valid elements
-            inds_mask = np.nonzero(Xb_mask.mask)
-            inds_valid = np.nonzero(~Xb_mask.mask)
-
+            inds_mask = np.nonzero(Xb_res.mask)
+            inds_valid = np.nonzero(~Xb_res.mask)
         else:
-            Xb_mask = Xb            
+            Xb_res = Xb
         
         # Assign return variables
-        #self.ens    = Xb
-        self.ens = Xb_mask
+        self.ens = Xb_res
         self.coords = Xb_coords
         self.full_state_info = state_vect_info
         

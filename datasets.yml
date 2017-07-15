@@ -221,7 +221,6 @@ ccsm3_trace21ka:
   dataformat: NCD
 
 
-
 # Non - default Datasets
 # 20CR used for LIM calibrations in Perkins & Hakim 2017
 old20cr:
