@@ -1491,14 +1491,14 @@ class prior(ConfigGroup):
         1) None : Regridding NOT performed. 
         2) 'spherical_harmonics' : Original regridding using pyspharm library.
         3) 'simple': Regridding through simple inverse distance averaging of surrounding grid points.
-        4) 'esmpy': Regridding using the ESMpy package. Includes bilinear, 
-           higher-order patch fit, and conservative regridding.
+        4) 'esmpy': Regridding using the ESMpy package. Includes bilinear and
+           higher-order patch fit regridding.
     regrid_resolution: int
         Integer representing the triangular truncation of the lower resolution grid (e.g. 42 for T42).
         Not used for 'esmpy' regrid_method.
     esmpy_interp_method: str
         Which ESMpy regridding method to use.  Currently supports bilinear or 
-        higher-oder patch fit interpolation, and conservative regridding.
+        higher-oder patch fit interpolation regridding.
     esmpy_regrid_to: str
         A grid defined in grid_def.yml to use as the regridding target.  
         Currently supports 't42' and 'reg_4x5deg'.
@@ -1563,7 +1563,6 @@ class prior(ConfigGroup):
     #    Note: fields with missing/masked values (e.g. ocean variables) allowed.
     # 4) 'esmpy': regridding facilitated by ESMpy package, includes blinear,
     #    and higher order patch interpolation
-    #    Note: does *NOT* handle fields with missing/masked values... yet
     regrid_method = 'simple'
     # resolution of truncated grid, based on triangular truncation (e.g., use 42 for T42))
     regrid_resolution = 42
