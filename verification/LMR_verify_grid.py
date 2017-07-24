@@ -2624,5 +2624,3 @@ if stat_save:
     print 'writing statistics to pickle file: ' + spfile
     outfile = open(spfile,'w')
     cPickle.dump(grid_verification_stats,outfile)
-
->>>>>>> remotes/from_Andre/esmpy_regrid

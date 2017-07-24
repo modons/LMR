@@ -250,7 +250,7 @@ for i in xrange(0,len(ERA20C_time)):
     # compute the global & hemispheric mean temperature
     [era_gm[i],
      era_nhm[i],
-     era_shm[i]] = global_hemispheric_means(ERA20C[i,:, :], lat_ERA20C[:, 0])
+     era_shm[i]] = global_hemispheric_means(ERA20C[i,:, :], lat_ERA20C)
 
 # load NOAA's 20th century reanalysis (TCR) reanalysis --------------------------------
 datadir = datadir_reanl+'/20cr'
@@ -281,7 +281,7 @@ tcr_shm = np.zeros([len(TCR_time)])
 for i in xrange(0,len(TCR_time)): 
     # compute the global & hemispheric mean temperature
     [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],
-                                                                 lat_TCR[:,0])
+                                                                 lat_TCR)
 
 
 #

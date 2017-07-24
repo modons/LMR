@@ -364,7 +364,7 @@ prior:
 #    sos_sfc_Odec: full
 
   detrend: False
-  # regridding options: null, simple or spherical_harmonics
+  # regridding options: null, simple, esmpy or spherical_harmonics
   regrid_method: simple
   regrid_resolution: 42
   esmpy_interp_method: bilinear
