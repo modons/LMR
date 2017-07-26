@@ -1,8 +1,12 @@
 
+# coding: utf-8
+
+# In[1]:
 
 import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import cartopy.feature
@@ -23,18 +27,27 @@ cmap = {'Ice:dD':'blue', 'Lake:':'gray', 'Coral:Rate':'pink', 'Ice:d18O':'brown'
 # In[2]:
 
 # specify a directory with the Ye pickle file
-#pth = '/home/disk/kalman3/hakim/LMR/testdevMultiState/r1/'
-#pth = '/home/disk/kalman3/hakim/LMR/test_V2proto/r0/'
-#pth = '/Users/hakim/data/LMR/archive/dadt_test/r0/'
-#pth = '/Users/hakim/data/LMR/archive/pages2_loc12000/r0/'
-#pth = '/Users/hakim/data/LMR/archive/pages2_loc12000_pages2k2_seasonal_TorP/r0/'
-pth = '/home/disk/kalman3/hakim/LMR/pages2_loc12000/r0/'
+#nexp = 'testdevMultiState'
+#nexp = 'test_V2proto'
+#nexp = 'dadt_test'
+#nexp = 'pages2_loc12000'
+
+# new---for file saving
+pth = '/Users/hakim/data/LMR/archive/'
+#pth = '/home/disk/kalman3/hakim/LMR/
+
+nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
+#nexp = 'pages2_loc12000'
+#nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+itn = 'r0'
+
+filn = pth+nexp+'/'+itn+'/'
 
 # In[3]:
 
 # load the data
 print 'loading proxies...'
-filn = pth + 'analysis_Ye.pckl'
+filn = filn + 'analysis_Ye.pckl'
 infile = open(filn,'rb')
 Ye_data = cPickle.load(infile)
 nproxies = len(Ye_data)
@@ -43,8 +56,7 @@ print 'number of proxies:',nproxies
 
 # In[4]:
 
-"""Got to save this because other method can't identify the records that were missed"""
-"""set a flag at the top of the script to turn this on/off. Useful for setting proxy groups in next block"""
+# screen for known proxies, date ranges, and identify the records that are missed in the process
 
 print 'First pass over Ye data to screen for known proxies and determine data ranges...'
 # initialize counters to zero
@@ -95,14 +107,12 @@ print 'total number of proxies:' + str(nkeys)
 print 'missing from the analysis: ' + str(len(miss)) + ' : ' + str(miss)
 
 
-# In[28]:
+# In[5]:
 
-"""This is the replacement block of code that supercedes those marked above.
+"""
 
 Loop over proxies in a *defined dictionary with target lists*, then loop over the Ye data dictionary to find all of the matches 
-(cf. looping over keys in Ye estimates). Compute observation influence and store as follows:
-
-1. ----to do----finish this. then work on saving plat and plon properly (dictionaries) to display maps below
+(cf. looping over keys in Ye estimates as above). Compute observation influence and store as follows:
 
 key variables:
 sens: influence for a single proxy, all years
@@ -117,7 +127,7 @@ S: influence for a single proxy, averaged over all years
 
 """
 
-# repeat, but now using dictionaries and lists
+# use dictionaries and lists
 proxies = {'Tree':['Width','Dens'],'Coral':['d18O','SrCa','Rate'],'Ice':['d18O','dD'],'Lake':['']}
 
 Syears = np.zeros([nproxies,nyears])
@@ -245,7 +255,7 @@ if iplot > 1:
  
 
 
-# In[9]:
+# In[8]:
 
 #total proxy impact:
 tpi = 0.
@@ -260,7 +270,7 @@ for key in sall.keys():
 print 'total impact: ' + '{0!s:.4}'.format(tpi)
 
 
-# In[10]:
+# In[9]:
 
 if iplot >0:
     """Plot all proxies on one map with symbol size scaled by impact and color by proxy group"""
@@ -287,11 +297,11 @@ if iplot >0:
     #handles, labels = ax.get_legend_handles_labels()
 
     ax.set_global()
-    plt.savefig('global_s_markers.png',dpi=300)
+    plt.savefig(nexp+'_impact_global_s_markers.png',dpi=300,bbox_inches='tight')
     plt.show()
 
 
-# In[11]:
+# In[10]:
 
 if iplot > 1:
     for key in sall:
@@ -319,14 +329,15 @@ if iplot > 1:
     plt.show()
 
 
-# In[12]:
+# In[11]:
 
 # influence by proxy group
 
 # grand total for normalization
 gti = np.sum(alls)
 gai = gti/len(alls)
-print 'global total impact=' '{0!s:.4}'.format(gti) + '\nglobal total impact per proxy= ' '{0!s:.4}'.format(gai)
+print 'global total impact=' '{0!s:.4}'.format(gti) + '\n global total impact per proxy= ' '{0!s:.4}'.format(gai)
+
 spai = 0.
 spti = 0.
 lpti = []
@@ -348,30 +359,34 @@ for key in sall:
     
 print 'sum partial impact: ' + '{0!s:.4}'.format(spti) + '     // per proxy:  ' '{0!s:.4}'.format(spai)
 
-if iplot >0:
+if iplot > 0:
     # total impact by group
     index = np.arange(len(lpti))
     plt.bar(index,lpti/(gti/100.))
     plt.xticks(index, sall.keys())
     plt.ylabel('Percentage of Total Impact')
     plt.title('Proxy Group Total Impact')
-    plt.show()
+
+    plt.savefig(nexp+'_impact_proxy_total.png',dpi=300)
+    plt.show()   
+    
     # per-proxy impact by group
     index = np.arange(len(lpai))
     plt.bar(index,lpai)
     plt.xticks(index, sall.keys())
-    plt.title('Proxy Group Impact per Proxy')
+    plt.title('Proxy Group Impact per Proxy (global total impact=' + '{0!s:.4}'.format(gti) + '; per proxy= ' + '{0!s:.4}'.format(gai)+')')
+
+    plt.savefig(nexp+'_impact_per_proxy.png',dpi=300)
     plt.show()
-    # R per proxy group
 
 
-# In[13]:
+# In[12]:
 
 print np.shape(rstore)
 rstore
 
 
-# In[38]:
+# In[13]:
 
 # construct full S and check properties relative to theory
 tyear = 1950 
@@ -400,7 +415,7 @@ for key in Ye_data.keys():
 print 'done'
 
 
-# In[43]:
+# In[14]:
 
 # need to remove the sample (row) mean!
 S = np.dot(samp,np.transpose(samp))/(nens-1)
@@ -426,8 +441,13 @@ if iplot >2:
     plt.title('log Proxy R')
     plt.show()
 
-
 # In[ ]:
 
-
+"""
+to do:
+1. determine which trees are moisture and temperature sensitive and break down the influence
+2. math an implementation for patterns/functionals (J)
+3. application of optimal proxy-pattern update and statistics
+"""
+    
 
