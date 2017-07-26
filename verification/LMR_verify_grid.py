@@ -12,7 +12,6 @@ Revisions:
 """
 import matplotlib
 # need to do this backend when running remotely or to suppress figures interactively
-matplotlib.use('Agg')
 
 # generic imports
 import numpy as np
@@ -54,9 +53,20 @@ iplot = True
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
 
+# Open interactive windows of figures
+interactive = False
+
+if interactive:
+    plt.ion()
+else:
+    # need to do this when running remotely, and to suppress figures
+    matplotlib.use('Agg')
+
 # option to print figures
 fsave = True
-#fsave = False
+
+# save statistics file
+stat_save = True
 
 # set paths, the filename for plots, and global plotting preferences
 
@@ -78,7 +88,7 @@ nexp = 'test'
 # override datadir
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+# datadir_output = '/home/katabatic2/wperkins/LMR_output/testing'
 datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
 
@@ -110,7 +120,7 @@ ref_period = [1900, 1999] # 20th century
 # or over a custom selection ( MCset = (begin,end) )
 # ex. MCset = (0,0)    -> only the first MC run
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
-#     MCset = (90,100) -> the 80th to 100th MC runs (21 realizations)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
 MCset = (0,0)
 
@@ -332,7 +342,7 @@ datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
 # load GISTEMP -----------------------------------------------------------------
 # Note: Anomalies w.r.t. 1951-1980 mean
-datafile_calib   = 'gistemp1200_ERSST.nc'
+datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
 [gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
 GIS_time = np.array([d.year for d in gtime])
@@ -937,7 +947,8 @@ ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,6)
 indok = np.isfinite(lmr_gis_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+            range=(bins.min(), bins.max()))
 ax.set_title('LMR - GISTEMP')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -963,7 +974,8 @@ ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,8)
 indok = np.isfinite(lmr_be_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_be_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_be_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+            range=(bins.min(), bins.max()))
 ax.set_title('LMR - BE')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -989,7 +1001,8 @@ ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,10)
 indok = np.isfinite(lmr_cru_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_cru_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_cru_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+        range=(bins.min(), bins.max()))
 ax.set_title('LMR - HadCRUT4')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -1016,7 +1029,8 @@ ax.set_xlabel('Year CE',fontweight='bold')
 ax = fig.add_subplot(6,2,12)
 indok = np.isfinite(lmr_mlost_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_mlost_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_mlost_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+        range=(bins.min(), bins.max()))
 ax.set_title('LMR - MLOST')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -1055,7 +1069,8 @@ if fsave:
     ax.set_ylim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Correlation',fontweight='bold')
     ax = fig.add_subplot(2,2,2)
-    ax.hist(lmr_tcr_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_tcr_csave,bins=bins,histtype='stepfilled',alpha=0.25,
+        range=(bins.min(), bins.max()))
     ax.set_title('LMR - 20CR-V2')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -1082,7 +1097,8 @@ if fsave:
     ax = fig.add_subplot(2,2,4)
     indok = np.isfinite(lmr_gis_csave)
     if np.sum(indok) > 0:
-        ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+        ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+                range=(bins.min(), bins.max()))
     ax.set_title('LMR - GISTEMP')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -2438,10 +2454,8 @@ if iplot:
         print('saving to .png')
         plt.savefig(nexp+'_verify_grid_ce_vsBias_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
-
-if iplot:
-    plt.show()
-
+if interactive and iplot:
+    plt.show(block=True)
 
 # ensemble calibration
 
@@ -2500,112 +2514,113 @@ lmr_mlost_mac = str(float('%.2f' %np.nanmean(lmr_mlost_csave)))
 #
 # need to store anomaly correlation data too
 #
-grid_verification_stats = {}
-stat_vars = ['trange','ref_period',
-             'lmr_tcr_rmean_global','lmr_tcr_rmean_nh','lmr_tcr_rmean_sh','lmr_tcr_cemean_global','lmr_tcr_cemean_nh','lmr_tcr_cemean_sh',
-             'lmr_era_rmean_global','lmr_era_rmean_nh','lmr_era_rmean_sh','lmr_era_cemean_global','lmr_era_cemean_nh','lmr_era_cemean_sh',
-             'lmr_gis_rmean_global','lmr_gis_rmean_nh','lmr_gis_rmean_sh','lmr_gis_cemean_global','lmr_gis_cemean_nh','lmr_gis_cemean_sh',
-             'lmr_be_rmean_global','lmr_be_rmean_nh','lmr_be_rmean_sh','lmr_be_cemean_global','lmr_be_cemean_nh','lmr_be_cemean_sh',
-             'lmr_cru_rmean_global','lmr_cru_rmean_nh','lmr_cru_rmean_sh','lmr_cru_cemean_global','lmr_cru_cemean_nh','lmr_cru_cemean_sh',
-             'lmr_mlost_rmean_global','lmr_mlost_rmean_nh','lmr_mlost_rmean_sh','lmr_mlost_cemean_global','lmr_mlost_cemean_nh','lmr_mlost_cemean_sh',
-             'xbm_tcr_rmean_global','xbm_tcr_rmean_nh','xbm_tcr_rmean_sh','xbm_tcr_cemean_global','xbm_tcr_cemean_nh','xbm_tcr_cemean_sh',
-             'xbm_era_rmean_global','xbm_era_rmean_nh','xbm_era_rmean_sh','xbm_era_cemean_global','xbm_era_cemean_nh','xbm_era_cemean_sh',
-             'xbm_gis_rmean_global','xbm_gis_rmean_nh','xbm_gis_rmean_sh','xbm_gis_cemean_global','xbm_gis_cemean_nh','xbm_gis_cemean_sh',
-             'xbm_be_rmean_global','xbm_be_rmean_nh','xbm_be_rmean_sh','xbm_be_cemean_global','xbm_be_cemean_nh','xbm_be_cemean_sh',
-             'xbm_cru_rmean_global','xbm_cru_rmean_nh','xbm_cru_rmean_sh','xbm_cru_cemean_global','xbm_cru_cemean_nh','xbm_cru_cemean_sh',
-             'xbm_mlost_rmean_global','xbm_mlost_rmean_nh','xbm_mlost_rmean_sh','xbm_mlost_cemean_global','xbm_mlost_cemean_nh','xbm_mlost_cemean_sh',
-             'lmr_tcr_mac','lmr_era_mac','lmr_gis_mac','lmr_be_mac','lmr_cru_mac','lmr_mlost_mac']
+if stat_save:
+    grid_verification_stats = {}
+    stat_vars = ['trange','ref_period',
+                 'lmr_tcr_rmean_global','lmr_tcr_rmean_nh','lmr_tcr_rmean_sh','lmr_tcr_cemean_global','lmr_tcr_cemean_nh','lmr_tcr_cemean_sh',
+                 'lmr_era_rmean_global','lmr_era_rmean_nh','lmr_era_rmean_sh','lmr_era_cemean_global','lmr_era_cemean_nh','lmr_era_cemean_sh',
+                 'lmr_gis_rmean_global','lmr_gis_rmean_nh','lmr_gis_rmean_sh','lmr_gis_cemean_global','lmr_gis_cemean_nh','lmr_gis_cemean_sh',
+                 'lmr_be_rmean_global','lmr_be_rmean_nh','lmr_be_rmean_sh','lmr_be_cemean_global','lmr_be_cemean_nh','lmr_be_cemean_sh',
+                 'lmr_cru_rmean_global','lmr_cru_rmean_nh','lmr_cru_rmean_sh','lmr_cru_cemean_global','lmr_cru_cemean_nh','lmr_cru_cemean_sh',
+                 'lmr_mlost_rmean_global','lmr_mlost_rmean_nh','lmr_mlost_rmean_sh','lmr_mlost_cemean_global','lmr_mlost_cemean_nh','lmr_mlost_cemean_sh',
+                 'xbm_tcr_rmean_global','xbm_tcr_rmean_nh','xbm_tcr_rmean_sh','xbm_tcr_cemean_global','xbm_tcr_cemean_nh','xbm_tcr_cemean_sh',
+                 'xbm_era_rmean_global','xbm_era_rmean_nh','xbm_era_rmean_sh','xbm_era_cemean_global','xbm_era_cemean_nh','xbm_era_cemean_sh',
+                 'xbm_gis_rmean_global','xbm_gis_rmean_nh','xbm_gis_rmean_sh','xbm_gis_cemean_global','xbm_gis_cemean_nh','xbm_gis_cemean_sh',
+                 'xbm_be_rmean_global','xbm_be_rmean_nh','xbm_be_rmean_sh','xbm_be_cemean_global','xbm_be_cemean_nh','xbm_be_cemean_sh',
+                 'xbm_cru_rmean_global','xbm_cru_rmean_nh','xbm_cru_rmean_sh','xbm_cru_cemean_global','xbm_cru_cemean_nh','xbm_cru_cemean_sh',
+                 'xbm_mlost_rmean_global','xbm_mlost_rmean_nh','xbm_mlost_rmean_sh','xbm_mlost_cemean_global','xbm_mlost_cemean_nh','xbm_mlost_cemean_sh',
+                 'lmr_tcr_mac','lmr_era_mac','lmr_gis_mac','lmr_be_mac','lmr_cru_mac','lmr_mlost_mac']
 
-stat_metadata = {'trange':"starting and ending year of verification time period",
-                 'ref_period':"starting and ending year of reference time period (mean removed)",
-                 'lmr_tcr_rmean_global':"LMR_TCR correlation global mean",
-                 'lmr_tcr_rmean_nh':"LMR_TCR correlation Northern Hemisphere mean",
-                 'lmr_tcr_rmean_sh':"LMR_TCR correlation Southern Hemisphere mean",
-                 'lmr_tcr_cemean_global':"LMR_TCR coefficient of efficiency global mean",
-                 'lmr_tcr_cemean_nh':"LMR_TCR coefficient of efficiency Northern Hemisphere mean",
-                 'lmr_tcr_cemean_sh':"LMR_TCR coefficient of efficiency Southern Hemisphere mean",
-                 'lmr_era_rmean_global':"LMR_ERA correlation global mean",
-                 'lmr_era_rmean_nh':"LMR_ERA correlation Northern Hemisphere mean",
-                 'lmr_era_rmean_sh':"LMR_ERA correlation Southern Hemisphere mean",
-                 'lmr_era_cemean_global':"LMR_ERA coefficient of efficiency global mean",
-                 'lmr_era_cemean_nh':"LMR_ERA coefficient of efficiency Northern Hemisphere mean",
-                 'lmr_era_cemean_sh':"LMR_ERA coefficient of efficiency Southern Hemisphere mean",
-                 'lmr_gis_rmean_global':"LMR_GIS correlation global mean",
-                 'lmr_gis_rmean_nh':"LMR_GIS correlation Northern Hemisphere mean",
-                 'lmr_gis_rmean_sh':"LMR_GIS correlation Southern Hemisphere mean",
-                 'lmr_gis_cemean_global':"LMR_GIS coefficient of efficiency global mean",
-                 'lmr_gis_cemean_nh':"LMR_GIS coefficient of efficiency Northern Hemisphere mean",
-                 'lmr_gis_cemean_sh':"LMR_GIS coefficient of efficiency Southern Hemisphere mean",
-                 'lmr_be_rmean_global':"LMR_BE correlation global mean",
-                 'lmr_be_rmean_nh':"LMR_BE correlation Northern Hemisphere mean",
-                 'lmr_be_rmean_sh':"LMR_BE correlation Southern Hemisphere mean",
-                 'lmr_be_cemean_global':"LMR_BE coefficient of efficiency global mean",
-                 'lmr_be_cemean_nh':"LMR_BE coefficient of efficiency Northern Hemisphere mean",
-                 'lmr_be_cemean_sh':"LMR_BE coefficient of efficiency Southern Hemisphere mean",
-                 'lmr_cru_rmean_global':"LMR_CRU correlation global mean",
-                 'lmr_cru_rmean_nh':"LMR_CRU correlation Northern Hemisphere mean",
-                 'lmr_cru_rmean_sh':"LMR_CRU correlation Southern Hemisphere mean",
-                 'lmr_cru_cemean_global':"LMR_CRU coefficient of efficiency global mean",
-                 'lmr_cru_cemean_nh':"LMR_CRU coefficient of efficiency Northern Hemisphere mean",
-                 'lmr_cru_cemean_sh':"LMR_CRU coefficient of efficiency Southern Hemisphere mean",
-                 'lmr_mlost_rmean_global':"LMR_MLOST correlation global mean",
-                 'lmr_mlost_rmean_nh':"LMR_MLOST correlation Northern Hemisphere mean",
-                 'lmr_mlost_rmean_sh':"LMR_MLOST correlation Southern Hemisphere mean",
-                 'lmr_mlost_cemean_global':"LMR_MLOST coefficient of efficiency global mean",
-                 'lmr_mlost_cemean_nh':"LMR_MLOST coefficient of efficiency Northern Hemisphere mean",
-                 'lmr_mlost_cemean_sh':"LMR_MLOST coefficient of efficiency Southern Hemisphere mean",
-                 'xbm_tcr_rmean_global':"XBM_TCR correlation global mean",
-                 'xbm_tcr_rmean_nh':"XBM_TCR correlation Northern Hemisphere mean",
-                 'xbm_tcr_rmean_sh':"XBM_TCR correlation Southern Hemisphere mean",
-                 'xbm_tcr_cemean_global':"XBM_TCR coefficient of efficiency global mean",
-                 'xbm_tcr_cemean_nh':"XBM_TCR coefficient of efficiency Northern Hemisphere mean",
-                 'xbm_tcr_cemean_sh':"XBM_TCR coefficient of efficiency Southern Hemisphere mean",
-                 'xbm_era_rmean_global':"XBM_ERA correlation global mean",
-                 'xbm_era_rmean_nh':"XBM_ERA correlation Northern Hemisphere mean",
-                 'xbm_era_rmean_sh':"XBM_ERA correlation Southern Hemisphere mean",
-                 'xbm_era_cemean_global':"XBM_ERA coefficient of efficiency global mean",
-                 'xbm_era_cemean_nh':"XBM_ERA coefficient of efficiency Northern Hemisphere mean",
-                 'xbm_era_cemean_sh':"XBM_ERA coefficient of efficiency Southern Hemisphere mean",
-                 'xbm_gis_rmean_global':"XBM_GIS correlation global mean",
-                 'xbm_gis_rmean_nh':"XBM_GIS correlation Northern Hemisphere mean",
-                 'xbm_gis_rmean_sh':"XBM_GIS correlation Southern Hemisphere mean",
-                 'xbm_gis_cemean_global':"XBM_GIS coefficient of efficiency global mean",
-                 'xbm_gis_cemean_nh':"XBM_GIS coefficient of efficiency Northern Hemisphere mean",
-                 'xbm_gis_cemean_sh':"XBM_GIS coefficient of efficiency Southern Hemisphere mean",
-                 'xbm_be_rmean_global':"XBM_BE correlation global mean",
-                 'xbm_be_rmean_nh':"XBM_BE correlation Northern Hemisphere mean",
-                 'xbm_be_rmean_sh':"XBM_BE correlation Southern Hemisphere mean",
-                 'xbm_be_cemean_global':"XBM_BE coefficient of efficiency global mean",
-                 'xbm_be_cemean_nh':"XBM_BE coefficient of efficiency Northern Hemisphere mean",
-                 'xbm_be_cemean_sh':"XBM_BE coefficient of efficiency Southern Hemisphere mean",
-                 'xbm_cru_rmean_global':"XBM_CRU correlation global mean",
-                 'xbm_cru_rmean_nh':"XBM_CRU correlation Northern Hemisphere mean",
-                 'xbm_cru_rmean_sh':"XBM_CRU correlation Southern Hemisphere mean",
-                 'xbm_cru_cemean_global':"XBM_CRU coefficient of efficiency global mean",
-                 'xbm_cru_cemean_nh':"XBM_CRU coefficient of efficiency Northern Hemisphere mean",
-                 'xbm_cru_cemean_sh':"XBM_CRU coefficient of efficiency Southern Hemisphere mean",
-                 'xbm_mlost_rmean_global':"XBM_MLOST correlation global mean",
-                 'xbm_mlost_rmean_nh':"XBM_MLOST correlation Northern Hemisphere mean",
-                 'xbm_mlost_rmean_sh':"XBM_MLOST correlation Southern Hemisphere mean",
-                 'xbm_mlost_cemean_global':"XBM_MLOST coefficient of efficiency global mean",
-                 'xbm_mlost_cemean_nh':"XBM_MLOST coefficient of efficiency Northern Hemisphere mean",
-                 'xbm_mlost_cemean_sh':"XBM_MLOST coefficient of efficiency Southern Hemisphere mean",
-                 'lmr_tcr_mac':"LMR_TCR time-mean spatial anomaly correlation",
-                 'lmr_era_mac':"LMR_ERA time-mean spatial anomaly correlation",
-                 'lmr_gis_mac':"LMR_GIS time-mean spatial anomaly correlation",
-                 'lmr_be_mac':"LMR_BE time-mean spatial anomaly correlation",
-                 'lmr_cru_mac':"LMR_CRU time-mean spatial anomaly correlation",
-                 'lmr_mlost_mac':"LMR_MLOST time-mean spatial anomaly correlation",
-                 'stat_metadata':'metadata'
-                 }
+    stat_metadata = {'trange':"starting and ending year of verification time period",
+                     'ref_period':"starting and ending year of reference time period (mean removed)",
+                     'lmr_tcr_rmean_global':"LMR_TCR correlation global mean",
+                     'lmr_tcr_rmean_nh':"LMR_TCR correlation Northern Hemisphere mean",
+                     'lmr_tcr_rmean_sh':"LMR_TCR correlation Southern Hemisphere mean",
+                     'lmr_tcr_cemean_global':"LMR_TCR coefficient of efficiency global mean",
+                     'lmr_tcr_cemean_nh':"LMR_TCR coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_tcr_cemean_sh':"LMR_TCR coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_era_rmean_global':"LMR_ERA correlation global mean",
+                     'lmr_era_rmean_nh':"LMR_ERA correlation Northern Hemisphere mean",
+                     'lmr_era_rmean_sh':"LMR_ERA correlation Southern Hemisphere mean",
+                     'lmr_era_cemean_global':"LMR_ERA coefficient of efficiency global mean",
+                     'lmr_era_cemean_nh':"LMR_ERA coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_era_cemean_sh':"LMR_ERA coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_gis_rmean_global':"LMR_GIS correlation global mean",
+                     'lmr_gis_rmean_nh':"LMR_GIS correlation Northern Hemisphere mean",
+                     'lmr_gis_rmean_sh':"LMR_GIS correlation Southern Hemisphere mean",
+                     'lmr_gis_cemean_global':"LMR_GIS coefficient of efficiency global mean",
+                     'lmr_gis_cemean_nh':"LMR_GIS coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_gis_cemean_sh':"LMR_GIS coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_be_rmean_global':"LMR_BE correlation global mean",
+                     'lmr_be_rmean_nh':"LMR_BE correlation Northern Hemisphere mean",
+                     'lmr_be_rmean_sh':"LMR_BE correlation Southern Hemisphere mean",
+                     'lmr_be_cemean_global':"LMR_BE coefficient of efficiency global mean",
+                     'lmr_be_cemean_nh':"LMR_BE coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_be_cemean_sh':"LMR_BE coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_cru_rmean_global':"LMR_CRU correlation global mean",
+                     'lmr_cru_rmean_nh':"LMR_CRU correlation Northern Hemisphere mean",
+                     'lmr_cru_rmean_sh':"LMR_CRU correlation Southern Hemisphere mean",
+                     'lmr_cru_cemean_global':"LMR_CRU coefficient of efficiency global mean",
+                     'lmr_cru_cemean_nh':"LMR_CRU coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_cru_cemean_sh':"LMR_CRU coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_mlost_rmean_global':"LMR_MLOST correlation global mean",
+                     'lmr_mlost_rmean_nh':"LMR_MLOST correlation Northern Hemisphere mean",
+                     'lmr_mlost_rmean_sh':"LMR_MLOST correlation Southern Hemisphere mean",
+                     'lmr_mlost_cemean_global':"LMR_MLOST coefficient of efficiency global mean",
+                     'lmr_mlost_cemean_nh':"LMR_MLOST coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_mlost_cemean_sh':"LMR_MLOST coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_tcr_rmean_global':"XBM_TCR correlation global mean",
+                     'xbm_tcr_rmean_nh':"XBM_TCR correlation Northern Hemisphere mean",
+                     'xbm_tcr_rmean_sh':"XBM_TCR correlation Southern Hemisphere mean",
+                     'xbm_tcr_cemean_global':"XBM_TCR coefficient of efficiency global mean",
+                     'xbm_tcr_cemean_nh':"XBM_TCR coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_tcr_cemean_sh':"XBM_TCR coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_era_rmean_global':"XBM_ERA correlation global mean",
+                     'xbm_era_rmean_nh':"XBM_ERA correlation Northern Hemisphere mean",
+                     'xbm_era_rmean_sh':"XBM_ERA correlation Southern Hemisphere mean",
+                     'xbm_era_cemean_global':"XBM_ERA coefficient of efficiency global mean",
+                     'xbm_era_cemean_nh':"XBM_ERA coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_era_cemean_sh':"XBM_ERA coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_gis_rmean_global':"XBM_GIS correlation global mean",
+                     'xbm_gis_rmean_nh':"XBM_GIS correlation Northern Hemisphere mean",
+                     'xbm_gis_rmean_sh':"XBM_GIS correlation Southern Hemisphere mean",
+                     'xbm_gis_cemean_global':"XBM_GIS coefficient of efficiency global mean",
+                     'xbm_gis_cemean_nh':"XBM_GIS coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_gis_cemean_sh':"XBM_GIS coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_be_rmean_global':"XBM_BE correlation global mean",
+                     'xbm_be_rmean_nh':"XBM_BE correlation Northern Hemisphere mean",
+                     'xbm_be_rmean_sh':"XBM_BE correlation Southern Hemisphere mean",
+                     'xbm_be_cemean_global':"XBM_BE coefficient of efficiency global mean",
+                     'xbm_be_cemean_nh':"XBM_BE coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_be_cemean_sh':"XBM_BE coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_cru_rmean_global':"XBM_CRU correlation global mean",
+                     'xbm_cru_rmean_nh':"XBM_CRU correlation Northern Hemisphere mean",
+                     'xbm_cru_rmean_sh':"XBM_CRU correlation Southern Hemisphere mean",
+                     'xbm_cru_cemean_global':"XBM_CRU coefficient of efficiency global mean",
+                     'xbm_cru_cemean_nh':"XBM_CRU coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_cru_cemean_sh':"XBM_CRU coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_mlost_rmean_global':"XBM_MLOST correlation global mean",
+                     'xbm_mlost_rmean_nh':"XBM_MLOST correlation Northern Hemisphere mean",
+                     'xbm_mlost_rmean_sh':"XBM_MLOST correlation Southern Hemisphere mean",
+                     'xbm_mlost_cemean_global':"XBM_MLOST coefficient of efficiency global mean",
+                     'xbm_mlost_cemean_nh':"XBM_MLOST coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_mlost_cemean_sh':"XBM_MLOST coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_tcr_mac':"LMR_TCR time-mean spatial anomaly correlation",
+                     'lmr_era_mac':"LMR_ERA time-mean spatial anomaly correlation",
+                     'lmr_gis_mac':"LMR_GIS time-mean spatial anomaly correlation",
+                     'lmr_be_mac':"LMR_BE time-mean spatial anomaly correlation",
+                     'lmr_cru_mac':"LMR_CRU time-mean spatial anomaly correlation",
+                     'lmr_mlost_mac':"LMR_MLOST time-mean spatial anomaly correlation",
+                     'stat_metadata':'metadata'
+                     }
 
-for var in stat_vars:
-    grid_verification_stats[var] = locals()[var]
+    for var in stat_vars:
+        grid_verification_stats[var] = locals()[var]
 
-grid_verification_stats['stat_metadata'] = stat_metadata
+    grid_verification_stats['stat_metadata'] = stat_metadata
 
-# dump the dictionary to a pickle file
-spfile = nexp+'_'+str(niters)+'_iters_grid_verification.pckl'
-print('writing statistics to pickle file: %s' % spfile)
-outfile = open(spfile,'w')
-cPickle.dump(grid_verification_stats,outfile)
+    # dump the dictionary to a pickle file
+    spfile = nexp+'_'+str(niters)+'_iters_grid_verification.pckl'
+    print 'writing statistics to pickle file: ' + spfile
+    outfile = open(spfile,'w')
+    cPickle.dump(grid_verification_stats,outfile)

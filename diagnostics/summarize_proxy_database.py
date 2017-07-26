@@ -74,7 +74,7 @@ proxy_def = \
 data_directory = "/home/disk/kalman3/rtardif/LMR/"
 
 #output_directory = "/home/scec-00/lmr/erbm/analysis/results/LMR/pages2kv2/figures/"
-#output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/Figs/summary_v0.2.0/"
+output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/Figs/summary_v0.2.0/"
 
 save_instead_of_plot = True
 

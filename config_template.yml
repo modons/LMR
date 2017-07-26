@@ -35,12 +35,12 @@ core:
   recon_timescale: 1
 #  recon_timescale: 250
   nens: 100
-  seed: 0
+  seed: null
   loc_rad: null
 
 proxies:
-  use_from: [pages]
-#  use_from: [NCDC]
+#  use_from: [pages]
+  use_from: [NCDC]
 #  use_from: [NCDCdtda]  
   proxy_frac: 1.0
   proxy_timeseries_kind: asis
@@ -364,9 +364,11 @@ prior:
 #    sos_sfc_Odec: full
 
   detrend: False
-  # regridding options: null, simple or spherical_harmonics
+  # regridding options: null, simple, esmpy or spherical_harmonics
   regrid_method: simple
   regrid_resolution: 42
+  esmpy_interp_method: bilinear
+  esmpy_regrid_to: t42
   state_variables_info:
     temperature: [
       'tas_sfc_Amon'

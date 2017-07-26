@@ -81,6 +81,10 @@ LEGACY_CONFIG = False
 # Absolute path to LMR source code directory
 SRC_DIR = '/home/disk/ekman/rtardif/codes/LMR/pyLMR'
 
+# Control logging output. (0 = none; 1 = most important; 2 = many; 3 = a lot;
+#   >=4 all)
+LOG_LEVEL = 2
+
 # Class for distinction of configuration classes
 class ConfigGroup(object):
 
@@ -89,7 +93,29 @@ class ConfigGroup(object):
             update_config_class_yaml(kwargs, self)
 
 
-class _DatasetDescriptors(object):
+class _YamlStorage(object):
+    """
+    Generic object for loading in dictionaries from yaml files, 
+    and a convenience function for returning loaded information.
+    """
+
+    def __init__(self, filename):
+        print 'Loading information from {}'.format(filename)
+        try:
+            f = open(join(SRC_DIR, filename), 'r')
+            self.data = yaml.load(f)
+        except IOError as e:
+            raise SystemExit(('Could not load {} file when initializing the '
+                              ' in LMR_config.py. File is required for locating'
+                              ' dataset specific files. Please ensure '
+                              'LMR_Config.SRC_DIR is correctly set. '
+                              'Exiting...').format(filename))
+
+    def get_info(self, tag):
+        return dict(self.data[tag])
+
+
+class _DatasetDescriptors(_YamlStorage):
     """
     Loads and stores the datasets.yml file and return dictionaries of file
     specifications for each dataset. Information used by psm, prior,
@@ -97,20 +123,21 @@ class _DatasetDescriptors(object):
     """
 
     def __init__(self):
-        print 'Loading dataset information from datasets.yml'
-        f = open(join(SRC_DIR, 'datasets.yml'), 'r')
-        self.datasets = yaml.load(f)
+        super(_DatasetDescriptors, self).__init__('datasets.yml')
 
-    # Returns information dictionary for requested dataset
-    def get_dataset_dict(self, tag):
-        return dict(self.datasets[tag])
+
+class _GridDefinitions(_YamlStorage):
+    """
+    Loads and stores the grid_def.yml file and returns dictionaries of 
+    information necessary to construct a given grid in ESMpy regridding.
+    """
+
+    def __init__(self):
+        super(_GridDefinitions, self).__init__('grid_def.yml')
 
 # Load dataset information on configuration import
-try:
-    _DataInfo = _DatasetDescriptors()
-except IOError as e:
-    raise SystemExit('Could not load datasets.yml file.  File is required for'
-                     ' locating dataset specific files.  Exiting...')
+_DataInfo = _DatasetDescriptors()
+_GridDef = _GridDefinitions()
 
 
 class constants:
@@ -930,7 +957,7 @@ class psm(ConfigGroup):
 
             self.datatag_calib = self.datatag_calib
 
-            dataset_descr = _DataInfo.get_dataset_dict(self.datatag_calib)
+            dataset_descr = _DataInfo.get_info(self.datatag_calib)
             self.datainfo_calib = dataset_descr['info']
             self.datadir_calib = dataset_descr['datadir']
             self.datafile_calib = dataset_descr['datafile']
@@ -1058,7 +1085,7 @@ class psm(ConfigGroup):
             super(self.__class__, self).__init__(**kwargs)
 
             self.datatag_calib_T = self.datatag_calib_T
-            dataset_descr_T = _DataInfo.get_dataset_dict(self.datatag_calib_T)
+            dataset_descr_T = _DataInfo.get_info(self.datatag_calib_T)
             self.datainfo_calib_T = dataset_descr_T['info']
             self.datadir_calib_T = dataset_descr_T['datadir']
             self.datafile_calib_T = dataset_descr_T['datafile']
@@ -1066,7 +1093,7 @@ class psm(ConfigGroup):
 
             
             self.datatag_calib_P = self.datatag_calib_P
-            dataset_descr_P = _DataInfo.get_dataset_dict(self.datatag_calib_P)
+            dataset_descr_P = _DataInfo.get_info(self.datatag_calib_P)
             self.datainfo_calib_P = dataset_descr_P['info']
             self.datadir_calib_P = dataset_descr_P['datadir']
             self.datafile_calib_P = dataset_descr_P['datafile']
@@ -1202,14 +1229,14 @@ class psm(ConfigGroup):
             super(self.__class__, self).__init__(**kwargs)
 
             self.datatag_calib_T = self.datatag_calib_T
-            dataset_descr_T = _DataInfo.get_dataset_dict(self.datatag_calib_T)
+            dataset_descr_T = _DataInfo.get_info(self.datatag_calib_T)
             self.datainfo_calib_T = dataset_descr_T['info']
             self.datadir_calib_T = dataset_descr_T['datadir']
             self.datafile_calib_T = dataset_descr_T['datafile']
             self.dataformat_calib_T = dataset_descr_T['dataformat']
 
             self.datatag_calib_P = self.datatag_calib_P
-            dataset_descr_P = _DataInfo.get_dataset_dict(self.datatag_calib_P)
+            dataset_descr_P = _DataInfo.get_info(self.datatag_calib_P)
             self.datainfo_calib_P = dataset_descr_P['info']
             self.datadir_calib_P = dataset_descr_P['datadir']
             self.datafile_calib_P = dataset_descr_P['datafile']
@@ -1464,8 +1491,17 @@ class prior(ConfigGroup):
         1) None : Regridding NOT performed. 
         2) 'spherical_harmonics' : Original regridding using pyspharm library.
         3) 'simple': Regridding through simple inverse distance averaging of surrounding grid points.
+        4) 'esmpy': Regridding using the ESMpy package. Includes bilinear and
+           higher-order patch fit regridding.
     regrid_resolution: int
         Integer representing the triangular truncation of the lower resolution grid (e.g. 42 for T42).
+        Not used for 'esmpy' regrid_method.
+    esmpy_interp_method: str
+        Which ESMpy regridding method to use.  Currently supports bilinear or 
+        higher-oder patch fit interpolation regridding.
+    esmpy_regrid_to: str
+        A grid defined in grid_def.yml to use as the regridding target.  
+        Currently supports 't42' and 'reg_4x5deg'.
     state_variables_info: dict
         Defines which variables represent temperature or moisture.
         Should be modified only if a new temperature or moisture state variable is added. 
@@ -1525,9 +1561,13 @@ class prior(ConfigGroup):
     #    Note: Does *NOT* handle fields with missing/masked values (e.g. ocean variables)
     # 3) 'simple': through simple interpolation using distance-weighted averaging.
     #    Note: fields with missing/masked values (e.g. ocean variables) allowed.
+    # 4) 'esmpy': regridding facilitated by ESMpy package, includes blinear,
+    #    and higher order patch interpolation
     regrid_method = 'simple'
     # resolution of truncated grid, based on triangular truncation (e.g., use 42 for T42))
     regrid_resolution = 42
+    esmpy_interp_method = 'bilinear'
+    esmpy_regrid_to = 't42'
     
     # Dict. defining which variables represent temperature or moisture.
     # To be modified only if a new temperature or moisture state variable is added. 
@@ -1543,7 +1583,7 @@ class prior(ConfigGroup):
 
         self.prior_source = self.prior_source
 
-        dataset_descr = _DataInfo.get_dataset_dict(self.prior_source)
+        dataset_descr = _DataInfo.get_info(self.prior_source)
         self.datainfo_prior = dataset_descr['info']
         self.datadir_prior = dataset_descr['datadir']
         self.datafile_prior = dataset_descr['datafile']
@@ -1576,8 +1616,12 @@ class prior(ConfigGroup):
             print('ERROR in config.: unrecognized core.recon_timescale!')
             raise SystemExit()
         
-        if self.regrid_method:
+        if self.regrid_method != 'esmpy':
             self.regrid_resolution = int(self.regrid_resolution)
+        elif self.regrid_method == 'esmpy':
+            self.regrid_resolution = None
+            self.esmpy_interp_method = self.esmpy_interp_method
+            self.esmpy_grid_def = _GridDef.get_info(self.esmpy_regrid_to)
         else:
             self.regrid_resolution = None
 
@@ -1599,6 +1643,10 @@ class Config(ConfigGroup):
     """
     
     def __init__(self, **kwargs):
+        self.LEGACY_CONFIG = LEGACY_CONFIG
+        self.SRC_DIR = SRC_DIR
+        self.LOG_LEVEL = LOG_LEVEL
+
         self.wrapper = wrapper(**kwargs.pop('wrapper', {}))
         self.core = core(**kwargs.pop('core', {}))
         lmr_path = self.core.lmr_path

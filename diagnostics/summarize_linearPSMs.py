@@ -39,13 +39,13 @@ from LMR_utils import coefficient_efficiency
 LMRdbversion = 'v0.2.0'
 psm_type     = 'linear'        # linear or bilinear (only linear for now!)
 calib_source = 'GISTEMP'       # linear: GISTEMP, MLOST, HadCRUT, BerkeleyEarth, GPCC or DaiPDSI
-calib_season = 'seasonMETA'    # annual, seasonMETA, seasonPSM
+calib_season = 'annual'        # annual, seasonMETA, seasonPSM
 inputdir     = '/home/disk/kalman3/rtardif/LMR/PSM'
 dbdir        = '/home/disk/kalman3/rtardif/LMR/data/proxies'
 
 PSM_Rcrit    = 0.2 # sites w/ "good" calibration 
 
-make_proxy_individual_plots = False
+make_proxy_individual_plots = True
 
 # Region for maps. Choice of:
 #  'GLOBAL', 'NAmerica', 'SAmerica', 'Europe', 'Asia', 'Africa', 'Australasia'
@@ -78,7 +78,7 @@ infile = open(fname,'r')
 psm_data = cPickle.load(infile)
 infile.close()
 
-proxy_types_sites = psm_data.keys()
+proxy_types_sites = sorted(psm_data.keys())
 proxy_types = list(set([proxy_types_sites[k][0] for k in range(len(proxy_types_sites))]))
 
 # metadata of proxies in the database
@@ -126,12 +126,20 @@ outfile.close()
 # --------------------------------------------
 # === Histogram of calibration correlation === 
 
-# file for diagnostic output
+# file for diagnostic output (sensitivity)
 fname = 'linearPSM_calibError_'+calib_tag+'.txt'
 outfilename = os.path.join(dirfig, fname)
 if os.path.exists(outfilename):
     os.system('rm -f {}'.format(outfilename))
 
+# file for diagnostic output (seasonality)
+if calib_season == 'seasonPSM':
+    fname2 = 'linearPSM_calibSeasonality_'+calib_tag+'.txt'
+    outfilename2 = os.path.join(dirfig, fname2)
+    if os.path.exists(outfilename2):
+        os.system('rm -f {}'.format(outfilename2))
+
+    
 for t in sorted(proxy_types):
 
     sites_goodPSM      = []
@@ -156,7 +164,10 @@ for t in sorted(proxy_types):
         site_meta = metadata[metadata['NCDC ID'] == ts[1]]
         climVar = site_meta['climateVariable'].iloc[0]
         sensi = site_meta['Relation_to_climateVariable'].iloc[0]
-
+        # check seasonality
+        meta_seasonality = site_meta['Seasonality'].iloc[0]
+        calib_seasonality = psm_data[ts]['Seasonality']
+        
         if climVar and sensi:
             if calib_source_var[calib_source] == 'temperature' and climVar == 'temperature':
                 if psm_data[ts]['PSMslope'] > 0. and sensi == 'positive' or \
@@ -199,7 +210,20 @@ for t in sorted(proxy_types):
             outfile.write('{:120}'.format(str(ts))+' : Corr= '+"{:7.4f}".format(psm_data[ts]['PSMcorrel'])+\
                           ' Slope= '+"{:.4f}".format(psm_data[ts]['PSMslope'])+'\n')
             outfile.close()
-    
+
+
+        # for checking seasonality derived during PSM calibration
+        if calib_season == 'seasonPSM':
+            if os.path.exists(outfilename2):
+                append_write = 'a'
+            else:
+                append_write = 'w'
+
+            outfile2 = open(outfilename2, append_write)
+            outfile2.write('{:120}'.format(str(ts))+' : Seasonality(metadata)= '+"{:48}".format(str(meta_seasonality))+\
+                           ' Seasonality(calibration)= '+"{:48}".format(str(calib_seasonality))+'\n')
+            outfile2.close()
+
     
     ALLcorr = np.asarray([sites_allPSM_corr[i] for i in range(len(sites_allPSM_corr))])
     GOODcorr = np.asarray([sites_goodPSM_corr[i] for i in range(len(sites_goodPSM_corr))])
