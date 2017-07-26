@@ -6,18 +6,23 @@
 import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
-get_ipython().magic(u'matplotlib inline')
+<<<<<<< HEAD
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+import cartopy.feature
+#get_ipython().magic(u'matplotlib inline')
 
-# iplot = 0: plot none; 1: most important 2: all 
+# iplot = 0: none; 1: all 2: most important
 iplot = 1
 
 # figure size
-plt.rcParams["figure.figsize"] = [10,10]
+#plt.rcParams["figure.figsize"] = [10,10]
 
 # set the global colormap to identify proxis
 #'tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'
-cmap = {'Ice:dD':'tab:blue', 'Lake:':'tab:gray', 'Coral:Rate':'tab:pink', 'Ice:d18O':'tab:brown', 'Tree:Dens':'tab:purple', 'Coral:SrCa':'tab:orange', 'Coral:d18O':'tab:red', 'Tree:Width':'tab:green'}
+#cmap = {'Ice:dD':'tab:blue', 'Lake:':'tab:gray', 'Coral:Rate':'tab:pink', 'Ice:d18O':'tab:brown', 'Tree:Dens':'tab:purple', 'Coral:SrCa':'tab:orange', 'Coral:d18O':'tab:red', 'Tree:Width':'tab:green'}
 
+cmap = {'Ice:dD':'blue', 'Lake:':'gray', 'Coral:Rate':'pink', 'Ice:d18O':'brown', 'Tree:Dens':'purple', 'Coral:SrCa':'orange', 'Coral:d18O':'red', 'Tree:Width':'green'}
 
 # In[2]:
 
@@ -37,7 +42,6 @@ nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
 itn = 'r0'
 
 filn = pth+nexp+'/'+itn+'/'
-
 
 # In[3]:
 
@@ -274,9 +278,6 @@ if iplot >0:
     # these are the keys for all proxy groups
     print sall.keys()
 
-    import cartopy.crs as ccrs
-    import matplotlib.pyplot as plt
-    import cartopy.feature
     #ax = plt.axes(projection=ccrs.PlateCarree())
     ax = plt.axes(projection=ccrs.Robinson(central_longitude=-90.))
     ax.coastlines()
@@ -290,9 +291,10 @@ if iplot >0:
         c = cmap[key]
         ax.scatter(lonplot,latplot,marker='o',color=c,alpha=0.75,label=key,s=msize,transform=ccrs.PlateCarree(),)
 
-    lgnd = ax.legend(bbox_to_anchor=(1.0, 1), loc=2, borderaxespad=0.)
+    #lgnd = ax.legend(bbox_to_anchor=(1.0, 1), loc=2, borderaxespad=0.)
+    lgnd = ax.legend()
     #lgnd.legendHandles[0]._legmarker.set_markersize(6) # this doesn't set the legend markers to the same size
-    handles, labels = ax.get_legend_handles_labels()
+    #handles, labels = ax.get_legend_handles_labels()
 
     ax.set_global()
     plt.savefig(nexp+'_impact_global_s_markers.png',dpi=300,bbox_inches='tight')
@@ -335,6 +337,7 @@ if iplot > 1:
 gti = np.sum(alls)
 gai = gti/len(alls)
 print 'global total impact=' '{0!s:.4}'.format(gti) + '\n global total impact per proxy= ' '{0!s:.4}'.format(gai)
+
 spai = 0.
 spti = 0.
 lpti = []
@@ -349,12 +352,12 @@ for key in sall:
     lpti.append(pti)
     lpai.append(pai)
     # express as percentage contribution
-    print '{0!s:.4}'.format(100.*pti/gti) + '% ' + '{0!s:.4}'.format(pai)
+    print '{0!s:.4}'.format(100.*pti/gti) + '% // per proxy: ' + '{0!s:.4}'.format(pai)
     spai = spai + pai
     spti = spti + pti
     rstore.append(np.mean(Rall[key]))
     
-print 'sum partial impact: ' + '{0!s:.4}'.format(spti) + '       ' '{0!s:.4}'.format(spai)
+print 'sum partial impact: ' + '{0!s:.4}'.format(spti) + '     // per proxy:  ' '{0!s:.4}'.format(spai)
 
 if iplot > 0:
     # total impact by group
@@ -432,11 +435,11 @@ for key in sall:
 
 print rpp
 index = np.arange(len(rpp))
-plt.bar(index,np.log(rpp))
-plt.xticks(index, sall.keys())
-plt.title('log Proxy R')
-plt.show()
-
+if iplot >2:
+    plt.bar(index,np.log(rpp))
+    plt.xticks(index, sall.keys())
+    plt.title('log Proxy R')
+    plt.show()
 
 # In[ ]:
 
