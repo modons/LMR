@@ -1457,3 +1457,131 @@ class FlagError(ValueError):
     Error for exiting code sections
     """
     pass
+
+def PAGES2K_regional_means(field,lat,lon):
+
+    """
+     compute geographical spatial mean valuee for all times in the input (i.e. field) array. regions are defined by The PAGES2K Consortium (2013) Nature Geosciences paper, Supplementary Information.
+     input:  field[ntime,nlat,nlon] or field[nlat,nlon]
+             lat[nlat,nlon] in degrees
+             lon[nlat,nlon] in degrees
+
+     output: rm[nregions,ntime] : regional means of "field" where nregions = 7 by definition, but could change
+     
+    """
+
+    # Originator: Greg Hakim
+    #             University of Washington
+    #             July 2017
+    #
+    # Modifications:
+    #
+
+    # number of geographical regions (default, as defined in PAGES2K(2013) paper
+    nregions = 7
+    
+    # set number of times, lats, lons; array indices for lat and lon    
+    if len(np.shape(field)) == 3: # time is a dimension
+        ntime,nlat,nlon = np.shape(field)
+        lati = 1
+        loni = 2
+    else: # only spatial dims
+        ntime = 1
+        nlat,nlon = np.shape(field)
+        field = field[None,:] # add time dim of size 1 for consistent array dims
+        lati = 1
+        loni = 2
+
+    # define regions as in PAGES paper
+
+    # lat and lon range for each region (first value is lower limit, second is upper limit)
+    rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
+    # 1. Arctic: north of 60°N 
+    rlat[0,0] = 60.; rlat[0,1] = 90.
+    rlon[0,0] = 0.; rlon[0,1] = 360.
+    # 2. Europe: 35°-70°N, 10°W-40°E
+    rlat[1,0] = 35.; rlat[1,1] = 70.
+    rlon[1,0] = 350.; rlon[1,1] = 40.
+    # 3. Asia: 23-55N; 60-160E (from map)
+    rlat[2,0] = 23.; rlat[2,1] = 55.
+    rlon[2,0] = 60.; rlon[2,1] = 160.
+    # 4. North America 1 (trees):  30°-55°N, 75°-130°W 
+    rlat[3,0] = 30.; rlat[3,1] = 55.
+    rlon[3,0] = 55.; rlon[3,1] = 230.
+    # 5. South America: Text: 20°S-65°S and 30°W-80°W
+    rlat[4,0] = -65.; rlat[4,1] = -20.
+    rlon[4,0] = 280.; rlon[4,1] = 330.
+    # 6. Australasia: 110°E-180°E, 0°-50°S 
+    rlat[5,0] = -50.; rlat[5,1] = 0.
+    rlon[5,0] = 110.; rlon[5,1] = 1800.
+    # 7. Antarctica: south of 60S (from map)
+    rlat[4,0] = -90.; rlat[4,1] = -60.
+    rlon[4,0] = 0.; rlon[4,1] = 360.
+
+    # ---revs to here---
+    
+    # latitude weighting 
+    lat_weight = np.cos(np.deg2rad(lat))
+    tmp = np.ones([nlon,nlat])
+    W = np.multiply(lat_weight,tmp).T
+
+    # define hemispheres
+    eqind = nlat/2 
+
+    if lat[0] > 0:
+        # data has NH -> SH format
+        W_NH = W[0:eqind+1]
+        field_NH = field[:,0:eqind+1,:]
+        W_SH = W[eqind+1:]
+        field_SH = field[:,eqind+1:,:]
+    else:
+        # data has SH -> NH format
+        W_NH = W[eqind:]
+        field_NH = field[:,eqind:,:]
+        W_SH = W[0:eqind]
+        field_SH = field[:,0:eqind,:]
+
+    gm  = np.zeros(ntime)
+    nhm = np.zeros(ntime)
+    shm = np.zeros(ntime)
+
+    # Check for valid (non-NAN) values & use numpy average function (includes weighted avg calculation) 
+    # Get arrays indices of valid values
+    indok    = np.isfinite(field)
+    indok_nh = np.isfinite(field_NH)
+    indok_sh = np.isfinite(field_SH)
+    for t in xrange(ntime):
+        if lati == 0:
+            # Global
+            gm[t]  = np.average(field[indok],weights=W[indok])
+            # NH
+            nhm[t] = np.average(field_NH[indok_nh],weights=W_NH[indok_nh])
+            # SH
+            shm[t] = np.average(field_SH[indok_sh],weights=W_SH[indok_sh])
+        else:
+            # Global
+            indok_2d    = indok[t,:,:]
+            field_2d    = np.squeeze(field[t,:,:])
+            gm[t]       = np.average(field_2d[indok_2d],weights=W[indok_2d])
+            # NH
+            indok_nh_2d = indok_nh[t,:,:]
+            field_nh_2d = np.squeeze(field_NH[t,:,:])
+            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W_NH[indok_nh_2d])
+            # SH
+            indok_sh_2d = indok_sh[t,:,:]
+            field_sh_2d = np.squeeze(field_SH[t,:,:])
+            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W_SH[indok_sh_2d])
+
+# original code (keep for now...)
+#    for t in xrange(ntime):
+#        if lati == 0:
+#            gm[t]  = np.sum(np.multiply(W,field))/(np.sum(np.sum(W)))
+#            nhm[t] = np.sum(np.multiply(W_NH,field_NH))/(np.sum(np.sum(W_NH)))
+#            shm[t] = np.sum(np.multiply(W_SH,field_SH))/(np.sum(np.sum(W_SH)))
+#        else:
+#            gm[t]  = np.sum(np.multiply(W,field[t,:,:]))/(np.sum(np.sum(W)))
+#            nhm[t] = np.sum(np.multiply(W_NH,field_NH[t,:,:]))/(np.sum(np.sum(W_NH)))
+#            shm[t] = np.sum(np.multiply(W_SH,field_SH[t,:,:]))/(np.sum(np.sum(W_SH)))
+
+
+    return gm,nhm,shm
