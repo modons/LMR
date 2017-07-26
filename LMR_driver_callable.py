@@ -84,7 +84,7 @@ def LMR_driver_callable(cfg=None):
 
     # verbose controls print comments (0 = none; 1 = most important;
     #  2 = many; 3 = a lot; >=4 = all)
-    verbose = 1
+    verbose = cfg.LOG_LEVEL
 
     nexp = core.nexp
     workdir = core.datadir_output
@@ -240,6 +240,23 @@ def LMR_driver_callable(cfg=None):
                 elif regrid_method == 'spherical_harmonics':
                     [var_array_new, lat_new, lon_new] = \
                         LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, regrid_resolution)
+                elif regrid_method == 'esmpy':
+                    target_grid = prior.esmpy_grid_def
+
+                    lat_2d = coords_array_full[:, ind_lat].reshape(nlat, nlon)
+                    lon_2d = coords_array_full[:, ind_lon].reshape(nlat, nlon)
+
+                    [var_array_new,
+                     lat_new,
+                     lon_new] = LMR_utils.regrid_esmpy(target_grid['nlat'],
+                                                       target_grid['nlon'],
+                                                       nens,
+                                                       var_array_full,
+                                                       lat_2d,
+                                                       lon_2d,
+                                                       nlat,
+                                                       nlon,
+                                                       method=prior.esmpy_interp_method)
                 else:
                     raise (SystemExit('Exiting! Unrecognized regridding method.'))
                 
@@ -357,13 +374,16 @@ def LMR_driver_callable(cfg=None):
     
     # Dump prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
-    if np.ma.isMaskedArray(Xb_one):
-        np.savez(filen, Xb_one=Xb_one.filled(), Xb_one_aug=Xb_one_aug.filled(), stateDim=state_dim,
-                 Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
-    else:
-        np.savez(filen, Xb_one=Xb_one, Xb_one_aug=Xb_one_aug, stateDim=state_dim,
-                 Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
-        
+    try:
+        out_Xb_one = Xb_one.filled()
+        out_Xb_one_aug = Xb_one_aug.filled()
+    except AttributeError as e:
+        out_Xb_one = Xb_one
+        out_Xb_one_aug = Xb_one_aug
+
+    np.savez(filen, Xb_one=out_Xb_one, Xb_one_aug=out_Xb_one_aug,
+             stateDim=state_dim,
+             Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
     
     # ==========================================================================
     # Loop over all years & proxies and perform assimilation -------------------
@@ -512,9 +532,9 @@ def LMR_driver_callable(cfg=None):
 
         # Dump Xa to file (use Xb in case no proxies assimilated for
         # current year)
-        if np.ma.isMaskedArray(Xb):
-            np.save(filen, Xb.filled())        
-        else:
+        try:
+            np.save(filen, Xb.filled())
+        except AttributeError as e:
             np.save(filen, Xb)
 
     end_time = time() - begin_time

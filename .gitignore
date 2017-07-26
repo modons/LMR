@@ -34,23 +34,11 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-# Sphinx documentation
-docs/_build/
-
 # Translations
 *.mo
 
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# Rope
-.ropeproject
-
-# Django stuff:
-*.log
-*.pot
+# Sphinx documentation
+docs/_build/
 
 #Data Files
 *.npy
@@ -76,3 +64,4 @@ Archive/*
 
 # default configuration
 config.yml
+LMR_config.py

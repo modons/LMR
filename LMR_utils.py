@@ -22,6 +22,7 @@ import re
 import cPickle
 import collections
 import copy
+import ESMF
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
@@ -551,7 +552,8 @@ def lon_lat_to_cartesian(lon, lat, R=6371.):
 
 def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
     """
-    Truncate lat,lon grid to another resolution using local distance-weighted averages. 
+    Truncate lat,lon grid to another resolution using local distance-weighted 
+    averages. 
 
     Inputs:
     Nens            : number of ensemble members
@@ -578,13 +580,16 @@ def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
     nlon_new = int(nlat_new*1.5)
 
     # create new lat,lon grid arrays
-    dlat = 90./((nlat_new-1)/2.)
-    dlon = 360./nlon_new
-    veclat = np.arange(-90.,90.+dlat,dlat)
-    veclon = np.arange(0.,360.,dlon)
-    blank = np.zeros([nlat_new,nlon_new])
-    lat_new = (veclat + blank.T).T  
-    lon_new = (veclon + blank)
+    # Note: AP - According to github.com/jswhit/pyspharm documentation the
+    #  latitudes will not include the equator or poles when nlats is even.
+    # TODO: Decide whether this should be tied to spherical regridding grids
+    if nlat_new % 2 == 0:
+        include_poles = False
+    else:
+        include_poles = True
+
+    lat_new, lon_new, _, _ = generate_latlon(nlat_new, nlon_new,
+                                             include_endpts=include_poles)
 
     # cartesian coords of target grid
     xt,yt,zt = lon_lat_to_cartesian(lon_new.flatten(), lat_new.flatten())
@@ -632,9 +637,185 @@ def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
     
     return X_new,lat_new,lon_new
 
+
+def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
+                 X_nlon, method='bilinear'):
+    """
+    Regrid field to target resolution using the ESMF package.
+    
+    Parameters
+    ----------
+    target_nlat: int
+        number of latitude points for destination grid
+    target_nlon: int
+        number of longitude points for the destination grid
+    X_nens: int
+        number of ensemble members in the data array
+    X: ndarray
+        data array to be regridded of shape (nlat*nlon, nens)
+    X_lat2D: ndarray
+        2D array of latitudes corresponding to the source field of shape (
+        nlat, nlon)
+    X_lon2D: ndarray
+        2D array of longitudes corresponding to the source field of shape (
+        nlat, nlon)
+    X_nlat: int
+        number of latitude points in the source grid
+    X_nlon: int
+        number of longitude points in the source grid
+    method: str
+        Regridding method to use. Valid options include 'bilinear' and 'patch'
+
+    Returns
+    -------    
+    X_new:  
+        truncated data array of shape (nlat_new*nlon_new, Nens)
+    lat_new: ndarray
+        2D latitude array on the new grid (nlat_new,nlon_new)
+    lon_new: ndarray
+        2D longitude array on the new grid (nlat_new,nlon_new)
+        
+    Notes
+    -----
+    This regridding function supports masked grids
+
+    """
+
+    lons_1D = X_lon2D[0]
+    lon_diff_negative = np.diff(lons_1D) < 0
+    if lon_diff_negative.sum() > 1:
+        raise ValueError('Expected monotonic value increase with index '
+                         '(excluding cyclic point) for input longitudes.')
+    # adjust cyclinc longitude point to boundaries if necessary
+    elif lon_diff_negative.sum() == 1:
+        cyclic_idx_start, = np.where(lon_diff_negative)
+        lon_shift = -(cyclic_idx_start+1)
+        X_lon2D = np.roll(X_lon2D, lon_shift, axis=1)
+    else:
+        lon_shift = None
+
+    # Create grid for the input state data
+    grid = ESMF.Grid(max_index=np.array((X_nlon, X_nlat)),
+                     num_peri_dims=1,
+                     pole_dim=1,
+                     coord_sys=ESMF.CoordSys.SPH_DEG,
+                     coord_typekind=ESMF.TypeKind.R8,
+                     staggerloc=ESMF.StaggerLoc.CENTER)
+
+    # Add grid cell center coordinates
+    [x, y] = (0, 1)
+    grid_x_center = grid.get_coords(x)
+    grid_x_center[:] = X_lon2D.T
+    grid_y_center = grid.get_coords(y)
+    grid_y_center[:] = X_lat2D.T
+
+    # Add grid cell corner boundaries
+    lat_bnds, lon_bnds = calculate_latlon_bnds(X_lat2D[:,0], X_lon2D[0])
+    grid.add_coords(staggerloc=ESMF.StaggerLoc.CORNER)
+    grid_x_corner = grid.get_coords(x, staggerloc=ESMF.StaggerLoc.CORNER)
+    # Cutoff last element because grid assumed periodic, this might be
+    # erroneous if we aren't using full global grids.
+    grid_x_corner[:] = lon_bnds[:-1, None]
+    grid_y_corner = grid.get_coords(y, staggerloc=ESMF.StaggerLoc.CORNER)
+    grid_y_corner[:] = lat_bnds[None, :]
+
+    # check for masked values
+    masked_regrid = hasattr(X, 'mask')
+
+    if masked_regrid:
+        print 'Mask detected.  Adding mask to src ESMF grid'
+        grid_mask = grid.add_item(ESMF.GridItem.MASK)
+        X_mask = X[:, 0].mask.astype(np.int16)
+        X_mask = X_mask.reshape(X_nlat, X_nlon)
+
+        if lon_shift:
+            X_mask = np.roll(X_mask, lon_shift, axis=1)
+
+        grid_mask[:] = X_mask.T
+        mask_values = np.array([1])
+    else:
+        mask_values = None
+
+    # Create new grid
+    new_grid = ESMF.Grid(max_index=np.array((target_nlon, target_nlat)),
+                         num_peri_dims=1,
+                         pole_dim=1,
+                         coord_sys=ESMF.CoordSys.SPH_DEG,
+                         coord_typekind=ESMF.TypeKind.R8,
+                         staggerloc=ESMF.StaggerLoc.CENTER)
+
+    [new_lat, new_lon,
+     new_lat_bnds, new_lon_bnds] = generate_latlon(target_nlat, target_nlon)
+    new_grid_x_cen = new_grid.get_coords(x)
+    new_grid_x_cen[:] = new_lon.T
+    new_grid_y_cen = new_grid.get_coords(y)
+    new_grid_y_cen[:] = new_lat.T
+    new_grid.add_coords(staggerloc=ESMF.StaggerLoc.CORNER)
+    new_grid_x_cor = new_grid.get_coords(x, staggerloc=ESMF.StaggerLoc.CORNER)
+    # Cut off last element of lon_bnds because grid assumed periodic
+    new_grid_x_cor[:] = new_lon_bnds[:-1, None]
+    new_grid_y_cor = new_grid.get_coords(y, staggerloc=ESMF.StaggerLoc.CORNER)
+    new_grid_y_cor[:] = new_lat_bnds[None, :]
+
+    new_grid_mask = new_grid.add_item(ESMF.GridItem.MASK)
+    new_grid_mask[:] = 0
+
+    if method == 'bilinear':
+        use_method = ESMF.RegridMethod.BILINEAR
+    # Note: Removed because conservative regridding does not work for irreg
+    # grids currently (discovered with rotated pole ocean grids)
+    # elif method == 'conserve':
+    #     use_method = ESMF. RegridMethod.CONSERVE
+    elif method == 'patch':
+        use_method = ESMF.RegridMethod.PATCH
+    else:
+        raise ValueError('Regridding method \'{}\''
+                         ' in regrid_esmpy does not exist.'.format(method))
+
+    # create src and dst fields
+    src_field = ESMF.Field(grid, name='src', staggerloc=ESMF.StaggerLoc.CENTER)
+    dst_field = ESMF.Field(new_grid, name='dst',
+                           staggerloc=ESMF.StaggerLoc.CENTER)
+
+    regrid_output = np.empty((target_nlat * target_nlon, X_nens))
+    regridder = ESMF.Regrid(src_field, dst_field, regrid_method=use_method,
+                            src_mask_values=mask_values,
+                            unmapped_action=ESMF.UnmappedAction.IGNORE)
+
+    # Regrid each ensemble member
+    for k in xrange(X_nens):
+        grid_data = X[:,k].reshape(X_nlat, X_nlon)
+
+        if lon_shift:
+            grid_data = np.roll(grid_data, lon_shift, axis=1)
+
+        src_field.data[:] = grid_data.T
+
+        regridder(src_field, dst_field)
+
+        out_data = dst_field.data[:].T
+
+        # Check for masked values on new grid
+        if masked_regrid:
+            out_mask = out_data == 0.0  # if it's exactly zero, it's masked
+            out_data[out_mask] = np.nan
+
+        regrid_output[:, k] = out_data.flatten()
+
+    if masked_regrid:
+        regrid_output = np.ma.masked_invalid(regrid_output)
+
+    # Clean up objects
+    src_field.destroy()
+    dst_field.destroy()
+    grid.destroy()
+    new_grid.destroy()
+    regridder.destroy()
+
+    return regrid_output, new_lat, new_lon
+
     
 def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
-
     """
     Truncate lat,lon grid to another resolution in spherical harmonic space. Triangular truncation
 
@@ -668,13 +849,15 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
 
     # create new lat,lon grid arrays
-    dlat = 90./((nlat_new-1)/2.)
-    dlon = 360./nlon_new
-    veclat = np.arange(-90.,90.+dlat,dlat)
-    veclon = np.arange(0.,360.,dlon)
-    blank = np.zeros([nlat_new,nlon_new])
-    lat_new = (veclat + blank.T).T  
-    lon_new = (veclon + blank)
+    # Note: AP - According to github.com/jswhit/pyspharm documentation the
+    #  latitudes will not include the equator or poles when nlats is even.
+    if nlat_new % 2 == 0:
+        include_poles = False
+    else:
+        include_poles = True
+
+    lat_new, lon_new, _, _ = generate_latlon(nlat_new, nlon_new,
+                                             include_endpts=include_poles)
 
     # transform each ensemble member, one at a time
     X_new = np.zeros([nlat_new*nlon_new,Nens])
@@ -685,6 +868,120 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
         X_new[:,k] = vectmp
 
     return X_new,lat_new,lon_new
+
+
+def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360),
+                    include_endpts=False):
+    """
+    Generate regularly spaced latitude and longitude arrays where each point 
+    is the center of the respective grid cell.
+    
+    Parameters
+    ----------
+    nlats: int
+        Number of latitude points
+    nlons: int
+        Number of longitude points
+    lat_bnd: tuple(float), optional
+        Bounding latitudes for gridcell edges (not centers).  Accepts values 
+        in range of [-90, 90].
+    lon_bnd: tuple(float), optional
+        Bounding longitudes for gridcell edges (not centers).  Accepts values 
+        in range of [-180, 360].
+    include_endpts: bool
+        Include the poles in the latitude array.  
+
+    Returns
+    -------
+    lat_center_2d:
+        Array of central latitide points (nlat x nlon)
+    lon_center_2d:
+        Array of central longitude points (nlat x nlon)
+    lat_corner:
+        Array of latitude boundaries for all grid cells (nlat+1)
+    lon_corner:
+        Array of longitude boundaries for all grid cells (nlon+1)   
+
+    """
+    if len(lat_bnd) != 2 or len(lon_bnd) != 2:
+        raise ValueError('Bound tuples must be of length 2')
+    if np.any(np.diff(lat_bnd) < 0) or np.any(np.diff(lon_bnd) < 0):
+        raise ValueError('Lower bounds must be less than upper bounds.')
+    if np.any(abs(np.array(lat_bnd)) > 90):
+        raise ValueError('Latitude bounds must be between -90 and 90')
+    if np.any(abs(np.diff(lon_bnd)) > 360):
+        raise ValueError('Longitude bound difference must not exceed 360')
+    if np.any(np.array(lon_bnd) < -180) or np.any(np.array(lon_bnd) > 360):
+        raise ValueError('Longitude bounds must be between -180 and 360')
+
+    lon_center = np.linspace(lon_bnd[0], lon_bnd[1], nlons, endpoint=False)
+
+    if include_endpts:
+        lat_center = np.linspace(lat_bnd[0], lat_bnd[1], nlats)
+    else:
+        tmp = np.linspace(lat_bnd[0], lat_bnd[1], nlats+1)
+        lat_center = (tmp[:-1] + tmp[1:]) / 2.
+
+    lon_center_2d, lat_center_2d = np.meshgrid(lon_center, lat_center)
+    lat_corner, lon_corner = calculate_latlon_bnds(lat_center, lon_center)
+
+    return lat_center_2d, lon_center_2d, lat_corner, lon_corner
+
+
+def calculate_latlon_bnds(lats, lons):
+    """
+    Calculate the bounds for regularly gridded lats and lons.
+    
+    Parameters
+    ----------
+    lats: ndarray
+        Regularly spaced latitudes.  Must be 1-dimensional and monotonically 
+        increase with index.
+    lons:  ndarray
+        Regularly spaced longitudes.  Must be 1-dimensional and monotonically 
+        increase with index.
+
+    Returns
+    -------
+    lat_bnds:
+        Array of latitude boundaries for each input latitude of length 
+        len(lats)+1.
+    lon_bnds:
+        Array of longitude boundaries for each input longitude of length
+        len(lons)+1.
+
+    """
+    if lats.ndim != 1 or lons.ndim != 1:
+        raise ValueError('Expected 1D-array for input lats and lons.')
+    if np.any(np.diff(lats) < 0) or np.any(np.diff(lons) < 0):
+        raise ValueError('Expected monotonic value increase with index for '
+                         'input latitudes and longitudes')
+
+    # Note: assumes lats are monotonic increase with index
+    dlat = abs(lats[1] - lats[0]) / 2.
+    dlon = abs(lons[1] - lons[0]) / 2.
+
+    # Check that inputs are regularly spaced
+    lat_space = np.diff(lats)
+    lon_space = np.diff(lons)
+
+    lat_bnds = np.zeros(len(lats)+1)
+    lon_bnds = np.zeros(len(lons)+1)
+
+    lat_bnds[1:-1] = lats[:-1] + lat_space/2.
+    lat_bnds[0] = lats[0] - lat_space[0]/2.
+    lat_bnds[-1] = lats[-1] + lat_space[-1]/2.
+
+    if lat_bnds[0] < -90:
+        lat_bnds[0] = -90.
+    if lat_bnds[-1] > 90:
+        lat_bnds[-1] = 90.
+
+    lon_bnds[1:-1] = lons[:-1] + lon_space/2.
+    lon_bnds[0] = lons[0] - lon_space[0]/2.
+    lon_bnds[-1] = lons[-1] + lon_space[-1]/2.
+
+    return lat_bnds, lon_bnds
 
 
 def assimilated_proxies(workdir):
@@ -1276,21 +1573,46 @@ def gaussianize(X):
 
     """
 
-    #n = X.shape[0]
-    n = X[~np.isnan(X)].shape[0]  # This line counts only elements with data.
+    # Give every record at least one dimensions, or else the code will crash.
+    X = np.atleast_1d(X)
 
-    #Xn = np.empty((n,))
-    Xn = copy.deepcopy(X)  # This line retains the data type of the original data variable.
+    # Make a blank copy of the array, retaining the data type of the original data variable.
+    Xn = copy.deepcopy(X)
     Xn[:] = np.NAN
-    nz = np.logical_not(np.isnan(X))
 
-    index = np.argsort(X[nz])
+    if len(X.shape) == 1:
+        Xn = gaussianize_single(X)
+    else:
+        for i in range(X.shape[1]):
+            Xn[:,i] = gaussianize_single(X[:,i])
+
+    return Xn
+
+
+def gaussianize_single(X_single):
+    """
+    Transforms a single (proxy) timeseries to Gaussian distribution.
+
+    Originator: Michael Erb, Univ. of Southern California - April 2017
+
+    """
+
+    # Count only elements with data.
+    n = X_single[~np.isnan(X_single)].shape[0]
+
+    # Create a blank copy of the array.
+    Xn_single = copy.deepcopy(X_single)
+    Xn_single[:] = np.NAN
+
+    nz = np.logical_not(np.isnan(X_single))
+
+    index = np.argsort(X_single[nz])
     rank = np.argsort(index)
 
     CDF = 1.*(rank+1)/(1.*n) -1./(2*n)
-    Xn[nz] = np.sqrt(2)*special.erfinv(2*CDF -1)
+    Xn_single[nz] = np.sqrt(2)*special.erfinv(2*CDF -1)
 
-    return Xn
+    return Xn_single
 
 
 def validate_config(config):

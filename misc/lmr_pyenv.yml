@@ -1,0 +1,20 @@
+name: lmr
+
+channels:
+  - conda
+  - ajdawson
+
+dependencies:
+  - python=2.*
+  - netCDF4
+  - numpy
+  - scipy
+  - matplotlib
+  - statsmodels
+  - pyspharm
+  - pyyaml
+  - pandas
+  - pytest
+  - ipython
+  - jpeg=8*
+  - basemap

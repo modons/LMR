@@ -23,7 +23,11 @@ Purpose: Takes proxy data in their native format (.xlsx file for PAGES or collec
             - Improved detection & treatment of missing data, now using tags found
               (or not) in each data file.
               [R. Tardif, U. of Washington, March 2017]
-            - ... 
+            - Added functionalities related to the merging of proxies coming from two
+              sources (PAGES2k phase 2 data contained in a single compressed pickle file
+              and "in-house" collections contained in NCDC-templated text files). 
+              The possibility to "gaussianize" records and to calculate annual averages
+              on "tropical year" (Apr to Mar) or calendar year have also been implemented.
               [R. Tardif, U. of Washington, Michael Erb, USC, May 2017]
 """
 import glob
@@ -304,6 +308,8 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
     years = list(set(years_all)) # 'set' is used to get unique values in list
     years = sorted(years) # sort the list
 
+    years = np.insert(years,0,years[0]-1) # M. Erb
+    
     # bounds, for calendar year : [years_beg,years_end[
     years_beg = np.asarray(years,dtype=np.float64) # inclusive lower bound
     years_end = years_beg + 1.                     # exclusive upper bound
@@ -581,7 +587,9 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         pages2k_data = pickle.load(f)
         f.close()
     else:
-        raise SystemExit('ERROR: Option to include PAGES2kv2 data enabled but specified file could not be found!')
+        raise SystemExit(('ERROR: Option to include PAGES2kv2 proxies enabled'
+                         ' but corresponding data file could not be found!'
+                         ' Please place file {} in directory {}').format(pages2kv2_file,datadir))
 
     
     # Summary of the uploaded data
@@ -845,7 +853,7 @@ def colonReader(string, fCon, fCon_low, end):
 
 # ===================================================================================
 
-def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None):
+def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=False):
 #====================================================================================
 # Purpose: Reads data from a selected site (chronology) in NCDC proxy dataset
 # 
@@ -1449,6 +1457,11 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None):
         # If subannual, average up to annual --------------------------------------------------------
         time_annual, data_annual, proxy_resolution = compute_annual_means(time_raw,data_raw,valid_frac,year_type)
         
+        # If gaussianize_data is set to true, transform the proxy data to Gaussian.
+        # This option should only be used when using regressions, not physically-based PSMs.
+        if gaussianize_data == True:
+            data_annual = gaussianize(data_annual)
+        
         # update to yearRange given availability of annual data
         yearRange = (int('%.0f' %time_annual[0]),int('%.0f' %time_annual[-1]))
         
@@ -1552,7 +1565,7 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
     nbsites_valid = 0
     for file_site in sites_data:
 
-        proxy_list, duplicate_list = read_proxy_data_NCDCtxt(file_site,proxy_def,year_type)
+        proxy_list, duplicate_list = read_proxy_data_NCDCtxt(file_site,proxy_def,year_type,gaussianize_data)
 
         if proxy_list: # if returned list is not empty
             # extract data from list and populate the master proxy dictionary
