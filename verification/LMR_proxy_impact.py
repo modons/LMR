@@ -3,18 +3,22 @@
 import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+import cartopy.feature
 #get_ipython().magic(u'matplotlib inline')
 
-#iplot = True
-iplot = False
+# iplot = 0: none; 1: all 2: most important
+iplot = 1
 
 # figure size
-plt.rcParams["figure.figsize"] = [10,10]
+#plt.rcParams["figure.figsize"] = [10,10]
 
 # set the global colormap to identify proxis
 #'tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'
-cmap = {'Ice:dD':'tab:blue', 'Lake:':'tab:gray', 'Coral:Rate':'tab:pink', 'Ice:d18O':'tab:brown', 'Tree:Dens':'tab:purple', 'Coral:SrCa':'tab:orange', 'Coral:d18O':'tab:red', 'Tree:Width':'tab:green'}
+#cmap = {'Ice:dD':'tab:blue', 'Lake:':'tab:gray', 'Coral:Rate':'tab:pink', 'Ice:d18O':'tab:brown', 'Tree:Dens':'tab:purple', 'Coral:SrCa':'tab:orange', 'Coral:d18O':'tab:red', 'Tree:Width':'tab:green'}
 
+cmap = {'Ice:dD':'blue', 'Lake:':'gray', 'Coral:Rate':'pink', 'Ice:d18O':'brown', 'Tree:Dens':'purple', 'Coral:SrCa':'orange', 'Coral:d18O':'red', 'Tree:Width':'green'}
 
 # In[2]:
 
@@ -22,9 +26,9 @@ cmap = {'Ice:dD':'tab:blue', 'Lake:':'tab:gray', 'Coral:Rate':'tab:pink', 'Ice:d
 #pth = '/home/disk/kalman3/hakim/LMR/testdevMultiState/r1/'
 #pth = '/home/disk/kalman3/hakim/LMR/test_V2proto/r0/'
 #pth = '/Users/hakim/data/LMR/archive/dadt_test/r0/'
-pth = '/Users/hakim/data/LMR/archive/pages2_loc12000/r0/'
+#pth = '/Users/hakim/data/LMR/archive/pages2_loc12000/r0/'
 #pth = '/Users/hakim/data/LMR/archive/pages2_loc12000_pages2k2_seasonal_TorP/r0/'
-
+pth = '/home/disk/kalman3/hakim/LMR/pages2_loc12000/r0/'
 
 # In[3]:
 
@@ -80,7 +84,7 @@ for key in Ye_data.keys():
     else:
         miss[key] = key[0]
     
-nyears = maxyear-minyear+1
+nyears = int(maxyear-minyear+1)
 print 'minyear: ' + str(minyear)
 print 'maxyear: ' + str(maxyear)
 print 'nyears: ' + str(nyears)
@@ -147,8 +151,8 @@ for rootkey in proxies.keys():
                 p = p + 1
                 years = Ye_data[key]['years']
                 # indexing for array storage relative to the earliest year in the reconstruction (minyear)
-                isyr = years[0] - minyear
-                ieyr = years[-1] - minyear + 1
+                isyr = int(years[0] - minyear)
+                ieyr = int(years[-1] - minyear + 1)
                 Ye = Ye_data[key]['HXa']
                 var_Ye = Ye.var(1,ddof=1)
                 R = Ye_data[key]['R']
@@ -215,7 +219,7 @@ GAI = sS/p
 pyrs = range(int(minyear),int(maxyear)+1)
 print len(pyrs)
 len(GAI)
-if iplot:
+if iplot > 1:
     plt.plot(pyrs,GAI)
     plt.show()
     
@@ -258,15 +262,12 @@ print 'total impact: ' + '{0!s:.4}'.format(tpi)
 
 # In[10]:
 
-if iplot:
+if iplot >0:
     """Plot all proxies on one map with symbol size scaled by impact and color by proxy group"""
 
     # these are the keys for all proxy groups
     print sall.keys()
 
-    import cartopy.crs as ccrs
-    import matplotlib.pyplot as plt
-    import cartopy.feature
     #ax = plt.axes(projection=ccrs.PlateCarree())
     ax = plt.axes(projection=ccrs.Robinson(central_longitude=-90.))
     ax.coastlines()
@@ -280,18 +281,19 @@ if iplot:
         c = cmap[key]
         ax.scatter(lonplot,latplot,marker='o',color=c,alpha=0.75,label=key,s=msize,transform=ccrs.PlateCarree(),)
 
-    lgnd = ax.legend(bbox_to_anchor=(1.0, 1), loc=2, borderaxespad=0.)
+    #lgnd = ax.legend(bbox_to_anchor=(1.0, 1), loc=2, borderaxespad=0.)
+    lgnd = ax.legend()
     #lgnd.legendHandles[0]._legmarker.set_markersize(6) # this doesn't set the legend markers to the same size
-    handles, labels = ax.get_legend_handles_labels()
+    #handles, labels = ax.get_legend_handles_labels()
 
     ax.set_global()
-    #plt.savefig('global_s_markers.png',dpi=300)
+    plt.savefig('global_s_markers.png',dpi=300)
     plt.show()
 
 
 # In[11]:
 
-if iplot:
+if iplot > 1:
     for key in sall:
         print key
 
@@ -324,7 +326,7 @@ if iplot:
 # grand total for normalization
 gti = np.sum(alls)
 gai = gti/len(alls)
-print 'global total impact=' '{0!s:.4}'.format(gti) + 'global total impact per proxy= ' '{0!s:.4}'.format(gai)
+print 'global total impact=' '{0!s:.4}'.format(gti) + '\nglobal total impact per proxy= ' '{0!s:.4}'.format(gai)
 spai = 0.
 spti = 0.
 lpti = []
@@ -339,14 +341,14 @@ for key in sall:
     lpti.append(pti)
     lpai.append(pai)
     # express as percentage contribution
-    print '{0!s:.4}'.format(100.*pti/gti) + '% ' + '{0!s:.4}'.format(pai)
+    print '{0!s:.4}'.format(100.*pti/gti) + '% // per proxy: ' + '{0!s:.4}'.format(pai)
     spai = spai + pai
     spti = spti + pti
     rstore.append(np.mean(Rall[key]))
     
-print 'sum partial impact: ' + '{0!s:.4}'.format(spti) + '       ' '{0!s:.4}'.format(spai)
+print 'sum partial impact: ' + '{0!s:.4}'.format(spti) + '     // per proxy:  ' '{0!s:.4}'.format(spai)
 
-if iplot:
+if iplot >0:
     # total impact by group
     index = np.arange(len(lpti))
     plt.bar(index,lpti/(gti/100.))
@@ -418,7 +420,7 @@ for key in sall:
 
 print rpp
 index = np.arange(len(rpp))
-if iplot:
+if iplot >2:
     plt.bar(index,np.log(rpp))
     plt.xticks(index, sall.keys())
     plt.title('log Proxy R')
