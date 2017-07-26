@@ -71,15 +71,31 @@ fsave = True
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-nexp = 'test'
+#nexp = 'test'
+#nexp = 'pages2_loc20000'
+#nexp = 'pages2_loc12000'
+#nexp = 'pages2_loc15000'
+#nexp = 'pages2_loc10000'
+#nexp = 'pages2_loc1000'
+#nexp = 'pages2_loc5000'
+#nexp = 'pages2_noloc'
+#nexp = 'pages2_loc12000_breit'
+#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
+#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP_nens500'
+#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.5'
+#nexp = 'pages2_noloc_nens200'
+#nexp = 'pages2_loc20000_pages2k2_seasonal_TorP_nens200'
+nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
 
 # ---
 
 # override datadir
 #datadir_output = './data/'
-#datadir_output = '/home/disk/kalman3/hakim/LMR'
+datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
 
 # Directory where reanalysis data can be found
@@ -112,7 +128,7 @@ ref_period = [1900, 1999] # 20th century
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
 #     MCset = (90,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
-MCset = (0,0)
+#MCset = (0,0)
 
 # set the default size of the figure in inches. ['figure.figsize'] = width, height;  
 # aspect ratio appears preserved on smallest of the two
@@ -951,6 +967,7 @@ ax.set_ylim(ymin,ymax)
 ypos = ymax-0.15*(ymax-ymin)
 xpos = xmin+0.025*(xmax-xmin)
 ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_gis_csave)),fontsize=11,fontweight='bold')
+print 'LMR-GIS mean anomaly correlation: ' + str (np.nanmean(lmr_gis_csave))
 
 # BE
 ax = fig.add_subplot(6,2,7)
@@ -1562,6 +1579,8 @@ xbm_gis_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
 xbm_gis_biasmean_global = str(float('%.2f' %biasmean_global[0]))
 xbm_gis_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
 xbm_gis_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+
+print 'LMR-GIS globa-mean CE:' + str(lmr_gis_cemean_global)
 
 # ------
 # LMR_BE
