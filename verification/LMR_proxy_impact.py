@@ -6,14 +6,13 @@
 import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
-<<<<<<< HEAD
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import cartopy.feature
 #get_ipython().magic(u'matplotlib inline')
 
 # iplot = 0: none; 1: all 2: most important
-iplot = 1
+iplot = 0
 
 # figure size
 #plt.rcParams["figure.figsize"] = [10,10]
@@ -33,12 +32,24 @@ cmap = {'Ice:dD':'blue', 'Lake:':'gray', 'Coral:Rate':'pink', 'Ice:d18O':'brown'
 #nexp = 'pages2_loc12000'
 
 # new---for file saving
-pth = '/Users/hakim/data/LMR/archive/'
-#pth = '/home/disk/kalman3/hakim/LMR/
+#pth = '/Users/hakim/data/LMR/archive/'
+pth = '/home/disk/kalman3/hakim/LMR/'
+#pth = '/home/disk/kalman3/rtardif/LMR/output/'
 
-nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
-#nexp = 'pages2_loc12000'
+# GH files:
+#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
+nexp = 'pages2_loc12000'
 #nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+# RT files:
+#nexp = 'p2_ccsm4LM_n100_GISTEMPseasonPSM_PAGES2kv2_pf0.75/'
+#nexp = 'p2_ccsm4LM_n100_GISTEMPannual_All_pf0.75/'
+#nexp = 'p2_ccsm4LM_n100_linTorP_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75'
+#nexp = 'p2_ccsm4LM_n100_linTorP_GISTEMPGPCCseasonMETA_PAGES2kv2_pf0.75'
+#nexp ='p2_ccsm4LM_n100_bilin_GISTEMPGPCCseasonMETA_PAGES2kv2_pf0.75'
+#nexp = 'p2_ccsm4LM_n100_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75'
+
+
+# iteration 
 itn = 'r0'
 
 filn = pth+nexp+'/'+itn+'/'
@@ -145,7 +156,7 @@ latall = {}
 lonall = {}
 Rall = {}
 # p is a counter for all Ye
-p = 0
+p = -1
 for rootkey in proxies.keys():
     print 'working on ' + rootkey + '...'
     for t in proxies[rootkey]:        
@@ -260,6 +271,8 @@ if iplot > 1:
 #total proxy impact:
 tpi = 0.
 
+print '\n\n--------------------------------------------------------------------------'
+print 'experiment: ' + pth+nexp
 for key in sall.keys():
     svals = sall[key]
     nsites = len(svals)
@@ -268,6 +281,7 @@ for key in sall.keys():
     tpi = tpi + sums
     
 print 'total impact: ' + '{0!s:.4}'.format(tpi)
+print '--------------------------------------------------------------------------\n\n'
 
 
 # In[9]:
@@ -445,6 +459,7 @@ if iplot >2:
 
 """
 to do:
+0. add iteration over iteration subdirectories. option for stats on iterations.
 1. determine which trees are moisture and temperature sensitive and break down the influence
 2. math an implementation for patterns/functionals (J)
 3. application of optimal proxy-pattern update and statistics
