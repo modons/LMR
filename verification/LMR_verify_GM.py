@@ -19,8 +19,8 @@ import csv
 import glob, os, fnmatch
 import numpy as np
 import mpl_toolkits.basemap as bm
-import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+import matplotlib.pyplot as plt
 from matplotlib import ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 from scipy import stats
@@ -85,8 +85,8 @@ if interactive:
     plt.ion()
 else:
     # need to do this when running remotely, and to suppress figures
-    matplotlib.use('Agg')
-
+    matplotlib.use('agg')
+    matplotlib.pyplot.switch_backend('agg')
 # option to save figures to a file
 fsave = True
 #fsave = False
@@ -123,7 +123,11 @@ stat_save = True
 #nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.5'
 #nexp = 'pages2_noloc_nens200'
 #nexp = 'pages2_loc20000_pages2k2_seasonal_TorP_nens200'
-nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'pages2_loc20000_seasonal_bilinear_nens200'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_75pct'
+nexp = 'pages2_loc25000_seasonal_bilinear_nens200_meta'
 
 # specify directories for LMR data
 #datadir_output = './data/'
@@ -315,6 +319,7 @@ print('--------------------------------------------------')
 print('reading LMR GMT data...')
 print('--------------------------------------------------')
 kk = -1
+print 'IPLOT = ' + str(iplot)
 if iplot:
     fig = plt.figure()
 
@@ -344,6 +349,7 @@ for dir in dirset:
     nhmt = npzfile['nhmt_ensemble']
     shmt = npzfile['shmt_ensemble']
     recon_times = npzfile['recon_times']
+    print recon_times
     print gmtpfile
     gmt_shape = np.shape(gmt)
     nhmt_shape = np.shape(nhmt)
@@ -1348,7 +1354,7 @@ if stat_save:
     stat_vars = ['stime','etime',
                  'ltc','lec','lgc','lcc','lbc','lmc','loc',
                  'ltce','lece','lgce','lcce','lbce','lmce','loce',
-                 'lgrd','lgcd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
+                 'lgrd','lgcd','lcocd','lcord','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
                  'lmrs','gs','crus','bes','mlosts','tcrs','eras']
 
     stat_metadata = {'stime':"starting year of verification time period",
@@ -1373,12 +1379,14 @@ if stat_save:
                      'lcrd':'LMR_CRU detrended correlation',
                      'lbrd':'LMR_BE detrended correlation',
                      'lmrd':'LMR_MLOST detrended correlation',
+                     'lcord':'LMR_consensus detrended correlation',
                      'ltcd':'LMR_TCR detrended coefficient of efficiency',
                      'lecd':'LMR_ERA detrended coefficient of efficiency',
                      'lgcd':'LMR_GIS detrended coefficient of efficiency',
                      'lccd':'LMR_CRU detrended coefficient of efficiency',
                      'lbcd':'LMR_BE detrended coefficient of efficiency',
                      'lmcd':'LMR_MLOST detrended coefficient of efficiency',
+                     'lcocd':'LMR_consensus detrended coefficient of efficiency',
                      'lmrs':'LMR trend (K/100 years)',
                      'gs':'GIS trend (K/100 years)',
                      'crus':'CRU trend (K/100 years)',

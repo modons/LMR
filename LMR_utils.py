@@ -22,7 +22,7 @@ import re
 import cPickle
 import collections
 import copy
-import ESMF
+#import ESMF
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
@@ -1818,22 +1818,22 @@ def PAGES2K_regional_means(field,lat,lon):
 
     # lat and lon range for each region (first value is lower limit, second is upper limit)
     rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
-    # 1. Arctic: north of 60°N 
+    # 1. Arctic: north of 60N 
     rlat[0,0] = 60.; rlat[0,1] = 90.
     rlon[0,0] = 0.; rlon[0,1] = 360.
-    # 2. Europe: 35°-70°N, 10°W-40°E
+    # 2. Europe: 35-70N, 10W-40E
     rlat[1,0] = 35.; rlat[1,1] = 70.
     rlon[1,0] = 350.; rlon[1,1] = 40.
     # 3. Asia: 23-55N; 60-160E (from map)
     rlat[2,0] = 23.; rlat[2,1] = 55.
     rlon[2,0] = 60.; rlon[2,1] = 160.
-    # 4. North America 1 (trees):  30°-55°N, 75°-130°W 
+    # 4. North America 1 (trees):  30-55N, 75-130W 
     rlat[3,0] = 30.; rlat[3,1] = 55.
     rlon[3,0] = 55.; rlon[3,1] = 230.
-    # 5. South America: Text: 20°S-65°S and 30°W-80°W
+    # 5. South America: Text: 20S-65S and 30W-80W
     rlat[4,0] = -65.; rlat[4,1] = -20.
     rlon[4,0] = 280.; rlon[4,1] = 330.
-    # 6. Australasia: 110°E-180°E, 0°-50°S 
+    # 6. Australasia: 110E-180E, 0-50S 
     rlat[5,0] = -50.; rlat[5,1] = 0.
     rlon[5,0] = 110.; rlon[5,1] = 1800.
     # 7. Antarctica: south of 60S (from map)

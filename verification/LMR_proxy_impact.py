@@ -33,14 +33,15 @@ cmap = {'Ice:dD':'blue', 'Lake:':'gray', 'Coral:Rate':'pink', 'Ice:d18O':'brown'
 #nexp = 'pages2_loc12000'
 
 # new---for file saving
-pth = '/Users/hakim/data/LMR/archive/'
+#pth = '/Users/hakim/data/LMR/archive/'
 #pth = '/home/disk/kalman3/hakim/LMR/'
-#pth = '/home/disk/kalman3/rtardif/LMR/output/'
+pth = '/home/disk/kalman3/rtardif/LMR/output/'
 
 # GH files:
 #nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
-nexp = 'pages2_loc12000'
+#nexp = 'pages2_loc12000'
 #nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'pages2_loc12000_breit_seasonal_TorP/'
 # RT files:
 #nexp = 'p2_ccsm4LM_n100_GISTEMPseasonPSM_PAGES2kv2_pf0.75/'
 #nexp = 'p2_ccsm4LM_n100_GISTEMPannual_All_pf0.75/'
@@ -48,15 +49,22 @@ nexp = 'pages2_loc12000'
 #nexp = 'p2_ccsm4LM_n100_linTorP_GISTEMPGPCCseasonMETA_PAGES2kv2_pf0.75'
 #nexp ='p2_ccsm4LM_n100_bilin_GISTEMPGPCCseasonMETA_PAGES2kv2_pf0.75'
 #nexp = 'p2_ccsm4LM_n100_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75'
-
+#nexp = 'p2_ccsm4LM_n100_linTorP_GISTEMPGPCCseasonPSM_PAGES2kv2Breit_pf0.75' # this one crashed
+nexp = 'p2_ccsm4LM_n100_linTorPallTRW_GISTEMPGPCCseasonPSM_PAGES2kv2Breit_pf0.75_loc12k'
 
 # get a listing of the iteration directories
 workdir = pth + nexp
 dirs = glob.glob(workdir+"/r*")
+niters = len(dirs)
+print 'number of iterations: ' + str(niters)
 
-for dir in dirs:
+# dictionary and counter for directories
+iterdict = {}
+cdir = -1
+for dir in dirs[0:10]:
 
-    print 'loading proxies in ' + dir + ' ...'
+    cdir = cdir + 1
+    print '\n\nloading proxies in ' + dir + ' ...\n'
     filn = dir + '/analysis_Ye.pckl'
     infile = open(filn,'rb')
     Ye_data = cPickle.load(infile)
@@ -264,8 +272,6 @@ for dir in dirs:
         plt.xlim([-10,nkeys])
         plt.show()
 
-
-
     # In[8]:
 
     #total proxy impact:
@@ -279,7 +285,14 @@ for dir in dirs:
         sums = np.sum(svals)
         print 'proxy ' + key + ' has ' + str(nsites) + ' locations // total impact: ' + '{0!s:.4}'.format(sums) + ' per proxy: ' + '{0!s:.4}'.format(sums/nsites)
         tpi = tpi + sums
-
+        if cdir == 0:
+            iterdict[key] = [[sums],[nsites]]
+        else:
+            tmp = iterdict[key]
+            tmp[0].append(sums)
+            tmp[1].append(nsites)
+            iterdict[key] = tmp
+            
     print 'total impact: ' + '{0!s:.4}'.format(tpi)
     print '--------------------------------------------------------------------------\n\n'
 
@@ -405,7 +418,7 @@ for dir in dirs:
     # construct full S and check properties relative to theory
     tyear = 1950 
     samp = np.zeros([nproxies,nens])
-    n = 0
+    n = -1
     for key in Ye_data.keys():
         check = True
         Ye = Ye_data[key]['HXa']
@@ -466,3 +479,24 @@ for dir in dirs:
     """
 
 
+print '\n\n--------------------------------------------------------------------------'
+print 'experiment: ' + workdir
+print 'number of iterations: ' +str(niters)
+
+print '\n proxy //  number // total impact // per-proxy impact ' 
+mtpi = 0.
+for key in iterdict.keys():
+    tmp = iterdict[key]
+    sums = tmp[0]
+    nsites = tmp[1]
+    msums = np.mean(sums)
+    mstd = np.std(sums)
+    msites = np.mean(nsites)
+    pps = np.divide(sums,nsites)
+    mpps = np.mean(pps)
+    spps = np.std(pps)
+    print ' ' + key + ' // ' + str(int(msites)) + ' //  ' + '{0!s:.4}'.format(msums) + '+/-' + '{0!s:.4}'.format(mstd) + ' // ' + '{0!s:.5}'.format(mpps) + '+/-' + '{0!s:.4}'.format(spps)
+    mtpi = mtpi + msums
+
+print 'mean total impact: ' + '{0!s:.4}'.format(mtpi)
+print '--------------------------------------------------------------------------\n\n'

@@ -56,8 +56,9 @@ fsave = True
 # where to find reconstruction data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/hakim/LMR'
 
 # Directory where reanalysis data can be found
 datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model/'
@@ -72,7 +73,9 @@ datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model/'
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-nexp = 'test'
+#nexp = 'test'
+nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
+#nexp = 'pages2_loc15000_seasonal_bilinear_nens200'
 
 
 # Definition of variables to verify
@@ -145,13 +148,6 @@ niters = len(mcdir)
 print('mcdir: %s' % str(mcdir))
 print('niters = %s' % str(niters))
 
-# get time period from the GMT file...
-gmtpfile =  workdir + '/r0/gmt.npz'
-npzfile = np.load(gmtpfile)
-npzfile.files
-LMR_time = npzfile['recon_times']
-
-
 # Loop over verif. variables
 for var in verif_vars:
 
@@ -169,6 +165,8 @@ for var in verif_vars:
         print('shape of tmp: %s' % str(np.shape(tmp)))
         if first:
             first = False
+            recon_times = npzfile['years']
+            LMR_time = np.array(map(int,recon_times))
             lat = npzfile['lat']
             lon = npzfile['lon']
             nlat = npzfile['nlat']

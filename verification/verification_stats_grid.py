@@ -30,16 +30,20 @@ iplot = False
 #         'V2_PAGES2_seasonal_T_1']
 
 expts = [
-    'pages2_loc1000_11',
-    'pages2_loc5000_11',
-    'pages2_loc10000_11',
-    'pages2_loc12000_11',
-    'pages2_loc15000_11',
-    'pages2_loc20000_11',
-    'pages2_noloc_11',
+#    'pages2_loc1000_11',
+#    'pages2_loc5000_11',
+#    'pages2_loc10000_11',
+#    'pages2_loc12000_11',
+#    'pages2_loc15000_11',
+#    'pages2_loc20000_11',
+#    'pages2_noloc_11',
     'pages2_loc12000_breit_11',
     'pages2_loc12000_pages2k2_seasonal_TorP_11',
-    'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.25_10'
+    'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.25_10',
+    'pages2_loc20000_seasonal_bilinear_nens200_11',
+    'pages2_loc25000_seasonal_bilinear_nens200_11',
+    'pages2_loc25000_seasonal_bilinear_nens200_75pct_11',
+    'pages2_loc25000_seasonal_bilinear_nens200_meta_11'
     ]
     
 # use a metadata keyword to filter results for quick assessment
@@ -80,7 +84,12 @@ print '\nresults for all experiments for metric: ' + keyword1
 dsave1 = print_verification_stats(expts, keyword1)
 print dsave1
 
-keyword2 = 'BE time-mean spatial anomaly correlation'
+keyword3 = 'LMR_GIS coefficient of efficiency global mean'
+print '\nresults for all experiments for metric: ' + keyword3
+dsave3 = print_verification_stats(expts, keyword3)
+print dsave3
+
+keyword2 = 'GIS time-mean spatial anomaly correlation'
 print '\nresults for all experiments for metric: ' + keyword2
 dsave2 = print_verification_stats(expts, keyword2)
 print dsave2

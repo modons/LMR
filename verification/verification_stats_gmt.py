@@ -25,15 +25,21 @@ import cPickle
 #         'production_mlost_era20c_pagesall_0.75_1',
 #         'test_V2proto_TorP_1']
 expts = [
-    'pages2_loc1000_11',
-    'pages2_loc5000_11',
-    'pages2_loc10000_11',
-    'pages2_loc12000_11',
-    'pages2_loc15000_11',
-    'pages2_loc20000_11',
-    'pages2_noloc_11',
-    'pages2_loc12000_breit_11',
-    'pages2_loc12000_pages2k2_seasonal_TorP_11'
+#    'pages2_loc1000_11',
+#    'pages2_loc5000_11',
+#    'pages2_loc10000_11',
+#    'pages2_loc12000_11',
+#    'pages2_loc15000_11',
+#    'pages2_loc20000_11',
+#    'pages2_noloc_11',
+#    'pages2_loc12000_breit_11',
+#    'pages2_loc12000_pages2k2_seasonal_TorP_11',
+#    'pages2_loc20000_pages2k2_seasonal_TorP_nens200_11',
+#    'pages2_loc25000_pages2k2_seasonal_TorP_nens200_5',
+#    'pages2_loc20000_seasonal_bilinear_nens200_11',
+    'pages2_loc25000_seasonal_bilinear_nens200_11',
+    'pages2_loc25000_seasonal_bilinear_nens200_75pct_11',
+    'pages2_loc25000_seasonal_bilinear_nens200_meta_11'
     ]
          
 # use a metadata keyword to filter results for quick assessment
@@ -47,8 +53,8 @@ def print_verification_stats(expts, keyword):
     dsave = []
     for ex in expts:
         exfile = ex+'_iters_gmt_verification.pckl'
-        print '---------------------------------------------------------------------'
-        print 'working on file: ',exfile
+        #print '---------------------------------------------------------------------'
+        #print 'working on file: ',exfile
         infile = open(exfile,'r')
         ddict = cPickle.load(infile)
 
@@ -61,11 +67,16 @@ def print_verification_stats(expts, keyword):
         for key in ddict.keys():
             #print key,ddict[key],stat_metadata[key]
             if keyword in stat_metadata[key]:
-                print key,ddict[key],stat_metadata[key]
+                #print key,ddict[key],stat_metadata[key]
                 # save data
                 dsave.append(ddict[key])
 
     return dsave
+
+print '----------------------------------'
+print 'experiments:'
+print expts
+print '----------------------------------'
 
 # use a keyword to filter results
 keyword1 = 'consensus coefficient of efficiency'
@@ -73,7 +84,8 @@ print '\nresults for all experiments for metric: ' + keyword1
 dsave1 = print_verification_stats(expts, keyword1)
 print dsave1
 
-keyword2 = 'GIS detrended coefficient of efficiency'
+#keyword2 = 'GIS detrended coefficient of efficiency'
+keyword2 = 'consensus detrended coefficient of efficiency'
 print '\nresults for all experiments for metric: ' + keyword2
 dsave2 = print_verification_stats(expts, keyword2)
 print dsave2
@@ -81,6 +93,11 @@ print dsave2
 keyword3 = 'consensus correlation'
 print '\nresults for all experiments for metric: ' + keyword3
 dsave3 = print_verification_stats(expts, keyword3)
+print dsave3
+
+keyword4 = 'LMR trend'
+print '\nresults for all experiments for metric: ' + keyword4
+dsave3 = print_verification_stats(expts, keyword4)
 print dsave3
 
 # make a simple plot

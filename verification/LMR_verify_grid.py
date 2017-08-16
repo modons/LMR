@@ -11,6 +11,9 @@ Revisions:
 
 """
 import matplotlib
+# need to do this when running remotely, and to suppress figures
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 # need to do this backend when running remotely or to suppress figures interactively
 
 # generic imports
@@ -53,17 +56,9 @@ iplot = True
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
 
-# Open interactive windows of figures
-interactive = False
-
-if interactive:
-    plt.ion()
-else:
-    # need to do this when running remotely, and to suppress figures
-    matplotlib.use('Agg')
-
 # option to print figures
 fsave = True
+#fsave = False
 
 # save statistics file
 stat_save = True
@@ -97,7 +92,12 @@ stat_save = True
 #nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.5'
 #nexp = 'pages2_noloc_nens200'
 #nexp = 'pages2_loc20000_pages2k2_seasonal_TorP_nens200'
-nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'pages2_loc20000_seasonal_bilinear_nens200'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_75pct'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_meta'
+nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
 
 # ---
 
@@ -154,7 +154,7 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-# variable
+# variable---this script is temperature only?
 var = 'tas_sfc_Amon'
 
 workdir = datadir_output + '/' + nexp
@@ -181,12 +181,6 @@ niters = len(mcdir)
 print('mcdir: %s' % str(mcdir))
 print('niters = %s' % str(niters))
 
-# get time period from the GMT file...
-gmtpfile =  workdir + '/r0/gmt.npz'
-npzfile = np.load(gmtpfile)
-npzfile.files
-LMR_time = npzfile['recon_times']
-
 # read ensemble mean data
 print('\n reading LMR ensemble-mean data...\n')
 
@@ -208,12 +202,15 @@ for dir in mcdir:
     Xb_one = Xprior_statevector['Xb_one']
     # extract variable (sfc temperature) from state vector
     state_info = Xprior_statevector['state_info'].item()
+    print state_info
     posbeg = state_info[var]['pos'][0]
     posend = state_info[var]['pos'][1]
     tas_prior = Xb_one[posbeg:posend+1,:]
     
     if first:
         first = False
+        recon_times = npzfile['years']
+        LMR_time = np.array(map(int,recon_times))
         lat = npzfile['lat']
         lon = npzfile['lon']
         nlat = npzfile['nlat']
@@ -226,8 +223,8 @@ for dir in mcdir:
         xam_all = np.zeros([niters,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
         # prior
         [_,Nens] = tas_prior.shape
-        nlatp = state_info['tas_sfc_Amon']['spacedims'][0]
-        nlonp = state_info['tas_sfc_Amon']['spacedims'][1]
+        nlatp = state_info[var]['spacedims'][0]
+        nlonp = state_info[var]['spacedims'][1]
         xbm_all = np.zeros([niters,nyrs,nlatp,nlonp])
 
     xam = xam + tmp
@@ -2474,7 +2471,7 @@ if iplot:
         print('saving to .png')
         plt.savefig(nexp+'_verify_grid_ce_vsBias_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
-if interactive and iplot:
+if iplot:
     plt.show(block=True)
 
 # ensemble calibration
