@@ -372,8 +372,20 @@ def LMR_driver_callable(cfg=None):
         Xb_one_aug = Xb_one
 
     
-    # Dump prior state vector (Xb_one) to file 
-    filen = workdir + '/' + 'Xb_one'
+    # NEW: Dump prior state vector (Xb_one) to file 
+    print '\n ---------- saving Xb_one for each variable to separate file -----------\n'
+    for var in X.trunc_state_info.keys():
+        print var
+        # now need to pluck off the index region that goes with var
+        ibeg = X.trunc_state_info[var]['pos'][0]
+        iend = X.trunc_state_info[var]['pos'][1]
+        Xb_var = np.reshape(Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
+        filen = workdir + '/' + 'Xb_one' + '_' + var 
+        np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
+
+    # END new file save
+
+    filen = workdir + '/' + 'Xb_one' 
     try:
         out_Xb_one = Xb_one.filled()
         out_Xb_one_aug = Xb_one_aug.filled()
