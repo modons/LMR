@@ -75,8 +75,9 @@ def main():
     # - Only PAGES2kv2 : include_NCDC = False, include_PAGES2kphase2 = True
     include_NCDC = True
     include_PAGES2kphase2 = True
-    PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pklz'
-
+    #PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pklz' # compressed version of the file
+    PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pckl'
+    
     # File containing info on duplicates in proxy records
     infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.2.0.xlsx'
 
@@ -583,9 +584,20 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
     if os.path.isfile(infile):
         print('Data from PAGES2k phase 2:')
         print(' Uploading data from %s ...' %infile)
-        f = gzip.open(infile,'rb')
-        pages2k_data = pickle.load(f)
-        f.close()
+        try:
+            # try to read as a straight pckl file
+            f = open(infile,'rb')
+            pages2k_data = pickle.load(f)
+            f.close()
+        except:
+            # failed to read so try as a compressed pckl (pklz) file
+            try:
+                f = gzip.open(infile,'rb')
+                pages2k_data = pickle.load(f)
+                f.close()
+            except:
+                raise SystemExit(('ERROR: Could not read the PAGES2kv2 proxy file {}'
+                         ' as a regular or compressed pickle file. Unrecognized format!').format(pages2kv2_file))
     else:
         raise SystemExit(('ERROR: Option to include PAGES2kv2 proxies enabled'
                          ' but corresponding data file could not be found!'
@@ -676,6 +688,8 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         # Rename some of the the proxy measurements to be more standard.
         if (pages2k_data[counter]['archiveType'] == 'Ice Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'd18O1'):
             pages2k_data[counter]['paleoData_variableName'] = 'd18O'
+        elif (pages2k_data[counter]['archiveType'] == 'Tree Rings') and (pages2k_data[counter]['paleoData_variableName'] == 'temperature1'):
+            pages2k_data[counter]['paleoData_variableName'] = 'temperature'
         elif (pages2k_data[counter]['archiveType'] == 'Lake Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'temperature1'):
             pages2k_data[counter]['paleoData_variableName'] = 'temperature'
         elif (pages2k_data[counter]['archiveType'] == 'Lake Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'temperature3'):
@@ -718,6 +732,20 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
             if year_type == 'tropical year': pages2k_data_seasonality = [4,5,6,7,8,9,10,11,12,13,14,15]
             else: pages2k_data_seasonality = [1,2,3,4,5,6,7,8,9,10,11,12]
 
+        # If the year type is "tropical", change all records tagged as "annual" to be tropical-year.
+        if year_type == 'tropical year' and pages2k_data_seasonality == [1,2,3,4,5,6,7,8,9,10,11,12]:
+            pages2k_data_seasonality = [4,5,6,7,8,9,10,11,12,13,14,15]
+
+        
+        # Some code to fix two erroneous seasonality metadata found in the PAGES2kv2 file:
+        # The data in the file itself should be fixed, but error dealt with here in the mean time.
+        if pages2k_data_seasonality == [6,7,2008]:
+            pages2k_data_seasonality = [6,7,8]
+        elif pages2k_data_seasonality == [7,8,2009]:
+            pages2k_data_seasonality = [7,8,9]
+
+            
+            
         # Spell out the name of the interpretation variable.
         if pages2k_data[counter]['climateInterpretation_variable'] == 'T':
             pages2k_data[counter]['climateInterpretation_variable'] = 'temperature'
@@ -1192,6 +1220,10 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 d['Relation_to_temp'] = None
                 d['Sensitivity'] = None
 
+            # If the year type is "tropical", change all annual records to the tropical-year mean.
+            if year_type == 'tropical year' and d['Seasonality'] == [1,2,3,4,5,6,7,8,9,10,11,12]:
+                d['Seasonality'] = [4,5,6,7,8,9,10,11,12,13,14,15]
+
         except EmptyError, e:
             print(e)
             return (None, None)
@@ -1663,7 +1695,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
 
     totchronol = len(merged_dict)
 
-    
+    dupecount = 0
     if eliminate_duplicates:
         print(' ')
         print('Checking list of duplicate/bad records:')
@@ -1674,7 +1706,6 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
         # numpy array containing names of proxy records to eliminate
         toflush = dupes['Record_To_Eliminate'].values
 
-        dupecount = 0
         for siteID in merged_dict.keys():
             if siteID in toflush:
                 try:

@@ -20,9 +20,20 @@ Revisions:
             Contains simulated isotope (d18O) field. 
             [R. Tardif, U. of Washington, May 2016]
           - Added 'ccsm3_trace21ka' (simulation of the transient climate of 
-            the last 21k years) as a possible prior source
+            the last 21k years i.e. LGM -> Holocene) as a possible prior source
             [R. Tardif, U. of Washington, Nov 2016]
-
+          - Added the 'loveclim_goosse2005' class (Common Era simulation performed
+            with the LOVECLIM v1.0 model by Goosse et al. GRL 2005) as a 
+            possible prior source.
+            [R. Tardif, U. of Washington, Jul 2017]
+          - Added the 'cgenie_petm' class (simulations of the PETM with the 
+            cGENIE EMIC) as a possible prior source.
+            [R. Tardif, U. of Washington, Aug 2017]
+          - Added the 'ihadcm3_preindustrial_control' class for use of data from 
+            the isotope-enabled HadCM3 model simulation of preindustrial climate 
+            (the "0kyr" run, part of paleoclimate simulations performed by 
+            Max Holloway of the British Antarctic Survey)
+            [R. Tardif, U. of Washington, Aug 2017]
 """
 
 import numpy as np
@@ -54,9 +65,16 @@ def prior_assignment(iprior):
         prior_object = prior_era20c()
     elif iprior == 'era20cm':
         prior_object = prior_era20cm()
+    elif iprior == 'loveclim_goosse2005':
+        prior_object = prior_loveclim_goosse2005()
+    elif iprior == 'ihadcm3_preindustrial_control':
+        prior_object = prior_ihadcm3_preindustrial_control()
     elif iprior == 'ccsm3_trace21ka':
         prior_object = prior_ccsm3_trace21ka()
+    elif iprior == 'cgenie_petm':
+        prior_object = prior_cgenie_petm()
 
+        
     return prior_object
 
 
@@ -422,6 +440,36 @@ class prior_era20cm(prior_master):
                                                                  self.statevars)
         return
 
+# class for the LOVECLIM 1.0 Common Era simulation of Goosse et al. (GRL 2005)
+class prior_loveclim_goosse2005(prior_master):
+
+    def read_prior(self):
+    
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.statevars_info)
+        return
+
+# class for the LOVECLIM 1.0 Common Era simulation of Goosse et al. (GRL 2005)
+class prior_ihadcm3_preindustrial_control(prior_master):
+
+    def read_prior(self):
+    
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.statevars_info)
+        return
+
+    
+    
 # class for the simulation of the transient climate of the last 21k years (TraCE21ka)
 class prior_ccsm3_trace21ka(prior_master):
 
@@ -433,4 +481,18 @@ class prior_ccsm3_trace21ka(prior_master):
                                                       self.avgInterval,
                                                       self.detrend,
                                                       self.anom_reference)        
+        return
+
+    
+# class for the cGENIE simulation if the PETM
+class prior_cgenie_petm(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_cGENIE_model
+        self.prior_dict = read_gridded_data_cGENIE_model(self.prior_datadir,
+                                                      self.prior_datafile,
+                                                      self.statevars,
+                                                      self.avgInterval,
+                                                      self.detrend,
+                                                      self.anom_reference)
         return

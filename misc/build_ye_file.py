@@ -101,8 +101,8 @@ if proxy_database == 'pages':
     proxy_cfg = cfg.proxies.pages
 elif proxy_database == 'NCDC':
     proxy_cfg = cfg.proxies.ncdc
-elif proxy_database == 'NCDCdadt':
-    proxy_cfg = cfg.proxies.ncdcdadt
+elif proxy_database == 'NCDCdtda':
+    proxy_cfg = cfg.proxies.ncdcdtda
 else:
     print 'ERROR in specification of proxy database.'
     raise SystemExit()
@@ -266,6 +266,7 @@ for psm_key in unique_psm_keys:
         X = LMR_prior.prior_assignment(cfg.prior.prior_source)
         X.prior_datadir = cfg.prior.datadir_prior
         X.prior_datafile = cfg.prior.datafile_prior
+        X.anom_reference = cfg.prior.anom_reference
         X.detrend = cfg.prior.detrend
         X.avgInterval = cfg.prior.avgInterval
         X.Nens = None  # None => Load entire prior

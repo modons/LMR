@@ -11,6 +11,9 @@ Revisions:
 
 """
 import matplotlib
+# need to do this when running remotely, and to suppress figures
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 # need to do this backend when running remotely or to suppress figures interactively
 
 # generic imports
@@ -19,7 +22,6 @@ import glob, os, sys
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
-import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 import cPickle
@@ -53,15 +55,6 @@ iplot = True
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
 
-# Open interactive windows of figures
-interactive = False
-
-if interactive:
-    plt.ion()
-else:
-    # need to do this when running remotely, and to suppress figures
-    matplotlib.use('Agg')
-
 # option to print figures
 fsave = True
 
@@ -82,8 +75,15 @@ stat_save = True
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
 nexp = 'test'
-
 # ---
+
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,0)
 
 # override datadir
 #datadir_output = './data/'
@@ -116,14 +116,6 @@ trange = [1880,2000] #works for nya = 0
 #ref_period = [1961,1990] # ref. period for CRU & MLOST
 ref_period = [1900, 1999] # 20th century
 
-# perform verification using all recon. MC realizations ( MCset = None )
-# or over a custom selection ( MCset = (begin,end) )
-# ex. MCset = (0,0)    -> only the first MC run
-#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
-#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
-MCset = None
-MCset = (0,0)
-
 # set the default size of the figure in inches. ['figure.figsize'] = width, height;  
 # aspect ratio appears preserved on smallest of the two
 plt.rcParams['figure.figsize'] = 10, 10 # that's default image size for this interactive session
@@ -137,7 +129,7 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-# variable
+# variable---this script is temperature only!
 var = 'tas_sfc_Amon'
 
 workdir = datadir_output + '/' + nexp
@@ -164,12 +156,6 @@ niters = len(mcdir)
 print('mcdir: %s' % str(mcdir))
 print('niters = %s' % str(niters))
 
-# get time period from the GMT file...
-gmtpfile =  workdir + '/r0/gmt.npz'
-npzfile = np.load(gmtpfile)
-npzfile.files
-LMR_time = npzfile['recon_times']
-
 # read ensemble mean data
 print('\n reading LMR ensemble-mean data...\n')
 
@@ -191,12 +177,15 @@ for dir in mcdir:
     Xb_one = Xprior_statevector['Xb_one']
     # extract variable (sfc temperature) from state vector
     state_info = Xprior_statevector['state_info'].item()
+    print state_info
     posbeg = state_info[var]['pos'][0]
     posend = state_info[var]['pos'][1]
     tas_prior = Xb_one[posbeg:posend+1,:]
     
     if first:
         first = False
+        recon_times = npzfile['years']
+        LMR_time = np.array(map(int,recon_times))
         lat = npzfile['lat']
         lon = npzfile['lon']
         nlat = npzfile['nlat']
@@ -209,8 +198,8 @@ for dir in mcdir:
         xam_all = np.zeros([niters,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
         # prior
         [_,Nens] = tas_prior.shape
-        nlatp = state_info['tas_sfc_Amon']['spacedims'][0]
-        nlonp = state_info['tas_sfc_Amon']['spacedims'][1]
+        nlatp = state_info[var]['spacedims'][0]
+        nlonp = state_info[var]['spacedims'][1]
         xbm_all = np.zeros([niters,nyrs,nlatp,nlonp])
 
     xam = xam + tmp
@@ -962,6 +951,7 @@ ax.set_ylim(ymin,ymax)
 ypos = ymax-0.15*(ymax-ymin)
 xpos = xmin+0.025*(xmax-xmin)
 ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_gis_csave)),fontsize=11,fontweight='bold')
+print 'LMR-GIS mean anomaly correlation: ' + str (np.nanmean(lmr_gis_csave))
 
 # BE
 ax = fig.add_subplot(6,2,7)
@@ -1578,6 +1568,8 @@ xbm_gis_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
 xbm_gis_biasmean_global = str(float('%.2f' %biasmean_global[0]))
 xbm_gis_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
 xbm_gis_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+
+print 'LMR-GIS globa-mean CE:' + str(lmr_gis_cemean_global)
 
 # ------
 # LMR_BE
@@ -2454,7 +2446,7 @@ if iplot:
         print('saving to .png')
         plt.savefig(nexp+'_verify_grid_ce_vsBias_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
-if interactive and iplot:
+if iplot:
     plt.show(block=True)
 
 # ensemble calibration

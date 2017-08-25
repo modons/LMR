@@ -11,8 +11,8 @@ Revisions:
           - Added the get_distance function for more efficient calculation of distances
             between lat/lon points on the globe. [R. Tardif, U. of Washington, January 2016]
 
-          - 
-
+          - Added fexibility in handling missing data in the global_hemispheric_means function.
+            [R. Tardif, U. of Washington, Aug. 2017]
 
 """
 import glob
@@ -1183,8 +1183,9 @@ def global_hemispheric_means(field,lat):
     #
     # Modifications:
     #           - Modified to handle presence of missing values (nan) in arrays
-    #             in calculation of spatial averages [ R. Tardif, November 2015) ]
-    #
+    #             in calculation of spatial averages [ R. Tardif, November 2015 ]
+    #           - Enhanced flexibility in the handling of missing values
+    #             [ R. Tardif, Aug. 2017 ]
 
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3: # time is a dimension
@@ -1239,17 +1240,26 @@ def global_hemispheric_means(field,lat):
         else:
             # Global
             indok_2d    = indok[t,:,:]
-            field_2d    = np.squeeze(field[t,:,:])
-            gm[t]       = np.average(field_2d[indok_2d],weights=W[indok_2d])
+            if indok_2d.any():
+                field_2d    = np.squeeze(field[t,:,:])
+                gm[t]       = np.average(field_2d[indok_2d],weights=W[indok_2d])
+            else:
+                gm[t] = np.nan
             # NH
             indok_nh_2d = indok_nh[t,:,:]
-            field_nh_2d = np.squeeze(field_NH[t,:,:])
-            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W_NH[indok_nh_2d])
+            if indok_nh_2d.any():
+                field_nh_2d = np.squeeze(field_NH[t,:,:])
+                nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W_NH[indok_nh_2d])
+            else:
+                nhm[t] = np.nan
             # SH
             indok_sh_2d = indok_sh[t,:,:]
-            field_sh_2d = np.squeeze(field_SH[t,:,:])
-            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W_SH[indok_sh_2d])
-
+            if indok_sh_2d.any():
+                field_sh_2d = np.squeeze(field_SH[t,:,:])
+                shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W_SH[indok_sh_2d])
+            else:
+                shm[t] = np.nan
+                
 # original code (keep for now...)
 #    for t in xrange(ntime):
 #        if lati == 0:

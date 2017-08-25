@@ -9,7 +9,8 @@ Purpose: Generates verification statistics of LMR global-mean 2m air temperature
 Originator: Greg Hakim, U. of Washington, November 2015
 
 Revisions: 
-
+           21 July 2017: add consensus to detrended verification (GJH)
+                         to do: make functions to do the repetetive actions
 """
 
 import matplotlib
@@ -60,14 +61,6 @@ warnings.filterwarnings('ignore')
 stime = 1880
 etime = 2000
 
-# perform verification using all recon. MC realizations ( MCset = None )
-# or over a custom selection ( MCset = (begin,end) )
-# ex. MCset = (0,0)    -> only the first MC run
-#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
-#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
-MCset = None
-#MCset = (0,0)
-
 # define the running time mean 
 #nsyrs = 31 # 31-> 31-year running mean--nsyrs must be odd!
 nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
@@ -83,10 +76,10 @@ if interactive:
     plt.ion()
 else:
     # need to do this when running remotely, and to suppress figures
-    matplotlib.use('Agg')
-
+    matplotlib.use('agg')
+    matplotlib.pyplot.switch_backend('agg')
 # option to save figures to a file
-fsave = False
+fsave = True
 
 # save statistics file
 stat_save = True
@@ -103,6 +96,14 @@ stat_save = True
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
 nexp = 'test'
+
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,0)
 
 # specify directories for LMR data
 #datadir_output = './data/'
@@ -292,6 +293,7 @@ print('--------------------------------------------------')
 print('reading LMR GMT data...')
 print('--------------------------------------------------')
 kk = -1
+print 'IPLOT = ' + str(iplot)
 if iplot:
     fig = plt.figure()
 
@@ -321,6 +323,7 @@ for dir in dirset:
     nhmt = npzfile['nhmt_ensemble']
     shmt = npzfile['shmt_ensemble']
     recon_times = npzfile['recon_times']
+    print recon_times
     print gmtpfile
     gmt_shape = np.shape(gmt)
     nhmt_shape = np.shape(nhmt)
@@ -415,8 +418,8 @@ mlost_smatch, mlost_ematch = find_date_indices(MLOST_time,stime,etime)
 # "consensus" global mean: average all non-LMR (obs-based) values
 consensus_gmt = np.array([gis_gm[gis_smatch:gis_ematch],cru_gm[cru_smatch:cru_ematch],be_gm[be_smatch:be_ematch],mlost_gm[mlost_smatch:mlost_ematch]])
 con_gm = np.mean(consensus_gmt,axis=0)
-CON_time = range(stime,etime)
-
+CON_time = np.arange(stime,etime)
+CON_time = np.asarray(CON_time) # fixed 21 July 2017 (GJH)
 
 #
 # correlation coefficients & CE over chosen time interval 
@@ -585,13 +588,13 @@ print('--------------------------------------------------')
 if iplot:
     lw = 2
     fig = plt.figure()
-    plt.plot(LMR_time,lmr_gm,'k-'    ,linewidth=lw*2,label='LMR')
-    plt.plot(GIS_time,gis_gm,'r-'    ,linewidth=lw,label='GISTEMP',alpha=alpha)
-    plt.plot(CRU_time,cru_gm,'m-'    ,linewidth=lw,label='HadCRUT4',alpha=alpha)
-    plt.plot(BE_time,be_gm,'g-'      ,linewidth=lw,label='BE',alpha=alpha)
-    plt.plot(MLOST_time,mlost_gm,'c-',linewidth=lw,label='MLOST',alpha=alpha)
-    plt.plot(TCR_time,tcr_gm,'y-'    ,linewidth=lw,label='20CR-V2',alpha=alpha)
-    plt.plot(ERA20C_time,era_gm,'b-' ,linewidth=lw,label='ERA-20C',alpha=alpha)
+    plt.plot(LMR_time,lmr_gm,'k-'        ,linewidth=lw*2,label='LMR')
+    plt.plot(GIS_time,gis_gm,'r-'        ,linewidth=lw,label='GISTEMP',alpha=alpha)
+    plt.plot(CRU_time,cru_gm,'m-'        ,linewidth=lw,label='HadCRUT4',alpha=alpha)
+    plt.plot(BE_time,be_gm,'g-'          ,linewidth=lw,label='BE',alpha=alpha)
+    plt.plot(MLOST_time,mlost_gm,'c-'    ,linewidth=lw,label='MLOST',alpha=alpha)
+    plt.plot(TCR_time,tcr_gm,'y-'        ,linewidth=lw,label='20CR-V2',alpha=alpha)
+    plt.plot(ERA20C_time,era_gm,'b-'     ,linewidth=lw,label='ERA-20C',alpha=alpha)
     plt.plot(CON_time,con_gm,color='lime',linestyle='-',linewidth=lw,label='consensus',alpha=alpha)
     plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha = 0.5,linewidth=0.)
     #plt.plot(LMR_time,lmr_gm,'k-'    ,linewidth=lw*2) # LMR back on top
@@ -709,7 +712,7 @@ lsmsc  = str(float('%.2f' % ls_ms_corr[0,1]))
 lsmsce = str(float('%.2f' % ls_ms_ce))
 
 
-# LMR-concensus
+# LMR-consensus
 overlap_yrs = np.intersect1d(np.intersect1d(LMR_smoothed_years, CON_smoothed_years), verif_yrs)
 ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years, overlap_yrs))
 ind_con = np.searchsorted(CON_smoothed_years, np.intersect1d(CON_smoothed_years, overlap_yrs))
@@ -745,16 +748,17 @@ print('--------------------------------------------------')
 if iplot:
     fig = plt.figure()
     #plt.plot(recon_times,lmr_gm,'k-',linewidth=2)
-    plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha=alpha,linewidth=0.)
+    #plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha=alpha,linewidth=0.)
 
     # add smoothed lines
-    plt.plot(LMR_smoothed_years,LMR_smoothed,'k-'    ,linewidth=4, label='LMR')
-    plt.plot(GIS_smoothed_years,GIS_smoothed,'r-'    ,linewidth=4, label='GISTEMP',alpha=alpha)
-    plt.plot(CRU_smoothed_years,CRU_smoothed,'m-'    ,linewidth=4, label='HadCRUT4',alpha=alpha)
-    plt.plot(BE_smoothed_years,BE_smoothed,'g-'      ,linewidth=4, label='BE',alpha=alpha)
-    plt.plot(MLOST_smoothed_years,MLOST_smoothed,'c-',linewidth=4, label='MLOST',alpha=alpha)
-    plt.plot(TCR_smoothed_years,TCR_smoothed,'y-'    ,linewidth=4, label='20CR-V2',alpha=alpha)
-    plt.plot(ERA_smoothed_years,ERA_smoothed,'b-'    ,linewidth=4, label='ERA-20C',alpha=alpha)
+    plt.plot(LMR_smoothed_years,LMR_smoothed,'k-'         ,linewidth=4, label='LMR')
+    plt.plot(GIS_smoothed_years,GIS_smoothed,'r-'         ,linewidth=4, label='GISTEMP',alpha=alpha)
+    plt.plot(CRU_smoothed_years,CRU_smoothed,'m-'         ,linewidth=4, label='HadCRUT4',alpha=alpha)
+    plt.plot(BE_smoothed_years,BE_smoothed,'g-'           ,linewidth=4, label='BE',alpha=alpha)
+    plt.plot(MLOST_smoothed_years,MLOST_smoothed,'c-'     ,linewidth=4, label='MLOST',alpha=alpha)
+    plt.plot(TCR_smoothed_years,TCR_smoothed,'y-'         ,linewidth=4, label='20CR-V2',alpha=alpha)
+    plt.plot(ERA_smoothed_years,ERA_smoothed,'b-'         ,linewidth=4, label='ERA-20C',alpha=alpha)
+    plt.plot(CON_smoothed_years,CON_smoothed,color='lime' ,linewidth=4, label='consensus',alpha=alpha)
     #plt.title('Global mean temperature range (gray) and ' +str(nsyrs) + '-year moving average\n(' + nexp + ')',weight='bold',y=1.03)
     plt.title('Global mean temperature range (gray) and ' +str(nsyrs) + '-year moving average',weight='bold',y=1.03)
     plt.xlabel('Year CE', fontweight='bold')
@@ -786,8 +790,8 @@ if iplot:
     plt.text(txl,tyl,'(LMR,20CR-V2)  : r= ' + lstsc.ljust(5,' ') + ' CE= ' + lstsce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-0.05
     plt.text(txl,tyl,'(LMR,ERA-20C)  : r= ' + lsesc.ljust(5,' ') + ' CE= ' + lsesce.ljust(5,' '), fontsize=14, family='monospace')
-    #tyl = tyl-0.05
-    #plt.text(txl,tyl,'(LMR,consensus): r= ' + lsosc.ljust(5,' ') + ' CE= ' + lsosce.ljust(5,' '), fontsize=14, family='monospace')
+    tyl = tyl-0.05
+    plt.text(txl,tyl,'(LMR,consensus): r= ' + lsconsc.ljust(5,' ') + ' CE= ' + lsconsce.ljust(5,' '), fontsize=14, family='monospace')
 
     plt.plot(xl_loc,[0,0],color='gray',linestyle=':',lw=2)
     plt.legend(loc=2)
@@ -976,6 +980,30 @@ lmr_era_ce_detrend = coefficient_efficiency(era_gm_detrend,lmr_gm_detrend[ind_lm
 lerd   =  str(float('%.2f' % lmr_era_corr_detrend[0,1]))
 lecd   =  str(float('%.2f' % lmr_era_ce_detrend))
 
+# for CONsensus
+# overlaping years within verification interval
+overlap_yrs = np.intersect1d(np.intersect1d(LMR_time_copy, CON_time), verif_yrs)
+ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_yrs))
+ind_con = np.searchsorted(CON_time, np.intersect1d(CON_time, overlap_yrs))
+CON_time_copy = CON_time[ind_con]
+con_gm_copy = np.copy(con_gm[ind_con])
+xvar = range(len(ind_con))
+con_slope, con_intercept, r_value, p_value, std_err = stats.linregress(xvar,con_gm_copy)
+con_trend = con_slope*np.squeeze(xvar) + con_intercept
+con_gm_detrend = con_gm_copy - con_trend
+# r and ce on full data
+full_err  = lmr_gm_copy[ind_lmr] - con_gm_copy
+lmr_con_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],con_gm[ind_con])
+lmr_con_ce_full = coefficient_efficiency(con_gm_copy,lmr_gm_copy[ind_lmr])
+lconrf =  str(float('%.2f' % lmr_con_corr_full[0,1]))
+lconcf =  str(float('%.2f' % lmr_con_ce_full))
+# r and ce on detrended data
+lmr_con_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],con_gm_detrend)
+lmr_detrend_err = lmr_gm_detrend[ind_lmr] - con_gm_detrend
+lmr_con_ce_detrend = coefficient_efficiency(con_gm_detrend,lmr_gm_detrend[ind_lmr])
+lconrd   =  str(float('%.2f' % lmr_con_corr_detrend[0,1]))
+lconcd   =  str(float('%.2f' % lmr_con_ce_detrend))
+
 # Trends
 lmrs   =  str(float('%.2f' % (lmr_slope*100.)))
 gs     =  str(float('%.2f' % (gis_slope*100.)))
@@ -984,6 +1012,7 @@ bes    =  str(float('%.2f' % (be_slope*100.)))
 mlosts =  str(float('%.2f' % (mlost_slope*100.)))
 tcrs   =  str(float('%.2f' % (tcr_slope*100.)))
 eras   =  str(float('%.2f' % (era_slope*100.)))
+cons   =  str(float('%.2f' % (con_slope*100.)))
 
 print('r:  %s %s' % (str(lgrf), str(lgrd)))
 print('ce: %s %s' % (str(lgcf), str(lgcd)))
@@ -1014,7 +1043,10 @@ if iplot:
     # ERA
     #plt.plot(ERA_time_copy,era_trend,'b-',lw=lw,alpha=alpha)
     plt.plot(ERA_time_copy,era_gm_detrend,'b-',lw=lw,alpha=alpha,label='ERA-20C (trend: '+eras+' K/100yrs)')
-
+    # CONsensus
+    #plt.plot(CON_time_copy,con_trend,color='lime',lw=lw,alpha=alpha)
+    plt.plot(CON_time_copy,con_gm_detrend,color='lime',lw=lw*2,alpha=alpha,label='consensus (trend: '+cons+' K/100yrs)')
+    
     plt.ylim(-1,1)    
     plt.legend(loc=2,fontsize=12)
 
@@ -1028,7 +1060,7 @@ if iplot:
     plt.xlim(xl_loc)
     plt.ylim(yl_loc)
     txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.005
-    tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.14
+    tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.15
     
     off = .03
     plt.text(txl,tyl,      '(LMR,GISTEMP) : r full= ' + lgrf.ljust(4,' ') + ' r detrend= ' + lgrd.ljust(4,' ') + ' CE full= ' + lgcf.ljust(5,' ') + ' CE detrend= ' + lgcd.ljust(5,' '), fontsize=12, family='monospace')
@@ -1037,6 +1069,7 @@ if iplot:
     plt.text(txl,tyl-3*off,'(LMR,MLOST)   : r full= ' + lmrf.ljust(4,' ') + ' r detrend= ' + lmrd.ljust(4,' ') + ' CE full= ' + lmcf.ljust(5,' ') + ' CE detrend= ' + lmcd.ljust(5,' '), fontsize=12, family='monospace')
     plt.text(txl,tyl-4*off,'(LMR,20CR-V2) : r full= ' + ltrf.ljust(4,' ') + ' r detrend= ' + ltrd.ljust(4,' ') + ' CE full= ' + ltcf.ljust(5,' ') + ' CE detrend= ' + ltcd.ljust(5,' '), fontsize=12, family='monospace')
     plt.text(txl,tyl-5*off,'(LMR,ERA-20C) : r full= ' + lerf.ljust(4,' ') + ' r detrend= ' + lerd.ljust(4,' ') + ' CE full= ' + lecf.ljust(5,' ') + ' CE detrend= ' + lecd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl-6*off,'(LMR,consens.): r full= ' + lconrf.ljust(4,' ') + ' r detrend= ' + lconrd.ljust(4,' ') + ' CE full= ' + lconcf.ljust(5,' ') + ' CE detrend= ' + lconcd.ljust(5,' '), fontsize=12, family='monospace')
     
     if fsave:
         print('saving to .png')
@@ -1122,8 +1155,6 @@ ind_ver = np.searchsorted(verif_yrs,   np.intersect1d(TCR_time[ind_tcr], verif_y
 tcr_gm_pad[ind_ver]     = tcr_gm[ind_tcr]
 ind_ver = np.searchsorted(verif_yrs,   np.intersect1d(ERA20C_time[ind_era], verif_yrs))
 era_gm_pad[ind_ver]     = era_gm[ind_era]
-
-CON_time = np.asarray(CON_time) # not sure why CON_time is a list here ...
 ind_ver = np.searchsorted(verif_yrs,   np.intersect1d(CON_time[ind_con], verif_yrs))
 con_gm_pad[ind_ver]     = con_gm[ind_con]
 
@@ -1293,7 +1324,7 @@ if stat_save:
     stat_vars = ['stime','etime',
                  'ltc','lec','lgc','lcc','lbc','lmc','loc',
                  'ltce','lece','lgce','lcce','lbce','lmce','loce',
-                 'lgrd','lgcd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
+                 'lgrd','lgcd', 'lconcd','lconrd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
                  'lmrs','gs','crus','bes','mlosts','tcrs','eras']
 
     stat_metadata = {'stime':"starting year of verification time period",
@@ -1318,12 +1349,14 @@ if stat_save:
                      'lcrd':'LMR_CRU detrended correlation',
                      'lbrd':'LMR_BE detrended correlation',
                      'lmrd':'LMR_MLOST detrended correlation',
+                     'lconrd':'LMR_consensus detrended correlation',
                      'ltcd':'LMR_TCR detrended coefficient of efficiency',
                      'lecd':'LMR_ERA detrended coefficient of efficiency',
                      'lgcd':'LMR_GIS detrended coefficient of efficiency',
                      'lccd':'LMR_CRU detrended coefficient of efficiency',
                      'lbcd':'LMR_BE detrended coefficient of efficiency',
                      'lmcd':'LMR_MLOST detrended coefficient of efficiency',
+                     'lconcd':'LMR_consensus detrended coefficient of efficiency',
                      'lmrs':'LMR trend (K/100 years)',
                      'gs':'GIS trend (K/100 years)',
                      'crus':'CRU trend (K/100 years)',

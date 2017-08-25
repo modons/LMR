@@ -41,55 +41,64 @@ plt.style.use('ggplot')
 # directory where data from reconstruction experiments are located
 datadir = '/home/disk/kalman3/rtardif/LMR/output'
 
-# name of experiment
+# name of reconstruction experiment
 nexp = 'test'
 
-# range of Monte-Carlo iterations
+# range of Monte-Carlo iterations to consider
 iter_range = [0,0]
 
+# Reconstruction performed with the following proxy database:
+#proxy_db = 'LMRv1' # aka PAGES2k phase 1 (Hakim et al. JGR 2016)
+proxy_db = 'LMRv2' # aka PAGES2k phase 2 + LMR-specific NCDC-templated proxies
+
 # Whether the y-axis (nb of proxy records) on the temporal plots 
-# whould be in log-scale or not.
+# should be in log-scale or not.
 logaxis_temporal_plots = False
 
 # --------------  End: user-defined parameters  -------------- #
 # ------------------------------------------------------------ #
 
 # Dictionary to associate a symbol and color to every proxy type
-# ** LMRv1 **
-"""
-proxy_symbols_color = {
-    'Tree ring_Width'       : ('^','#66CC00'), 
-    'Tree ring_Density'     : ('v','#FFCC00'), 
-    'Coral_d18O'            : ('o','#FF8080'), 
-    'Ice core_d18O'         : ('d','#66FFFF'), 
-    'Ice core_d2H'          : ('d','#B8E6E6'), 
-    'Ice core_Accumulation' : ('d','#5CB8E6'), 
-    'Lake sediment_All'     : ('s','#FF00FF'), 
-    'Marine sediment_All'   : ('3','#009999'), 
-    'Speleothem_All'        : ('p','#996600'), 
-    }
-"""
 
-# ** LMRv2 **
-proxy_symbols_color = {
-    'Bivalve_d18O'                     : ('h','#FFFF00'),
-    'Corals and Sclerosponges_Rates'   : ('o','#FFE6E6'),
-    'Corals and Sclerosponges_SrCa'    : ('o','#E60000'),
-    'Corals and Sclerosponges_d18O'    : ('o','#FF8080'),
-    'Ice Cores_Accumulation'           : ('d','#5CB8E6'),
-    'Ice Cores_MeltFeature'            : ('d','#0000FF'),
-    'Ice Cores_d18O'                   : ('d','#66FFFF'),
-    'Ice Cores_dD'                     : ('d','#B8E6E6'),
-    'Lake Cores_Misc'                  : ('s','#FFB3FF'),
-    'Lake Cores_Varve'                 : ('s','#FF00FF'),
-    'Marine Cores_d18O'                : ('3','#009999'),
-    'Speleothems_d18O'                 : ('p','#D9B3FF'),
-    'Tree Rings_WidthBreit'            : ('^','#B3FF66'),
-    'Tree Rings_WidthPages2'           : ('^','#66CC00'),
-    'Tree Rings_WoodDensity'           : ('v','#FFCC00'),
-    'Tree Rings_Isotopes'              : ('*','#CCFFCC'),    
+if proxy_db == 'LMRv1':
+    # ** LMRv1 **    
+    proxy_symbols_color = {
+        'Tree ring_Width'       : ('^','#66CC00'), 
+        'Tree ring_Density'     : ('v','#FFCC00'), 
+        'Coral_d18O'            : ('o','#FF8080'), 
+        'Ice core_d18O'         : ('d','#66FFFF'), 
+        'Ice core_d2H'          : ('d','#B8E6E6'), 
+        'Ice core_Accumulation' : ('d','#5CB8E6'), 
+        'Lake sediment_All'     : ('s','#FF00FF'), 
+        'Marine sediment_All'   : ('3','#009999'), 
+        'Speleothem_All'        : ('p','#996600'), 
     }
 
+elif proxy_db == 'LMRv2':
+    # ** LMRv2 **
+    proxy_symbols_color = {
+        'Bivalve_d18O'                     : ('h','#FFFF00'),
+        'Corals and Sclerosponges_Rates'   : ('o','#FFE6E6'),
+        'Corals and Sclerosponges_SrCa'    : ('o','#E60000'),
+        'Corals and Sclerosponges_d18O'    : ('o','#FF8080'),
+        'Ice Cores_Accumulation'           : ('d','#5CB8E6'),
+        'Ice Cores_MeltFeature'            : ('d','#0000FF'),
+        'Ice Cores_d18O'                   : ('d','#66FFFF'),
+        'Ice Cores_dD'                     : ('d','#B8E6E6'),
+        'Lake Cores_Misc'                  : ('s','#FFB3FF'),
+        'Lake Cores_Varve'                 : ('s','#FF00FF'),
+        'Marine Cores_d18O'                : ('3','#009999'),
+        'Speleothems_d18O'                 : ('p','#D9B3FF'),
+        'Tree Rings_WidthBreit'            : ('^','#B3FF66'),
+        'Tree Rings_WidthPages2'           : ('^','#66CC00'),
+        'Tree Rings_WoodDensity'           : ('v','#FFCC00'),
+        'Tree Rings_Isotopes'              : ('*','#CCFFCC'),    
+    }
+else:
+    raise SystemExit('ERROR: unrecognized slection for proxy database used in '
+                     'reconstruction (proxy_db)')
+
+    
 proxy_types = sorted(proxy_symbols_color.keys())
 
 expdir = join(datadir,nexp)

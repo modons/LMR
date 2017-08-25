@@ -38,7 +38,7 @@ bm.latlon_default = True
 
 # option to suppress figures
 iplot = True
-iplot_individual_years = True
+iplot_individual_years = False
 
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
@@ -52,8 +52,9 @@ fsave = True
 # override datadir
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
 
 # Directories where precip and reanalysis data can be found
 datadir_precip = '/home/disk/kalman3/rtardif/LMR/data/verification'
@@ -70,7 +71,15 @@ datadir_reanl  = '/home/disk/kalman3/rtardif/LMR/data/model'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
 nexp = 'test'
+# ---
 
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,10)
 
 # Definition of variables to verify
 #                       kind   name   variable long name bounds     units   mult. factor
@@ -124,18 +133,18 @@ print '\n getting file system information...\n'
 dirs = glob.glob(workdir+"/r*")
 # sorted
 dirs.sort()
-mcdir = [item.split('/')[-1] for item in dirs]
+
+# selecting the MC iterations to keep
+if MCset:
+    dirset = dirs[MCset[0]:MCset[1]+1]
+else:
+    dirset = dirs
+
+mcdir = [item.split('/')[-1] for item in dirset]
 niters = len(mcdir)
 
 print 'mcdir:' + str(mcdir)
 print 'niters = ' + str(niters)
-
-# get time period from the GMT file...
-gmtpfile =  workdir + '/r0/gmt.npz'
-npzfile = np.load(gmtpfile)
-npzfile.files
-LMR_time = npzfile['recon_times']
-
 
 # Loop over verif. variables
 for var in verif_vars:
@@ -154,6 +163,8 @@ for var in verif_vars:
         print 'shape of tmp: ' + str(np.shape(tmp))
         if first:
             first = False
+            recon_times = npzfile['years']
+            LMR_time = np.array(map(int,recon_times))
             lat = npzfile['lat']
             lon = npzfile['lon']
             nlat = npzfile['nlat']
