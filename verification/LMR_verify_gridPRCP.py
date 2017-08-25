@@ -71,8 +71,9 @@ datadir_reanl  = '/home/disk/kalman3/rtardif/LMR/data/model'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
 #nexp = 'test'
-nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
 #nexp = 'pages2_loc15000_seasonal_bilinear_nens200'
+nexp = 'pages2_loc10000_seasonal_bilinear_nens200'
 
 
 # Definition of variables to verify
