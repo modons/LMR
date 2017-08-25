@@ -1,3 +1,6 @@
+import sys
+sys.path.append("..")
+
 import LMR_utils as L
 import numpy as np
 import matplotlib
@@ -9,7 +12,7 @@ def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
     """
     Given vectors for lat and lon, and lat-lon boundaries for a regional domain, 
     return an array of ones and zeros, with ones located within the domain and zeros outside
-    the grid as defined by the input lat,lon vectors.
+    the domain as defined by the input lat,lon vectors.
     """
 
     nlat = len(lat)
@@ -23,7 +26,7 @@ def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
     print longrid
 
     lab = (latgrid >= southlat) & (latgrid <=northlat)
-    # check for crossing the dateline
+    # check for zero crossing 
     if eastlon < westlon:
         lob1 = (longrid >= westlon) & (longrid <=360.)
         lob2 = (longrid >= 0.) & (longrid <=eastlon)
@@ -55,6 +58,10 @@ def PAGES2K_regional_means(field,lat,lon):
     # Modifications:
     #
 
+    # print debug statements
+    #debug = True
+    debug = False
+    
     # number of geographical regions (default, as defined in PAGES2K(2013) paper
     nregions = 7
     
@@ -65,6 +72,9 @@ def PAGES2K_regional_means(field,lat,lon):
         ntime = 1
         nlat,nlon = np.shape(field)
         field = field[None,:] # add time dim of size 1 for consistent array dims
+
+    print 'field dimensions...'
+    print np.shape(field)
 
     # define regions as in PAGES paper
 
@@ -91,7 +101,8 @@ def PAGES2K_regional_means(field,lat,lon):
     # 7. Antarctica: south of 60S (from map)
     rlat[6,0] = -90.; rlat[6,1] = -60.
     rlon[6,0] = 0.; rlon[6,1] = 360.
-
+    # ...add other regions here...
+    
     # latitude weighting 
     lat_weight = np.cos(np.deg2rad(lat))
     tmp = np.ones([nlon,nlat])
@@ -102,17 +113,22 @@ def PAGES2K_regional_means(field,lat,lon):
     # loop over regions
     for region in range(nregions):
 
-        print 'region='+str(region)
-        print rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1]
+        if debug:
+            print 'region='+str(region)
+            print rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1]
+            
         # regional weighting (ones in region; zeros outside)
         mask = regional_mask(lat,lon,rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
-        print 'mask='
-        print mask
+        if debug:
+            print 'mask='
+            print mask
+
+        # this is the weight mask for the regional domain    
         Wmask = np.multiply(mask,W)
 
         # make sure data starts at South Pole
         if lat[0] > 0:
-            # data has NH -> SH format
+            # data has NH -> SH format; reverse
             field = np.flipud(field)
 
         # Check for valid (non-NAN) values & use numpy average function (includes weighted avg calculation) 
@@ -128,7 +144,9 @@ def PAGES2K_regional_means(field,lat,lon):
     return rm
 
 
-#----- start main
+#----- start main----------------------------------------------------
+
+# test #1: define a grid and region
 lat = [-90.,-45.,0.,45.,90.]
 lon = [0,90.,180,270.]
 
@@ -137,7 +155,7 @@ lon = np.array(lon)
 nlat = len(lat)
 nlon = len(lon)
 
-# test a lat-lon region
+# define a lat-lon region
 southlat = 0.
 northlat = 90.
 westlon = 230.
@@ -150,32 +168,31 @@ lat_weight = np.cos(np.deg2rad(lat))
 tmp = np.ones([nlon,nlat])
 W = np.multiply(lat_weight,tmp).T
 
-print tmp
-print np.shape(lat_weight)
-print np.shape(tmp)
+print 'W:'
 print W
 
-# use the regional mask
+# the regional mask
 Wmask = np.multiply(mask,W)
-print 'mask:'
+print 'masked W:'
 print Wmask
 
-# more testing of old code
+#---------------------------------------------------------------------
+# test #2: averages from LMR_utils for a given field
 field =  np.ones([nlon,nlat])
 field[1,1] = -7.
 [tmp_gm,_,_] = L.global_hemispheric_means(field.T,lat)
-print tmp_gm
+print 'global mean: ' + str(tmp_gm)
 
-# check here
+# check with global weights defined here
 gmt_check = np.average(field.T,weights=W)
-print gmt_check
+print 'global mean local: ' + str(gmt_check)
 
-# now test the regional mask
+# regional mask w/o function call
 gmt_region = np.average(field.T,weights=Wmask)
-print gmt_region
+print 'regional mean: ' + str(gmt_region)
 
-# test new function
-#rm = PAGES2K_regional_means(field.T,lat,lon)
+#---------------------------------------------------------------------
+# test #3: regional averages for LMR data using function call
 
 # apply to LMR output
 datadir_output = '/Users/hakim/data/LMR/archive'
@@ -255,6 +272,7 @@ for k in range(nregions):
 plt.tight_layout()
 fname = 'regions_'+nexp+'.png'
 plt.savefig(fname,additional_artists=art,bbox_inches='tight')
+
 
 #plt.show()
 
