@@ -1,9 +1,11 @@
 import sys
 sys.path.append("..")
 
+import glob, os
 import LMR_utils as L
 import numpy as np
 import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
 
@@ -17,13 +19,10 @@ def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
 
     nlat = len(lat)
     nlon =len(lon)
-    print nlat,nlon
 
     tmp = np.ones([nlon,nlat])
     latgrid = np.multiply(lat,tmp).T
     longrid = np.multiply(tmp.T,lon)
-    print latgrid
-    print longrid
 
     lab = (latgrid >= southlat) & (latgrid <=northlat)
     # check for zero crossing 
@@ -35,7 +34,6 @@ def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
         lob = (longrid >= westlon) & (longrid <=eastlon)
 
     mask = np.multiply(lab*lob,tmp.T)
-    print mask
 
     return mask
 
@@ -73,8 +71,9 @@ def PAGES2K_regional_means(field,lat,lon):
         nlat,nlon = np.shape(field)
         field = field[None,:] # add time dim of size 1 for consistent array dims
 
-    print 'field dimensions...'
-    print np.shape(field)
+    if debug:
+        print 'field dimensions...'
+        print np.shape(field)
 
     # define regions as in PAGES paper
 
@@ -194,10 +193,14 @@ print 'regional mean: ' + str(gmt_region)
 #---------------------------------------------------------------------
 # test #3: regional averages for LMR data using function call
 
+# save figures here
+figdir = '/Users/hakim/lmr/lmr_plots/'
+
 # apply to LMR output
 datadir_output = '/Users/hakim/data/LMR/archive'
 #nexp = 'dadt_test_xbone'
 nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+nexp = 'test'
 dir = 'r0'
 
 #var = 'tas_sfc_Adec'
@@ -219,17 +222,22 @@ lon2 = np.reshape(lon,(nlat,nlon))
 years = npzfile['years']
 nyrs =  len(years)
 
-print np.shape(xam)
-print np.shape(lat)
-print np.shape(lon)
-print nyrs
-print np.max(xam)
+print 'min lat:' + str(np.min(lat))
+print 'max lat:' + str(np.max(lat))
+print 'min lon:' + str(np.min(lon))
+print 'max lon:' + str(np.max(lon))
+
+#print np.shape(xam)
+#print np.shape(lat)
+#print np.shape(lon)
+#print nyrs
+#print np.max(xam)
 
 [tmp_gm,_,_] = L.global_hemispheric_means(xam,lat[:,1])
-print tmp_gm
+#print tmp_gm
 rm = PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
 nregions = np.shape(rm)[0]
-print nregions
+print 'nregions='+ str(nregions)
 
 # region labels for plotting
 labs = [
@@ -242,6 +250,19 @@ labs = [
 'Antarctica: south of 60S'
 ]
 
+labs2 = [
+'Arctic',
+'Europe',
+'Asia',
+'N. America',
+'S. America',
+'Australasia',
+'Antarctica',
+'NH',
+'SH',
+'global mean'
+]
+
 fontP = FontProperties()
 fontP.set_size('small')
 for k in range(nregions):
@@ -250,19 +271,10 @@ for k in range(nregions):
 lgd = plt.legend(bbox_to_anchor=(0.5,-.1),loc=9,ncol=2,borderaxespad=0)
 art = []
 art.append(lgd)
-fname = 'regions_all_'+nexp+'.png'
+fname = figdir+'regions_all_'+nexp+'.png'
 plt.savefig(fname,additional_artists=art,bbox_inches='tight')
 
-labs2 = [
-'Arctic',
-'Europe',
-'Asia',
-'N. America',
-'S. America',
-'Australasia',
-'Antarctica'
-]
-
+plt.figure()
 matplotlib.rcParams.update({'font.size':8})
 for k in range(nregions):
     plt.subplot(3,3,k+1)
@@ -270,7 +282,81 @@ for k in range(nregions):
     plt.title(labs2[k])
     
 plt.tight_layout()
-fname = 'regions_'+nexp+'.png'
+fname = figdir+'regions_'+nexp+'.png'
+print 'saving...'
+print fname
+plt.savefig(fname,additional_artists=art,bbox_inches='tight')
+plt.show()
+
+#---------------------------------------------------------------------
+# test #4: regional averages for LMR data using function call
+
+# loop over directories
+MCset = None
+#MCset = (0,2)
+#MCset = (0,7)
+
+# get a listing of the iteration directories, and combine with MCset
+dirs = glob.glob(workdir+"/r*")
+if MCset:
+    dirset = dirs[MCset[0]:MCset[1]+1]
+else:
+    dirset = dirs
+niters = len(dirset)
+
+print('--------------------------------------------------')
+print('niters = %s' % str(niters))
+print('--------------------------------------------------')
+
+kk = -1
+first = True
+for dir in dirset:
+    kk = kk + 1
+    ensfiln = dir + '/ensemble_mean_'+var+'.npz'
+    print ensfiln
+    npzfile = np.load(ensfiln)
+    xam = npzfile['xam']
+    lat = npzfile['lat']
+    lon = npzfile['lon']
+    nlat = npzfile['nlat']
+    nlon = npzfile['nlon']
+    years = npzfile['years']
+    nyrs =  len(years)
+    if first:
+        first = False
+        rmsave = np.zeros([niters,nregions+3,nyrs])
+        
+    [tmp_gm,tmp_nh,tmp_sh] = L.global_hemispheric_means(xam,lat[:,1])
+    rm = PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
+    rmsave[kk,0:nregions] = rm
+    rmsave[kk,nregions] = tmp_nh
+    rmsave[kk,nregions+1] = tmp_sh
+    rmsave[kk,nregions+2] = tmp_gm
+    
+print np.shape(rmsave)
+rms_avg = np.mean(rmsave,0)
+rms_5 = np.percentile(rmsave,5,axis=0)
+rms_95 = np.percentile(rmsave,95,axis=0)
+print np.shape(rms_5)
+print np.min(rms_5)
+print np.max(rms_5)
+print np.min(rms_95)
+print np.max(rms_95)
+
+# new plot: 7 regions + global mean + NH + SH
+plt.figure()
+for k in range(nregions+2):
+    plt.subplot(3,3,k+1)
+    plt.plot(years,rms_avg[k,:],color='b',label=labs2[k],lw=1.)
+    plt.plot(years,rms_5[k,:],color='gray',alpha=0.75,lw=0.5)
+    plt.plot(years,rms_95[k,:],color='gray',alpha=0.75,lw=0.5)
+    #plt.fill_between(years,rms_5[k,:],rms_95[k,:],facecolor='gray',alpha = 0.5,linewidth=0.)
+    plt.title(labs2[k])
+    
+plt.tight_layout()
+fname = figdir+'regions_'+nexp+'_5_95.png'
+print 'saving...'
+print fname
 plt.savefig(fname,additional_artists=art,bbox_inches='tight')
 
 
