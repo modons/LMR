@@ -467,7 +467,11 @@ def LMR_driver_callable(cfg=None):
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
             # Check if we have proxy ob for current time interval
             try:
-                Yvals = Y.values[(Y.values.index > start_yr) & (Y.values.index <= end_yr)]
+                if recon_timescale > 1.:
+                    # exclude lower bound to not include same obs in adjacent time intervals
+                    Yvals = Y.values[(Y.values.index > start_yr) & (Y.values.index <= end_yr)]
+                else:
+                    Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
                 if Yvals.empty: raise KeyError()
                 nYobs = len(Yvals)
                 Yobs =  Yvals.mean()

@@ -372,6 +372,9 @@ class LinearPSM(BasePSM):
             Diagnostic output flags for calibration method
         """
 
+        # reference period (years) over which calibration anomalies are referenced
+        ref_period = (1900,2000)
+
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
 
@@ -414,7 +417,7 @@ class LinearPSM(BasePSM):
             exit(1)
         
         nbmonths = len(avgMonths)
-        cyears = list(set([C.time[k].year for k in range(len(C.time))])) # 'set' is used to get unique values in list
+        cyears = np.asarray(list(set([C.time[k].year for k in range(len(C.time))]))) # 'set' is used to get unique values
         nbcyears = len(cyears)
         reg_x = np.zeros(shape=[nbcyears])
         reg_x[:] = np.nan # initialize with nan's
@@ -442,10 +445,14 @@ class LinearPSM(BasePSM):
                 tmp = np.nan
             reg_x[i] = tmp
             
-            
-        # making sure calibration anomalies are unbiased (avg = 0) (NEW: RT 12/22/16)
-        #reg_x = reg_x - np.nanmean(reg_x)
-
+        
+        # making sure calibration anomalies are referenced to ref_period
+        # --------------------------------------------------------------
+        # indices of elements in calibration set within ref_period
+        inds, = np.where((cyears>=ref_period[0]) & (cyears<=ref_period[1]))
+        # remove mean over reference period
+        reg_x = reg_x - np.nanmean(reg_x[inds])
+        
         
         # -------------------------
         # Perform linear regression
@@ -1134,6 +1141,9 @@ class BilinearPSM(BasePSM):
         diag_output, diag_output_figs: bool, optional
             Diagnostic output flags for calibration method
         """
+
+         # reference period (years) over which calibration anomalies are referenced
+        ref_period = (1900,2000)
         
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
@@ -1204,7 +1214,7 @@ class BilinearPSM(BasePSM):
         nbmonths_P = len(avgMonths_P)
             
         # Temperature data
-        cyears_T = list(set([C_T.time[k].year for k in range(len(C_T.time))])) # 'set' is used to get unique values in list
+        cyears_T = np.asarray(list(set([C_T.time[k].year for k in range(len(C_T.time))]))) # 'set' is used to get unique values
         nbcyears_T = len(cyears_T)
         reg_x_T = np.zeros(shape=[nbcyears_T])
         reg_x_T[:] = np.nan # initialize with nan's
@@ -1234,7 +1244,7 @@ class BilinearPSM(BasePSM):
 
         
         # Moisture data
-        cyears_P = list(set([C_P.time[k].year for k in range(len(C_P.time))])) # 'set' is used to get unique values in list
+        cyears_P = np.asarray(list(set([C_P.time[k].year for k in range(len(C_P.time))]))) # 'set' is used to get unique values
         nbcyears_P = len(cyears_P)
         reg_x_P = np.zeros(shape=[nbcyears_P])
         reg_x_P[:] = np.nan # initialize with nan's
@@ -1263,10 +1273,15 @@ class BilinearPSM(BasePSM):
             reg_x_P[i] = tmp
 
 
-        # making sure calibration anomalies are unbiased (avg =0) (NEW: RT 12/22/16)
-        #reg_x_T = reg_x_T - np.nanmean(reg_x_T)
-        #reg_x_P = reg_x_P - np.nanmean(reg_x_P)
-
+        # making sure calibration anomalies are referenced to ref_period
+        # --------------------------------------------------------------
+        # indices of elements in calibration set within ref_period
+        indsT, = np.where((cyears_T>=ref_period[0]) & (cyears_T<=ref_period[1]))
+        indsP, = np.where((cyears_P>=ref_period[0]) & (cyears_P<=ref_period[1]))
+        # remove mean over reference period
+        reg_x_T = reg_x_T - np.nanmean(reg_x_T[indsT])
+        reg_x_P = reg_x_P - np.nanmean(reg_x_P[indsP])
+                
             
         # ---------------------------
         # Perform bilinear regression

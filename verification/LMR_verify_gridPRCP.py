@@ -131,8 +131,6 @@ print '\n getting file system information...\n'
 # RT: modified way to determine list of directories with mc realizations
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
-# sorted
-dirs.sort()
 
 # selecting the MC iterations to keep
 if MCset:
