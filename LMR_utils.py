@@ -257,7 +257,7 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
-def ensemble_stats(workdir, y_assim):
+def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
     """
     Compute the ensemble mean and variance for files in the input directory
 
@@ -492,46 +492,48 @@ def ensemble_stats(workdir, y_assim):
     # --------------------------------------------------------
     # Extract the analyzed Ye ensemble for diagnostic purposes
     # --------------------------------------------------------
-    # get information on dim of state without the Ye's (before augmentation)
-    stateDim  = npzfile['stateDim']
-    Xbtmp_aug = npzfile['Xb_one_aug']
-    # dim of entire state vector (augmented)
-    totDim = Xbtmp_aug.shape[0]
-    nbye = (totDim - stateDim)
-    Ye_s = np.zeros([nbye,nyears,nens])
+    if write_posterior_Ye:
 
-    # Loop over **analysis** files & extract the Ye's
-    years = []
-    for k, f in enumerate(sfiles):
-        i = f.rfind('year')
-        fname_end = f[i+4:]
-        ii = fname_end.rfind('.')
-        year = fname_end[:ii]
-        years.append(float(year))
-        Xatmp = np.load(f)
-        # Extract the Ye's from augmented state (beyond stateDim 'til end of
-        #  state vector)
-        Ye_s[:, k, :] = Xatmp[stateDim:, :]
-    years = np.array(years)
+        # get information on dim of state without the Ye's (before augmentation)
+        stateDim  = npzfile['stateDim']
+        Xbtmp_aug = npzfile['Xb_one_aug']
+        # dim of entire state vector (augmented)
+        totDim = Xbtmp_aug.shape[0]
+        nbye = (totDim - stateDim)
+        Ye_s = np.zeros([nbye,nyears,nens])
 
-    # Build dictionary
-    YeDict = {}
-    # loop over assimilated proxies
-    for i, pobj in enumerate(y_assim):
-        # build boolean of indices to pull from HXa
-        yr_idxs = np.array([year in pobj.time for year in years],
-                           dtype=np.bool)
-        YeDict[(pobj.type, pobj.id)] = {}
-        YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
-        YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
-        YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
-        YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
-        YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
+        # Loop over **analysis** files & extract the Ye's
+        years = []
+        for k, f in enumerate(sfiles):
+            i = f.rfind('year')
+            fname_end = f[i+4:]
+            ii = fname_end.rfind('.')
+            year = fname_end[:ii]
+            years.append(float(year))
+            Xatmp = np.load(f)
+            # Extract the Ye's from augmented state (beyond stateDim 'til end of
+            #  state vector)
+            Ye_s[:, k, :] = Xatmp[stateDim:, :]
+        years = np.array(years)
 
-    # Dump dictionary to pickle file
-    outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
-    cPickle.dump(YeDict, outfile)
-    outfile.close()
+        # Build dictionary
+        YeDict = {}
+        # loop over assimilated proxies
+        for i, pobj in enumerate(y_assim):
+            # build boolean of indices to pull from HXa
+            yr_idxs = np.array([year in pobj.time for year in years],
+                               dtype=np.bool)
+            YeDict[(pobj.type, pobj.id)] = {}
+            YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
+            YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
+            YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
+            YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
+            YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
+
+        # Dump dictionary to pickle file
+        outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
+        cPickle.dump(YeDict, outfile)
+        outfile.close()
 
     return
 
