@@ -10,7 +10,6 @@ Originators: Greg Hakim & Robert Tardif | U. of Washington
 Revisions: 
           - Added the get_distance function for more efficient calculation of distances
             between lat/lon points on the globe. [R. Tardif, U. of Washington, January 2016]
-
           - Added fexibility in handling missing data in the global_hemispheric_means function.
             [R. Tardif, U. of Washington, Aug. 2017]
 
@@ -257,7 +256,7 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
-def ensemble_stats(workdir, y_assim):
+def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
     """
     Compute the ensemble mean and variance for files in the input directory
 
@@ -279,7 +278,8 @@ def ensemble_stats(workdir, y_assim):
       Revised February 2017 (R Tardif, UW)
               : Added flexibility by getting rid of originally hard-coded features.
               : Added use of new "natural_sort" function to sort filenames composed with negative years.
-
+      Revised August 2017 (G. Hakim, UW)
+              : Added boolean flag to control the generation of analysis_Ye.pckl file.
     """
     
     prior_filn = workdir + '/Xb_one.npz'
@@ -492,46 +492,48 @@ def ensemble_stats(workdir, y_assim):
     # --------------------------------------------------------
     # Extract the analyzed Ye ensemble for diagnostic purposes
     # --------------------------------------------------------
-    # get information on dim of state without the Ye's (before augmentation)
-    stateDim  = npzfile['stateDim']
-    Xbtmp_aug = npzfile['Xb_one_aug']
-    # dim of entire state vector (augmented)
-    totDim = Xbtmp_aug.shape[0]
-    nbye = (totDim - stateDim)
-    Ye_s = np.zeros([nbye,nyears,nens])
+    if write_posterior_Ye:
 
-    # Loop over **analysis** files & extract the Ye's
-    years = []
-    for k, f in enumerate(sfiles):
-        i = f.rfind('year')
-        fname_end = f[i+4:]
-        ii = fname_end.rfind('.')
-        year = fname_end[:ii]
-        years.append(float(year))
-        Xatmp = np.load(f)
-        # Extract the Ye's from augmented state (beyond stateDim 'til end of
-        #  state vector)
-        Ye_s[:, k, :] = Xatmp[stateDim:, :]
-    years = np.array(years)
+        # get information on dim of state without the Ye's (before augmentation)
+        stateDim  = npzfile['stateDim']
+        Xbtmp_aug = npzfile['Xb_one_aug']
+        # dim of entire state vector (augmented)
+        totDim = Xbtmp_aug.shape[0]
+        nbye = (totDim - stateDim)
+        Ye_s = np.zeros([nbye,nyears,nens])
 
-    # Build dictionary
-    YeDict = {}
-    # loop over assimilated proxies
-    for i, pobj in enumerate(y_assim):
-        # build boolean of indices to pull from HXa
-        yr_idxs = np.array([year in pobj.time for year in years],
-                           dtype=np.bool)
-        YeDict[(pobj.type, pobj.id)] = {}
-        YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
-        YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
-        YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
-        YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
-        YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
+        # Loop over **analysis** files & extract the Ye's
+        years = []
+        for k, f in enumerate(sfiles):
+            i = f.rfind('year')
+            fname_end = f[i+4:]
+            ii = fname_end.rfind('.')
+            year = fname_end[:ii]
+            years.append(float(year))
+            Xatmp = np.load(f)
+            # Extract the Ye's from augmented state (beyond stateDim 'til end of
+            #  state vector)
+            Ye_s[:, k, :] = Xatmp[stateDim:, :]
+        years = np.array(years)
 
-    # Dump dictionary to pickle file
-    outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
-    cPickle.dump(YeDict, outfile)
-    outfile.close()
+        # Build dictionary
+        YeDict = {}
+        # loop over assimilated proxies
+        for i, pobj in enumerate(y_assim):
+            # build boolean of indices to pull from HXa
+            yr_idxs = np.array([year in pobj.time for year in years],
+                               dtype=np.bool)
+            YeDict[(pobj.type, pobj.id)] = {}
+            YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
+            YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
+            YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
+            YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
+            YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
+
+        # Dump dictionary to pickle file
+        outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
+        cPickle.dump(YeDict, outfile)
+        outfile.close()
 
     return
 
@@ -1273,6 +1275,149 @@ def global_hemispheric_means(field,lat):
 
 
     return gm,nhm,shm
+
+
+def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
+
+    """
+    Given vectors for lat and lon, and lat-lon boundaries for a regional domain, 
+    return an array of ones and zeros, with ones located within the domain and zeros outside
+    the domain as defined by the input lat,lon vectors.
+
+    Originator: Greg Hakim
+                University of Washington
+                July 2017
+
+    """
+
+    nlat = len(lat)
+    nlon = len(lon)
+
+    tmp = np.ones([nlon,nlat])
+    latgrid = np.multiply(lat,tmp).T
+    longrid = np.multiply(tmp.T,lon)
+
+    lab = (latgrid >= southlat) & (latgrid <=northlat)
+    # check for zero crossing 
+    if eastlon < westlon:
+        lob1 = (longrid >= westlon) & (longrid <=360.)
+        lob2 = (longrid >= 0.) & (longrid <=eastlon)
+        lob = lob1+lob2
+    else:
+        lob = (longrid >= westlon) & (longrid <=eastlon)
+
+    mask = np.multiply(lab*lob,tmp.T)
+
+    return mask
+
+
+def PAGES2K_regional_means(field,lat,lon):
+    """
+    Compute geographical spatial mean values for all times in the input (i.e. field) array. 
+    Regions are defined following The PAGES2K Consortium (2013) Nature Geosciences paper, 
+    Supplementary Information.
+
+    input:  field[ntime,nlat,nlon] or field[nlat,nlon]
+             lat[nlat,nlon] in degrees
+             lon[nlat,nlon] in degrees
+
+    output: rm[nregions,ntime] : regional means of "field" where nregions = 7 by definition, but could change
+
+    uses functions: regional_mask()
+
+    Originator: Greg Hakim
+                University of Washington
+                July 2017
+    
+    Revisions:
+     
+    """
+
+    # print debug statements
+    #debug = True
+    debug = False
+    
+    # number of geographical regions (default, as defined in PAGES2K(2013) paper
+    nregions = 7
+    
+    # set number of times, lats, lons; array indices for lat and lon    
+    if len(np.shape(field)) == 3: # time is a dimension
+        ntime,nlat,nlon = np.shape(field)
+    else: # only spatial dims
+        ntime = 1
+        nlat,nlon = np.shape(field)
+        field = field[None,:] # add time dim of size 1 for consistent array dims
+
+    if debug:
+        print 'field dimensions...'
+        print np.shape(field)
+
+    # define regions as in PAGES paper
+
+    # lat and lon range for each region (first value is lower limit, second is upper limit)
+    rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
+    # 1. Arctic: north of 60N 
+    rlat[0,0] = 60.; rlat[0,1] = 90.
+    rlon[0,0] = 0.; rlon[0,1] = 360.
+    # 2. Europe: 35-70N, 10W-40E
+    rlat[1,0] = 35.; rlat[1,1] = 70.
+    rlon[1,0] = 350.; rlon[1,1] = 40.
+    # 3. Asia: 23-55N; 60-160E (from map)
+    rlat[2,0] = 23.; rlat[2,1] = 55.
+    rlon[2,0] = 60.; rlon[2,1] = 160.
+    # 4. North America 1 (trees):  30-55N, 75-130W 
+    rlat[3,0] = 30.; rlat[3,1] = 55.
+    rlon[3,0] = 55.; rlon[3,1] = 230.
+    # 5. South America: Text: 20S-65S and 30W-80W
+    rlat[4,0] = -65.; rlat[4,1] = -20.
+    rlon[4,0] = 280.; rlon[4,1] = 330.
+    # 6. Australasia: 110E-180E, 0-50S 
+    rlat[5,0] = -50.; rlat[5,1] = 0.
+    rlon[5,0] = 110.; rlon[5,1] = 180.
+    # 7. Antarctica: south of 60S (from map)
+    rlat[6,0] = -90.; rlat[6,1] = -60.
+    rlon[6,0] = 0.; rlon[6,1] = 360.
+    # ...add other regions here...
+    
+    # latitude weighting 
+    lat_weight = np.cos(np.deg2rad(lat))
+    tmp = np.ones([nlon,nlat])
+    W = np.multiply(lat_weight,tmp).T
+
+    rm  = np.zeros([nregions,ntime])
+
+    # loop over regions
+    for region in range(nregions):
+
+        if debug:
+            print 'region='+str(region)
+            print rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1]
+            
+        # regional weighting (ones in region; zeros outside)
+        mask = regional_mask(lat,lon,rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
+        if debug:
+            print 'mask='
+            print mask
+
+        # this is the weight mask for the regional domain    
+        Wmask = np.multiply(mask,W)
+
+        # make sure data starts at South Pole
+        if lat[0] > 0:
+            # data has NH -> SH format; reverse
+            field = np.flipud(field)
+
+        # Check for valid (non-NAN) values & use numpy average function (includes weighted avg calculation) 
+        # Get arrays indices of valid values
+        indok    = np.isfinite(field)
+        for t in xrange(ntime):
+            indok_2d = indok[t,:,:]
+            field_2d = np.squeeze(field[t,:,:])
+            if np.max(Wmask) >0.:
+                rm[region,t] = np.average(field_2d[indok_2d],weights=Wmask[indok_2d])
+            else:
+                rm[region,t] = np.nan
+    return rm
 
 
 def class_docs_fixer(cls):

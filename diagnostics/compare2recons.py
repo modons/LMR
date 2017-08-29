@@ -41,7 +41,7 @@ datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
 
 
-# experiments to compare. Format: [test, reference]
+# Experiments to compare. Format: [test, reference]
 # -------------------------------------------------
 
 exps = ['test2', 'test']
@@ -66,7 +66,7 @@ make_movie = False
 
 # ==== for GMT timeseries plot:
 # -- anomalies --
-pltymin = -1.5; pltymax = 1.5; ylabel = 'Temperature anomaly (K)'
+pltymin = -1.5; pltymax = 1.5; pltymindiff = -0.5; pltymaxdiff = 0.5; ylabel = 'Temperature anomaly (K)'
 #pltymin = -6.0; pltymax = 6.0; ylabel = 'Temperature anomaly (K)'
 # -- full field --
 #pltymin = 276.; pltymax = 290.; ylabel = 'Temperature (K)'
@@ -295,7 +295,7 @@ if make_gmt_plot:
                 recon_refe_data = gmt_data['nhmt_ensemble']
                 recon_refe_nhmt[citer,:,:] = recon_refe_data.T # flip time/nens dims
                 # SH mean
-                recon_data = gmt_data['shmt_ensemble']
+                recon_refe_data = gmt_data['shmt_ensemble']
                 recon_refe_shmt[citer,:,:] = recon_refe_data.T # flip time/nens dims
                 
             else:
@@ -562,11 +562,7 @@ if make_gmt_plot:
         plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
 
-        
-        #pltymin_diff = -0.5; pltymax_diff = 0.5
-        pltymin_diff = pltymin; pltymax_diff = pltymax
-        
-        plt.axis((year_range[0],year_range[1],pltymin_diff,pltymax_diff))
+        plt.axis((year_range[0],year_range[1],pltymindiff,pltymaxdiff))
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
         fig.tight_layout()
@@ -628,11 +624,7 @@ if make_gmt_plot:
         plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
 
-        
-        #pltymin_diff = -0.5; pltymax_diff = 0.5
-        pltymin_diff = pltymin; pltymax_diff = pltymax
-        
-        plt.axis((year_range[0],year_range[1],pltymin_diff,pltymax_diff))
+        plt.axis((year_range[0],year_range[1],pltymindiff,pltymaxdiff))
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
         fig.tight_layout()
@@ -695,11 +687,7 @@ if make_gmt_plot:
         plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
 
-        
-        #pltymin_diff = -0.5; pltymax_diff = 0.5
-        pltymin_diff = pltymin; pltymax_diff = pltymax
-        
-        plt.axis((year_range[0],year_range[1],pltymin_diff,pltymax_diff))
+        plt.axis((year_range[0],year_range[1],pltymindiff,pltymaxdiff))
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
         fig.tight_layout()
