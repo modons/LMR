@@ -145,68 +145,60 @@ def PAGES2K_regional_means(field,lat,lon):
 
 #----- start main----------------------------------------------------
 
-# test #1: define a grid and region
-lat = [-90.,-45.,0.,45.,90.]
-lon = [0,90.,180,270.]
-
-lat = np.array(lat)
-lon = np.array(lon)
-nlat = len(lat)
-nlon = len(lon)
-
-# define a lat-lon region
-southlat = 0.
-northlat = 90.
-westlon = 230.
-eastlon = 90.
-
-mask = regional_mask(lat,lon,southlat,northlat,westlon,eastlon)
-
-# latitude weighting 
-lat_weight = np.cos(np.deg2rad(lat))
-tmp = np.ones([nlon,nlat])
-W = np.multiply(lat_weight,tmp).T
-
-print 'W:'
-print W
-
-# the regional mask
-Wmask = np.multiply(mask,W)
-print 'masked W:'
-print Wmask
-
-#---------------------------------------------------------------------
-# test #2: averages from LMR_utils for a given field
-field =  np.ones([nlon,nlat])
-field[1,1] = -7.
-[tmp_gm,_,_] = L.global_hemispheric_means(field.T,lat)
-print 'global mean: ' + str(tmp_gm)
-
-# check with global weights defined here
-gmt_check = np.average(field.T,weights=W)
-print 'global mean local: ' + str(gmt_check)
-
-# regional mask w/o function call
-gmt_region = np.average(field.T,weights=Wmask)
-print 'regional mean: ' + str(gmt_region)
-
-#---------------------------------------------------------------------
-# test #3: regional averages for LMR data using function call
-
 # save figures here
-figdir = '/Users/hakim/lmr/lmr_plots/'
+#figdir = '/Users/hakim/lmr/lmr_plots/'
+figdir = '/home/disk/ice4/hakim/lmr/lmr_plots/'
 
-# apply to LMR output
-datadir_output = '/Users/hakim/data/LMR/archive'
+#datadir_output = '/Users/hakim/data/LMR/archive'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+
 #nexp = 'dadt_test_xbone'
-nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
-nexp = 'test'
-dir = 'r0'
+#nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
+#nexp = 'test'
+nexp = 'p2_ccsm4LM_n200_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75_loc25k'
 
 #var = 'tas_sfc_Adec'
 var = 'tas_sfc_Amon'
 
+# loop over directories
+MCset = None
+#MCset = (0,0)
+#MCset = (0,10)
+
+# region labels for plotting (push this to LMR_utils.py?)
+labs = [
+'Arctic: north of 60N ',
+'Europe: 35-70N, 10W-40E',
+'Asia: 23-55N',
+'North America (trees):30-55N,75-130W',
+'South America: 20S-65S, 30W-80W',
+'Australasia: 0-50S, 110E-180E', 
+'Antarctica: south of 60S'
+]
+
+labs_short = [
+'Arctic',
+'Europe',
+'Asia',
+'N. America',
+'S. America',
+'Australasia',
+'Antarctica',
+'NH',
+'SH',
+'global mean'
+]
+
+#----------------------------------------------------------------------------
+# end of user-defined parameters
+#----------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+# plot the ensemble mean for a single realization for all regions on a single figure...
+#----------------------------------------------------------------------------
+
 workdir = datadir_output + '/' + nexp
+dir = '/r0/'
 ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
 npzfile = np.load(ensfiln)
 print  npzfile.files
@@ -220,6 +212,7 @@ nlon = npzfile['nlon']
 lat2 = np.reshape(lat,(nlat,nlon))
 lon2 = np.reshape(lon,(nlat,nlon))
 years = npzfile['years']
+years = years.astype(float)
 nyrs =  len(years)
 
 print 'min lat:' + str(np.min(lat))
@@ -239,30 +232,6 @@ rm = PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
 nregions = np.shape(rm)[0]
 print 'nregions='+ str(nregions)
 
-# region labels for plotting
-labs = [
-'Arctic: north of 60N ',
-'Europe: 35-70N, 10W-40E',
-'Asia: 23-55N',
-'North America (trees):30-55N,75-130W',
-'South America: 20S-65S, 30W-80W',
-'Australasia: 0-50S, 110E-180E', 
-'Antarctica: south of 60S'
-]
-
-labs2 = [
-'Arctic',
-'Europe',
-'Asia',
-'N. America',
-'S. America',
-'Australasia',
-'Antarctica',
-'NH',
-'SH',
-'global mean'
-]
-
 fontP = FontProperties()
 fontP.set_size('small')
 for k in range(nregions):
@@ -278,8 +247,8 @@ plt.figure()
 matplotlib.rcParams.update({'font.size':8})
 for k in range(nregions):
     plt.subplot(3,3,k+1)
-    plt.plot(rm[k,:],label=labs2[k])
-    plt.title(labs2[k])
+    plt.plot(rm[k,:],label=labs_short[k])
+    plt.title(labs_short[k])
     
 plt.tight_layout()
 fname = figdir+'regions_'+nexp+'.png'
@@ -288,13 +257,10 @@ print fname
 plt.savefig(fname,additional_artists=art,bbox_inches='tight')
 plt.show()
 
-#---------------------------------------------------------------------
-# test #4: regional averages for LMR data using function call
-
-# loop over directories
-MCset = None
-#MCset = (0,2)
-#MCset = (0,7)
+#----------------------------------------------------------------------------
+# plot the iteration/ensemble mean for all regions on different subplots of a single figure, along with iteration uncertainty...
+#   --change to ensemble 5/95 when full-field ensemble writing ia available!
+#----------------------------------------------------------------------------
 
 # get a listing of the iteration directories, and combine with MCset
 dirs = glob.glob(workdir+"/r*")
@@ -320,7 +286,6 @@ for dir in dirset:
     lon = npzfile['lon']
     nlat = npzfile['nlat']
     nlon = npzfile['nlon']
-    years = npzfile['years']
     nyrs =  len(years)
     if first:
         first = False
@@ -347,11 +312,11 @@ print np.max(rms_95)
 plt.figure()
 for k in range(nregions+2):
     plt.subplot(3,3,k+1)
-    plt.plot(years,rms_avg[k,:],color='b',label=labs2[k],lw=1.)
-    plt.plot(years,rms_5[k,:],color='gray',alpha=0.75,lw=0.5)
-    plt.plot(years,rms_95[k,:],color='gray',alpha=0.75,lw=0.5)
-    #plt.fill_between(years,rms_5[k,:],rms_95[k,:],facecolor='gray',alpha = 0.5,linewidth=0.)
-    plt.title(labs2[k])
+    plt.fill_between(years,rms_5[k,:],rms_95[k,:],facecolor='gray',alpha = 0.75,linewidth=0.)
+    plt.plot(years,rms_avg[k,:],color='k',label=labs_short[k],lw=0.5)
+    #plt.plot(years,rms_5[k,:],color='gray',alpha=0.5,lw=0.5)
+    #plt.plot(years,rms_95[k,:],color='gray',alpha=0.5,lw=0.5)
+    plt.title(labs_short[k])
     
 plt.tight_layout()
 fname = figdir+'regions_'+nexp+'_5_95.png'
