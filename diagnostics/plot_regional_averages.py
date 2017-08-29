@@ -2,148 +2,12 @@ import sys
 sys.path.append("..")
 
 import glob, os
-import LMR_utils as L
+import LMR_utils
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
-
-def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
-
-    """
-    Given vectors for lat and lon, and lat-lon boundaries for a regional domain, 
-    return an array of ones and zeros, with ones located within the domain and zeros outside
-    the domain as defined by the input lat,lon vectors.
-    """
-
-    nlat = len(lat)
-    nlon =len(lon)
-
-    tmp = np.ones([nlon,nlat])
-    latgrid = np.multiply(lat,tmp).T
-    longrid = np.multiply(tmp.T,lon)
-
-    lab = (latgrid >= southlat) & (latgrid <=northlat)
-    # check for zero crossing 
-    if eastlon < westlon:
-        lob1 = (longrid >= westlon) & (longrid <=360.)
-        lob2 = (longrid >= 0.) & (longrid <=eastlon)
-        lob = lob1+lob2
-    else:
-        lob = (longrid >= westlon) & (longrid <=eastlon)
-
-    mask = np.multiply(lab*lob,tmp.T)
-
-    return mask
-
-def PAGES2K_regional_means(field,lat,lon):
-
-    """
-     compute geographical spatial mean valuee for all times in the input (i.e. field) array. regions are defined by The PAGES2K Consortium (2013) Nature Geosciences paper, Supplementary Information.
-     input:  field[ntime,nlat,nlon] or field[nlat,nlon]
-             lat[nlat,nlon] in degrees
-             lon[nlat,nlon] in degrees
-
-     output: rm[nregions,ntime] : regional means of "field" where nregions = 7 by definition, but could change
-     
-    """
-
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             July 2017
-    #
-    # Modifications:
-    #
-
-    # print debug statements
-    #debug = True
-    debug = False
-    
-    # number of geographical regions (default, as defined in PAGES2K(2013) paper
-    nregions = 7
-    
-    # set number of times, lats, lons; array indices for lat and lon    
-    if len(np.shape(field)) == 3: # time is a dimension
-        ntime,nlat,nlon = np.shape(field)
-    else: # only spatial dims
-        ntime = 1
-        nlat,nlon = np.shape(field)
-        field = field[None,:] # add time dim of size 1 for consistent array dims
-
-    if debug:
-        print 'field dimensions...'
-        print np.shape(field)
-
-    # define regions as in PAGES paper
-
-    # lat and lon range for each region (first value is lower limit, second is upper limit)
-    rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
-    # 1. Arctic: north of 60N 
-    rlat[0,0] = 60.; rlat[0,1] = 90.
-    rlon[0,0] = 0.; rlon[0,1] = 360.
-    # 2. Europe: 35-70N, 10W-40E
-    rlat[1,0] = 35.; rlat[1,1] = 70.
-    rlon[1,0] = 350.; rlon[1,1] = 40.
-    # 3. Asia: 23-55N; 60-160E (from map)
-    rlat[2,0] = 23.; rlat[2,1] = 55.
-    rlon[2,0] = 60.; rlon[2,1] = 160.
-    # 4. North America 1 (trees):  30-55N, 75-130W 
-    rlat[3,0] = 30.; rlat[3,1] = 55.
-    rlon[3,0] = 55.; rlon[3,1] = 230.
-    # 5. South America: Text: 20S-65S and 30W-80W
-    rlat[4,0] = -65.; rlat[4,1] = -20.
-    rlon[4,0] = 280.; rlon[4,1] = 330.
-    # 6. Australasia: 110E-180E, 0-50S 
-    rlat[5,0] = -50.; rlat[5,1] = 0.
-    rlon[5,0] = 110.; rlon[5,1] = 180.
-    # 7. Antarctica: south of 60S (from map)
-    rlat[6,0] = -90.; rlat[6,1] = -60.
-    rlon[6,0] = 0.; rlon[6,1] = 360.
-    # ...add other regions here...
-    
-    # latitude weighting 
-    lat_weight = np.cos(np.deg2rad(lat))
-    tmp = np.ones([nlon,nlat])
-    W = np.multiply(lat_weight,tmp).T
-
-    rm  = np.zeros([nregions,ntime])
-
-    # loop over regions
-    for region in range(nregions):
-
-        if debug:
-            print 'region='+str(region)
-            print rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1]
-            
-        # regional weighting (ones in region; zeros outside)
-        mask = regional_mask(lat,lon,rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
-        if debug:
-            print 'mask='
-            print mask
-
-        # this is the weight mask for the regional domain    
-        Wmask = np.multiply(mask,W)
-
-        # make sure data starts at South Pole
-        if lat[0] > 0:
-            # data has NH -> SH format; reverse
-            field = np.flipud(field)
-
-        # Check for valid (non-NAN) values & use numpy average function (includes weighted avg calculation) 
-        # Get arrays indices of valid values
-        indok    = np.isfinite(field)
-        for t in xrange(ntime):
-            indok_2d = indok[t,:,:]
-            field_2d = np.squeeze(field[t,:,:])
-            if np.max(Wmask) >0.:
-                rm[region,t] = np.average(field_2d[indok_2d],weights=Wmask[indok_2d])
-            else:
-                rm[region,t] = np.nan
-    return rm
-
-
-#----- start main----------------------------------------------------
 
 # save figures here
 #figdir = '/Users/hakim/lmr/lmr_plots/'
@@ -226,9 +90,9 @@ print 'max lon:' + str(np.max(lon))
 #print nyrs
 #print np.max(xam)
 
-[tmp_gm,_,_] = L.global_hemispheric_means(xam,lat[:,1])
+[tmp_gm,_,_] = LMR_utils.global_hemispheric_means(xam,lat[:,1])
 #print tmp_gm
-rm = PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
+rm = LMR_utils.PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
 nregions = np.shape(rm)[0]
 print 'nregions='+ str(nregions)
 
@@ -291,8 +155,8 @@ for dir in dirset:
         first = False
         rmsave = np.zeros([niters,nregions+3,nyrs])
         
-    [tmp_gm,tmp_nh,tmp_sh] = L.global_hemispheric_means(xam,lat[:,1])
-    rm = PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
+    [tmp_gm,tmp_nh,tmp_sh] = LMR_utils.global_hemispheric_means(xam,lat[:,1])
+    rm = LMR_utils.PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
     rmsave[kk,0:nregions] = rm
     rmsave[kk,nregions] = tmp_nh
     rmsave[kk,nregions+1] = tmp_sh
