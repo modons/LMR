@@ -23,18 +23,9 @@ If at any point there is an error for a missing dependency, install it using
 ``conda install`` command (the installer that comes with Anaconda).
 
 
-Retrieve LMR source code
+LMR source code
 ------------------------
-Navigate to the directory where you want to store the LMR code and retrieve
-it from the repostory.
-
-Using Github::
-
-    git clone git@github.com:frodre/LMR.git
-
-Using SVN::
-
-    svn co https://www.atmos.washington.edu/svn/lmr/tags/v2.0
+The source code for this project is not yet publicly available.
 
 Retrieve Data
 -------------

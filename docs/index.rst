@@ -15,6 +15,9 @@ Originators: R. Tardif, W. A. Perkins, G. J. Hakim
              University of Washington
              September 2016
 
+.. note:: This documentation is preliminary and will likely be updated before
+ the LMR Workshop.
+
 Where to start
 --------------
 * :ref:`Quick Start Guide <quick>`
