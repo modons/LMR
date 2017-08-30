@@ -38,7 +38,7 @@ bm.latlon_default = True
 
 # option to suppress figures
 iplot = True
-iplot_individual_years = True
+iplot_individual_years = False
 
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
@@ -75,6 +75,13 @@ datadir_reanl  = '/home/disk/kalman3/rtardif/LMR/data/model'
 #nexp = 'pages2_loc15000_seasonal_bilinear_nens200'
 nexp = 'pages2_loc10000_seasonal_bilinear_nens200'
 
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,10)
 
 # Definition of variables to verify
 #                       kind   name   variable long name bounds     units   mult. factor
@@ -126,9 +133,14 @@ print '\n getting file system information...\n'
 # RT: modified way to determine list of directories with mc realizations
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
-# sorted
-dirs.sort()
-mcdir = [item.split('/')[-1] for item in dirs]
+
+# selecting the MC iterations to keep
+if MCset:
+    dirset = dirs[MCset[0]:MCset[1]+1]
+else:
+    dirset = dirs
+
+mcdir = [item.split('/')[-1] for item in dirset]
 niters = len(mcdir)
 
 print 'mcdir:' + str(mcdir)

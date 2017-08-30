@@ -22,7 +22,6 @@ import glob, os, sys
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
-import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
 import cPickle
@@ -101,6 +100,14 @@ nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
 
 # ---
 
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,0)
+
 # override datadir
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
@@ -133,14 +140,6 @@ trange = [1880,2000] #works for nya = 0
 #ref_period = [1961,1990] # ref. period for CRU & MLOST
 ref_period = [1900, 1999] # 20th century
 
-# perform verification using all recon. MC realizations ( MCset = None )
-# or over a custom selection ( MCset = (begin,end) )
-# ex. MCset = (0,0)    -> only the first MC run
-#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
-#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
-MCset = None
-#MCset = (0,0)
-
 # set the default size of the figure in inches. ['figure.figsize'] = width, height;  
 # aspect ratio appears preserved on smallest of the two
 plt.rcParams['figure.figsize'] = 10, 10 # that's default image size for this interactive session
@@ -154,7 +153,7 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-# variable---this script is temperature only?
+# variable---this script is temperature only!
 var = 'tas_sfc_Amon'
 
 workdir = datadir_output + '/' + nexp
@@ -166,8 +165,6 @@ print('\n getting file system information...\n')
 # RT: modified way to determine list of directories with mc realizations
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
-# sorted
-dirs.sort()
 
 # selecting  the MC iterations to keep
 if MCset:

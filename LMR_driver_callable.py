@@ -372,7 +372,7 @@ def LMR_driver_callable(cfg=None):
         Xb_one_aug = Xb_one
 
     
-    # NEW: Dump prior state vector (Xb_one) to file 
+    # NEW: Dump prior state vector (Xb_one) to file, one file per state variable
     print '\n ---------- saving Xb_one for each variable to separate file -----------\n'
     for var in X.trunc_state_info.keys():
         print var
@@ -382,10 +382,10 @@ def LMR_driver_callable(cfg=None):
         Xb_var = np.reshape(Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
         filen = workdir + '/' + 'Xb_one' + '_' + var 
         np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
-
     # END new file save
 
-    filen = workdir + '/' + 'Xb_one' 
+    # Dump entire prior state vector (Xb_one) to file 
+    filen = workdir + '/' + 'Xb_one'
     try:
         out_Xb_one = Xb_one.filled()
         out_Xb_one_aug = Xb_one_aug.filled()
@@ -467,7 +467,11 @@ def LMR_driver_callable(cfg=None):
         for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
             # Check if we have proxy ob for current time interval
             try:
-                Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+                if recon_timescale > 1:
+                    # exclude lower bound to not include same obs in adjacent time intervals
+                    Yvals = Y.values[(Y.values.index > start_yr) & (Y.values.index <= end_yr)]
+                else:
+                    Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
                 if Yvals.empty: raise KeyError()
                 nYobs = len(Yvals)
                 Yobs =  Yvals.mean()

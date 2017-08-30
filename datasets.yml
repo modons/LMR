@@ -209,6 +209,27 @@ era20cm:
   datafile: '[vardef_template]_ERA20CM_190001-201012.nc'
   dataformat: NCD
 
+loveclim_goosse2005:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['tas_sfc_Amon', 'tos_sfc_Amon']
+
+  datadir: null
+  datafile: '[vardef_template]_loveclim_expD2000.nc'
+  dataformat: NCD
+
+ihadcm3_preindustrial_control:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['tas_sfc_Amon', 'psl_sfc_Amon',
+                     'pr_sfc_Amon', 'd18O_sfc_Amon']
+
+  datadir: null
+  datafile: '[vardef_template]_ihadcm3_preindustrial_control.nc'
+  dataformat: NCD
+
 ccsm3_trace21ka:
   info:
     multiple_vars: True
@@ -218,6 +239,16 @@ ccsm3_trace21ka:
 
   datadir: null
   datafile: '[vardef_template]_CCSM3_TraCE21ka.nc'
+  dataformat: NCD
+
+cgenie_petm:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: ['tas_sfc_Adec', 'tos_sfc_Adec']
+
+  datadir: null
+  datafile: '[vardef_template]_cgenie_petm.nc'
   dataformat: NCD
 
 

@@ -67,6 +67,8 @@ Revisions:
  - Added functionalities associated with the use of the simplified 
    config.yml configuration file. 
    [ A. Perkins & R. Tardif, Univ. of Washington, April 2017 ]
+ - Added a boolean flag to activate/deactivate output to analysis_Ye.pckl file.
+   [G. Hakim, Univ. of Washington, August 2017] 
 """
 
 from os.path import join
@@ -84,7 +86,7 @@ SRC_DIR = '/home/disk/ice4/hakim/gitwork/LMR'
 
 # Control logging output. (0 = none; 1 = most important; 2 = many; 3 = a lot;
 #   >=4 all)
-LOG_LEVEL = 2
+LOG_LEVEL = 4
 
 # Class for distinction of configuration classes
 class ConfigGroup(object):
@@ -227,6 +229,10 @@ class core(ConfigGroup):
         Absolute path to working directory output for LMR
     archive_dir: str
         Absolute path to LMR reconstruction archive directory
+    write_posterior_Ye: bool
+        Flag to indicate whether the analysis_Ye.pckl is to be generated 
+        or not (large file containing full information on the posterior 
+        proxy estimates (assimilated proxy records).
     """
 
     ##** BEGIN User Parameters **##
@@ -268,6 +274,7 @@ class core(ConfigGroup):
     archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
 
+    # Whether to produce the analysis_Ye.pckl file or not
     write_posterior_Ye = False
     
     ##** END User Parameters **##
@@ -289,6 +296,7 @@ class core(ConfigGroup):
         self.seed = self.seed
         self.datadir_output = self.datadir_output
         self.archive_dir = self.archive_dir
+        self.write_posterior_Ye = self.write_posterior_Ye
 
         if curr_iter is None:
             self.curr_iter = wrapper.iter_range[0]

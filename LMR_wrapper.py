@@ -14,7 +14,7 @@ Originator: Greg Hakim   | Dept. of Atmospheric Sciences, Univ. of Washington
 Revisions: 
           - Adapted to OOP coding of proxy- and prior-related classes [A. Perkins, U. of Washington]
           - Includes new parameter space search into iterations [A. Perkins, UW, Feb 2017]
-
+          - Added flag to control whether the analysis_Ye.pckl is generated or not. [G. Hakim, UW, Aug 2017]
 """
 import os
 import numpy as np

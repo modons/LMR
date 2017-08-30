@@ -295,8 +295,8 @@ psm:
     temperature: [GISTEMP, MLOST, HadCRUT, BerkeleyEarth]
     moisture: [GPCC, DaiPDSI]
 
-  avgPeriod: annual
-#  avgPeriod: season
+#  avgPeriod: annual
+  avgPeriod: season
   season_source: proxy_metadata
 #  season_source: psm_calib
 
@@ -365,7 +365,7 @@ prior:
 
   detrend: False
   # regridding options: null, simple, esmpy or spherical_harmonics
-  regrid_method: simple
+  regrid_method: spherical_harmonics
   regrid_resolution: 42
   esmpy_interp_method: bilinear
   esmpy_regrid_to: t42

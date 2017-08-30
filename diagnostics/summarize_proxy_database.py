@@ -8,11 +8,13 @@ Module: summarize_proxy_database.py
   2) Produces individual figures of all preprocessed proxy records, 
      along with metadata.
 
- Note: 
+ Notes: 
  - You'll need to make the preprocessed files (using LMR_proxy_preprocess.py)
    and a PSM file (generated with LMR_PSMbuild.py) before using this.  
  - Also, change the "data_directory" and "output_directory" to point to the
    appropriate places on your machine.
+ - Only works on the LMRv2 release (merged PAGES2k phase2 + LMR-specific 
+   NCDC-templated proxy records.
 
  author: Michael P. Erb
  date  : 4/17/2017
@@ -31,15 +33,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 
-### ----------------------------------------------------------------------------
-### Proxy type definitions
-### ----------------------------------------------------------------------------
+
+# ------------------------------------------------------------ #
+# -------------- Begin: user-defined parameters -------------- #
+
+# directory where data from reconstruction experiments are located 
+#data_directory = "/home/scec-00/lmr/erbm/LMR/"
+data_directory = "/home/disk/kalman3/rtardif/LMR/"
 
 # Version of the database to query
 dbversion = 'v0.2.0'
 
 # Filter on proxy temporal resolution (range is inclusive)
 temporal_resolution_range = (1,1); resolution_tag = 'annual'
+
+# Directory where the output (figures) will be created.
+# The directory needs to exist prior to running this module.
+# ----------------------------------------------------------
+#output_directory = "/home/scec-00/lmr/erbm/analysis/results/LMR/pages2kv2/figures/"
+output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/Figs/summary_v0.2.0/"
+
+# Swith to inicate whether you want the figure to the produced on-screen (False)
+# or save in .png files (True)
+save_instead_of_plot = True
+
+
+# --------------  End: user-defined parameters  -------------- #
+# ------------------------------------------------------------ #
+
+
+
+### ----------------------------------------------------------------------------
+### Proxy type definitions
+### ----------------------------------------------------------------------------
 
 proxy_def = \
             {
@@ -69,14 +95,6 @@ proxy_def = \
 ### ----------------------------------------------------------------------------
 ### LOAD DATA
 ### ----------------------------------------------------------------------------
-
-#data_directory = "/home/scec-00/lmr/erbm/LMR/"
-data_directory = "/home/disk/kalman3/rtardif/LMR/"
-
-#output_directory = "/home/scec-00/lmr/erbm/analysis/results/LMR/pages2kv2/figures/"
-output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/Figs/summary_v0.2.0/"
-
-save_instead_of_plot = True
 
 # Load the proxy data and metadata as dataframes.
 

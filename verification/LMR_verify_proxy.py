@@ -148,6 +148,9 @@ class v_proxies(object):
     # type of proxy timeseries to return: 'anom' for anomalies
     # (temporal mean removed) or asis' to keep unchanged
     proxy_timeseries_kind = 'asis'
+    #
+    proxy_availability_filter = False
+    proxy_availability_fraction = 1.0
     
     # ---------------
     # PAGES2k proxies
@@ -281,6 +284,8 @@ class v_proxies(object):
             self.proxy_psm_type = deepcopy(self.proxy_psm_type)
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.proxy_blacklist = list(self.proxy_blacklist)
+            self.proxy_availability_filter = v_proxies.proxy_availability_filter
+            self.proxy_availability_fraction = v_proxies.proxy_availability_fraction
             
             # Create mapping for Proxy Type/Measurement Type to type names above
             self.proxy_type_mapping = {}
@@ -339,8 +344,9 @@ class v_proxies(object):
         """
 
         #dbversion = 'v0.0.0'
-        dbversion = 'v0.1.0'
-
+        #dbversion = 'v0.1.0'
+        dbversion = 'v0.2.0'
+        
         datadir_proxy = None
         datafile_proxy = 'NCDC_%s_Proxies.df.pckl' %(dbversion)
         metafile_proxy = 'NCDC_%s_Metadata.df.pckl' %(dbversion)
@@ -354,8 +360,8 @@ class v_proxies(object):
         
         # Limit proxies to those included in the following databases
         database_filter = []
-        #database_filter = ['PAGES2']
-        #database_filter = ['LMR','PAGES2']
+        #database_filter = ['PAGES2kv2']
+        #database_filter = ['LMR','PAGES2kv2']
 
         # A blacklist on proxy records, to prevent processing of chronologies known to be duplicates.
         proxy_blacklist = []
@@ -380,7 +386,7 @@ class v_proxies(object):
             'Lake Cores_GeoChem',
             'Lake Cores_Misc',
             'Marine Cores_d18O',
-            'Speleothems_d18O',
+#            'Speleothems_d18O',
             'Bivalve_d18O',
             ]
 
@@ -416,7 +422,7 @@ class v_proxies(object):
         proxy_assim2 = {
             'Corals and Sclerosponges_d18O' : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm',
                                                'd18o_avg','d18o_ave','dO18','d18O_4'],
-            'Corals and Sclerosponges_SrCa' : ['Sr/Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
+            'Corals and Sclerosponges_SrCa' : ['Sr/Ca','Sr_Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
             'Corals and Sclerosponges_Rates': ['ext','calc','calcification','calcification rate', 'composite'],
             'Ice Cores_d18O'                : ['d18O','delta18O','delta18o','d18o','dO18',
                                                'd18o_int','d18O_int',
@@ -426,8 +432,9 @@ class v_proxies(object):
             'Ice Cores_Accumulation'        : ['accum','accumu'],
             'Ice Cores_MeltFeature'         : ['MFP','melt'],
             'Lake Cores_Varve'              : ['varve', 'varve_thickness', 'varve thickness','thickness'],
-            'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86'],
+            'Lake Cores_BioMarkers'         : ['Uk37', 'TEX86', 'tex86'],
             'Lake Cores_GeoChem'            : ['Sr/Ca', 'Mg/Ca','Cl_cont'],
+            'Lake Cores_Misc'               : ['RABD660_670','X_radiograph_dark_layer','massacum'],
             'Marine Cores_d18O'             : ['d18O'],
             'Speleothems_d18O'              : ['d18O'],
             'Bivalve_d18O'                  : ['d18O'],
@@ -467,7 +474,9 @@ class v_proxies(object):
             self.proxy_assim2 = deepcopy(self.proxy_assim2)
             self.database_filter = list(self.database_filter)
             self.proxy_blacklist = list(self.proxy_blacklist)
-
+            self.proxy_availability_filter = v_proxies.proxy_availability_filter
+            self.proxy_availability_fraction = v_proxies.proxy_availability_fraction
+            
             self.proxy_type_mapping = {}
             for ptype, measurements in self.proxy_assim2.iteritems():
                 # Fetch proxy type name that occurs before underscore
@@ -499,8 +508,6 @@ class v_psm(object):
 
     # Keep this as annual, as it is assumed that LMR output is annual
     avgPeriod = 'annual'
-    #avgPeriod = 'seasonMETA'
-    #avgPeriod = 'seasonPSM'
     
     # Mapping of calibration sources w/ climate variable
     # To be modified only if a new calibration source is added. 
