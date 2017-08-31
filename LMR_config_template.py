@@ -233,6 +233,8 @@ class core(ConfigGroup):
         Flag to indicate whether the analysis_Ye.pckl is to be generated 
         or not (large file containing full information on the posterior 
         proxy estimates (assimilated proxy records).
+    save_full_field: bool
+        Flag to indicate whether fields for the full ensemble should be saved
     """
 
     ##** BEGIN User Parameters **##
@@ -274,8 +276,10 @@ class core(ConfigGroup):
     archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
     #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
 
-    # Whether to produce the analysis_Ye.pckl file or not
+    # Whether or not to produce the analysis_Ye.pckl file
     write_posterior_Ye = False
+    # Whether or not to write the full ensemble
+    save_full_field = False
     
     ##** END User Parameters **##
 

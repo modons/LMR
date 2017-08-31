@@ -14,7 +14,8 @@ Originator: Greg Hakim   | Dept. of Atmospheric Sciences, Univ. of Washington
 Revisions: 
           - Adapted to OOP coding of proxy- and prior-related classes [A. Perkins, U. of Washington]
           - Includes new parameter space search into iterations [A. Perkins, UW, Feb 2017]
-          - Added flag to control whether the analysis_Ye.pckl is generated or not. [G. Hakim, UW, Aug 2017]
+          - Added flag to control whether or not the analysis_Ye.pckl is generated. [G. Hakim, UW, Aug 2017]
+          - Added flag to control whether or not the full ensemble is output. [M. Erb, G. Hakim port, Aug 2017]
 """
 import os
 import numpy as np
@@ -130,7 +131,7 @@ for iter_and_params in itertools.product(*param_iterables):
 
     # write the analysis ensemble mean and variance to separate files (per
     # state variable)
-    ensemble_stats(core.datadir_output, all_proxy_objs, core.write_posterior_Ye)
+    ensemble_stats(core.datadir_output, all_proxy_objs, core.write_posterior_Ye, core.save_full_field)
 
     # start: DO NOT DELETE
     # move files from local disk to an archive location
