@@ -10,8 +10,11 @@ Originators: Greg Hakim & Robert Tardif | U. of Washington
 Revisions: 
           - Added the get_distance function for more efficient calculation of distances
             between lat/lon points on the globe. [R. Tardif, U. of Washington, January 2016]
+          - Added fexibility in handling missing data in the global_hemispheric_means function.
+            [R. Tardif, U. of Washington, Aug. 2017]
 
-          - 
+          - Added the option to save full fields of variables. [M. Erb, U. Southern California,
+            June 2017]
 
 
 """
@@ -257,7 +260,7 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
-def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
+def ensemble_stats(workdir, y_assim, write_posterior_Ye=False, save_full_field=False):
     """
     Compute the ensemble mean and variance for files in the input directory
 
@@ -279,7 +282,11 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
       Revised February 2017 (R Tardif, UW)
               : Added flexibility by getting rid of originally hard-coded features.
               : Added use of new "natural_sort" function to sort filenames composed with negative years.
+      Revised August 2017 (G. Hakim, UW)
+              : Added boolean flag to control the generation of analysis_Ye.pckl file.
 
+      Revised August 2017 (M. Erb; G. Hakim git port)
+              : added full-ensemble saving facility
     """
     
     prior_filn = workdir + '/Xb_one.npz'
@@ -324,6 +331,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
 
             # Process the **analysis** (i.e. posterior) files
             years = []
+            xa_ens = np.zeros([nyears,ndim1,ndim2,nens])
             xam = np.zeros([nyears,ndim1,ndim2])
             xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
             k = -1
@@ -336,6 +344,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
                 years.append(year)
                 Xatmp = np.load(f)
                 Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                xa_ens[k,:,:,:] = Xa                  # total ensemble
                 xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
                 xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
 
@@ -349,6 +358,8 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
             coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
             coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
 
+            vars_to_save_ens  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xb_ens':Xb, 'xa_ens':xa_ens}
             vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
@@ -367,6 +378,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
 
             # Process the **analysis** (i.e. posterior) files
             years = []
+            xa_ens = np.zeros([nyears,ndim1,ndim2,nens])
             xam = np.zeros([nyears,ndim1,ndim2])
             xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
             k = -1
@@ -379,6 +391,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
                 years.append(year)
                 Xatmp = np.load(f)
                 Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                xam[k,:,:,:] = Xa                     # total ensemble
                 xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
                 xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
 
@@ -392,6 +405,8 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
             coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
             coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
 
+            vars_to_save_ens  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
+                                     coordname1:coord1, coordname2:coord2, 'xb_ens':Xb, 'xa_ens':xa_ens}
             vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
@@ -409,6 +424,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
 
             # Process the **analysis** (i.e. posterior) files
             years = []
+            xa_ens = np.zeros([nyears,ndim1,nens])
             xam = np.zeros([nyears,ndim1])
             xav = np.zeros([nyears,ndim1],dtype=np.float64)
             k = -1
@@ -421,6 +437,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
                 years.append(year)
                 Xatmp = np.load(f)
                 Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,nens))
+                xa_ens[k,:,:] = Xa                  # total ensemble
                 xam[k,:] = np.mean(Xa,axis=1)       # ensemble mean
                 xav[k,:] = np.var(Xa,axis=1,ddof=1) # ensemble variance
 
@@ -430,6 +447,8 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
 
             coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0]))
 
+            vars_to_save_ens  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
+                                     coordname1:coord1, 'xb_ens':Xb, 'xa_ens':xa_ens}
             vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
                                      coordname1:coord1, 'xbm':xbm, 'xam':xam}
             vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
@@ -475,6 +494,10 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False):
             continue
 
 
+        if (state_info[var]['vartype'] != '0D:time series') and (save_full_field == True):
+            filen = workdir + '/ensemble_full_' + var
+            print 'writing the new ensemble file' + filen
+            np.savez(filen, **vars_to_save_ens)
 
         # --- Write data to files ---
         # ens. mean to file
@@ -1185,8 +1208,9 @@ def global_hemispheric_means(field,lat):
     #
     # Modifications:
     #           - Modified to handle presence of missing values (nan) in arrays
-    #             in calculation of spatial averages [ R. Tardif, November 2015) ]
-    #
+    #             in calculation of spatial averages [ R. Tardif, November 2015 ]
+    #           - Enhanced flexibility in the handling of missing values
+    #             [ R. Tardif, Aug. 2017 ]
 
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3: # time is a dimension
@@ -1241,17 +1265,26 @@ def global_hemispheric_means(field,lat):
         else:
             # Global
             indok_2d    = indok[t,:,:]
-            field_2d    = np.squeeze(field[t,:,:])
-            gm[t]       = np.average(field_2d[indok_2d],weights=W[indok_2d])
+            if indok_2d.any():
+                field_2d    = np.squeeze(field[t,:,:])
+                gm[t]       = np.average(field_2d[indok_2d],weights=W[indok_2d])
+            else:
+                gm[t] = np.nan
             # NH
             indok_nh_2d = indok_nh[t,:,:]
-            field_nh_2d = np.squeeze(field_NH[t,:,:])
-            nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W_NH[indok_nh_2d])
+            if indok_nh_2d.any():
+                field_nh_2d = np.squeeze(field_NH[t,:,:])
+                nhm[t]      = np.average(field_nh_2d[indok_nh_2d],weights=W_NH[indok_nh_2d])
+            else:
+                nhm[t] = np.nan
             # SH
             indok_sh_2d = indok_sh[t,:,:]
-            field_sh_2d = np.squeeze(field_SH[t,:,:])
-            shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W_SH[indok_sh_2d])
-
+            if indok_sh_2d.any():
+                field_sh_2d = np.squeeze(field_SH[t,:,:])
+                shm[t]      = np.average(field_sh_2d[indok_sh_2d],weights=W_SH[indok_sh_2d])
+            else:
+                shm[t] = np.nan
+                
 # original code (keep for now...)
 #    for t in xrange(ntime):
 #        if lati == 0:
@@ -1265,6 +1298,149 @@ def global_hemispheric_means(field,lat):
 
 
     return gm,nhm,shm
+
+
+def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
+
+    """
+    Given vectors for lat and lon, and lat-lon boundaries for a regional domain, 
+    return an array of ones and zeros, with ones located within the domain and zeros outside
+    the domain as defined by the input lat,lon vectors.
+
+    Originator: Greg Hakim
+                University of Washington
+                July 2017
+
+    """
+
+    nlat = len(lat)
+    nlon = len(lon)
+
+    tmp = np.ones([nlon,nlat])
+    latgrid = np.multiply(lat,tmp).T
+    longrid = np.multiply(tmp.T,lon)
+
+    lab = (latgrid >= southlat) & (latgrid <=northlat)
+    # check for zero crossing 
+    if eastlon < westlon:
+        lob1 = (longrid >= westlon) & (longrid <=360.)
+        lob2 = (longrid >= 0.) & (longrid <=eastlon)
+        lob = lob1+lob2
+    else:
+        lob = (longrid >= westlon) & (longrid <=eastlon)
+
+    mask = np.multiply(lab*lob,tmp.T)
+
+    return mask
+
+
+def PAGES2K_regional_means(field,lat,lon):
+    """
+    Compute geographical spatial mean values for all times in the input (i.e. field) array. 
+    Regions are defined following The PAGES2K Consortium (2013) Nature Geosciences paper, 
+    Supplementary Information.
+
+    input:  field[ntime,nlat,nlon] or field[nlat,nlon]
+             lat[nlat,nlon] in degrees
+             lon[nlat,nlon] in degrees
+
+    output: rm[nregions,ntime] : regional means of "field" where nregions = 7 by definition, but could change
+
+    uses functions: regional_mask()
+
+    Originator: Greg Hakim
+                University of Washington
+                July 2017
+    
+    Revisions:
+     
+    """
+
+    # print debug statements
+    #debug = True
+    debug = False
+    
+    # number of geographical regions (default, as defined in PAGES2K(2013) paper
+    nregions = 7
+    
+    # set number of times, lats, lons; array indices for lat and lon    
+    if len(np.shape(field)) == 3: # time is a dimension
+        ntime,nlat,nlon = np.shape(field)
+    else: # only spatial dims
+        ntime = 1
+        nlat,nlon = np.shape(field)
+        field = field[None,:] # add time dim of size 1 for consistent array dims
+
+    if debug:
+        print 'field dimensions...'
+        print np.shape(field)
+
+    # define regions as in PAGES paper
+
+    # lat and lon range for each region (first value is lower limit, second is upper limit)
+    rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
+    # 1. Arctic: north of 60N 
+    rlat[0,0] = 60.; rlat[0,1] = 90.
+    rlon[0,0] = 0.; rlon[0,1] = 360.
+    # 2. Europe: 35-70N, 10W-40E
+    rlat[1,0] = 35.; rlat[1,1] = 70.
+    rlon[1,0] = 350.; rlon[1,1] = 40.
+    # 3. Asia: 23-55N; 60-160E (from map)
+    rlat[2,0] = 23.; rlat[2,1] = 55.
+    rlon[2,0] = 60.; rlon[2,1] = 160.
+    # 4. North America 1 (trees):  30-55N, 75-130W 
+    rlat[3,0] = 30.; rlat[3,1] = 55.
+    rlon[3,0] = 55.; rlon[3,1] = 230.
+    # 5. South America: Text: 20S-65S and 30W-80W
+    rlat[4,0] = -65.; rlat[4,1] = -20.
+    rlon[4,0] = 280.; rlon[4,1] = 330.
+    # 6. Australasia: 110E-180E, 0-50S 
+    rlat[5,0] = -50.; rlat[5,1] = 0.
+    rlon[5,0] = 110.; rlon[5,1] = 180.
+    # 7. Antarctica: south of 60S (from map)
+    rlat[6,0] = -90.; rlat[6,1] = -60.
+    rlon[6,0] = 0.; rlon[6,1] = 360.
+    # ...add other regions here...
+    
+    # latitude weighting 
+    lat_weight = np.cos(np.deg2rad(lat))
+    tmp = np.ones([nlon,nlat])
+    W = np.multiply(lat_weight,tmp).T
+
+    rm  = np.zeros([nregions,ntime])
+
+    # loop over regions
+    for region in range(nregions):
+
+        if debug:
+            print 'region='+str(region)
+            print rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1]
+            
+        # regional weighting (ones in region; zeros outside)
+        mask = regional_mask(lat,lon,rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
+        if debug:
+            print 'mask='
+            print mask
+
+        # this is the weight mask for the regional domain    
+        Wmask = np.multiply(mask,W)
+
+        # make sure data starts at South Pole
+        if lat[0] > 0:
+            # data has NH -> SH format; reverse
+            field = np.flipud(field)
+
+        # Check for valid (non-NAN) values & use numpy average function (includes weighted avg calculation) 
+        # Get arrays indices of valid values
+        indok    = np.isfinite(field)
+        for t in xrange(ntime):
+            indok_2d = indok[t,:,:]
+            field_2d = np.squeeze(field[t,:,:])
+            if np.max(Wmask) >0.:
+                rm[region,t] = np.average(field_2d[indok_2d],weights=Wmask[indok_2d])
+            else:
+                rm[region,t] = np.nan
+    return rm
 
 
 def class_docs_fixer(cls):

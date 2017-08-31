@@ -861,8 +861,7 @@ def main():
         print 'Proxy data location :', Cfg.proxies.ncdc.datadir_proxy
         proxy_psm_seasonality =  Cfg.proxies.ncdc.proxy_psm_seasonality
     else:
-        print 'ERROR in specification of proxy database. Exiting!'
-        raise SystemExit()
+        raise SystemExit('ERROR in specification of proxy database. Exiting!')
         
     # psm type
     if psm_type == 'linear':
@@ -892,8 +891,7 @@ def main():
         C_P.read_calibration()
 
     else:
-        print 'ERROR: problem with the specified type of psm!'
-        exit(1)
+        raise SystemExit('ERROR: problem with the specified type of psm. Exiting!')
     
     print 'PSM calibration/parameters file:', psm_file
 
@@ -977,8 +975,7 @@ def main():
                     seasons_M = seasons[:]
 
         else: 
-            print '...blah blah blah...'
-            raise SystemExit()
+            raise SystemExit('Error in choice of seasonality. Exiting!')
 
         # ---------------------------------------------------------
         # Calculating the regressions and associated statistics for
