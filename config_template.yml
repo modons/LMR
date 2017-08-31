@@ -30,6 +30,7 @@ core:
   online_reconstruction: False
   clean_start: True
   use_precalc_ye: True
+  write_posterior_Ye: False
   recon_period: !!python/tuple [1800, 2000]
 #  recon_period: !!python/tuple [-120000, 2000]
   recon_timescale: 1
