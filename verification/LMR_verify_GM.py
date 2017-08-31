@@ -127,7 +127,10 @@ stat_save = True
 #nexp = 'pages2_loc20000_seasonal_bilinear_nens200'
 #nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
 #nexp = 'pages2_loc25000_seasonal_bilinear_nens200_75pct'
-nexp = 'pages2_loc25000_seasonal_bilinear_nens200_meta'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_meta'
+#nexp = 'pages2_noloc_seasonal_bilinear_nens1000'
+#nexp = 'pages2_loc25000_seasonal_bilinear_nens1000'
+nexp = 'pages2_loc25000_seasonal_bilinear_nens50_75pct'
 
 # specify directories for LMR data
 #datadir_output = './data/'
@@ -447,6 +450,9 @@ con_gm = np.mean(consensus_gmt,axis=0)
 CON_time = range(stime,etime)
 CON_time = np.asarray(CON_time) # fixed 21 July 2017 (GJH)
 
+# write to a file for use by other programs
+filen = 'consensus_gmt.npz'
+np.savez(filen,con_gm=con_gm,CON_time=CON_time)
 
 #
 # correlation coefficients & CE over chosen time interval 
