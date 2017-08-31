@@ -20,12 +20,13 @@ import os
 # --- Begin section of user-defined parameters ---
 
 # name of directory where the output of LMR experiments are located
-datadir = '/home/scec-00/lmr/erbm/LMR/archive_output'
+#datadir = '/home/scec-00/lmr/erbm/LMR/archive_output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
+datadir ='/Users/hakim/data/LMR/archive'
 
 # name of the experiment
-nexp = 'test_pages2kv2_fullfield'
-
+#nexp = 'test_pages2kv2_fullfield'
+nexp = 'dadt_test_fullensemble'
 
 # Dictionary containing definitions of variables that can be handled by this code
 var_desc = \
@@ -51,7 +52,9 @@ var_desc = \
         'AMOC45N1000m_Omon'         : ('AMOC45N1000m','Meridional overturning streamfunction at 45N and 1000m depth','kg s-1'),               \
         'AMOC26N1000m_Omon'         : ('AMOC26N1000m','Meridional overturning streamfunction at 26N and 1000m depth','kg s-1'),               \
         'AMOC26Nmax_Omon'           : ('AMOC26Nmax','Maximum meridional overturning streamfunction in ocean column at 26N','kg s-1'),         \
-    }
+      \
+        'tas_sfc_Adec'              : ('Tsfc', 'Near surface air temperature anomaly', 'K')
+        }
 
 # --- End section of user-defined parameters ---
 
@@ -60,7 +63,7 @@ expdir = datadir + '/'+nexp
 # where the netcdf files are created 
 outdir = expdir
 
-print '\n Getting information on Monte-Carlo realizations...\n'
+print '\n Getting information on Monte-Carlo realizations for ' + expdir+ '...\n'
 
 dirs = glob.glob(expdir+"/r*")
 # sorted
