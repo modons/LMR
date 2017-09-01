@@ -43,7 +43,7 @@ import re
 import six
 import ast
 from os.path import join
-import pickle
+import cPickle as pickle
 import gzip
 import calendar
 
@@ -106,7 +106,7 @@ def main():
     eliminate_duplicates = True
 
     # datadir: directory where the original proxy datafiles are located
-    #datadir = '/home/chaos2/wperkins/data/LMR/proxies/'
+    # datadir = '/home/katabatic2/wperkins/data/LMR/proxies/'
     datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
     
     # outdir: directory where the proxy database files will be created
