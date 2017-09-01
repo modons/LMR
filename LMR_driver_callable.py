@@ -410,6 +410,8 @@ def LMR_driver_callable(cfg=None):
         ibeg = X.trunc_state_info[var]['pos'][0]
         iend = X.trunc_state_info[var]['pos'][1]
         Xb_var = np.reshape(Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
+        if np.ma.is_masked(Xb_var):
+            Xb_var = Xb_var.filled()
         filen = workdir + '/' + 'Xb_one' + '_' + var 
         np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
     # END new file save
