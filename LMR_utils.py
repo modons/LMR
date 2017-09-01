@@ -458,7 +458,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False, save_full_field=F
             # 0D:time series variable (no spatial dims)
             Xb = Xbtmp[ibeg:iend+1,:] # prior (full) ensemble
             xbm = np.mean(Xb,axis=1)  # ensemble mean
-            xbv = np.var(Xb,axis=1)   # ensemble variance
+            xbv = np.var(Xb,axis=1,ddof=1)   # ensemble variance
 
             # process the **analysis** files
             years = []
@@ -477,7 +477,7 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False, save_full_field=F
                 Xa = Xatmp[ibeg:iend+1,:]
                 xa_ens[k] = Xa  # total ensemble
                 xam[k] = np.mean(Xa,axis=1) # ensemble mean
-                xav[k] = np.var(Xa,axis=1)  # ensemble variance
+                xav[k] = np.var(Xa,axis=1,ddof=1)  # ensemble variance
 
             vars_to_save_ens = {'nens':nens, 'years':years, 'xb_ens':Xb, 'xa_ens':xa_ens}
             vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}

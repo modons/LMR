@@ -17,6 +17,14 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
 
     Originator: G. J. Hakim, with code borrowed from L. Madaus
                 Dept. Atmos. Sciences, Univ. of Washington
+
+    Revisions:
+
+    1 September 2017: 
+                    - changed varye = np.var(Ye) to varye = np.var(Ye,ddof=1) 
+                    for an unbiased calculation of the variance. 
+                    (G. Hakim - U. Washington)
+    
     -----------------------------------------------------------------
      Inputs:
           Xb: background ensemble estimates of state (Nx x Nens) 
@@ -36,7 +44,7 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
 
     # ensemble mean and variance of the background estimate of the proxy 
     mye   = np.mean(Ye)
-    varye = np.var(Ye)
+    varye = np.var(Ye,ddof=1)
 
     # lowercase ye has ensemble-mean removed 
     ye = np.subtract(Ye, mye)

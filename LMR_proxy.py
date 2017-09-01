@@ -184,7 +184,7 @@ class proxy_master(object):
 
             if diag_output:
                 # Some other diagnostics
-                varproxy = np.var(reg_ya); varresiduals = np.var(residuals)
+                varproxy = np.var(reg_ya,ddof=1); varresiduals = np.var(residuals,ddof=1)
                 varratio = np.divide(varproxy,varresiduals)
                 snr = np.absolute(r_value)/(np.sqrt(1.0-r_value**2))            
                 # Diagnostic output 
