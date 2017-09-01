@@ -94,7 +94,7 @@ class v_core(object):
     ##** BEGIN User Parameters **##
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HadCRUT...) and proxies.
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
+    #lmr_path = '/home/katabatic/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
 
     calib_period = (1850, 2015)

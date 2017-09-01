@@ -1,7 +1,7 @@
 name: lmr
 
 channels:
-  - conda
+  - conda-forge
   - ajdawson
 
 dependencies:
@@ -13,8 +13,10 @@ dependencies:
   - statsmodels
   - pyspharm
   - pyyaml
-  - pandas
+  - pandas=0.19.2 # currently necessary for loading pages2k v2 pckl file?
+  - xlrd
   - pytest
   - ipython
-  - jpeg=8*
+  - jpeg
   - basemap
+  - esmpy

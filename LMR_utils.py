@@ -260,7 +260,7 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
-def ensemble_stats(workdir, y_assim, write_posterior_Ye=False, save_full_field=False):
+def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False):
     """
     Compute the ensemble mean and variance for files in the input directory
 
@@ -287,6 +287,10 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False, save_full_field=F
 
       Revised August 2017 (M. Erb; G. Hakim git port)
               : added full-ensemble saving facility
+      Revised August 2017 (R. Tardif, UW)
+              : Modified load_precalculated_ye_vals_psm_per_proxy function to upload Ye values
+                either from assimilated or withheld proxy sets (R. Tardif, UW)
+
     """
     
     prior_filn = workdir + '/Xb_one.npz'
@@ -535,27 +539,48 @@ def ensemble_stats(workdir, y_assim, write_posterior_Ye=False, save_full_field=F
             years.append(float(year))
             Xatmp = np.load(f)
             # Extract the Ye's from augmented state (beyond stateDim 'til end of
-            #  state vector)
+            #  state vector).
+            # RT Aug 2017: These now include Ye's from assimilated AND withheld proxies.
             Ye_s[:, k, :] = Xatmp[stateDim:, :]
         years = np.array(years)
 
         # Build dictionary
         YeDict = {}
         # loop over assimilated proxies
+        nbassim = 0
         for i, pobj in enumerate(y_assim):
             # build boolean of indices to pull from HXa
             yr_idxs = np.array([year in pobj.time for year in years],
                                dtype=np.bool)
             YeDict[(pobj.type, pobj.id)] = {}
+            YeDict[(pobj.type, pobj.id)]['status'] = 'assimilated'
             YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
             YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
             YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
             YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
             YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
 
+            nbassim +=1
+
+        # loop over non-assimilated (withheld) proxies
+        if y_eval:
+            for j, pobj in enumerate(y_eval):
+                # build boolean of indices to pull from HXa
+                yr_idxs = np.array([year in pobj.time for year in years],
+                                   dtype=np.bool)
+                YeDict[(pobj.type, pobj.id)] = {}
+                YeDict[(pobj.type, pobj.id)]['status'] = 'withheld'
+                YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
+                YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
+                YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
+                YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
+                YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[nbassim+j, yr_idxs, :]
+
+            
         # Dump dictionary to pickle file
+        # using protocol 2 for more efficient storing
         outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
-        cPickle.dump(YeDict, outfile)
+        cPickle.dump(YeDict, outfile, protocol=2)
         outfile.close()
 
     return
@@ -1582,7 +1607,7 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     return ye_all
 
 
-def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs):
+def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, sample_idxs):
     """
     Convenience function to load a precalculated Ye file for the current
     experiment.
@@ -1593,25 +1618,32 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
         Current experiment instance of the configuration object.
     proxy_manager: LMR_proxy_pandas_rework.ProxyManager
         Current experiment proxy manager
+    proxy_set: str
+        String to indicate which proxy set to handle ('assim' or 'eval')
     sample_idxs: list(int)
         A list of the current sample indices used to create the prior ensemble.
 
     Returns
     -------
     ye_all: ndarray
-        The array of Ye values for the current ensemble and all proxy records
+        The array of Ye values for the current ensemble and all records from
+        selected proxy set.
     """
 
     begin_load = time()
 
     load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
-
-    num_proxies_assim = len(proxy_manager.ind_assim)
+    
+    if proxy_set == 'assim':
+        num_proxies_assim = len(proxy_manager.ind_assim)
+        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))
+    elif proxy_set == 'eval':
+        num_proxies_assim = len(proxy_manager.ind_eval)
+        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_eval_proxy_objs()]))
     num_samples = len(sample_idxs)
     ye_all = np.zeros((num_proxies_assim, num_samples))
     ye_all_coords = np.zeros((num_proxies_assim, 2))
     
-    psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))    
     precalc_files = {}
     for psm_key in psm_keys:
 
@@ -1647,16 +1679,27 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, sample_idxs)
 
     
     print '  Now extracting proxy type-dependent Ye values...'
-    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
-        psm_key = pobj.psm_obj.psm_key
-        pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
-        precalc_vals = precalc_files[psm_key]['ye_vals']
-        
-        pidx = pid_idx_map[pobj.id]
-        ye_all[i] = precalc_vals[pidx, sample_idxs]
+    if proxy_set == 'assim':
+        for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
+            psm_key = pobj.psm_obj.psm_key
+            pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
+            precalc_vals = precalc_files[psm_key]['ye_vals']
 
-        ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
-        
+            pidx = pid_idx_map[pobj.id]
+            ye_all[i] = precalc_vals[pidx, sample_idxs]
+
+            ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
+    elif proxy_set == 'eval':
+        for i, pobj in enumerate(proxy_manager.sites_eval_proxy_objs()):
+            psm_key = pobj.psm_obj.psm_key
+            pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
+            precalc_vals = precalc_files[psm_key]['ye_vals']
+
+            pidx = pid_idx_map[pobj.id]
+            ye_all[i] = precalc_vals[pidx, sample_idxs]
+
+            ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)        
+            
     print '  Completed in ',  time() - begin_load, 'secs'
         
     return ye_all, ye_all_coords
@@ -1711,6 +1754,8 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
                 pkind = 'anom'
             else:
                 raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
+        elif psm_key == 'bayesreg_uk37':
+            pkind = 'full'
         else:
             raise ValueError('Unrecognized PSM key.')
 

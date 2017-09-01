@@ -3,6 +3,12 @@
 Quick Start Guide
 =================
 
+
+LMR source code
+------------------------
+The source code for this project is not yet publicly available.
+
+
 Install Python
 ----------------
 The LMR codebase utilizes many packages typical to the scientific Python stack.
@@ -14,27 +20,45 @@ to fulfill program dependencies.  Install the latest 2.7.x version of Python.
 * `Miniconda <http://conda.pydata.org/miniconda.html>`_ is a barebones
   installation where you can then add only the necessary packages.
 
-It will be necessary to add a few extra packages. E.g. ::
+It will be necessary to install additional packages for the LMR code to run.
+We suggest utilizing
+`Conda environment functionality <https://conda.io/docs/user-guide/tasks/manage-environments.html#>`_
+(conda is the Python package manager included with Anaconda) to
+set up a new environment specifically for running LMR code.  Included with the code
+under the 'misc' directory, ``lmr_pyenv.yml`` includes a list of the packages
+to be installed and any specific versioning requirements.
+
+To set up the default environment (named 'lmr') use the following command ::
+
+    conda env create -f lmr_pyenv.yml
+
+Note that you can override the default environment name (lmr) using the
+-n flag ::
+
+    conda env create -f lmr_pyenv.yml -n new_env_name
+
+If running tasks from the command line you can temporarily change this new
+environment to your default Python by using
+
+* Windows: ``activate lmr``
+* macOS or Linux: ``source activate lmr`` (Bash only)
+
+where `lmr` should be the name of your environment if the default name was
+overridden.  You can deactivate the environment using
+
+* Windows: ``deactivate``
+* macOS or Linux: ``source deactivate``
+
+If you're using an IDE to interact with and run Python code just make sure your
+new environment is set as the default Python interpreter.
+
+If you'd like to create your environment manually or if at at any point there
+is an error for a missing dependency, install it using
+``conda install`` command. E.g.::
 
     conda install netCDF4
     conda install -c https://conda.anaconda.org/ajdawson pyspharm
 
-If at any point there is an error for a missing dependency, install it using
-``conda install`` command (the installer that comes with Anaconda).
-
-
-Retrieve LMR source code
-------------------------
-Navigate to the directory where you want to store the LMR code and retrieve
-it from the repostory.
-
-Using Github::
-
-    git clone git@github.com:frodre/LMR.git
-
-Using SVN::
-
-    svn co https://www.atmos.washington.edu/svn/lmr/tags/v2.0
 
 Retrieve Data
 -------------

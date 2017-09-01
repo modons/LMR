@@ -35,6 +35,9 @@ Revisions:
             the assimilation of alkenone uk37 proxy data. Code based on 
             spline coefficients provided by J. Tierney (U of Arizona).
             [ R. Tardif, Univ. of Washington, January 2017 ]
+          - Calibration of statistical PSMs now all referenced to anomalies w.r.t.
+            20th century.
+            [ R. Tardif, Univ. of Washington, August 2017 ]
 """
 import numpy as np
 import logging
@@ -454,9 +457,9 @@ class LinearPSM(BasePSM):
         reg_x = reg_x - np.nanmean(reg_x[inds])
         
         
-        # -------------------------
-        # Perform linear regression
-        # -------------------------
+        # ------------------------
+        # Set-up linear regression
+        # ------------------------
         # Use pandas DataFrame to store proxy & calibration data side-by-side
         header = ['variable', 'y']
         # Fill-in proxy data

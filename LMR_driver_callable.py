@@ -59,6 +59,10 @@ Revisions:
             - Replaced the hared-coded truncation resolution (T42) of spatial fields 
               updated during the DA (i.e. reconstruction resolution) by a 
               user-specified value set in the configuration.
+ August 2017:
+            - Included the Ye's from withheld proxies to state vector so they get 
+              updated during DA as well for easier & complete proxy-based evaluation
+              of reconstruction. (R. Tardif - U. of Washington)
 """
 import numpy as np
 from os.path import join
@@ -186,10 +190,10 @@ def LMR_driver_callable(cfg=None):
         print '--------------------------------------------------------------------'
         print 'Proxy counts for experiment:'
         # count the total number of proxies
-        total_proxy_count = len(prox_manager.ind_assim)
+        assim_proxy_count = len(prox_manager.ind_assim)
         for pkey, plist in sorted(type_site_assim.iteritems()):
             print('%45s : %5d' % (pkey, len(plist)))
-        print('%45s : %5d' % ('TOTAL', total_proxy_count))
+        print('%45s : %5d' % ('TOTAL', assim_proxy_count))
         print '--------------------------------------------------------------------'
 
     if verbose > 2:
@@ -345,29 +349,55 @@ def LMR_driver_callable(cfg=None):
                 raise FlagError('use_precalc_ye=False: forego loading precalcul'
                                 'ated ye values.')
 
-            print 'Loading precalculated Ye values.'
-            [Ye_all, Ye_all_coords] = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg, prox_manager,
-                                                          X.prior_sample_indices)
+            print 'Loading precalculated Ye values for proxies to be assimilated.'
+            [Ye_assim, Ye_assim_coords] = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg, prox_manager,
+                                                    'assim', X.prior_sample_indices)
 
+            eval_proxy_count = 0
+            if prox_manager.ind_eval:
+                print 'Loading precalculated Ye values for withheld proxies.'
+                [Ye_eval, Ye_eval_coords] = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg,
+                                                    prox_manager, 'eval', X.prior_sample_indices)
+                [eval_proxy_count,_] = Ye_eval.shape
+            
         except (IOError, FlagError) as e:
             print e
 
             # Manually calculate ye_values from state vector
             print 'Calculating ye_values from the prior...'
-            Ye_all = np.empty(shape=[total_proxy_count, nens])
-            Ye_all_coords = np.empty(shape=[total_proxy_count, 2])
+            Ye_assim = np.empty(shape=[assim_proxy_count, nens])
+            Ye_assim_coords = np.empty(shape=[assim_proxy_count, 2])
             for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
-                Ye_all[k, :] = proxy.psm(Xb_one_full,
+                Ye_assim[k, :] = proxy.psm(Xb_one_full,
                                          X.full_state_info,
                                          X.coords)
-                Ye_all_coords[k, :] = np.asarray([proxy.lat, proxy.lon], dtype=np.float64)
-                
+                Ye_assim_coords[k, :] = np.asarray([proxy.lat, proxy.lon], dtype=np.float64)
+
+
+            eval_proxy_count = 0
+            if prox_manager.ind_eval:
+                eval_proxy_count = len(prox_manager.ind_eval)
+                Ye_eval = np.empty(shape=[eval_proxy_count, nens])
+                Ye_eval_coords = np.empty(shape=[eval_proxy_count, 2])
+                for k, proxy in enumerate(prox_manager.sites_eval_proxy_objs()):
+                    Ye_eval[k, :] = proxy.psm(Xb_one_full,
+                                              X.full_state_info,
+                                              X.coords)
+                    Ye_eval_coords[k, :] = np.asarray([proxy.lat, proxy.lon], dtype=np.float64)
+
+
         # ----------------------------------
         # Augment state vector with the Ye's
         # ----------------------------------
-        # Append ensemble of Ye's to prior state vector
-        Xb_one_aug = np.append(Xb_one, Ye_all, axis=0)
-        Xb_one_coords = np.append(Xb_one_coords, Ye_all_coords, axis=0)
+        # Append ensemble of Ye's of assimilated proxies to prior state vector
+        Xb_one_aug = np.append(Xb_one, Ye_assim, axis=0)
+        Xb_one_coords = np.append(Xb_one_coords, Ye_assim_coords, axis=0)
+
+        if prox_manager.ind_eval:
+            # Append ensemble of Ye's of withheld proxies to prior state vector
+            Xb_one_aug = np.append(Xb_one_aug, Ye_eval, axis=0)
+            Xb_one_coords = np.append(Xb_one_coords, Ye_eval_coords, axis=0)
+        
     else:
         Xb_one_aug = Xb_one
 
@@ -380,6 +410,8 @@ def LMR_driver_callable(cfg=None):
         ibeg = X.trunc_state_info[var]['pos'][0]
         iend = X.trunc_state_info[var]['pos'][1]
         Xb_var = np.reshape(Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
+        if np.ma.is_masked(Xb_var):
+            Xb_var = Xb_var.filled()
         filen = workdir + '/' + 'Xb_one' + '_' + var 
         np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
     # END new file save
@@ -408,9 +440,9 @@ def LMR_driver_callable(cfg=None):
     # TODO: AP temporary fix for no TAS in state
     tas_var = [item for item in cfg.prior.state_variables.keys() if 'tas_sfc_' in item]
     if tas_var:
-        gmt_save = np.zeros([total_proxy_count+1,ntimes])
-        nhmt_save = np.zeros([total_proxy_count+1,ntimes])
-        shmt_save = np.zeros([total_proxy_count+1,ntimes])
+        gmt_save = np.zeros([assim_proxy_count+1,ntimes])
+        nhmt_save = np.zeros([assim_proxy_count+1,ntimes])
+        shmt_save = np.zeros([assim_proxy_count+1,ntimes])
         # get state vector indices where to find surface air temperature
         ibeg_tas = X.trunc_state_info[tas_var[0]]['pos'][0]
         iend_tas = X.trunc_state_info[tas_var[0]]['pos'][1]
@@ -501,7 +533,7 @@ def LMR_driver_callable(cfg=None):
                 Ye = Y.psm(Xb)
             else:
                 # Extract latest updated Ye from appended state vector
-                Ye = Xb[proxy_idx - total_proxy_count]
+                Ye = Xb[proxy_idx - (assim_proxy_count+eval_proxy_count)]
 
             # Define the ob error variance
             ob_err = Y.psm_obj.R
@@ -590,8 +622,8 @@ def LMR_driver_callable(cfg=None):
         filen = join(workdir, 'gmt')
         np.savez(filen, gmt_save=gmt_save, nhmt_save=nhmt_save, shmt_save=shmt_save,
                  recon_times=recon_times,
-                 apcount=total_proxy_count,
-                 tpcount=total_proxy_count)
+                 apcount=assim_proxy_count,
+                 tpcount=assim_proxy_count)
 
     # TODO: (AP) The assim/eval lists of lists instead of lists of 1-item dicts
     assimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time,
@@ -616,7 +648,7 @@ def LMR_driver_callable(cfg=None):
         print '====================================================='
 
     # TODO: best method for Ye saving?
-    return prox_manager.sites_assim_proxy_objs()
+    return prox_manager.sites_assim_proxy_objs(), prox_manager.sites_eval_proxy_objs()
 # ------------------------------------------------------------------------------
 # --------------------------- end of main code ---------------------------------
 # ------------------------------------------------------------------------------
