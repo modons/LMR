@@ -35,12 +35,13 @@ etime = 2000
 # specify directories for LMR data
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/Users/hakim/data/LMR/archive/'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/Users/hakim/data/LMR/archive/'
 
 # file specification
 #nexp = 'pages2_loc25000_seasonal_bilinear_nens50_75pct'
-nexp = 'test'
+#nexp = 'test'
+nexp = 'p2_ccsm4LM_n200_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75_loc25k/'
 
 # perform verification using all recon. MC realizations (MCset = None )
 MCset = None
@@ -260,4 +261,6 @@ ymax = np.array(ce_max)-np.array(ce_grand)
 ymin = np.array(ce_grand)-np.array(ce_min)
 plt.errorbar(xvals,ce_grand,yerr=[ymin,ymax],ecolor='gray')
 plt.savefig('ce_grand.png')
-plt.show()
+#plt.show()
+
+# add a second plot...
