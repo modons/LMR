@@ -1,3 +1,18 @@
+"""
+Module: LMR_proxy_impact.py
+
+Purpose: Calculate the impact of individual or grouped proxy records on the analysis 
+         (reconstruction) following Cardinali et al (2009)
+
+Originator: Greg Hakim, University of Washington, August 2017
+
+Revisions:
+          - Adapted code to handle latest content structure of Ye file 
+            (now containing info on both assimilated and withheld proxies). 
+            [R. Tardif, University of Washington - September 2017]
+
+"""
+
 
 # coding: utf-8
 
@@ -8,9 +23,13 @@ import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-import matplotlib.pyplot as plt
 import cartopy.feature
+import matplotlib.pyplot as plt
 #get_ipython().magic(u'matplotlib inline')
+
+
+
+# -------------- Begin: user-defined parameters -------------- #
 
 # iplot = 0: none; 1: all 2: most important
 iplot = 0
@@ -18,7 +37,7 @@ iplot = 0
 # figure size
 #plt.rcParams["figure.figsize"] = [10,10]
 
-# set the global colormap to identify proxis
+# set the global colormap to identify proxies
 #'tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'
 #cmap = {'Ice:dD':'tab:blue', 'Lake:':'tab:gray', 'Coral:Rate':'tab:pink', 'Ice:d18O':'tab:brown', 'Tree:Dens':'tab:purple', 'Coral:SrCa':'tab:orange', 'Coral:d18O':'tab:red', 'Tree:Width':'tab:green'}
 
@@ -52,16 +71,30 @@ pth = '/home/disk/kalman3/rtardif/LMR/output/'
 #nexp = 'p2_ccsm4LM_n100_linTorP_GISTEMPGPCCseasonPSM_PAGES2kv2Breit_pf0.75' # this one crashed
 nexp = 'p2_ccsm4LM_n100_linTorPallTRW_GISTEMPGPCCseasonPSM_PAGES2kv2Breit_pf0.75_loc12k'
 
+
+# MC realizations
+#MCset = None
+MCset = (0,10)
+
+# --------------  End: user-defined parameters  -------------- #
+
 # get a listing of the iteration directories
 workdir = pth + nexp
 dirs = glob.glob(workdir+"/r*")
 niters = len(dirs)
+print 'total number of iterations: ' + str(niters)
+
+if MCset:
+    dirset = dirs[MCset[0]:MCset[1]+1]
+else:
+    dirset = dirs
+niters = len(dirset)
 print 'number of iterations: ' + str(niters)
 
 # dictionary and counter for directories
 iterdict = {}
 cdir = -1
-for dir in dirs[0:10]:
+for dir in dirset:   # Why this range is hard-coded ?
 
     cdir = cdir + 1
     print '\n\nloading proxies in ' + dir + ' ...\n'
@@ -70,10 +103,8 @@ for dir in dirs[0:10]:
     Ye_data = cPickle.load(infile)
     infile.close()
 
-    nproxies = len(Ye_data)
-    print 'number of proxies:',nproxies
-
-    # In[4]:
+    ntotproxies = len(Ye_data)
+    print 'total number of proxies in file:',ntotproxies
 
     # screen for known proxies, date ranges, and identify the records that are missed in the process
 
@@ -88,33 +119,49 @@ for dir in dirs[0:10]:
     maxyear = -9999
 
     # hard-coded proxy "groups"
+    nproxies = 0
     for key in Ye_data.keys():
-        years = Ye_data[key]['years']
-        if years[0] < minyear:
-            minyear = years[0]
-        if years[-1] > maxyear:
-            maxyear = years[-1]
-        #print key,years[0],years[-1]
 
-        if 'Tree' in key[0] and 'Width' in key[0]:
-            trw = trw + 1
-        elif 'Tree' in key[0] and 'Dens' in key[0]:
-            trd = trd + 1
-        elif 'Coral' in key[0] and 'd18O' in key[0]:
-            cd18 = cd18 + 1
-        elif 'Ice' in key[0] and 'd18O' in key[0]:
-            id18 = id18 + 1
-        elif 'Coral' in key[0] and 'SrCa' in key[0]:
-            csrca = csrca + 1
-        elif 'Coral' in key[0] and 'Rate' in key[0]:
-            crate = crate + 1
-        elif 'Ice' in key[0] and 'dD' in key[0]:
-            idd = idd + 1
-        elif 'Lake'in key[0]:
-            lake = lake + 1
-        else:
-            miss[key] = key[0]
+        # Restrict processing on "assimilated" proxies. Ye file now
+        # also contains info on "withheld" proxy records
+        # check if "status" is a key included in the dict
+        # (for backward compatibility with older files)
+        try:
+            pstatus = Ye_data[key]['status']
+        except KeyError as e:
+            # key does not exist, thus older file containing
+            # info on only assimilated proxies
+            pstatus = 'assimilated'
+        
+        if pstatus == 'assimilated':        
+            years = Ye_data[key]['years']
+            if years[0] < minyear:
+                minyear = years[0]
+            if years[-1] > maxyear:
+                maxyear = years[-1]
+            #print key,years[0],years[-1]
 
+            if 'Tree' in key[0] and 'Width' in key[0]:
+                trw = trw + 1
+            elif 'Tree' in key[0] and 'Dens' in key[0]:
+                trd = trd + 1
+            elif 'Coral' in key[0] and 'd18O' in key[0]:
+                cd18 = cd18 + 1
+            elif 'Ice' in key[0] and 'd18O' in key[0]:
+                id18 = id18 + 1
+            elif 'Coral' in key[0] and 'SrCa' in key[0]:
+                csrca = csrca + 1
+            elif 'Coral' in key[0] and 'Rate' in key[0]:
+                crate = crate + 1
+            elif 'Ice' in key[0] and 'dD' in key[0]:
+                idd = idd + 1
+            elif 'Lake'in key[0]:
+                lake = lake + 1
+            else:
+                miss[key] = key[0]
+
+            nproxies +=1
+                
     nyears = int(maxyear-minyear+1)
     print 'minyear: ' + str(minyear)
     print 'maxyear: ' + str(maxyear)
@@ -122,11 +169,9 @@ for dir in dirs[0:10]:
 
     print 'identified proxies: ' + str(trw) + ' ' + str(trd) + ' ' + str(cd18) + ' ' + str(id18) + ' ' + str(csrca)+ ' ' + str(lake)+ ' ' + str(crate) + ' ' + str(idd)
     print 'total identified: ' + str(trw+trd+cd18+id18+csrca+idd+crate+lake)
-    print 'total number of proxies:' + str(nkeys)
+    print 'total number of proxies in file:' + str(nkeys)
     print 'missing from the analysis: ' + str(len(miss)) + ' : ' + str(miss)
 
-
-    # In[5]:
 
     """
 
@@ -138,7 +183,7 @@ for dir in dirs[0:10]:
     S: influence for a single proxy, averaged over all years
 
 
-    # p counts the _total_ number of proxies in a given year (-1 since counts starts at zero)
+    # p counts the _total_ number of assimilated proxies in a given year (-1 since counts starts at zero)
     # Ye has shape [nproxies,Nens] for a given given proxy _type_ and a given year
     # S has the diagonal elements of the observation sensitivity matrix (nproxies,nyears)
     # sS = trace(S) "degrees of freedom from signal (proxies)"
@@ -174,7 +219,19 @@ for dir in dirs[0:10]:
             S = []
             for key in Ye_data.keys():
                 found = False
-                if rootkey in key[0] and t in key[0]:
+
+                # Restrict processing on "assimilated" proxies. Ye file now
+                # also contains info on "withheld" proxy records
+                # check if "status" is a key included in the dict
+                # (for backward compatibility with older files)
+                try:
+                    pstatus = Ye_data[key]['status']
+                except KeyError as e:
+                    # key does not exist, thus older file containing
+                    # info on assimilated proxies only
+                    pstatus = 'assimilated'
+        
+                if pstatus == 'assimilated' and rootkey in key[0] and t in key[0]:
                     found = True
                     n = n + 1
                     p = p + 1
@@ -420,25 +477,39 @@ for dir in dirs[0:10]:
     samp = np.zeros([nproxies,nens])
     n = -1
     for key in Ye_data.keys():
-        check = True
-        Ye = Ye_data[key]['HXa']
-        # analyze a single year to start
-        years = Ye_data[key]['years']
-        #print years[0],years[-1]
-        try:
-            tind = np.nonzero(years==tyear)[0][0]
-            #print tind
-            #print np.shape(Ye[tind,:])
-        except:
-            check = False
 
-        if check:
-            n = n + 1
-            #var_Ye = Ye[tind,:].var(ddof=1)
-            R = Ye_data[key]['R']
-            sens = Ye[tind,:]/R
-            #print np.shape(sens)
-            samp[n,:] = sens
+        # Restrict processing on "assimilated" proxies. Ye file now
+        # also contains info on "withheld" proxy records
+        # check if "status" is a key included in the dict
+        # (for backward compatibility with older files)
+        try:
+            pstatus = Ye_data[key]['status']
+        except KeyError as e:
+            # key does not exist, thus older file containing
+            # info on only assimilated proxies
+            pstatus = 'assimilated'
+        
+        if pstatus == 'assimilated':
+            check = True
+            Ye = Ye_data[key]['HXa']
+            # analyze a single year to start
+            years = Ye_data[key]['years']
+            #print years[0],years[-1]
+            try:
+                tind = np.nonzero(years==tyear)[0][0]
+                #print tind
+                #print np.shape(Ye[tind,:])
+            except:
+                check = False
+
+            if check:
+                n = n + 1
+                #var_Ye = Ye[tind,:].var(ddof=1)
+                R = Ye_data[key]['R']
+                sens = Ye[tind,:]/R
+                #print np.shape(sens)
+                samp[n,:] = sens
+
     print 'done'
 
 
@@ -483,7 +554,8 @@ print '\n\n---------------------------------------------------------------------
 print 'experiment: ' + workdir
 print 'number of iterations: ' +str(niters)
 
-print '\n proxy //  number // total impact // per-proxy impact ' 
+
+print('\n%s | %s | %s | %s' %('{:30}'.format('proxy group'), 'number', 'total impact', 'per-proxy impact'))
 mtpi = 0.
 for key in iterdict.keys():
     tmp = iterdict[key]
@@ -495,7 +567,8 @@ for key in iterdict.keys():
     pps = np.divide(sums,nsites)
     mpps = np.mean(pps)
     spps = np.std(pps)
-    print ' ' + key + ' // ' + str(int(msites)) + ' //  ' + '{0!s:.4}'.format(msums) + '+/-' + '{0!s:.4}'.format(mstd) + ' // ' + '{0!s:.5}'.format(mpps) + '+/-' + '{0!s:.4}'.format(spps)
+
+    print('%s | %s | %s +/- %s | %s +/- %s' %('{:30}'.format(key), '{:6}'.format(str(int(msites))), '{0!s:.4}'.format(msums), '{0!s:.4}'.format(mstd),'{0!s:.5}'.format(mpps),  '{0!s:.4}'.format(spps)))
     mtpi = mtpi + msums
 
 print 'mean total impact: ' + '{0!s:.4}'.format(mtpi)
