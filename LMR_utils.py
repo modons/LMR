@@ -25,7 +25,7 @@ import re
 import cPickle
 import collections
 import copy
-#import ESMF
+import ESMF
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt
@@ -260,7 +260,7 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
-def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False):
+def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save_full_field=False):
     """
     Compute the ensemble mean and variance for files in the input directory
 
@@ -284,7 +284,6 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False):
               : Added use of new "natural_sort" function to sort filenames composed with negative years.
       Revised August 2017 (G. Hakim, UW)
               : Added boolean flag to control the generation of analysis_Ye.pckl file.
-
       Revised August 2017 (M. Erb; G. Hakim git port)
               : added full-ensemble saving facility
       Revised August 2017 (R. Tardif, UW)
@@ -498,7 +497,7 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False):
             continue
 
 
-        if (state_info[var]['vartype'] != '0D:time series') and (save_full_field == True):
+        if (state_info[var]['vartype'] != '0D:time series') and save_full_field:
             filen = workdir + '/ensemble_full_' + var
             print 'writing the new ensemble file' + filen
             np.savez(filen, **vars_to_save_ens)
