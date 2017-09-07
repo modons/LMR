@@ -25,7 +25,7 @@ import re
 import cPickle
 import collections
 import copy
-import ESMF
+#import ESMF
 from time import time
 from os.path import join
 from math import radians, cos, sin, asin, sqrt

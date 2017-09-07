@@ -1,32 +1,3 @@
-<<<<<<< HEAD
-import sys
-sys.path.append("..")
-
-import glob, os
-import LMR_utils
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-from matplotlib import pyplot as plt
-from matplotlib.font_manager import FontProperties
-
-# save figures here
-#figdir = '/Users/hakim/lmr/lmr_plots/'
-figdir = '/home/disk/ice4/hakim/lmr/lmr_plots/'
-
-#datadir_output = '/Users/hakim/data/LMR/archive'
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-
-#nexp = 'dadt_test_xbone'
-#nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'test'
-nexp = 'p2_ccsm4LM_n200_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75_loc25k'
-
-#var = 'tas_sfc_Adec'
-var = 'tas_sfc_Amon'
-
-# loop over directories
-=======
 """
 Module: plot_regional_averages.py
 
@@ -63,19 +34,20 @@ import LMR_utils
 # save figures here:
 # -----------------
 #figdir = '/Users/hakim/lmr/lmr_plots/'
-figdir = '/home/disk/ice4/hakim/lmr/lmr_plots/'
+#figdir = '/home/disk/ice4/hakim/lmr/lmr_plots/'
 #figdir = '/home/disk/kalman3/rtardif/LMR/output/'
+figdir = './'
 
 # LMR input dayta located here:
 # ----------------------------
-#datadir_output = '/Users/hakim/data/LMR/archive'
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/Users/hakim/data/LMR/archive'
+#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 
 # Name of reconstruction experiment
 # ---------------------------------
-#nexp = 'test'
+nexp = 'test'
 #nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
-nexp = 'p2_ccsm4LM_n200_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75_loc25k'
+#nexp = 'p2_ccsm4LM_n200_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75_loc25k'
 
 
 # Variable to plot
@@ -83,42 +55,11 @@ nexp = 'p2_ccsm4LM_n200_bilin_GISTEMPGPCCseasonPSM_PAGES2kv2_pf0.75_loc25k'
 var = 'tas_sfc_Amon'
 #var = 'tas_sfc_Adec'
 
-
 # MC iterations to consider
->>>>>>> refs/remotes/robertsgit/DADT
 MCset = None
 #MCset = (0,0)
 #MCset = (0,10)
 
-<<<<<<< HEAD
-# region labels for plotting (push this to LMR_utils.py?)
-labs = [
-'Arctic: north of 60N ',
-'Europe: 35-70N, 10W-40E',
-'Asia: 23-55N',
-'North America (trees):30-55N,75-130W',
-'South America: 20S-65S, 30W-80W',
-'Australasia: 0-50S, 110E-180E', 
-'Antarctica: south of 60S'
-]
-
-labs_short = [
-'Arctic',
-'Europe',
-'Asia',
-'N. America',
-'S. America',
-'Australasia',
-'Antarctica',
-'NH',
-'SH',
-'global mean'
-]
-
-#----------------------------------------------------------------------------
-# end of user-defined parameters
-#----------------------------------------------------------------------------
-=======
 
 # ---- End section of user-defined parameters ----
 # ------------------------------------------------
@@ -128,8 +69,7 @@ labs_short = [
 #  Important: These need to match the hard-coded definitions
 #  in PAGES2K_regional_means() found in LMR_utils.py
 
-# more compact definition of regions
-# than original using multiple lists
+# more compact definition of regions than original using multiple lists
 region_labels = OrderedDict([
     ('Arctic', 'Arctic: north of 60N'),
     ('Europe','Europe: 35-70N, 10W-40E'),
@@ -147,7 +87,6 @@ region_labels = OrderedDict([
 labs_short = region_labels.keys()
 labs = [region_labels[item] for item in labs_short]
 
->>>>>>> refs/remotes/robertsgit/DADT
 
 #----------------------------------------------------------------------------
 # plot the ensemble mean for a single realization for all regions on a single figure...
@@ -176,18 +115,7 @@ print 'max lat:' + str(np.max(lat))
 print 'min lon:' + str(np.min(lon))
 print 'max lon:' + str(np.max(lon))
 
-<<<<<<< HEAD
-#print np.shape(xam)
-#print np.shape(lat)
-#print np.shape(lon)
-#print nyrs
-#print np.max(xam)
-
 [tmp_gm,_,_] = LMR_utils.global_hemispheric_means(xam,lat[:,1])
-#print tmp_gm
-=======
-[tmp_gm,_,_] = LMR_utils.global_hemispheric_means(xam,lat[:,1])
->>>>>>> refs/remotes/robertsgit/DADT
 rm = LMR_utils.PAGES2K_regional_means(xam,lat[:,1],lon[1,:])
 nregions = np.shape(rm)[0]
 print 'nregions='+ str(nregions)
@@ -195,13 +123,9 @@ print 'nregions='+ str(nregions)
 fontP = FontProperties()
 fontP.set_size('small')
 for k in range(nregions):
-    plt.plot(rm[k,:],label=labs[k],alpha=0.5)
+    plt.plot(years,rm[k,:],label=labs[k],alpha=0.5)
 
-<<<<<<< HEAD
-lgd = plt.legend(bbox_to_anchor=(0.5,-.1),loc=9,ncol=2,borderaxespad=0)
-=======
 lgd = plt.legend(bbox_to_anchor=(0.5,-.1),loc=9,ncol=2,borderaxespad=0,fontsize=10)
->>>>>>> refs/remotes/robertsgit/DADT
 art = []
 art.append(lgd)
 fname = figdir+'regions_all_'+nexp+'.png'
@@ -211,35 +135,23 @@ plt.figure()
 matplotlib.rcParams.update({'font.size':8})
 for k in range(nregions):
     plt.subplot(3,3,k+1)
-    plt.plot(rm[k,:],label=labs_short[k])
-<<<<<<< HEAD
-    plt.title(labs_short[k])
-=======
+    plt.plot(years,rm[k,:],label=labs_short[k])
     xmin,xmax,ymin,ymax = plt.axis()
     plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
     plt.xlabel('Year CE')
     plt.title(labs_short[k],fontweight='bold')
->>>>>>> refs/remotes/robertsgit/DADT
     
 plt.tight_layout()
 fname = figdir+'regions_'+nexp+'.png'
 print 'saving...'
 print fname
 plt.savefig(fname,additional_artists=art,bbox_inches='tight')
-<<<<<<< HEAD
-plt.show()
-
-#----------------------------------------------------------------------------
-# plot the iteration/ensemble mean for all regions on different subplots of a single figure, along with iteration uncertainty...
-#   --change to ensemble 5/95 when full-field ensemble writing ia available!
-=======
 #plt.show()
 
 #----------------------------------------------------------------------------
 # plot the iteration/ensemble mean for all regions on different subplots of a
 # single figure, along with iteration uncertainty...
 # -- change to ensemble 5/95 when full-field ensemble writing ia available!
->>>>>>> refs/remotes/robertsgit/DADT
 #----------------------------------------------------------------------------
 
 # get a listing of the iteration directories, and combine with MCset
@@ -292,13 +204,6 @@ print np.max(rms_95)
 plt.figure()
 for k in range(nregions+2):
     plt.subplot(3,3,k+1)
-<<<<<<< HEAD
-    plt.fill_between(years,rms_5[k,:],rms_95[k,:],facecolor='gray',alpha = 0.75,linewidth=0.)
-    plt.plot(years,rms_avg[k,:],color='k',label=labs_short[k],lw=0.5)
-    #plt.plot(years,rms_5[k,:],color='gray',alpha=0.5,lw=0.5)
-    #plt.plot(years,rms_95[k,:],color='gray',alpha=0.5,lw=0.5)
-    plt.title(labs_short[k])
-=======
     plt.fill_between(years,rms_5[k,:],rms_95[k,:],facecolor='gray',alpha = 0.5,linewidth=0.)
     plt.plot(years,rms_avg[k,:],color='b',label=labs_short[k],lw=0.5)
     #plt.plot(years,rms_5[k,:],color='gray',alpha=0.5,lw=0.5)
@@ -307,19 +212,10 @@ for k in range(nregions+2):
     plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
     plt.xlabel('Year CE')
     plt.title(labs_short[k],fontweight='bold')
->>>>>>> refs/remotes/robertsgit/DADT
     
 plt.tight_layout()
 fname = figdir+'regions_'+nexp+'_5_95.png'
 print 'saving...'
 print fname
 plt.savefig(fname,additional_artists=art,bbox_inches='tight')
-<<<<<<< HEAD
-
-
 #plt.show()
-
-
-=======
-#plt.show()
->>>>>>> refs/remotes/robertsgit/DADT
