@@ -538,7 +538,7 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
             years.append(float(year))
             Xatmp = np.load(f)
             # Extract the Ye's from augmented state (beyond stateDim 'til end of
-            #  state vector).
+            # state vector).
             # RT Aug 2017: These now include Ye's from assimilated AND withheld proxies.
             Ye_s[:, k, :] = Xatmp[stateDim:, :]
         years = np.array(years)
@@ -558,7 +558,8 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
             YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
             YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
             YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
-
+            YeDict[(pobj.type, pobj.id)]['augStateIndex'] = i
+            
             nbassim +=1
 
         # loop over non-assimilated (withheld) proxies
@@ -574,7 +575,7 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
                 YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
                 YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
                 YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[nbassim+j, yr_idxs, :]
-
+                YeDict[(pobj.type, pobj.id)]['augStateIndex'] = nbassim+j
             
         # Dump dictionary to pickle file
         # using protocol 2 for more efficient storing
