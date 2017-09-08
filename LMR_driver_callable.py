@@ -402,20 +402,6 @@ def LMR_driver_callable(cfg=None):
         Xb_one_aug = Xb_one
 
     
-    # NEW: Dump prior state vector (Xb_one) to file, one file per state variable
-    print '\n ---------- saving Xb_one for each variable to separate file -----------\n'
-    for var in X.trunc_state_info.keys():
-        print var
-        # now need to pluck off the index region that goes with var
-        ibeg = X.trunc_state_info[var]['pos'][0]
-        iend = X.trunc_state_info[var]['pos'][1]
-        Xb_var = np.reshape(Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
-        if np.ma.is_masked(Xb_var):
-            Xb_var = Xb_var.filled()
-        filen = workdir + '/' + 'Xb_one' + '_' + var 
-        np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
-    # END new file save
-
     # Dump entire prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
     try:
@@ -428,6 +414,19 @@ def LMR_driver_callable(cfg=None):
     np.savez(filen, Xb_one=out_Xb_one, Xb_one_aug=out_Xb_one_aug,
              stateDim=state_dim,
              Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
+
+    # NEW: Dump prior state vector (Xb_one) to file, one file per state variable
+    print '\n ---------- saving Xb_one for each variable to separate file -----------\n'
+    for var in X.trunc_state_info.keys():
+        print var
+        # now need to pluck off the index region that goes with var
+        ibeg = X.trunc_state_info[var]['pos'][0]
+        iend = X.trunc_state_info[var]['pos'][1]
+        Xb_var = np.reshape(out_Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
+        filen = workdir + '/' + 'Xb_one' + '_' + var 
+        np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
+    # END new file save
+    
     
     # ==========================================================================
     # Loop over all years & proxies and perform assimilation -------------------
