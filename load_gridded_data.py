@@ -1312,22 +1312,26 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             outtimeavg_key = outtimeavg_dict.keys()[0]
             # here, it should be 'annual'. No other definition allowed.
             if outtimeavg_key == 'annual':
-                outtimeavg = outtimeavg_dict['annual']
+                outtimeavg_val = outtimeavg_dict['annual']
             else:
-                # Set to calendar year for now...
-                outtimeavg = range(1,13)
+                # Set to calendar year first, to perform averaging over
+                # annual cycle before averaging over multiple years
+                outtimeavg_val = range(1,13)
         else:
+            # not a dict, must be a list or tuple of lists providing
+            # sequence(s) of months over which to average
             outtimeavg_key = 'annual'
+            outtimeavg_val = outtimeavg
             
-        # outtimeavg is a tuple, or a list?
-        if type(outtimeavg) is tuple:
+        # outtimeavg_val is a tuple, or a list?
+        if type(outtimeavg_val) is tuple:
             # Is var_info defined? 
             if var_info:
                 # assign appropriate seasonality whether variable represents temperature *or* moisture
                 if vardef in var_info['temperature']:
-                    outtimeavg_var =  outtimeavg[0]
+                    outtimeavg_var =  outtimeavg_val[0]
                 elif vardef in var_info['moisture']:
-                    outtimeavg_var =  outtimeavg[1]
+                    outtimeavg_var =  outtimeavg_val[1]
                 else:
                     # variable not representing temperature or moisture
                     print('ERROR: outtimeavg is a tuple but variable is not' \
@@ -1338,8 +1342,8 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                        ' contained in this dict. is required to assign proper' \
                        ' seasonality to temperature and moisture variables')
                 raise SystemExit()
-        elif type(outtimeavg) is list:
-            outtimeavg_var =  outtimeavg
+        elif type(outtimeavg_val) is list:
+            outtimeavg_var =  outtimeavg_val
         else:
             print 'ERROR: outtimeavg has to be a list or a tuple of lists, but is:', outtimeavg
             raise SystemExit()
