@@ -32,7 +32,7 @@ core:
   use_precalc_ye: True
   write_posterior_Ye: False
   save_full_field: False
-recon_period: !!python/tuple [1800, 2000]
+  recon_period: !!python/tuple [1800, 2000]
 #  recon_period: !!python/tuple [-120000, 2000]
   recon_timescale: 1
 #  recon_timescale: 250
@@ -157,7 +157,7 @@ proxies:
       'Lake Cores_GeoChem',
       'Lake Cores_Misc',
       'Marine Cores_d18O',
-      'Speleothems_d18O',
+#      'Speleothems_d18O',
       'Bivalve_d18O'
       ]
     proxy_psm_type:
