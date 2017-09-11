@@ -83,11 +83,17 @@ subdirectory ::
     cd data/model/ccsm4_last_millenium/
     ln -s tas_Amon_CCSM4_past1000_085001-185012.nc tas_sfc_Amon_CCSM4_past1000_085001-185012.nc
 
+You may also need to retrieve the newest version of the proxy dataset.  Contact the LMR team for this.
+
 Running an Experiment
 ---------------------
 
-To run an experiment, you must edit configuration. In the LMR code directory
-copy ``config_template.yml``, which is under version control, to ``config .yml``,
+To run an experiment, you must edit configuration. First, in the LMR code directory,
+copy the file ``LRM_config_template.py`` to ``LMR_config.py``.  In ``LMR_config.py``,
+change the ``SRC_DIR`` variable to the LMR code directory on your machine (i.e. the
+directory which contains the ``LMR_config_template.py`` file).
+
+Next, copy ``config_template.yml``, which is under version control, to ``config .yml``,
 which is not. ::
 
     cp config_template.yml config.yml
@@ -106,7 +112,6 @@ Now edit ``config.yml``. At a minimum, do the following:
    data will be written during the experiment, so local disk is better (faster)
    than over a network. If the directory does not exist, you need to create it
    before running an experiment.
-
 
 3. set ``core.archive_dir`` to the LMR reconstruction archive directory. This is where
    the experiment is archived, and datadir_output is scrubbed clean
