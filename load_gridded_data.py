@@ -77,17 +77,13 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq):
     # Check if file exists
     infile = data_dir+'/GISTEMP/'+data_file
     if not os.path.isfile(infile):
-        print 'Error in specification of gridded dataset'
-        print 'File ', infile, ' does not exist! - Exiting ...'
-        exit(1)
-
+        raise SystemExit(('Error in specification of gridded dataset. '
+                          'File {} does not exist. Exiting.').format(infile))
+        
     # Sanity check on number of variables to read
     if len(data_vars) > 1:
-        print 'Too many variables to read!'
-        print 'This file only contains surface air temperature (anomalies)'
-        print 'Exiting!'
-        exit(1)
-
+        raise SystemExit('Too many variables to read! This file only contains'
+                         ' surface air temperature (anomalies). Exiting.')
         
     dateref = datetime(1800,1,1,0)
     data = Dataset(infile,'r')
@@ -178,17 +174,13 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars,outfreq):
     # Check if file exists
     infile = data_dir+'/HadCRUT/'+data_file
     if not os.path.isfile(infile):
-        print 'Error in specification of gridded dataset'
-        print 'File ', infile, ' does not exist! - Exiting ...'
-        exit(1)
+        raise SystemExit(('Error in specification of gridded dataset. '
+                          'File {} does not exist. Exiting.').format(infile))
 
     # Sanity check on number of variables to read
     if len(data_vars) > 1:
-        print 'Too many variables to read!'
-        print 'This file only contains surface air temperature (anomalies)'
-        print 'Exiting!'
-        exit(1)
-
+        raise SystemExit('Too many variables to read! This file only contains'
+                         ' surface air temperature (anomalies). Exiting.')
 
     dateref = datetime(1850,1,1,0)
     data = Dataset(infile,'r')
@@ -279,16 +271,13 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq):
     # Check if file exists
     infile = data_dir+'/BerkeleyEarth/'+data_file
     if not os.path.isfile(infile):
-        print 'Error in specification of gridded dataset'
-        print 'File ', infile, ' does not exist! - Exiting ...'
-        exit(1)
+        raise SystemExit(('Error in specification of gridded dataset. '
+                          'File {} does not exist. Exiting.').format(infile))
 
     # Sanity check on number of variables to read
     if len(data_vars) > 1:
-        print 'Too many variables to read!'
-        print 'This file only contains surface air temperature (anomalies)'
-        print 'Exiting!'
-        exit(1)
+        raise SystemExit('Too many variables to read! This file only contains'
+                         ' surface air temperature (anomalies). Exiting.')
 
     data = Dataset(infile,'r')
 
@@ -386,16 +375,13 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars,outfreq):
     # Check if file exists
     infile = data_dir+'/MLOST/'+data_file
     if not os.path.isfile(infile):
-        print 'Error in specification of gridded dataset'
-        print 'File ', infile, ' does not exist! - Exiting ...'
-        exit(1)
+        raise SystemExit(('Error in specification of gridded dataset. '
+                          'File {} does not exist. Exiting.').format(infile))
 
     # Sanity check on number of variables to read
     if len(data_vars) > 1:
-        print 'Too many variables to read!'
-        print 'This file only contains surface air temperature (anomalies)'
-        print 'Exiting!'
-        exit(1)
+        raise SystemExit('Too many variables to read! This file only contains'
+                         ' surface air temperature (anomalies). Exiting.')
 
     data = Dataset(infile,'r')
 
@@ -490,16 +476,13 @@ def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies,outfreq):
     # Check if file exists
     infile = data_dir+'/GPCC/'+data_file
     if not os.path.isfile(infile):
-        print 'Error in specification of gridded dataset'
-        print 'File ', infile, ' does not exist! - Exiting ...'
-        exit(1)
+        raise SystemExit(('Error in specification of gridded dataset. '
+                          'File {} does not exist. Exiting.').format(infile))
 
     # Sanity check on number of variables to read
     if len(data_vars) > 1:
-        print 'Too many variables to read!'
-        print 'This file only contains precipitation accumulation or flux data'
-        print 'Exiting!'
-        exit(1)
+        raise SystemExit('Too many variables to read! This file only contains'
+                         ' precipitation accumulation or flux data. Exiting.')
 
     data = Dataset(infile,'r')
 
@@ -607,17 +590,13 @@ def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,outfreq
     # Check if file exists
     infile = data_dir+'/DaiPDSI/'+data_file
     if not os.path.isfile(infile):
-        print 'Error in specification of gridded dataset'
-        print 'File ', infile, ' does not exist! - Exiting ...'
-        exit(1)
+        raise SystemExit(('Error in specification of gridded dataset. '
+                          'File {} does not exist. Exiting.').format(infile))
 
     # Sanity check on number of variables to read
     if len(data_vars) > 1:
-        print 'Too many variables to read!'
-        print 'This file only contains surface PDSI (anomalies)'
-        print 'Exiting!'
-        exit(1)
-
+        raise SystemExit('Too many variables to read! This file only contains'
+                         ' Palmer Drought Severity Index (PDSI). Exiting.')
 
     data = Dataset(infile,'r')
 
@@ -728,17 +707,14 @@ def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,outfreq):
     # Check if file exists
     infile = data_dir+'/SPEI/'+data_file
     if not os.path.isfile(infile):
-        print 'Error in specification of gridded dataset'
-        print 'File ', infile, ' does not exist! - Exiting ...'
-        exit(1)
+        raise SystemExit(('Error in specification of gridded dataset. '
+                          'File {} does not exist. Exiting.').format(infile))
 
     # Sanity check on number of variables to read
     if len(data_vars) > 1:
-        print 'Too many variables to read!'
-        print 'This file only contains surface PDSI (anomalies)'
-        print 'Exiting!'
-        exit(1)
-
+        raise SystemExit('Too many variables to read! This file only contains'
+                         ' Standardized Precipitation Evapotranspiration Index (SPEI).'
+                         ' Exiting.')
 
     data = Dataset(infile,'r')
 

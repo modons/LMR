@@ -104,7 +104,7 @@ class v_core(object):
     #psm_type = 'bilinear'
 
     # Boolean to indicate whether upload of existing PSM data is to be performed. Keep False here. 
-    load_psmobj = False # ???
+    load_psmobj = False 
     
     ##** END User Parameters **##
         
@@ -1014,7 +1014,8 @@ def main():
                     test_psm_obj_dict[str(s)] =  test_psm_obj
                 
                 except:
-                    pass
+                    print('Test on seasonnality %s could not be completed.' %str(s))
+
 
                 i += 1
             
@@ -1058,21 +1059,22 @@ def main():
                         test_psm_obj_dict[str((sT,sM))] =  test_psm_obj
                                                 
                     except:
-                        pass
+                        print('Test on seasonnality pair %s could not be completed.' %(str(sT)+':'+str(sM)))
+
                     
                     i += 1
 
-        # -----------------------------------------------------------------
-        # Select the psm object corresponding to the season (linear) or
-        # pair of seasons (bilinear) that provide the best fit 
-        # -----------------------------------------------------------------
 
         # if calculations could not be completed, just move on to next
         # proxy record
         if np.all(metric==defaultnb):
-            print 'Tests on seasonality could not be completed...Skipping proxy record.'
+            print('Calibration could not be completed...Skipping proxy record.')
             continue
-        
+
+
+        # Select the psm object corresponding to the season (linear) or
+        # pair of seasons (bilinear) that provide the best fit 
+        # -------------------------------------------------------------
         # Select the "seasonal" model (psm)
         # criterion: min of metric if BIC, max if adjusted R-squared
         indmin = np.argmin(metric)
@@ -1142,8 +1144,7 @@ def main():
             psm_dict_diag[sitetag]['calib_fit_values'] = Y.psm_obj.calib_proxy_fit
             
         else:
-            print 'ERROR: problem with the type of psm!'
-            exit(1)
+            raise SystemExit('ERROR: problem with the type of psm!')
 
 
     # Summary of calibrated proxy sites
