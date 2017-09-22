@@ -170,6 +170,10 @@ assim_listdict = []
 iter = 0
 for dir in dirset:
 
+    if verbose > 0:
+        print('================================================')
+        print('\nMC iteration: %s' %dir)
+    
     # Load the Ye data and parse between assimilated and withheld records
     filn = join(dir,'analysis_Ye.pckl')
     infile = open(filn,'rb')

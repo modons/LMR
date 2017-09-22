@@ -92,18 +92,18 @@ elif proxies == 'NCDC':
                    'Tree Rings_WidthBreit'         :'o',\
                    'Tree Rings_Isotopes'           :'*',\
                    'Corals and Sclerosponges_d18O' :'p',\
-                   'Corals and Sclerosponges_SrCa' :'8',\
+                   'Corals and Sclerosponges_SrCa' :'h',\
                    'Corals and Sclerosponges_Rates':'D',\
                    'Ice Cores_d18O'                :'v',\
                    'Ice Cores_dD'                  :'^',\
                    'Ice Cores_Accumulation'        :'D',\
                    'Ice Cores_MeltFeature'         :'d',\
                    'Lake Cores_Varve'              :'<',\
+                   'Lake Cores_Misc'               :'>',\
                    'Lake Cores_BioMarkers'         :'>',\
                    'Lake Cores_GeoChem'            :'^',\
-                   'Lake Cores_Misc'               :'^',\
                    'Marine Cores_d18O'             :'H',\
-                   'Bivalve_d18O'                  :'h',\
+                   'Bivalve_d18O'                  :'8',\
                    'Speleothems_d18O'              :'h',\
     }
 
@@ -376,6 +376,18 @@ def main():
 
             verif_period_label = str(verif_period[p][0])+'-'+str(verif_period[p][1])
 
+            proxy_types = []
+            for sitetag in sites:
+                sitetype = sitetag[0]
+                if sitetype not in proxy_types:
+                    proxy_types.append(sitetype)
+            proxy_types = sorted(proxy_types)
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.   # GLOBAL
+            x, y = m(0.,0.)
+            l = []
+            for sitetype in sorted(proxy_types):                
+                l.append(m.scatter(x,y,35,c='white',marker=proxy_verif[sitetype],edgecolor='black',linewidth='1'))
+
             # ===========================================================================
             # 2) Maps with proxy sites plotted with dots colored according to correlation
             # ===========================================================================
@@ -403,8 +415,6 @@ def main():
             m.drawmeridians(np.arange(-180.,181.,lonres))
 
             # loop over proxy sites
-            l = []
-            proxy_types = []
             for sitetag in sites:
                 sitetype = sitetag[0]
                 sitename = sitetag[1]
@@ -413,9 +423,6 @@ def main():
                 lat = workdict[p][sitetag]['lat']
                 lon = workdict[p][sitetag]['lon']
                 x, y = m(lon,lat)
-                if sitetype not in proxy_types:
-                    proxy_types.append(sitetype)
-                    l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
                 Gplt = m.scatter(x,y,35,c=workdict[p][sitetag]['MeanCorr'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
 
             cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
@@ -466,8 +473,6 @@ def main():
                 m.drawmeridians(np.arange(-180.,181.,lonres))
 
                 # loop over proxy sites
-                l = []
-                proxy_types = []
                 for sitetag in sites:
                     sitetype = sitetag[0]
                     sitename = sitetag[1]
@@ -476,10 +481,6 @@ def main():
                     lat = workdict[p][sitetag]['lat']
                     lon = workdict[p][sitetag]['lon']
                     x, y = m(lon,lat)
-                    if sitetype not in proxy_types:
-                        proxy_types.append(sitetype)
-                        l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
-
                     plot_var = dplot[dd]
                     Gplt = m.scatter(x,y,35,c=workdict[p][sitetag][plot_var],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
 
@@ -500,7 +501,7 @@ def main():
                        ncol=3,
                        fontsize=9)
 
-            #fig.tight_layout()
+            fig.tight_layout()
             plt.savefig('%s/%s_verify_proxy_map_%s_ce_%s.png' % (figdir,nexp,v,verif_period_label),bbox_inches='tight')
             if make_pdfs:
                 plt.savefig('%s/%s_verify_proxy_map_%s_ce_%s.pdf' % (figdir,nexp,v,verif_period_label),bbox_inches='tight', dpi=300, format='pdf')
@@ -521,8 +522,6 @@ def main():
             m.drawmeridians(np.arange(-180.,181.,lonres))
 
             # loop over proxy sites
-            l = []
-            proxy_types = []
             for sitetag in sites:
                 sitetype = sitetag[0]
                 sitename = sitetag[1]
@@ -531,10 +530,6 @@ def main():
                 lat = workdict[p][sitetag]['lat']
                 lon = workdict[p][sitetag]['lon']
                 x, y = m(lon,lat)
-                if sitetype not in proxy_types:
-                    proxy_types.append(sitetype)
-                    l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
-
                 plot_var = workdict[p][sitetag]['MeanCE'] - workdict[p][sitetag]['PriorMeanCE']
                 Gplt = m.scatter(x,y,35,c=plot_var,marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
             cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
@@ -548,12 +543,11 @@ def main():
                        ncol=3,
                        fontsize=9)
 
-            #fig.tight_layout()
+            fig.tight_layout()
             plt.savefig('%s/%s_verify_proxy_map_%s_delta_ce_%s.png' % (figdir,nexp,v,verif_period_label),bbox_inches='tight')
             if make_pdfs:
                 plt.savefig('%s/%s_verify_proxy_map_%s_delta_ce_%s.pdf' % (figdir,nexp,v,verif_period_label),bbox_inches='tight', dpi=300, format='pdf')
             plt.close()
-
 
 
             # ==========================================================================================
@@ -587,8 +581,6 @@ def main():
                 m.drawmeridians(np.arange(-180.,181.,lonres))
 
                 # loop over proxy sites
-                l = []
-                proxy_types = []
                 for sitetag in sites:
                     sitetype = sitetag[0]
                     sitename = sitetag[1]
@@ -597,10 +589,6 @@ def main():
                     lat = workdict[p][sitetag]['lat']
                     lon = workdict[p][sitetag]['lon']
                     x, y = m(lon,lat)
-                    if sitetype not in proxy_types:
-                        proxy_types.append(sitetype)
-                        l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
-
                     plot_var = dplot[dd]
                     Gplt = m.scatter(x,y,35,c=workdict[p][sitetag][plot_var],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
 
@@ -621,7 +609,7 @@ def main():
                        ncol=3,
                        fontsize=9)
 
-            #fig.tight_layout()
+            fig.tight_layout()
             plt.savefig('%s/%s_verify_proxy_map_%s_EnsCal_%s.png' % (figdir,nexp,v,verif_period_label),bbox_inches='tight')
             if make_pdfs:
                 plt.savefig('%s/%s_verify_proxy_map_%s_EnsCal_%s.pdf' % (figdir,nexp,v,verif_period_label),bbox_inches='tight', dpi=300, format='pdf')
