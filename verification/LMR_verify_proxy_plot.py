@@ -178,6 +178,16 @@ def main():
         else:
             verif_data = False
 
+    # get list of all proxy types in the assimilated/withheld data
+    lst = []
+    for p in range(nbperiods):
+        a_sites = assim_dict[p].keys()
+        lst = lst + list(set([item[0] for item in a_sites]))
+        if verif_data:
+            v_sites = verif_dict[p].keys()
+            lst = lst + list(set([item[0] for item in v_sites]))
+    master_proxy_types = list(set([item for item in lst]))
+    master_proxy_types.insert(0,'All')
     
     # ==================
     # Now creating plots
@@ -193,168 +203,214 @@ def main():
     # ============================================================================================================
     # 1) Histograms of (recon, proxy) CORRELATION, CE across grand ensemble for all proxy types and per proxy type
     # ============================================================================================================
-    #fig = plt.figure()
-    fig = plt.figure(figsize=(12,8))
 
-    irow = 1
-    for v in vtype.keys(): # "assim" & "verif" proxies
+    # loop over proxy types
+    for proxy in master_proxy_types:
 
-        if v == 'verif' and not verif_data:
-            break
+        print('Proxies: %s' %proxy)
         
-        ax_master = fig.add_subplot(2,1,irow)
-        # Turn off axis lines and ticks of the big subplot 
-        ax_master.tick_params(labelcolor=(1.,1.,1., 0.0), top='off', bottom='off', left='off', right='off')
-        # Removes the white frame
-        ax_master._frameon = False
-        ax_master.set_title("%s\n" % vtype[v], fontsize=16, fontweight='bold')
+        fig = plt.figure(figsize=(12,8))
 
-        # ----------------------------------
-        # Stats based on **all** proxy types
-        # ----------------------------------
+        irow = 1
+        for v in vtype.keys(): # "assim" & "verif" proxies
 
-        facecolor = fcolor[0]
-        if v == 'assim':
-            pos = [1,2,3]
-        else:
-            pos = [4,5,6]
+            if v == 'verif' and not verif_data:
+                break
 
-        bins_corr = np.arange(-1.-binwidth/2, 1.+binwidth/2, binwidth)
-        bins_ce   = np.arange(-2.-binwidth/2, 1.+binwidth/2, binwidth)
+            ax_master = fig.add_subplot(2,1,irow)
+            # Turn off axis lines and ticks of the big subplot 
+            ax_master.tick_params(labelcolor=(1.,1.,1., 0.0), top='off', bottom='off', left='off', right='off')
+            # Removes the white frame
+            ax_master._frameon = False
+            ax_master.set_title("%s\n" % vtype[v], fontsize=16, fontweight='bold')
 
-        # 1) --- Correlation ---
-        ax = fig.add_subplot(2,3,pos[0])
+            # ----------------------------------
+            # Stats based on **all** proxy types
+            # ----------------------------------
 
-        prior_tmp = []
-        for p in range(nbperiods):
-            # pick right dict and associate to "workdict"
-            dname = v+'_dict'
-            workdict = eval(dname)
-            sitetag = workdict[p].keys()
-            proxy_types = list(set([item[0] for item in sitetag]))
+            facecolor = fcolor[0]
+            if v == 'assim':
+                pos = [1,2,3]
+            else:
+                pos = [4,5,6]
 
-            tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-            stat = [item for sublist in tmp for item in sublist] # flatten list of lists
-            nbdata = len(stat)
-            mean_stat = np.mean(stat)
-            std_stat = np.std(stat)
-            results, edges = np.histogram(stat, bins=bins_corr, normed=True)
-            plt.bar(edges[:-1]+binwidth/2,results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,align="center",label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
+            bins_corr = np.arange(-1.-binwidth/2, 1.+binwidth/2, binwidth)
+            bins_ce   = np.arange(-2.-binwidth/2, 1.+binwidth/2, binwidth)
 
-            # Accumulate prior stat
-            tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-            prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
+            # 1) --- Correlation ---
+            ax = fig.add_subplot(2,3,pos[0])
 
-        
-        prior_corr = [item for sublist in prior_tmp for item in sublist]
-        results, edges = np.histogram(prior_corr, bins=bins_corr, normed=True)
-        plt.plot(edges[:-1]+binwidth,results,linewidth=1,ls='steps',color='black',label='Prior')
+            mean_stat = np.zeros([nbperiods])
+            std_stat = np.zeros([nbperiods])
+            prior_tmp = []
+            for p in range(nbperiods):
+                # pick right dict and associate to "workdict"
+                dname = v+'_dict'
+                workdict = eval(dname)
+                sitetag = workdict[p].keys()
+                if proxy == 'All':
+                    proxy_types = list(set([item[0] for item in sitetag]))
+                else:
+                    proxy_types = proxy
 
-        plt.xlabel("Correlation",fontweight='bold')
-        plt.ylabel("Probability density",fontweight='bold')
-        xmin,xmax,ymin,ymax = plt.axis()
-        ymin = 0.0
-        #ymax = 0.04; nbins = 4
-        #ymax = 0.05; nbins = 5 # for r_crit = 0.2
-        #ymax = 0.1; nbins = 5
-        ymax = 2.0; nbins = 5
-        plt.axis((CORRrange[0],CORRrange[1],ymin,ymax))
-        plt.locator_params(axis = 'y', nbins = nbins)
-        plt.legend(loc=2,fontsize=10,frameon=False,handlelength=1)
+                tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                nbdata = len(stat)
+                mean_stat[p] = np.mean(stat)
+                std_stat[p] = np.std(stat)
+                results, edges = np.histogram(stat, bins=bins_corr, normed=True)
+                plt.bar(edges[:-1]+binwidth/2,results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,align="center",label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
 
+                # Accumulate prior stat
+                tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
+
+            xmind,xmaxd,ymind,ymaxd = plt.axis()
+                
+            prior_corr = [item for sublist in prior_tmp for item in sublist]
+            results, edges = np.histogram(prior_corr, bins=bins_corr, normed=True)
+            plt.plot(edges[:-1]+binwidth,results,linewidth=1,ls='steps',color='black',label='Prior')
+
+            plt.xlabel("Correlation",fontweight='bold')
+            plt.ylabel("Probability density",fontweight='bold')
+
+            ymin = 0.0
+            #ymax = 0.04; nbins = 4
+            #ymax = 0.05; nbins = 5 # for r_crit = 0.2
+            #ymax = 0.1; nbins = 5
+            #ymax = 2.0; nbins = 5
+            if proxy == 'All':
+                ymax = 2.0; nbins = 5
+            else:
+                ymax = ymaxd
             
-        # 2) --- CE ---
-        ax = fig.add_subplot(2,3,pos[1])
+            plt.axis((CORRrange[0],CORRrange[1],ymin,ymax))
+            plt.locator_params(axis = 'y', nbins = nbins)
+            plt.legend(loc=2,fontsize=10,frameon=False,handlelength=1)
 
-        prior_tmp = []
-        for p in range(nbperiods):
-            # pick right dict and associate to "workdict"
-            dname = v+'_dict'
-            workdict = eval(dname)
-            sitetag = workdict[p].keys()
-            proxy_types = list(set([item[0] for item in sitetag]))
+            xmin,xmax,ymin,ymax = plt.axis()
+            xpos = xmin+0.025*(xmax-xmin)
+            ypos = ymin+0.5*(ymax-ymin)
+            for p in range(nbperiods):
+                plt.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(mean_stat[p]),fontsize=10,fontweight='bold',color=fcolor[p])
+                ypos = ypos-0.075*(ymax-ymin)
+            plt.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.mean(prior_corr)),fontsize=10,fontweight='bold')
 
-            tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-            stat = [item for sublist in tmp for item in sublist] # flatten list of lists
-            nbdata = len(stat)
-            mean_stat = np.mean(stat)
-            std_stat = np.std(stat)
+
+            # 2) --- CE ---
+            ax = fig.add_subplot(2,3,pos[1])
+
+            mean_stat = np.zeros([nbperiods])
+            std_stat = np.zeros([nbperiods])
+            prior_tmp = []
+            for p in range(nbperiods):
+                # pick right dict and associate to "workdict"
+                dname = v+'_dict'
+                workdict = eval(dname)
+                sitetag = workdict[p].keys()
+                if proxy == 'All':
+                    proxy_types = list(set([item[0] for item in sitetag]))
+                else:
+                    proxy_types = proxy
+
+                tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                nbdata = len(stat)
+                mean_stat[p] = np.mean(stat)
+                std_stat[p] = np.std(stat)
+                # Since CE is not bounded at the lower end, assign values smaller than 1st bin to value of 1st bin 
+                #stat = [bins[0] if x<bins[0] else x for x in stat]
+                results, edges = np.histogram(stat, bins=bins_ce, normed=True)
+                plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
+
+                # Accumulate prior stat
+                tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
+
+            prior_ce = [item for sublist in prior_tmp for item in sublist]
             # Since CE is not bounded at the lower end, assign values smaller than 1st bin to value of 1st bin 
-            #stat = [bins[0] if x<bins[0] else x for x in stat]
-            results, edges = np.histogram(stat, bins=bins_ce, normed=True)
-            plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
+            prior_ce = [bins_ce[0] if x<bins_ce[0] else x for x in prior_ce]
+            results, edges = np.histogram(prior_ce, bins=bins_ce, normed=True)
+            plt.plot(edges[:-1]+binwidth,results,linewidth=1,ls='steps',color='black',label='Prior')
 
-            # Accumulate prior stat
-            tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-            prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
+            plt.xlabel("Coefficient of efficiency",fontweight='bold') 
+            plt.ylabel("Probability density",fontweight='bold')
+            xmin,xmax,ymin,ymax = plt.axis()
+            ymin = 0.0
+            #ymax = 0.45
+            #ymax = 0.1 # for r_crit = 0.2
+            #ymax = 0.5; nbins = 5
+            ymax = 12.0; nbins = 6        
 
-        prior_ce = [item for sublist in prior_tmp for item in sublist]
-        # Since CE is not bounded at the lower end, assign values smaller than 1st bin to value of 1st bin 
-        prior_ce = [bins_ce[0] if x<bins_ce[0] else x for x in prior_ce]
-        results, edges = np.histogram(prior_ce, bins=bins_ce, normed=True)
-        plt.plot(edges[:-1]+binwidth,results,linewidth=1,ls='steps',color='black',label='Prior')
+            plt.axis((CErange[0],CErange[1],ymin,ymax))
+            plt.legend(loc=2,fontsize=10,frameon=False,handlelength=1)
 
-        plt.xlabel("Coefficient of efficiency",fontweight='bold') 
-        plt.ylabel("Probability density",fontweight='bold')
-        xmin,xmax,ymin,ymax = plt.axis()
-        ymin = 0.0
-        #ymax = 0.45
-        #ymax = 0.1 # for r_crit = 0.2
-        #ymax = 0.5; nbins = 5
-        ymax = 12.0; nbins = 6        
-
-        plt.axis((CErange[0],CErange[1],ymin,ymax))
-        plt.legend(loc=2,fontsize=10,frameon=False,handlelength=1)
+            xmin,xmax,ymin,ymax = plt.axis()
+            xpos = xmin+0.025*(xmax-xmin)
+            ypos = ymin+0.5*(ymax-ymin)
+            for p in range(nbperiods):
+                plt.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(mean_stat[p]),fontsize=10,fontweight='bold',color=fcolor[p])
+                ypos = ypos-0.075*(ymax-ymin)
+            plt.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.mean(prior_ce)),fontsize=10,fontweight='bold')
 
 
-        # 3) --- Change in CE from prior to posterior ---
-        ax = fig.add_subplot(2,3,pos[2])
+            # 3) --- Change in CE from prior to posterior ---
+            ax = fig.add_subplot(2,3,pos[2])
 
-        prior_tmp = []
-        for p in range(nbperiods):
-            # pick right dict and associate to "workdict"
-            dname = v+'_dict'
-            workdict = eval(dname)
-            sitetag = workdict[p].keys()
-            proxy_types = list(set([item[0] for item in sitetag]))
+            prior_tmp = []
+            for p in range(nbperiods):
+                # pick right dict and associate to "workdict"
+                dname = v+'_dict'
+                workdict = eval(dname)
+                sitetag = workdict[p].keys()
+                if proxy == 'All':
+                    proxy_types = list(set([item[0] for item in sitetag]))
+                else:
+                    proxy_types = proxy
 
-            tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-            tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-            statPost  = [item for sublist in tmpPost for item in sublist]  # flatten list of lists
-            statPrior = [item for sublist in tmpPrior for item in sublist] # flatten list of lists
+                tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                statPost  = [item for sublist in tmpPost for item in sublist]  # flatten list of lists
+                statPrior = [item for sublist in tmpPrior for item in sublist] # flatten list of lists
 
-            # difference
-            stat = [statPost[i]-statPrior[i] for i in range(len(statPost))]
-            nbdata = len(stat)
-            mean_stat = np.mean(stat)
-            std_stat = np.std(stat)
-            # % of positive change
-            dCEplus = [stat[i] for i in range(len(stat)) if stat[i] > 0.0]
-            frac = float(len(dCEplus))/float(len(stat))
-            fractiondCEplus = str(float('%.2f' % frac ))
-            print 'CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
-                ' Fraction of +change:', fractiondCEplus
+                # difference
+                stat = [statPost[i]-statPrior[i] for i in range(len(statPost))]
+                nbdata = len(stat)
+                mean_stat = np.mean(stat)
+                std_stat = np.std(stat)
+                # % of positive change
+                dCEplus = [stat[i] for i in range(len(stat)) if stat[i] > 0.0]
+                frac = float(len(dCEplus))/float(len(stat))
+                fractiondCEplus = str(float('%.2f' % frac ))
+                print 'CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
+                    ' Fraction of +change:', fractiondCEplus
 
-            results, edges = np.histogram(stat, bins=bins_ce, normed=True)
-            plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
+                results, edges = np.histogram(stat, bins=bins_ce, normed=True)
+                leg = str(verif_period[p][0])+' to '+str(verif_period[p][1])+' : % +change='+str(fractiondCEplus)
+                plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,label=leg)
 
-        plt.xlabel("Change in coefficient of efficiency",fontweight='bold') 
-        plt.ylabel("Probability density",fontweight='bold')
-        xmin,xmax,ymin,ymax = plt.axis()
-        ymin = 0.0
-        ymax = 8.0; nbins = 5        
+            plt.xlabel("Change in coefficient of efficiency",fontweight='bold') 
+            plt.ylabel("Probability density",fontweight='bold')
+            xmin,xmax,ymin,ymax = plt.axis()
+            ymin = 0.0
+            ymax = 8.0; nbins = 5        
 
-        plt.axis((CEchangerange[0],CEchangerange[1],ymin,ymax))
-        plt.legend(loc=2,fontsize=10,frameon=False,handlelength=1)
+            plt.axis((CEchangerange[0],CEchangerange[1],ymin,ymax))
+            plt.legend(loc=2,fontsize=10,frameon=False,handlelength=1)
 
 
-        irow = irow + 1
+            irow = irow + 1
 
-    fig.tight_layout()
-    plt.savefig('%s/%s_verify_proxy_hist_corr_ce_Allproxies.png' % (figdir,nexp),bbox_inches='tight')
-    if make_pdfs:
-        plt.savefig('%s/%s_verify_proxy_hist_corr_ce_Allproxies.pdf' % (figdir,nexp),bbox_inches='tight',dpi=300, format='pdf')
-    plt.close()
+        fig.tight_layout()
+
+        if proxy == 'All':
+            proxy_tag = 'Allproxies'
+        else:
+            proxy_tag = proxy.replace(' ','_')
+        plt.savefig('%s/%s_verify_proxy_hist_corr_ce_%s.png' % (figdir,nexp,proxy_tag),bbox_inches='tight')
+        if make_pdfs:
+            plt.savefig('%s/%s_verify_proxy_hist_corr_ce_%s.pdf' % (figdir,nexp,proxy_tag),bbox_inches='tight',dpi=300, format='pdf')
+        plt.close()
 
     # ==========================================================================
     # PART 2: MAPS of site-based verification metrics --------------------------
