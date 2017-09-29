@@ -422,9 +422,29 @@ def LMR_driver_callable(cfg=None):
         # now need to pluck off the index region that goes with var
         ibeg = X.trunc_state_info[var]['pos'][0]
         iend = X.trunc_state_info[var]['pos'][1]
-        Xb_var = np.reshape(out_Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
-        filen = workdir + '/' + 'Xb_one' + '_' + var 
-        np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
+
+        if X.trunc_state_info[var]['vartype'] == '2D:horizontal':
+            # if no truncation: lat_new and lon_new are not defined...rather get actual lats/lons info from state vector
+            ind_lon = X.trunc_state_info[var]['spacecoords'].index('lon')
+            ind_lat = X.trunc_state_info[var]['spacecoords'].index('lat')
+
+            nlon_new = X.trunc_state_info[var]['spacedims'][ind_lon]
+            nlat_new = X.trunc_state_info[var]['spacedims'][ind_lat]
+
+            lat_sv = Xb_one_coords[ibeg:iend+1, ind_lat]
+            lon_sv = Xb_one_coords[ibeg:iend+1, ind_lon]
+
+            lat_new = np.unique(lat_sv)
+            lon_new = np.unique(lon_sv)
+
+            Xb_var = np.reshape(out_Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
+
+            filen = workdir + '/' + 'Xb_one' + '_' + var 
+            np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
+
+        else:
+            print('Warning: Only saving 2D:horizontal variable. Variable (%s) is of another type' %(var))
+            # TODO: Code mods above are a quick fix. Should allow saving other types of variables here!
     # END new file save
     
     
