@@ -41,18 +41,18 @@ core:
   loc_rad: null
 
 proxies:
-#  use_from: [pages]
-  use_from: [NCDC]
+#  use_from: [PAGES2kv1]
+  use_from: [LMRdb]
 #  use_from: [NCDCdtda]  
   proxy_frac: 1.0
   proxy_timeseries_kind: asis
   proxy_availability_filter: False
   proxy_availability_fraction: 1.0
 
-  pages:
+  PAGES2kv1:
     datadir_proxy: null
-    datafile_proxy: Pages2k_Proxies.df.pckl
-    metafile_proxy: Pages2k_Metadata.df.pckl
+    datafile_proxy: Pages2kv1_Proxies.df.pckl
+    metafile_proxy: Pages2kv1_Metadata.df.pckl
     dataformat_proxy: DF
     regions: [
       'Antarctica',
@@ -118,11 +118,11 @@ proxies:
       Marine sediment_All: [ 'Mg/Ca' ]
       Speleothem_All: [ 'Lamina thickness' ]
 
-  ncdc:
+  LMRdb:
     dbversion: 'v0.2.0'
     datadir_proxy: null
-    datafile_proxy: 'NCDC_{}_Proxies.df.pckl'
-    metafile_proxy: 'NCDC_{}_Metadata.df.pckl'
+    datafile_proxy: 'LMRdb_{}_Proxies.df.pckl'
+    metafile_proxy: 'LMRdb_{}_Metadata.df.pckl'
     dataformat_proxy: 'DF'
     regions: [
       'Antarctica',

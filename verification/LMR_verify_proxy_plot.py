@@ -64,13 +64,13 @@ fcolor = ['blue', 'red']
 # Section 2: Proxy datasets
 # -------------------------
 
-#proxies = 'PAGES'
-proxies = 'NCDC'
+#proxies = 'PAGES2kv1'
+proxies = 'LMRdb'
 
 
 # Assign symbol to proxy types for plotting: dependent on proxy database used.
-if proxies == 'PAGES':
-    # PAGES proxies
+if proxies == 'PAGES2kv1':
+    # PAGES2kv1 proxies
     proxy_verif = {\
                    'Tree ring_Width'       :'o',\
                    'Tree ring_Density'     :'s',\
@@ -83,8 +83,8 @@ if proxies == 'PAGES':
                    'Marine sediment_All'   :'>',\
                    'Speleothem_All'        :'h',\
     }
-elif proxies == 'NCDC':
-    # NCDC proxies
+elif proxies == 'LMRdb':
+    # LMRdb proxies
     proxy_verif = {\
                    'Tree Rings_WoodDensity'        :'s',\
                    'Tree Rings_WidthPages'         :'o',\

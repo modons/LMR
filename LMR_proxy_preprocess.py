@@ -29,6 +29,9 @@ Purpose: Takes proxy data in their native format (.xlsx file for PAGES or collec
               The possibility to "gaussianize" records and to calculate annual averages
               on "tropical year" (Apr to Mar) or calendar year have also been implemented.
               [R. Tardif, U. of Washington, Michael Erb, USC, May 2017]
+            - Renamed the proxy databases to less-confusing convention. 
+              'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
+              [R. Tardif, U. of Washington, Sept 2017]
 """
 import glob
 import os
@@ -64,10 +67,10 @@ def main():
     # Section for User-defined options: begin
     # 
 
-    #proxy_data_source = 'PAGES2K'
-
+    proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
     # ---
-    proxy_data_source = 'NCDC'
+    #proxy_data_source = 'LMRdb'     # proxies from PAGES2k phase 2 (2017) +
+                                    # "in-house" collection in NCDC-templated files
 
     # Determine which dataset(s) (NCDC and/or PAGES2kv2) to include in the DF.
     # - Both           : include_NCDC = True,  include_PAGES2kphase2 = True
@@ -81,13 +84,13 @@ def main():
     # File containing info on duplicates in proxy records
     infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.2.0.xlsx'
 
-    # version of the NCDC proxy db to process
+    # version of the LMRdb proxy db to process
     # - first set put together, including PAGES2k2013 trees
-    #ncdc_dbversion = 'v0.0.0'
+    #LMRdb_dbversion = 'v0.0.0'
     # - PAGES2k2013 trees taken out, but with NCDC-templated records from PAGES2k phase 2, version 1.9.0
-    #ncdc_dbversion = 'v0.1.0'
+    #LMRdb_dbversion = 'v0.1.0'
     # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0). stored in .pklz file
-    ncdc_dbversion = 'v0.2.0'
+    LMRdb_dbversion = 'v0.2.0'
 
     
     # This option transforms all data to a Gaussian distribution.  It should only be used for
@@ -119,36 +122,36 @@ def main():
 
     main_begin_time = clock.time() 
     
-    if proxy_data_source == 'PAGES2K':
+    if proxy_data_source == 'PAGES2Kv1':
         # ============================================================================
-        # PAGES2K proxy data ---------------------------------------------------------
+        # PAGES2Kv1 proxy data -------------------------------------------------------
         # ============================================================================
 
         take_average_out = False
 
         fname = datadir + 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
-        meta_outfile = outdir + 'Pages2k_Metadata.df.pckl'
-        outfile = outdir + 'Pages2k_Proxies.df.pckl'
+        meta_outfile = outdir + 'Pages2kv1_Metadata.df.pckl'
+        outfile = outdir + 'Pages2kv1_Proxies.df.pckl'
         pages_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
 
         
-    elif  proxy_data_source == 'NCDC':
+    elif  proxy_data_source == 'LMRdb':
         # ============================================================================
-        # NCDC proxy data ------------------------------------------------------------
+        # LMRdb proxy data -----------------------------------------------------------
         # ============================================================================
         
-        datadir = datadir+'NCDC/ToPandas_'+ncdc_dbversion+'/'
+        datadir = datadir+'LMRdb/ToPandas_'+LMRdb_dbversion+'/'
 
 
         infoDuplicates = datadir+infoDuplicates
 
         
-        meta_outfile = outdir + 'NCDC_'+ncdc_dbversion+'_Metadata.df.pckl'
-        data_outfile = outdir + 'NCDC_'+ncdc_dbversion+'_Proxies.df.pckl'
+        meta_outfile = outdir + 'LMRdb_'+LMRdb_dbversion+'_Metadata.df.pckl'
+        data_outfile = outdir + 'LMRdb_'+LMRdb_dbversion+'_Proxies.df.pckl'
 
         
         # Specify all proxy types & associated proxy measurements to look for & extract from the data files
-        # This is to take into account all the possible different names found in the NCDC data files.
+        # This is to take into account all the possible different names found in the PAGES2kv2 and NCDC data files.
         proxy_def = \
             {
 #old             'Tree Rings_WidthPages'                : ['TRW','ERW','LRW'],\
@@ -390,6 +393,8 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     meta_sheet_name = 'Metadata'
     metadata = pd.read_excel(filename, meta_sheet_name)
+    # rename 'PAGES ID' column header to more general 'Proxy ID'
+    metadata.rename(columns = {'PAGES ID':'Proxy ID'},inplace=True)
     metadata.to_pickle(metaout)
     
     record_sheet_names = ['AntProxies', 'ArcProxies', 'AsiaProxies',
@@ -1299,7 +1304,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         for ivar in range(nvar):
             proxy_types = [s for s in proxy_types_keep if d['DataColumn' + format(ivar+1, '02') + '_ShortName'] in proxy_def[s]]
             if proxy_types: # if non-empty list
-                # Crude logic to distinguish between PAGES vs Breitenmoser Tree Rings data at proxy type level
+                # Crude logic to distinguish between PAGES2kv2 vs Breitenmoser Tree Rings data at proxy type level
                 if len(proxy_types) > 1 and [item for item in proxy_types if 'Tree Rings' in item ]:
                     if 'Breitenmoser' in d['Investigators'].split(',')[0]:
                         treetag = '_WidthBreit'
@@ -1685,14 +1690,6 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     else:
         raise SystemExit('No dataset has been selected for inclusion in the proxy database!')
 
-    """
-    merged_dict = deepcopy(ncdc_dict)
-    if len(pages2kv2_dict) > 0:
-        merged_dict.update(pages2kv2_dict)
-    else:
-        merged_dict = deepcopy(ncdc_dict)
-    """
-
     totchronol = len(merged_dict)
 
     dupecount = 0
@@ -1756,14 +1753,13 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     # Build up pandas DataFrame
     metadf  = pd.DataFrame()
 
-#    headers = ['NCDC ID','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement','Resolution (yr)',\
+#    headers = ['Proxy ID','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement','Resolution (yr)',\
 #               'Oldest (C.E.)','Youngest (C.E.)','Location','climateVariable','Realm','Relation_to_climateVariable',\
 #               'Seasonality', 'Databases']
 
-    headers = ['NCDC ID','Study name','Investigators','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement',\
+    headers = ['Proxy ID','Study name','Investigators','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement',\
                'Resolution (yr)','Oldest (C.E.)','Youngest (C.E.)','Location','climateVariable','Realm','Relation_to_climateVariable',\
                'Seasonality', 'Databases']
-
 
     
     for key in sorted(proxy_def.keys()):
@@ -1821,12 +1817,12 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
 
         if counter == 0:
             # Build up pandas DataFrame
-            header = ['NCDC ID', siteID]
+            header = ['Proxy ID', siteID]
             df = pd.DataFrame({'a':frame_data[:,0], 'b':frame_data[:,1]})
             df.columns = header
         else:
-            frame = pd.DataFrame({'NCDC ID':frame_data[:,0], siteID:frame_data[:,1]})
-            df = df.merge(frame, how='outer', on='NCDC ID')
+            frame = pd.DataFrame({'Proxy ID':frame_data[:,0], siteID:frame_data[:,1]})
+            df = df.merge(frame, how='outer', on='Proxy ID')
 
         counter = counter + 1
     
@@ -1870,24 +1866,6 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     # List filenames im the data directory (dirname)
     # files is a python list contining file names to be read
     sites_data = glob.glob(datadir+"/*.txt")
-
-    # For specific testing :
-    #sites_data = ['/home/disk/ekman/rtardif/kalman3/LMR/data/proxies/NCDC/LMR_data_files-master/00aust01a.txt']
-    #sites_data = ['/home/disk/ekman/rtardif/kalman3/LMR/data/proxies/NCDC/LMR_data_files-master/SAm_8.txt']
-    # --
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_v0.1.0/00Epic01.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_v0.1.0/PAGES2kv2_Arc-MackenzieDelta_Porter_2013LMR63.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_v0.1.0/PAGES2kv2_SAm-chil017_Szeicz_2000LMR681.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_v0.1.0/PAGES2kv2_Arc-Kittelfjall_Bjorkelund_2013LMR54.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_v0.1.0/PAGES2kv2_Ocean2kHR-PacificLinsley2006Rarotongad18O2RLMR652.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_v0.1.0/PAGES2kv2_Ant-BerknerIslan_Mulvaney_2002LMR5.txt']
-    # --
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vtest/Africa-LakeTanganyi.Tierney.2010_MODIFIED2.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vtest/shevenell2011-odp178-1098b_MODIFIED.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDTDAtest/anderson2014-tn057-21.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDTDAtest/hodell2003-ttn057-6.txt']
-    #sites_data = ['/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/ToPandas_vDTDAtest/fronval1997-hm94-34.txt']
-
 
     nbsites = len(sites_data)
     
@@ -1953,10 +1931,10 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     metadf  = pd.DataFrame()
 
     # for v0.0.0:
-    #headers = ['NCDC ID','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement','Resolution (yr)',\
+    #headers = ['Proxy ID','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement','Resolution (yr)',\
     #               'Oldest (C.E.)','Youngest (C.E.)','Location','Sensitivity','Relation_to_temp','Databases']
     # for v0.1.0:
-    headers = ['NCDC ID','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement','Resolution (yr)',\
+    headers = ['Proxy ID','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement','Resolution (yr)',\
                'Oldest (C.E.)','Youngest (C.E.)','Location','climateVariable','Realm','Relation_to_climateVariable',\
                'Seasonality', 'Databases']
 
@@ -2036,12 +2014,12 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
 
         if counter == 0:
             # Build up pandas DataFrame
-            header = ['NCDC ID', siteID]
+            header = ['Proxy ID', siteID]
             df = pd.DataFrame({'a':frame_data[:,0], 'b':frame_data[:,1]})
             df.columns = header
         else:
-            frame = pd.DataFrame({'NCDC ID':frame_data[:,0], siteID:frame_data[:,1]})
-            df = df.merge(frame, how='outer', on='NCDC ID')
+            frame = pd.DataFrame({'Proxy ID':frame_data[:,0], siteID:frame_data[:,1]})
+            df = df.merge(frame, how='outer', on='Proxy ID')
 
         counter = counter + 1
     

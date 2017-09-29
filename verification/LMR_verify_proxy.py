@@ -133,10 +133,10 @@ cfg = LMR_config.Config()
 proxy_database = cfg.proxies.use_from[0]
 print('Proxy database       : %s' %proxy_database)
 
-if proxy_database == 'pages':
-    proxy_cfg = cfg.proxies.pages
-elif proxy_database == 'NCDC':
-    proxy_cfg = cfg.proxies.ncdc
+if proxy_database == 'PAGES2kv1':
+    proxy_cfg = cfg.proxies.PAGES2kv1
+elif proxy_database == 'LMRdb':
+    proxy_cfg = cfg.proxies.LMRdb
 elif proxy_database == 'NCDCdtda':
     proxy_cfg = cfg.proxies.ncdcdtda
 else:

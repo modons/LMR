@@ -15,7 +15,7 @@ Module: summarize_assimilated_proxies.py
              December 2016
  Revisions: 
           - Adapted to the newest set of proxy types  
-            composing the NCDC v0.2.0 proxy database            
+            composing the LMRdb v0.2.0 proxy database            
             [R. Tardif, U of Washington - May 2017]
 
 """
@@ -42,14 +42,15 @@ plt.style.use('ggplot')
 datadir = '/home/disk/kalman3/rtardif/LMR/output'
 
 # name of reconstruction experiment
-nexp = 'test'
+#nexp = 'test'
+nexp = 'test2k_Proxies_LMRdbAllProxies'
 
 # range of Monte-Carlo iterations to consider
 iter_range = [0,0]
 
 # Reconstruction performed with the following proxy database:
-#proxy_db = 'LMRv1' # aka PAGES2k phase 1 (Hakim et al. JGR 2016)
-proxy_db = 'LMRv2' # aka PAGES2k phase 2 + LMR-specific NCDC-templated proxies
+#proxy_db = 'PAGES2kv1' # aka PAGES2k phase 1 (Hakim et al. JGR 2016)
+proxy_db = 'LMRdb'     # aka PAGES2k phase 2 + LMR-specific NCDC-templated proxies
 
 # Whether the y-axis (nb of proxy records) on the temporal plots 
 # should be in log-scale or not.
@@ -60,22 +61,23 @@ logaxis_temporal_plots = False
 
 # Dictionary to associate a symbol and color to every proxy type
 
-if proxy_db == 'LMRv1':
-    # ** LMRv1 **    
+if proxy_db == 'PAGES2kv1':
+    # ** PAGES2kv1 **    
     proxy_symbols_color = {
         'Tree ring_Width'       : ('^','#66CC00'), 
         'Tree ring_Density'     : ('v','#FFCC00'), 
-        'Coral_d18O'            : ('o','#FF8080'), 
+        'Coral_d18O'            : ('o','#FF8080'),
+        'Coral_Luminescence'    : ('o','#FFB980'),
         'Ice core_d18O'         : ('d','#66FFFF'), 
         'Ice core_d2H'          : ('d','#B8E6E6'), 
         'Ice core_Accumulation' : ('d','#5CB8E6'), 
         'Lake sediment_All'     : ('s','#FF00FF'), 
-        'Marine sediment_All'   : ('3','#009999'), 
+        'Marine sediment_All'   : ('<','#00b7b6'), 
         'Speleothem_All'        : ('p','#996600'), 
     }
 
-elif proxy_db == 'LMRv2':
-    # ** LMRv2 **
+elif proxy_db == 'LMRdb':
+    # ** LMRdb **
     proxy_symbols_color = {
         'Bivalve_d18O'                     : ('h','#FFFF00'),
         'Corals and Sclerosponges_Rates'   : ('o','#FFE6E6'),
@@ -87,7 +89,7 @@ elif proxy_db == 'LMRv2':
         'Ice Cores_dD'                     : ('d','#B8E6E6'),
         'Lake Cores_Misc'                  : ('s','#FFB3FF'),
         'Lake Cores_Varve'                 : ('s','#FF00FF'),
-        'Marine Cores_d18O'                : ('3','#009999'),
+        'Marine Cores_d18O'                : ('<','#00b7b6'),
         'Speleothems_d18O'                 : ('p','#D9B3FF'),
         'Tree Rings_WidthBreit'            : ('^','#B3FF66'),
         'Tree Rings_WidthPages2'           : ('^','#66CC00'),

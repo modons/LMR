@@ -27,6 +27,9 @@ Revisions:
          - Added class for low-resolution marine proxies used for LGM & Holocene
            reconstructions (NCDCdtda class). 
            [ R. Tardif, U. Washington, January 2017 ]
+         - Renamed the proxy databases to less-confusing convention. 
+           'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
+           [ R. Tardif, Univ. of Washington, Sept 2017 ]
 """
 
 import LMR_psms
@@ -313,11 +316,11 @@ class BaseProxyObject:
 
 
 @class_docs_fixer
-class ProxyPages(BaseProxyObject):
+class ProxyPAGES2kv1(BaseProxyObject):
 
     @staticmethod
     def get_psm_obj(config,proxy_type):
-        psm_key = config.proxies.pages.proxy_psm_type[proxy_type]
+        psm_key = config.proxies.PAGES2kv1.proxy_psm_type[proxy_type]
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
@@ -329,18 +332,18 @@ class ProxyPages(BaseProxyObject):
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
         """
 
-        pages_cfg = config.proxies.pages
+        pages2kv1_cfg = config.proxies.PAGES2kv1
         if meta_src is None:
-            meta_src = load_data_frame(pages_cfg.metafile_proxy)
+            meta_src = load_data_frame(pages2kv1_cfg.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(pages_cfg.datafile_proxy)
+            data_src = load_data_frame(pages2kv1_cfg.datafile_proxy)
 
-        site_meta = meta_src[meta_src['PAGES ID'] == site]
-        pid = site_meta['PAGES ID'].iloc[0]
+        site_meta = meta_src[meta_src['Proxy ID'] == site]
+        pid = site_meta['Proxy ID'].iloc[0]
         pmeasure = site_meta['Proxy measurement'].iloc[0]
-        pages_type = site_meta['Archive type'].iloc[0]
+        pages2kv1_type = site_meta['Archive type'].iloc[0]
         try:
-            proxy_type = pages_cfg.proxy_type_mapping[(pages_type, pmeasure)]
+            proxy_type = pages2kv1_cfg.proxy_type_mapping[(pages2kv1_type, pmeasure)]
         except (KeyError, ValueError) as e:
             print 'Proxy type/measurement not found in mapping: {}'.format(e)
             raise ValueError(e)
@@ -365,7 +368,7 @@ class ProxyPages(BaseProxyObject):
         times = values.index.values
 
         # transform in "anomalies" (time-mean removed) if option activated
-        if config.proxies.pages.proxy_timeseries_kind == 'anom':
+        if config.proxies.PAGES2kv1.proxy_timeseries_kind == 'anom':
             values = values - values.mean()
         
         if len(values) == 0:
@@ -385,15 +388,15 @@ class ProxyPages(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.PAGES2kv1.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(config.proxies.pages.datafile_proxy)
+            data_src = load_data_frame(config.proxies.PAGES2kv1.datafile_proxy)
 
-        filters = config.proxies.pages.simple_filters
-        proxy_order = config.proxies.pages.proxy_order
-        ptype_filters = config.proxies.pages.proxy_assim2
-        availability_filter = config.proxies.pages.proxy_availability_filter
-        availability_fraction = config.proxies.pages.proxy_availability_fraction
+        filters = config.proxies.PAGES2kv1.simple_filters
+        proxy_order = config.proxies.PAGES2kv1.proxy_order
+        ptype_filters = config.proxies.PAGES2kv1.proxy_assim2
+        availability_filter = config.proxies.PAGES2kv1.proxy_availability_filter
+        availability_fraction = config.proxies.PAGES2kv1.proxy_availability_fraction
         
         # initial masks all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
@@ -424,13 +427,13 @@ class ProxyPages(BaseProxyObject):
             # period (ignore record if fraction of available data is below user-defined
             # threshold (proxy_availability_fraction in config).
             maxnb = (finish - start) + 1
-            proxies_to_test = meta_src['PAGES ID'][availability_mask & useable].values
+            proxies_to_test = meta_src['Proxy ID'][availability_mask & useable].values
             for prx in proxies_to_test.tolist():
                 values = data_src[prx][(data_src[:].index >= start) & (data_src[:].index <= finish)]
                 values = values[values.notnull()]
                 frac_available = float(len(values))/float(maxnb)
                 if frac_available < availability_fraction:
-                    availability_mask[meta_src[meta_src['PAGES ID'] == prx].index] = False
+                    availability_mask[meta_src[meta_src['Proxy ID'] == prx].index] = False
             
         # Create proxy id lists
         proxy_id_by_type = {}
@@ -455,7 +458,7 @@ class ProxyPages(BaseProxyObject):
                 measure_mask |= meta_src[measure_col] == measure
 
             # Extract proxy ids using mask and append to lists
-            proxies = meta_src['PAGES ID'][measure_mask & type_mask &
+            proxies = meta_src['Proxy ID'][measure_mask & type_mask &
                                            availability_mask & useable].values
 
             # If we have ids after filtering add them to the type list
@@ -499,13 +502,13 @@ class ProxyPages(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.pages.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.PAGES2kv1.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(config.proxies.pages.datafile_proxy)
+            data_src = load_data_frame(config.proxies.PAGES2kv1.datafile_proxy)
 
         useable = meta_src['Resolution (yr)'] == 1.0
 
-        proxy_ids = meta_src['PAGES ID'][useable].values
+        proxy_ids = meta_src['Proxy ID'][useable].values
 
         proxy_objs = []
         for site in proxy_ids:
@@ -523,11 +526,11 @@ class ProxyPages(BaseProxyObject):
         return 0.1
 
 
-class ProxyNCDC(BaseProxyObject):
+class ProxyLMRdb(BaseProxyObject):
 
     @staticmethod
     def get_psm_obj(config,proxy_type):
-        psm_key = config.proxies.ncdc.proxy_psm_type[proxy_type]
+        psm_key = config.proxies.LMRdb.proxy_psm_type[proxy_type]
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
@@ -539,18 +542,18 @@ class ProxyNCDC(BaseProxyObject):
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
         """
 
-        ncdc_cfg = config.proxies.ncdc
+        LMRdb_cfg = config.proxies.LMRdb
         if meta_src is None:
-            meta_src = load_data_frame(ncdc_cfg.metafile_proxy)
+            meta_src = load_data_frame(LMRdb_cfg.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(ncdc_cfg.datafile_proxy)
+            data_src = load_data_frame(LMRdb_cfg.datafile_proxy)
 
-        site_meta = meta_src[meta_src['NCDC ID'] == site]
-        pid = site_meta['NCDC ID'].iloc[0]
+        site_meta = meta_src[meta_src['Proxy ID'] == site]
+        pid = site_meta['Proxy ID'].iloc[0]
         pmeasure = site_meta['Proxy measurement'].iloc[0]
-        NCDC_type = site_meta['Archive type'].iloc[0]
+        LMRdb_type = site_meta['Archive type'].iloc[0]
         try:
-            proxy_type = ncdc_cfg.proxy_type_mapping[(NCDC_type,pmeasure)]
+            proxy_type = LMRdb_cfg.proxy_type_mapping[(LMRdb_type,pmeasure)]
         except (KeyError, ValueError) as e:
             print 'Proxy type/measurement not found in mapping: {}'.format(e)
             raise ValueError(e)
@@ -577,7 +580,7 @@ class ProxyNCDC(BaseProxyObject):
         times = values.index.values
 
         # transform in "anomalies" (time-mean removed) if option activated
-        if config.proxies.ncdc.proxy_timeseries_kind == 'anom':
+        if config.proxies.LMRdb.proxy_timeseries_kind == 'anom':
             values = values - values.mean() 
 
         if len(values) == 0:
@@ -597,17 +600,17 @@ class ProxyNCDC(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.ncdc.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.LMRdb.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(config.proxies.ncdc.datafile_proxy)
+            data_src = load_data_frame(config.proxies.LMRdb.datafile_proxy)
 
-        filters = config.proxies.ncdc.simple_filters
-        proxy_order = config.proxies.ncdc.proxy_order
-        ptype_filters = config.proxies.ncdc.proxy_assim2
-        dbase_filters = config.proxies.ncdc.database_filter
-        proxy_blacklist = config.proxies.ncdc.proxy_blacklist
-        availability_filter = config.proxies.ncdc.proxy_availability_filter
-        availability_fraction = config.proxies.ncdc.proxy_availability_fraction
+        filters = config.proxies.LMRdb.simple_filters
+        proxy_order = config.proxies.LMRdb.proxy_order
+        ptype_filters = config.proxies.LMRdb.proxy_assim2
+        dbase_filters = config.proxies.LMRdb.database_filter
+        proxy_blacklist = config.proxies.LMRdb.proxy_blacklist
+        availability_filter = config.proxies.LMRdb.proxy_availability_filter
+        availability_fraction = config.proxies.LMRdb.proxy_availability_fraction
         
         # initial mask all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
@@ -638,13 +641,13 @@ class ProxyNCDC(BaseProxyObject):
             # period (ignore record if fraction of available data is below user-defined
             # threshold (proxy_availability_fraction in config).
             maxnb = (finish - start) + 1
-            proxies_to_test = meta_src['NCDC ID'][availability_mask & useable].values
+            proxies_to_test = meta_src['Proxy ID'][availability_mask & useable].values
             for prx in proxies_to_test.tolist():
                 values = data_src[prx][(data_src[:].index >= start) & (data_src[:].index <= finish)]
                 values = values[values.notnull()]
                 frac_available = float(len(values))/float(maxnb)
                 if frac_available < availability_fraction:
-                    availability_mask[meta_src[meta_src['NCDC ID'] == prx].index] = False
+                    availability_mask[meta_src[meta_src['Proxy ID'] == prx].index] = False
             
         # Find indices matching **database filter** specifications
         database_col = 'Databases'
@@ -670,13 +673,13 @@ class ProxyNCDC(BaseProxyObject):
         # Define mask of proxies listed in a user-defined "blacklist"
         # (see LMR_config).
         # boolean array set with right dimension & all set to True
-        blacklist_mask = meta_src['NCDC ID'] != ' '
+        blacklist_mask = meta_src['Proxy ID'] != ' '
         if proxy_blacklist:
             # If site listed in blacklist, modify corresponding elements of
             # boolean array to False
             for pbl in proxy_blacklist:
-                tmp = meta_src['NCDC ID'].map(lambda x: x.startswith(pbl))
-                inds = meta_src['NCDC ID'][tmp].index
+                tmp = meta_src['Proxy ID'].map(lambda x: x.startswith(pbl))
+                inds = meta_src['Proxy ID'][tmp].index
                 blacklist_mask[inds] = False
 
         # Create proxy id lists
@@ -702,7 +705,7 @@ class ProxyNCDC(BaseProxyObject):
                 measure_mask |= meta_src[measure_col] == measure
 
             # Extract proxy ids using mask and append to lists
-            proxies = meta_src['NCDC ID'][measure_mask & type_mask &
+            proxies = meta_src['Proxy ID'][measure_mask & type_mask &
                                           dbase_mask & blacklist_mask &
                                           availability_mask & useable].values
             # If we have ids after filtering add them to the type list
@@ -745,14 +748,14 @@ class ProxyNCDC(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.ncdc.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.LMRdb.metafile_proxy)
         if data_src is None:
-            data_src = load_data_frame(config.proxies.ncdc.datafile_proxy)
+            data_src = load_data_frame(config.proxies.LMRdb.datafile_proxy)
 
         # TODO: For now hard coded to annual resolution - AP
         useable = meta_src['Resolution (yr)'] == 1.0
 
-        proxy_ids = meta_src['NCDC ID'][useable].values
+        proxy_ids = meta_src['Proxy ID'][useable].values
 
         proxy_objs = []
         for site in proxy_ids:
@@ -1044,7 +1047,7 @@ def fix_lon(lon):
     return lon
 
 
-_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdtda': ProxyNCDCdtda}
+_proxy_classes = {'PAGES2kv1': ProxyPAGES2kv1, 'LMRdb': ProxyLMRdb, 'NCDCdtda': ProxyNCDCdtda}
 
 def get_proxy_class(proxy_key):
     """

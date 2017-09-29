@@ -31,6 +31,7 @@ Module: summarize_proxy_database.py
 
 import numpy as np
 import matplotlib.pyplot as plt
+from os.path import join
 from mpl_toolkits.basemap import Basemap
 
 
@@ -41,7 +42,11 @@ from mpl_toolkits.basemap import Basemap
 #data_directory = "/home/scec-00/lmr/erbm/LMR/"
 data_directory = "/home/disk/kalman3/rtardif/LMR/"
 
-# Version of the database to query
+# which proxy database? PAGES2kv2 or LMRdb
+#proxy_db = 'PAGES2kv1'
+proxy_db = 'LMRdb'
+
+# Version of the database to query (for proxy_db = LMRdb only)
 dbversion = 'v0.2.0'
 
 # Filter on proxy temporal resolution (range is inclusive)
@@ -51,9 +56,10 @@ temporal_resolution_range = (1,1); resolution_tag = 'annual'
 # The directory needs to exist prior to running this module.
 # ----------------------------------------------------------
 #output_directory = "/home/scec-00/lmr/erbm/analysis/results/LMR/pages2kv2/figures/"
-output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/NCDC/Figs/summary_v0.2.0/"
+#output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/PAGES2kv1/Figs/"
+output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/LMRdb/Figs/summary_v0.2.0/"
 
-# Swith to inicate whether you want the figure to the produced on-screen (False)
+# Swith to indicate whether you want the figure to the produced on-screen (False)
 # or save in .png files (True)
 save_instead_of_plot = True
 
@@ -67,29 +73,57 @@ save_instead_of_plot = True
 ### Proxy type definitions
 ### ----------------------------------------------------------------------------
 
-proxy_def = \
-            {
-            'Tree Rings_WidthPages2'               : ['trsgi'],\
-            'Tree Rings_WidthBreit'                : ['trsgi_breit'],\
-            'Tree Rings_WoodDensity'               : ['max_d','min_d','early_d','earl_d','late_d','MXD','density'],\
-            'Tree Rings_Isotopes'                  : ['d18O'],\
-            'Corals and Sclerosponges_d18O'        : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm','d18o_avg','d18o_ave','dO18','d18O_4'],\
-            'Corals and Sclerosponges_SrCa'        : ['Sr/Ca','Sr_Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],\
-            'Corals and Sclerosponges_Rates'       : ['ext','calc','calcification','calcification rate', 'composite'],\
-            'Ice Cores_d18O'                       : ['d18O','delta18O','delta18o','d18o','d18o_int','d18O_int','d18O_norm','d18o_norm','dO18','d18O_anom'],\
-            'Ice Cores_dD'                         : ['deltaD','delD','dD'],\
-            'Ice Cores_Accumulation'               : ['accum','accumu'],\
-            'Ice Cores_MeltFeature'                : ['MFP','melt'],\
-            'Lake Cores_Varve'                     : ['varve', 'varve_thickness', 'varve thickness', 'thickness'],\
-            'Lake Cores_BioMarkers'                : ['Uk37', 'TEX86', 'tex86'],\
-            'Lake Cores_GeoChem'                   : ['Sr/Ca', 'Mg/Ca','Cl_cont'],\
-            'Lake Cores_Misc'                      : ['RABD660_670','X_radiograph_dark_layer','massacum'],\
-            'Marine Cores_d18O'                    : ['d18O'],\
-            'Marine Cores_tex86'                   : ['tex86'],\
-            'Marine Cores_uk37'                    : ['uk37','UK37'],\
-            'Speleothems_d18O'                     : ['d18O'],\
-            'Bivalve_d18O'                         : ['d18O'],\
-            }
+if proxy_db == 'PAGES2kv1':
+    proxy_def = \
+                {
+                'Tree ring_Width': ['Ring width',
+                                    'Tree ring width',
+                                    'Total ring width',
+                                    'TRW'],
+                'Tree ring_Density': ['Maximum density',
+                                      'Minimum density',
+                                      'Earlywood density',
+                                      'Latewood density',
+                                      'MXD'],
+                'Ice core_d18O': ['d18O'],
+                'Ice core_d2H': ['d2H'],
+                'Ice core_Accumulation': ['Accumulation'],
+                'Coral_d18O': ['d18O'],
+                'Coral_Luminescence': ['Luminescence'],
+                'Lake sediment_All': ['Varve thickness',
+                                      'Thickness',
+                                      'Mass accumulation rate',
+                                      'Particle-size distribution',
+                                      'Organic matter',
+                                      'X-ray density'],
+                'Marine sediment_All': ['Mg/Ca'],
+                'Speleothem_All': ['Lamina thickness'],
+                }
+
+elif proxy_db == 'LMRdb':
+    proxy_def = \
+                {
+                'Tree Rings_WidthPages2'               : ['trsgi'],\
+                'Tree Rings_WidthBreit'                : ['trsgi_breit'],\
+                'Tree Rings_WoodDensity'               : ['max_d','min_d','early_d','earl_d','late_d','MXD','density'],\
+                'Tree Rings_Isotopes'                  : ['d18O'],\
+                'Corals and Sclerosponges_d18O'        : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm','d18o_avg','d18o_ave','dO18','d18O_4'],\
+                'Corals and Sclerosponges_SrCa'        : ['Sr/Ca','Sr_Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],\
+                'Corals and Sclerosponges_Rates'       : ['ext','calc','calcification','calcification rate', 'composite'],\
+                'Ice Cores_d18O'                       : ['d18O','delta18O','delta18o','d18o','d18o_int','d18O_int','d18O_norm','d18o_norm','dO18','d18O_anom'],\
+                'Ice Cores_dD'                         : ['deltaD','delD','dD'],\
+                'Ice Cores_Accumulation'               : ['accum','accumu'],\
+                'Ice Cores_MeltFeature'                : ['MFP','melt'],\
+                'Lake Cores_Varve'                     : ['varve', 'varve_thickness', 'varve thickness', 'thickness'],\
+                'Lake Cores_BioMarkers'                : ['Uk37', 'TEX86', 'tex86'],\
+                'Lake Cores_GeoChem'                   : ['Sr/Ca', 'Mg/Ca','Cl_cont'],\
+                'Lake Cores_Misc'                      : ['RABD660_670','X_radiograph_dark_layer','massacum'],\
+                'Marine Cores_d18O'                    : ['d18O'],\
+                'Marine Cores_tex86'                   : ['tex86'],\
+                'Marine Cores_uk37'                    : ['uk37','UK37'],\
+                'Speleothems_d18O'                     : ['d18O'],\
+                'Bivalve_d18O'                         : ['d18O'],\
+                }
 
 
 ### ----------------------------------------------------------------------------
@@ -98,15 +132,26 @@ proxy_def = \
 
 # Load the proxy data and metadata as dataframes.
 
-metadata = np.load(data_directory+'data/proxies/NCDC_'+dbversion+'_Metadata.df.pckl')
-proxies = np.load(data_directory+'data/proxies/NCDC_'+dbversion+'_Proxies.df.pckl')
+if proxy_db == 'PAGES2kv1':
+    metadata = np.load(data_directory+'data/proxies/Pages2kv1_Metadata.df.pckl')
+    proxies = np.load(data_directory+'data/proxies/Pages2kv1_Proxies.df.pckl')
+    # Load an LMR PSM file.
+    try:
+        psms = np.load(data_directory+'PSM/PSMs_PAGES2kv1_GISTEMP.pckl')
+    except:
+        psms = []
 
-# Load an LMR PSM file.
-try:
-    psms = np.load(data_directory+'PSM/PSMs_NCDC_'+dbversion+'_annual_GISTEMP.pckl')
-except:
-    psms = []
+elif proxy_db == 'LMRdb':    
+    metadata = np.load(data_directory+'data/proxies/LMRdb_'+dbversion+'_Metadata.df.pckl')
+    proxies = np.load(data_directory+'data/proxies/LMRdb_'+dbversion+'_Proxies.df.pckl')    
+    # Load an LMR PSM file.
+    try:
+        psms = np.load(data_directory+'PSM/PSMs_LMRdb_'+dbversion+'_annual_GISTEMP.pckl')
+    except:
+        psms = []
 
+    # include dbversion in the name
+    proxy_db = '_'.join([proxy_db,dbversion])
 
 ### CALCULATIONS ---
 
@@ -135,7 +180,7 @@ print('Proxy types for data assimilation -------------------')
 proxy_types =  proxy_def.keys()
 for ptype in sorted(proxy_types):
     latslons = []    
-    latslons.append([(metadata['Lat (N)'][i],metadata['Lon (E)'][i]) for i in range(0,len(metadata['NCDC ID'])) \
+    latslons.append([(metadata['Lat (N)'][i],metadata['Lon (E)'][i]) for i in range(0,len(metadata['Proxy ID'])) \
                      if metadata['Archive type'][i] == ptype.split('_')[0] and metadata['Proxy measurement'][i] in proxy_def[ptype] \
                      and metadata['Resolution (yr)'][i] >= temporal_resolution_range[0] \
                      and metadata['Resolution (yr)'][i] <= temporal_resolution_range[1]])
@@ -173,13 +218,12 @@ for ptype in sorted(proxy_types):
             l.append(m.scatter(x,y,35,marker='o',color=color_dots,edgecolor='#ffe7e5',linewidth='1',zorder=4))
         plt.title('%s:%d (%s)' % (ptype,nbproxies,resolution_tag), fontweight='bold',fontsize=14)
 
-        plt.savefig('%smap_proxies_LMRdb_%s_%s.png' %(output_directory,dbversion,ptype.replace(' ','_')),bbox_inches='tight')
+        plt.savefig('%smap_proxies_%s_%s.png' %(output_directory,proxy_db,ptype.replace(' ','_')),bbox_inches='tight')
         #plt.show()
 
 print('%35s : %4d' %('Total',sumnbproxies))
 
 
-        
 ### ----------------------------------------------------------------------------
 ### FIGURES of individual records (time series)
 ### ----------------------------------------------------------------------------
@@ -193,19 +237,19 @@ for i in range(0,len(psms)):
 plt.style.use('ggplot')
 
 #for i in range(0,3):  # To make sample figures, use this line instead of the next line.
-for i in range(0,len(metadata['NCDC ID'])):
-    print "Proxy: ",i+1,"/",len(metadata['NCDC ID']), metadata['NCDC ID'][i]
-    if metadata['NCDC ID'][i] in records_with_psms: has_psm = "YES"
+for i in range(0,len(metadata['Proxy ID'])):
+    print "Proxy: ",i+1,"/",len(metadata['Proxy ID']), metadata['Proxy ID'][i]
+    if metadata['Proxy ID'][i] in records_with_psms: has_psm = "YES"
     else: has_psm = "NO"
     
     # Make a plot of each proxy.
     plt.figure(figsize=(10,8))
     ax = plt.axes([.1,.6,.8,.3])
-    plt.plot(proxies[metadata['NCDC ID'][i]],'-b',linewidth=2,alpha=.3)
-    plt.plot(proxies[metadata['NCDC ID'][i]],'.',color='b')
+    plt.plot(proxies[metadata['Proxy ID'][i]],'-b',linewidth=2,alpha=.3)
+    plt.plot(proxies[metadata['Proxy ID'][i]],'.',color='b')
 
     plt.suptitle("LMR proxy time series",fontweight='bold',fontsize=12)
-    plt.title(metadata['NCDC ID'][i],fontsize=11)
+    plt.title(metadata['Proxy ID'][i],fontsize=11)
     plt.xlabel("Year CE")
     plt.ylabel(metadata['Proxy measurement'][i])
 
@@ -214,7 +258,7 @@ for i in range(0,len(metadata['NCDC ID'])):
     
     # Print metadata on each figure.
     for offset, key in enumerate(metadata):
-        if key != 'NCDC ID':
+        if key != 'Proxy ID':
             plt.text(0,-.3-offsetscale*offset,key+":",transform=ax.transAxes,fontsize=fntsize)
             if key == 'Study name' or key == 'Investigators':
                 if len(metadata[key][i]) > 100:
@@ -243,7 +287,7 @@ for i in range(0,len(metadata['NCDC ID'])):
     plt.text(.23,-.4-offsetscale*offset,has_psm,transform=ax.transAxes,fontsize=fntsize)
     
     if save_instead_of_plot:
-        plt.savefig(output_directory+'ts_'+metadata['Archive type'][i].replace(" ","_")+"_"+metadata['NCDC ID'][i].replace("/","_")+".png")
+        plt.savefig(output_directory+'ts_'+metadata['Archive type'][i].replace(" ","_")+"_"+metadata['Proxy ID'][i].replace("/","_")+".png")
     else:
         plt.show()
     plt.close()
