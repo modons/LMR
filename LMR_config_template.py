@@ -339,8 +339,8 @@ class proxies(ConfigGroup):
     # =============================
     # Which proxy database to use ?
     # =============================
-    use_from = ['pages']
-    #use_from = ['NCDC']
+    use_from = ['PAGES2kv1']
+    #use_from = ['LMRdb']
     #use_from = ['NCDCdtda']
 
     proxy_frac = 1.0
@@ -369,12 +369,12 @@ class proxies(ConfigGroup):
     
     ##** END User Parameters **##
 
-    # ---------------
-    # PAGES2k proxies
-    # ---------------
-    class pages(ConfigGroup):
+    # -----------------
+    # PAGES2kv1 proxies
+    # -----------------
+    class PAGES2kv1(ConfigGroup):
         """
-        Parameters for PagesProxy class
+        Parameters for PAGES2kv1Proxy class
 
         Notes
         -----
@@ -418,8 +418,8 @@ class proxies(ConfigGroup):
         ##** BEGIN User Parameters **##
 
         datadir_proxy = None
-        datafile_proxy = 'Pages2k_Proxies.df.pckl'
-        metafile_proxy = 'Pages2k_Metadata.df.pckl'
+        datafile_proxy = 'Pages2kv1_Proxies.df.pckl'
+        metafile_proxy = 'Pages2kv1_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
@@ -530,12 +530,12 @@ class proxies(ConfigGroup):
             self.simple_filters = {'PAGES 2k Region': self.regions,
                                    'Resolution (yr)': self.proxy_resolution}
 
-    # ---------------
-    # NCDC proxies
-    # ---------------
-    class ncdc(ConfigGroup):
+    # -------------
+    # LMRdb proxies
+    # -------------
+    class LMRdb(ConfigGroup):
         """
-        Parameters for NCDC proxy class
+        Parameters for LMRdb proxy class
 
         Notes
         -----
@@ -586,11 +586,11 @@ class proxies(ConfigGroup):
 
         
         datadir_proxy = None
-        datafile_proxy = 'NCDC_{}_Proxies.df.pckl'
-        metafile_proxy = 'NCDC_{}_Metadata.df.pckl'
+        datafile_proxy = 'LMRdb_{}_Proxies.df.pckl'
+        metafile_proxy = 'LMRdb_{}_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
-        # This is not activated with NCDC data yet...
+        # This is not activated with LMRdb data yet...
         regions = ['Antarctica', 'Arctic', 'Asia', 'Australasia', 'Europe',
                    'North America', 'South America']
 
@@ -890,8 +890,8 @@ class proxies(ConfigGroup):
     
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, seed=None, **kwargs):
-        self.pages = self.pages(lmr_path=lmr_path, **kwargs.pop('pages', {}))
-        self.ncdc = self.ncdc(lmr_path=lmr_path, **kwargs.pop('ncdc', {}))
+        self.PAGES2kv1 = self.PAGES2kv1(lmr_path=lmr_path, **kwargs.pop('PAGES2kv1', {}))
+        self.LMRdb = self.LMRdb(lmr_path=lmr_path, **kwargs.pop('LMRdb', {}))
         self.ncdcdtda = self.ncdcdtda(lmr_path=lmr_path, **kwargs.pop('ncdcdtda', {}))
 
         super(self.__class__, self).__init__(**kwargs)
@@ -980,8 +980,8 @@ class psm(ConfigGroup):
 
             self.psm_r_crit = self.psm_r_crit
 
-            if '-'.join(proxies.use_from) == 'pages' and 'season' in psm.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+            if '-'.join(proxies.use_from) == 'PAGES2kv1' and 'season' in psm.avgPeriod:
+                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
                 print '       No seasonality metadata provided in that dataset. Exiting!'
                 print '       Change avgPeriod to "annual" in your configuration.'
                 raise SystemExit()
@@ -1012,8 +1012,8 @@ class psm(ConfigGroup):
                 self.datadir_calib = self.datadir_calib
 
             if self.pre_calib_datafile is None:
-                if '-'.join(proxies.use_from) == 'NCDC':
-                    dbversion = proxies.ncdc.dbversion
+                if '-'.join(proxies.use_from) == 'LMRdb':
+                    dbversion = proxies.LMRdb.dbversion
                     filename = ('PSMs_' + '-'.join(proxies.use_from) +
                                 '_' + dbversion +
                                 '_' + self.avgPeriod +
@@ -1116,8 +1116,8 @@ class psm(ConfigGroup):
 
             self.psm_r_crit = self.psm_r_crit
             
-            if '-'.join(proxies.use_from) == 'pages' and 'season' in psm.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+            if '-'.join(proxies.use_from) == 'PAGES2kv1' and 'season' in psm.avgPeriod:
+                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
                 print '       No seasonality metadata provided in that dataset. Exiting!'
                 print '       Change avgPeriod to "annual" in your configuration.'
                 raise SystemExit()
@@ -1148,8 +1148,8 @@ class psm(ConfigGroup):
                 self.datadir_calib_P = join(lmr_path, 'data', 'analyses')
                 
             if self.pre_calib_datafile_T is None:
-                if '-'.join(proxies.use_from) == 'NCDC':
-                    dbversion = proxies.ncdc.dbversion
+                if '-'.join(proxies.use_from) == 'LMRdb':
+                    dbversion = proxies.LMRdb.dbversion
                     filename_t = ('PSMs_' + '-'.join(proxies.use_from) +
                                   '_' + dbversion +
                                   '_' + self.avgPeriod +
@@ -1166,8 +1166,8 @@ class psm(ConfigGroup):
 
                 
             if self.pre_calib_datafile_P is None:
-                if '-'.join(proxies.use_from) == 'NCDC':
-                    dbversion = proxies.ncdc.dbversion
+                if '-'.join(proxies.use_from) == 'LMRdb':
+                    dbversion = proxies.LMRdb.dbversion
                     filename_p = ('PSMs_' + '-'.join(proxies.use_from) +
                                   '_' + dbversion +
                                   '_' + self.avgPeriod +
@@ -1259,8 +1259,8 @@ class psm(ConfigGroup):
 
             self.psm_r_crit = self.psm_r_crit
 
-            if '-'.join(proxies.use_from) == 'pages' and 'season' in psm.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES1 proxy records.'
+            if '-'.join(proxies.use_from) == 'PAGES2kv1' and 'season' in psm.avgPeriod:
+                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
                 print '       No seasonality metadata provided in that dataset. Exiting!'
                 print '       Change avgPeriod to "annual" in your configuration.'
                 raise SystemExit()
@@ -1291,8 +1291,8 @@ class psm(ConfigGroup):
                 self.datadir_calib_P = join(lmr_path, 'data', 'analyses')
                 
             if self.pre_calib_datafile is None:
-                if '-'.join(proxies.use_from) == 'NCDC':
-                    dbversion = proxies.ncdc.dbversion
+                if '-'.join(proxies.use_from) == 'LMRdb':
+                    dbversion = proxies.LMRdb.dbversion
                     filename = ('PSMs_'+'-'.join(proxies.use_from) +
                                 '_' + dbversion +
                                 '_' + self.avgPeriod +

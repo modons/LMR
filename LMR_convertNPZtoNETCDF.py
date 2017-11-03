@@ -32,12 +32,15 @@ var_desc = \
         'tas_sfc_Amon'              : ('Tsfc', 'Near surface air temperature anomaly', 'K'),   \
         'psl_sfc_Amon'              : ('MSLP', 'Mean sea level pressure anomaly', 'Pa'),       \
         'pr_sfc_Amon'               : ('PRCP', 'Precipitation rate anomaly', 'kg/m2/s1'),      \
+        'scpdsi_sfc_Amon'           : ('scpdsi','self-calibrated Palmer Drought Severity Index', ''), \
         'uas_sfc_Amon'              : ('Usfc', 'Near surface zonal wind anomaly', 'm/s'),      \
         'vas_sfc_Amon'              : ('Vsfc', 'Near surface meridional wind anomaly', 'm/s'), \
         'zg_500hPa_Amon'            : ('H500', '500hPa geopotential height anomaly', 'm'),     \
         'wap_500hPa_Amon'           : ('W500', '500hPa vertical motion anomaly', 'Ps/s'),      \
+        'wap_700hPa_Amon'           : ('W700', '700hPa vertical motion anomaly', 'Ps/s'),      \
         'ua_500hPa_Amon'            : ('U500', '500hPa zonal wind anomaly', 'm/s'),            \
         'va_500hPa_Amon'            : ('V500', '500hPa meridional wind anomaly', 'm/s'),       \
+        'tos_sfc_Omon'              : ('tos',  'Sea surface temperature', 'K'),                \
         'ohcArctic_0-700m_Omon'     : ('ohcArctic_0to700m','Basin-averaged Ocean Heat Content of Arctic Ocean in 0-700m layer','J'),          \
         'ohcAtlanticNH_0-700m_Omon' : ('ohcAtlanticNH_0to700m','Basin-averaged Ocean Heat Content of N. Atlantic Ocean in 0-700m layer','J'), \
         'ohcAtlanticSH_0-700m_Omon' : ('ohcAtlanticNH_0to700m','Basin-averaged Ocean Heat Content of S. Atlantic Ocean in 0-700m layer','J'), \

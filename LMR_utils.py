@@ -12,11 +12,11 @@ Revisions:
             between lat/lon points on the globe. [R. Tardif, U. of Washington, January 2016]
           - Added fexibility in handling missing data in the global_hemispheric_means function.
             [R. Tardif, U. of Washington, Aug. 2017]
-
           - Added the option to save full fields of variables. [M. Erb, U. Southern California,
             June 2017]
-
-
+          - Renamed the proxy databases to less-confusing convention. 
+            'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
+            [R. Tardif, U. of Washington, Sept 2017]
 """
 import glob
 import os
@@ -1558,8 +1558,8 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         psm_str = psm_key + '-' + calib_str
 
     proxy_str = str(proxy_database)
-    if proxy_str == 'NCDC':
-        proxy_str = proxy_str + str(config.proxies.ncdc.dbversion)
+    if proxy_str == 'LMRdb':
+        proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
     elif proxy_str == 'NCDCdtda':
         proxy_str = proxy_str + str(config.proxies.ncdcdtda.dbversion)
         
@@ -1855,10 +1855,10 @@ def validate_config(config):
     """
 
     proxy_database = config.proxies.use_from[0]
-    if proxy_database == 'NCDC':
-        proxy_cfg = config.proxies.ncdc
-    elif proxy_database == 'pages':
-        proxy_cfg = config.proxies.pages
+    if proxy_database == 'LMRdb':
+        proxy_cfg = config.proxies.LMRdb
+    elif proxy_database == 'PAGES2kv1':
+        proxy_cfg = config.proxies.PAGES2kv1
     elif proxy_database == 'NCDCdtda':
         proxy_cfg = config.proxies.ncdcdtda
     else:
@@ -1916,13 +1916,13 @@ def validate_config(config):
 
     # Constraints irrespective of value chosen for use_precalc_ye
 
-    # 3) Cannot use seasonally-calibrated PSMs with PAGES1 proxies
+    # 3) Cannot use seasonally-calibrated PSMs with PAGES2kv1 proxies
     #    Required metadata not available in that dataset.
 
-    if config.psm.avgPeriod == 'season' and proxy_database == 'pages':
+    if config.psm.avgPeriod == 'season' and proxy_database == 'PAGES2kv1':
         print (' ERROR: Conflicting options in configuration :'
                ' Trying to use seasonally-calibrated PSM'
-               ' (avgPeriod=season in class psm) with PAGES1 proxies.'
+               ' (avgPeriod=season in class psm) with PAGES2kv1 proxies.'
                ' No seasonality metadata available in that dataset.'
                ' Change avgPeriod to "annual" in your configuration.')
         proceed_ok = False

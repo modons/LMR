@@ -292,6 +292,7 @@ def LMR_driver_callable(cfg=None):
             else:
                 print var,\
                     ' : not truncating this variable: no changes from full state'
+
                 var_array_new = var_array_full
                 coords_array_new = coords_array_full
                 # updated dimension

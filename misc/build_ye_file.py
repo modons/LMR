@@ -51,6 +51,9 @@ from LMR_utils import create_precalc_ye_filename
                 [ R. Tardif, U. of Washington ]
  -  March 2017: Introduced use of config.yml simplified configuration file.
                 [ A. Perkins, U. of Washington ]
+ -  Sept. 2017: Renamed the proxy databases to less-confusing convention. 
+                'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
+                [ R. Tardif, U. of Washington ]
 """
 
 # If true it uses LMR_config defaults instead of config.yml update
@@ -97,10 +100,10 @@ cfg.psm.linear.psm_r_crit = 0.0
 proxy_database = cfg.proxies.use_from[0]
 proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
 
-if proxy_database == 'pages':
-    proxy_cfg = cfg.proxies.pages
-elif proxy_database == 'NCDC':
-    proxy_cfg = cfg.proxies.ncdc
+if proxy_database == 'PAGES2kv1':
+    proxy_cfg = cfg.proxies.PAGES2kv1
+elif proxy_database == 'LMRdb':
+    proxy_cfg = cfg.proxies.LMRdb
 elif proxy_database == 'NCDCdtda':
     proxy_cfg = cfg.proxies.ncdcdtda
 else:

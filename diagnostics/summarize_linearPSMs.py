@@ -73,7 +73,7 @@ dirfig = inputdir+'/Figs_'+calib_tag
 if not os.path.isdir(dirfig):
     os.system('mkdir {}'.format(dirfig))
 
-fname = inputdir+'/PSMs_NCDC_'+calib_tag+'_diag.pckl'
+fname = inputdir+'/PSMs_LMRdb_'+calib_tag+'_diag.pckl'
 infile = open(fname,'r')
 psm_data = cPickle.load(infile)
 infile.close()
@@ -82,7 +82,7 @@ proxy_types_sites = sorted(psm_data.keys())
 proxy_types = list(set([proxy_types_sites[k][0] for k in range(len(proxy_types_sites))]))
 
 # metadata of proxies in the database
-fname_meta = dbdir+'/NCDC_'+LMRdbversion+'_Metadata.df.pckl'
+fname_meta = dbdir+'/LMRdb_'+LMRdbversion+'_Metadata.df.pckl'
 metadata = pd.read_pickle(fname_meta)
 
 
@@ -161,7 +161,7 @@ for t in sorted(proxy_types):
             
         # -- checking sensitivity inferred from PSM vs metadata (if available) --
 
-        site_meta = metadata[metadata['NCDC ID'] == ts[1]]
+        site_meta = metadata[metadata['Proxy ID'] == ts[1]]
         climVar = site_meta['climateVariable'].iloc[0]
         sensi = site_meta['Relation_to_climateVariable'].iloc[0]
         # check seasonality
