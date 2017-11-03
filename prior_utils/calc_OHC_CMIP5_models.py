@@ -38,7 +38,8 @@ def main():
     
     # --------------------- begin user input -----------------------------
 
-    datadir = '/home/disk/kalman3/rtardif/CMIP5data'
+    #datadir = '/home/disk/kalman3/rtardif/CMIP5data'
+    datadir = '/home/disk/ekman4/rtardif/CMIP5data'
 
     # ---    
     model_exp = 'ccsm4_last_millenium'
@@ -283,7 +284,7 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     # looping over time slices
     for i in range(ntimeint):
         ibeg = i*inter
-        iend = ibeg+inter-1
+        iend = ibeg+inter
         print i, ': time indices [', ibeg,',',iend,']'
         ohc[ibeg:iend,:,:] = np.sum(wt*thetao[ibeg:iend,:,:,:],1)*rho_sw_mks*cp_sw_mks/areacello
 
