@@ -543,20 +543,33 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
             Ye_s[:, k, :] = Xatmp[stateDim:, :]
         years = np.array(years)
 
+        int_recon = years[1] - years[0]
+
         # Build dictionary
         YeDict = {}
         # loop over assimilated proxies
         nbassim = 0
         for i, pobj in enumerate(y_assim):
             # build boolean of indices to pull from HXa
-            yr_idxs = np.array([year in pobj.time for year in years],
-                               dtype=np.bool)
+            if int_recon == 1.:
+                yr_idxs = np.array([year in pobj.time for year in years],
+                                   dtype=np.bool)
+            else:
+                yr_idxs = np.zeros([len(years)],dtype=np.bool) # init. w/ all False
+                for k in range(len(years)):
+                    if [ pyr for pyr in pobj.time if ((pyr > years[k]-int_recon/2.)
+                                                      and (pyr <= years[k]+int_recon/2.)) ]:
+                        yr_idxs[k] = True
+                    else:
+                        yr_idxs[k] = False
+            
             YeDict[(pobj.type, pobj.id)] = {}
             YeDict[(pobj.type, pobj.id)]['status'] = 'assimilated'
             YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
             YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
             YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
-            YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
+            #YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
+            YeDict[(pobj.type, pobj.id)]['years'] = years[yr_idxs]
             YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[i, yr_idxs, :]
             YeDict[(pobj.type, pobj.id)]['augStateIndex'] = i
             
@@ -566,14 +579,26 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
         if y_eval:
             for j, pobj in enumerate(y_eval):
                 # build boolean of indices to pull from HXa
-                yr_idxs = np.array([year in pobj.time for year in years],
-                                   dtype=np.bool)
+                if int_recon == 1.:
+                    yr_idxs = np.array([year in pobj.time for year in years],
+                                       dtype=np.bool)
+                    ye_years = pobj.time
+                else:
+                    yr_idxs = np.zeros([len(years)],dtype=np.bool) # init. w/ all False
+                    for k in range(len(years)):
+                        if [ pyr for pyr in pobj.time if ((pyr > years[k]-int_recon/2.)
+                                                          and (pyr <= years[k]+int_recon/2.)) ]:
+                            yr_idxs[k] = True
+                        else:
+                            yr_idxs[k] = False
+
                 YeDict[(pobj.type, pobj.id)] = {}
                 YeDict[(pobj.type, pobj.id)]['status'] = 'withheld'
                 YeDict[(pobj.type, pobj.id)]['lat'] = pobj.lat
                 YeDict[(pobj.type, pobj.id)]['lon'] = pobj.lon
                 YeDict[(pobj.type, pobj.id)]['R'] = pobj.psm_obj.R
-                YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
+                #YeDict[(pobj.type, pobj.id)]['years'] = pobj.time
+                YeDict[(pobj.type, pobj.id)]['years'] = years[yr_idxs]
                 YeDict[(pobj.type, pobj.id)]['HXa'] = Ye_s[nbassim+j, yr_idxs, :]
                 YeDict[(pobj.type, pobj.id)]['augStateIndex'] = nbassim+j
             

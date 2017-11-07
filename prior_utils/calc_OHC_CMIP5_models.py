@@ -285,14 +285,14 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     for i in range(ntimeint):
         ibeg = i*inter
         iend = ibeg+inter
-        print i, ': time indices [', ibeg,',',iend,']'
+        print('%d : times from %s to %s' %(i, str(dates[ibeg]), str(dates[iend])))
         ohc[ibeg:iend,:,:] = np.sum(wt*thetao[ibeg:iend,:,:,:],1)*rho_sw_mks*cp_sw_mks/areacello
 
     # do the remaining (residual) array elements not included in the interval chunks above
     time_resids = np.arange(ntimeint*inter,ntime)
     # looping over single time elements
     for i in time_resids:
-        print 'single time :', i
+        print('single time : %s' %str(dates[i]))
         ohc[i,:,:] = np.sum(wt*thetao[i,:,:,:],0)*rho_sw_mks*cp_sw_mks/areacello
 
         
