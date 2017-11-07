@@ -73,6 +73,31 @@ DaiPDSI:
   dataformat: NCD
 
 
+icesm_last_millennium:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: [tas_sfc_Amon, psl_sfc_Amon, 
+                     pr_sfc_Amon, d18O_sfc_Amon,
+                     tos_sfc_Omon, sos_sfc_Omon,
+                     d18Osw_sfc_Omon]
+
+  datadir: null
+  datafile: '[vardef_template]_iCESM_past1000_085001-184912.nc'
+  dataformat: NCD
+
+icesm_last_millennium_historical:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: [tas_sfc_Amon, psl_sfc_Amon, 
+                     pr_sfc_Amon, d18O_sfc_Amon,
+                     tos_sfc_Omon, sos_sfc_Omon,
+                     d18Osw_sfc_Omon]
+
+  datadir: null
+  datafile: '[vardef_template]_iCESM_past1000historical_085001-200512.nc'
+  dataformat: NCD
 
 ccsm4_last_millenium:
   info:

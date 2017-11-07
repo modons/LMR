@@ -334,6 +334,7 @@ psm:
 
 prior:
   prior_source: ccsm4_last_millenium
+#  prior_source: icesm_last_millennium
 #  prior_source: ccsm3_trace21ka
 
   state_variables:

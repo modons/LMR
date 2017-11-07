@@ -34,6 +34,12 @@ Revisions:
             (the "0kyr" run, part of paleoclimate simulations performed by 
             Max Holloway of the British Antarctic Survey)
             [R. Tardif, U. of Washington, Aug 2017]
+          - Added the 'icesm_last_millennium' and 'icesm_last_millennium_historical'
+            classes for isotope-enabled CESM model simulations of the 
+            last millennium (0850 to 1850) and of the last millennium to which 
+            a modern historical simulation (1850 to 2006) has been concatenated. 
+            [R. Tardif, U. of Washington, Nov 2017]
+
 """
 
 import numpy as np
@@ -67,6 +73,10 @@ def prior_assignment(iprior):
         prior_object = prior_era20cm()
     elif iprior == 'loveclim_goosse2005':
         prior_object = prior_loveclim_goosse2005()
+    elif iprior == 'icesm_last_millennium':
+        prior_object = prior_icesm_last_millennium()
+    elif iprior == 'icesm_last_millennium_historical':
+        prior_object = prior_icesm_last_millennium_historical()        
     elif iprior == 'ihadcm3_preindustrial_control':
         prior_object = prior_ihadcm3_preindustrial_control()
     elif iprior == 'ccsm3_trace21ka':
@@ -454,7 +464,36 @@ class prior_loveclim_goosse2005(prior_master):
                                                         self.statevars_info)
         return
 
-# class for the LOVECLIM 1.0 Common Era simulation of Goosse et al. (GRL 2005)
+# class for the iCESM last millennium simulation
+class prior_icesm_last_millennium(prior_master):
+
+    def read_prior(self):
+    
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.statevars_info)
+        return
+
+# class for the concatenated iCESM last millennium and historical simulations
+class prior_icesm_last_millennium_historical(prior_master):
+
+    def read_prior(self):
+    
+        from load_gridded_data import read_gridded_data_CMIP5_model
+        self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
+                                                        self.prior_datafile,
+                                                        self.statevars,
+                                                        self.avgInterval,
+                                                        self.detrend,
+                                                        self.statevars_info)
+        return
+
+# class for the the isotope-enabled HadCM3 model simulation of preindustrial climate
+# (the "0kyr" time slice, part of a series of equilibrium paleoclimate simulations
 class prior_ihadcm3_preindustrial_control(prior_master):
 
     def read_prior(self):
@@ -468,8 +507,6 @@ class prior_ihadcm3_preindustrial_control(prior_master):
                                                         self.statevars_info)
         return
 
-    
-    
 # class for the simulation of the transient climate of the last 21k years (TraCE21ka)
 class prior_ccsm3_trace21ka(prior_master):
 
