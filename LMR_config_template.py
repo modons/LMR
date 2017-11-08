@@ -222,6 +222,8 @@ class core(ConfigGroup):
         Ensemble size
     loc_rad: float
         Localization radius for DA (in km)
+    inflation_fact : float
+        Covariance inflation factor
     seed: int, None
         RNG seed.  Passed to all random function calls. (e.g. prior and proxy
         record sampling)  Overridden by wrapper.multi_seed.
@@ -266,6 +268,8 @@ class core(ConfigGroup):
 
     loc_rad = None
 
+    inflation_fact = None
+    
     #datadir_output = '/home/disk/ice4/hakim/svnwork/lmr/trunk/data'
     #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
     datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
@@ -297,6 +301,7 @@ class core(ConfigGroup):
         self.recon_period = self.recon_period
         self.nens = self.nens
         self.loc_rad = self.loc_rad
+        self.inflation_fact = self.inflation_fact
         self.seed = self.seed
         self.datadir_output = self.datadir_output
         self.archive_dir = self.archive_dir

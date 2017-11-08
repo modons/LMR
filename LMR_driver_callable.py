@@ -97,6 +97,7 @@ def LMR_driver_callable(cfg=None):
     online = core.online_reconstruction
     nens = core.nens
     loc_rad = core.loc_rad
+    inflation_fact = core.inflation_fact
     prior_source = prior.prior_source
     datadir_prior = prior.datadir_prior
     datafile_prior = prior.datafile_prior
@@ -167,6 +168,13 @@ def LMR_driver_callable(cfg=None):
         print 'Loading completed in ' + str(load_time)+' seconds'
         print '-----------------------------------------------------'
 
+    # check covariance inflation from config
+    inflate = None
+    if inflation_fact is not None:
+        inflate = inflation_fact
+        if verbose > 2:            
+            print('\nUsing covariance inflation factor: %8.2f' %inflate)
+        
     # ==========================================================================
     # Get information on proxies to assimilate ---------------------------------
     # ==========================================================================
@@ -544,7 +552,7 @@ def LMR_driver_callable(cfg=None):
             loc = None
             if loc_rad is not None:
                 if verbose > 2:
-                    print '...computing localization...'
+                    print('...computing localization...')
                 loc = cov_localization(loc_rad, Y, X, Xb_one_coords)
 
             # Get Ye values for current proxy
@@ -570,7 +578,7 @@ def LMR_driver_callable(cfg=None):
                        str(Ye.mean()))
 
             # Update the state
-            Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc)
+            Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc, inflate)
 
             
             # TODO: AP Temporary fix for no TAS in state
