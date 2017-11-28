@@ -266,7 +266,7 @@ proxies:
       Tree Rings_Isotopes: ['d18O']
 
 
-  ncdcdtda:
+  NCDCdtda:
     dbversion: 'v0.0.1'
     datadir_proxy: null
     datafile_proxy: 'DTDA_{}_Proxies.df.pckl'

@@ -1586,7 +1586,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     if proxy_str == 'LMRdb':
         proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
     elif proxy_str == 'NCDCdtda':
-        proxy_str = proxy_str + str(config.proxies.ncdcdtda.dbversion)
+        proxy_str = proxy_str + str(config.proxies.NCDCdtda.dbversion)
         
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
@@ -1885,7 +1885,7 @@ def validate_config(config):
     elif proxy_database == 'PAGES2kv1':
         proxy_cfg = config.proxies.PAGES2kv1
     elif proxy_database == 'NCDCdtda':
-        proxy_cfg = config.proxies.ncdcdtda
+        proxy_cfg = config.proxies.NCDCdtda
     else:
         print 'ERROR in specification of proxy database.'
         raise SystemExit()
