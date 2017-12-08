@@ -43,34 +43,31 @@ datadir = '/Users/hakim/data/LMR/archive'
 #datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
 
-exp = 'dadt_test'
-#exp = 'testDADT100yrs'
-#exp = 'testDADT250yrs'
-#exp = 'testDADT500yrs3'
-#exp = 'testDADT250yrsAnom'
+
 #exp = 'production_mlost_ccsm4_pagesall_0.75'
 #exp = 'production_mlost_era20c_pagesall_0.75'
 #exp = 'production_mlost_era20cm_pagesall_0.75'
 #exp = 'production_gis_ccsm4_pagesall_0.75'
-#exp = 'test'
+# --
+exp = 'test'
 
 
-year_range = [1800,2000]
-#year_range = [0,2000]
+#year_range = [1800,2000]
+year_range = [0,2000]
 #year_range = [-25000,2000]
 #year_range = [-115000,2000]
 
 # --
-iter_range = [0,1]
-#iter_range = [0,100]
+#iter_range = [0,0]
+iter_range = [0,100]
 
 # options of which figures to produce
 make_gmt_plot  = True
-make_map_plots = True
+make_map_plots = False
 
-# for maps:
+# for maps (if make_map_plots is set to True):
 show_assimilated_proxies = True
-make_movie = True
+make_movie = False
 
 
 # ==== for GMT timeseries plot:
@@ -111,9 +108,6 @@ mapmin = -2.; mapmax = +2.; mapint = 0.5; cmap = plt.cm.bwr; cbarfmt = '%4.1f'  
 #mapmin = 20.; mapmax = 40.; mapint = 5.; cmap = mapcolor; cbarfmt = '%4.0f'           # S full field
 #mapmin = 98000.; mapmax = 103000.; mapint = 1000.; cmap = mapcolor; cbarfmt = '%4.0f' # MSLP full field
 
-#make_movie = True
-make_movie = False
-show_assimilated_proxies = True
 
 # ---- End section of user-defined parameters ----
 # ------------------------------------------------
