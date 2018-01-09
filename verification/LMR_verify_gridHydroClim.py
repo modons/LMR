@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import glob, os, sys
 from datetime import datetime, timedelta
-from netCDF4 import Dataset
+
 import mpl_toolkits.basemap as bm
 import matplotlib.pyplot as plt
 from matplotlib import ticker
@@ -424,64 +424,6 @@ if availablePRCP:
     GPCC = GPCC - np.nanmean(GPCC[smatch:ematch,:,:],axis=0)
 
 
-
-
-"""
-# ------------------------
-
-print '==> ', np.min(xam2_all), np.max(xam2_all), np.mean(xam2_all)
-
-print np.nanmin(GPCC), np.nanmax(GPCC), np.nanmean(GPCC)
-rho = 1000.
-GPCCmmyr = 1000.*GPCC*365.*86400./rho
-print np.nanmin(GPCCmmyr), np.nanmax(GPCCmmyr), np.nanmean(GPCCmmyr)
-
-
-lon2d = lon2d_GPCC
-lat2d = lat2d_GPCC
-#data_plot = GPCCmmyr[0,:,:]
-data_plot = GPCC[-1,:,:]
-
-
-label= 'GPCC'
-#fmin = -800.; fmax = 800.; fint = 200.0
-fmin = -1e-4; fmax = 1e-4; fint = 2e-5
-
-mapcolor = plt.cm.bwr  
-bckgcolor = 'lightgray'
-#cbarfmt = '%4.1f'
-cbarfmt = '%7.5f'
-
-fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, 1, 101);           
-scaled_colors = mapcolor(fvalc)
-cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
-cbarticks=np.linspace(fmin,fmax,11)
-
-fig = plt.figure()
-m = bm.Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=30.
-#m = bm.Basemap(projection='cyl', lat_0=0, lon_0=180,resolution='l', area_thresh=700.0); latres = 20.; lonres=30. 
-m.drawmapboundary(fill_color = bckgcolor)
-m.drawcoastlines(); m.drawcountries()
-m.drawparallels(np.arange(-80.,81.,latres))
-m.drawmeridians(np.arange(-180.,181.,lonres))
-cbnds = [fmin,fint,fmax];
-nlevs = 101
-cints = np.linspace(fmin, fmax, nlevs, endpoint=True)
-#x, y = m(lon2d,lat2d)
-#Gplt = m.scatter(x,y,20,marker='s',c=data_plot,edgecolor=None,linewidth='0',zorder=1,cmap=cmap,norm=norm)
-#cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
-#cbar = m.colorbar(Gplt,location='bottom',pad="5%",ticks=cbarticks,format=cbarfmt,extend='both')
-cs = m.contourf(lon2d,lat2d,data_plot,cints,cmap=plt.get_cmap(cmap),vmin=fmin,vmax=fmax,extend='both',latlon=True)
-cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
-cbar = m.colorbar(cs,location='bottom',pad="5%",ticks=cbarticks, extend='both',format=cbarfmt)
-cbar.set_label(label,size=11,weight='bold')
-fig.tight_layout()
-plt.savefig('data.png')
-plt.close()
-# ------------------------
-"""
-
-
 print('\n regridding LMR data to grids of verification data...\n')
 
 iplot_loc= False
@@ -698,33 +640,6 @@ fig = plt.figure()
 
 
 k = 0
-if availablePDSI:
-    # LMR compared to DaiPDSI
-    ax = fig.add_subplot(3,2,k+1)
-    ax.plot(cyears,lmr_dai_csave,lw=2)
-    ax.plot([trange[0],trange[-1]],[0,0],'k:')
-    ax.set_title('LMR - DaiPDSI')
-    ax.set_xlim(trange[0],trange[-1])
-    ax.set_ylim(corr_range[0],corr_range[-1])
-    ax.set_ylabel('Correlation',fontweight='bold')
-    ax = fig.add_subplot(3,2,k+2)
-    ax.hist(lmr_dai_csave[~np.isnan(lmr_dai_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
-    ax.set_title('LMR - DaiPDSI')
-    ax.set_xlim(corr_range[0],corr_range[-1])
-    ax.set_ylabel('Counts',fontweight='bold')
-    xmin,xmax = ax.get_xlim()
-    ymin,ymax = ax.get_ylim()
-    if ymax < 10:
-        ymax = 10
-    elif ymax >= 10 and ymax < 20:
-        ymax = 20
-    ax.set_ylim(ymin,ymax)
-    ypos = ymax-0.15*(ymax-ymin)
-    xpos = xmin+0.025*(xmax-xmin)
-    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_dai_csave)),fontsize=11,fontweight='bold')
-
-    k = k + 2
-
 if availablePRCP:
     # LMR compared to GPCC
     ax = fig.add_subplot(3,2,k+1)
@@ -749,6 +664,34 @@ if availablePRCP:
     ypos = ymax-0.15*(ymax-ymin)
     xpos = xmin+0.025*(xmax-xmin)
     ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_gpcc_csave)),fontsize=11,fontweight='bold')
+
+    k = k + 2
+
+if availablePDSI:
+    # LMR compared to DaiPDSI
+    ax = fig.add_subplot(3,2,k+1)
+    ax.plot(cyears,lmr_dai_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR - DaiPDSI')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(3,2,k+2)
+    ax.hist(lmr_dai_csave[~np.isnan(lmr_dai_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR - DaiPDSI')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_dai_csave)),fontsize=11,fontweight='bold')
+    
 
 fig.tight_layout()
 plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
@@ -1045,24 +988,24 @@ nticks = 4 # number of ticks on the colorbar
 if iplot:
     fig = plt.figure()
 
-    if availablePDSI:
-        bmin = -1.0
-        bmax = 1.0
-        cbarfmt = '%4.1f'
-        ax = fig.add_subplot(3,2,1)    
-        LMR_plotter(bias_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_biasmean_global))
-        plt.clim(-1,1)
-        ax.title.set_position([.5, 1.05])
-
     if availablePRCP:
         bmin = -1.0e-5
         bmax = 1.0e-5
         cbarfmt = '%7.5f'    
-        ax = fig.add_subplot(3,2,2)    
+        ax = fig.add_subplot(3,2,1)    
         LMR_plotter(bias_lmr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - GPCC bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_gpcc_biasmean_global))
         plt.clim(bmin,bmax)
+        ax.title.set_position([.5, 1.05])
+    
+    if availablePDSI:
+        bmin = -1.0
+        bmax = 1.0
+        cbarfmt = '%4.1f'
+        ax = fig.add_subplot(3,2,2)    
+        LMR_plotter(bias_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_biasmean_global))
+        plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
     fig.tight_layout()
@@ -1081,23 +1024,7 @@ if iplot:
 
     fig = plt.figure()
 
-
     k = 0
-    if availablePDSI:
-        # LMR - DaiPDSI
-        ax = fig.add_subplot(3,2,k+1)    
-        LMR_plotter(r_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_rmean_global))
-        plt.clim(-1,1)
-        ax.title.set_position([.5, 1.05])
-
-        ax = fig.add_subplot(3,2,k+2)    
-        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_cemean_global))
-        plt.clim(-1,1)
-        ax.title.set_position([.5, 1.05])
-
-        k = k + 2
 
     if availablePRCP:
         # LMR - GPCC
@@ -1113,6 +1040,21 @@ if iplot:
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
     
+        k = k + 2
+
+    if availablePDSI:
+        # LMR - DaiPDSI
+        ax = fig.add_subplot(3,2,k+1)    
+        LMR_plotter(r_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,k+2)    
+        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
 
     fig.tight_layout()
     if fsave:
@@ -1125,21 +1067,6 @@ if iplot:
     # -----
     fig = plt.figure()
     k = 0
-    if availablePDSI:
-        # LMR - DaiPDSI
-        ax = fig.add_subplot(3,2,k+1)    
-        LMR_plotter(r_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('Prior - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_rmean_global))
-        plt.clim(-1,1)
-        ax.title.set_position([.5, 1.05])
-
-        ax = fig.add_subplot(3,2,k+2)    
-        LMR_plotter(ce_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('Prior - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_cemean_global))
-        plt.clim(-1,1)
-        ax.title.set_position([.5, 1.05])
-
-        k = k + 2
 
     if availablePRCP:
         # LMR - GPCC
@@ -1155,6 +1082,23 @@ if iplot:
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
+        k = k + 2
+
+
+    if availablePDSI:
+        # LMR - DaiPDSI
+        ax = fig.add_subplot(3,2,k+1)    
+        LMR_plotter(r_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,k+2)    
+        LMR_plotter(ce_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+        
     
     fig.tight_layout()
     if fsave:
@@ -1167,25 +1111,7 @@ if iplot:
     # Comparisons of CE (full) & CE (unbiased errors)    
     fig = plt.figure()
     k = 0
-    if availablePDSI:
-        # LMR - DaiPDSI
-        lmr_dai_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:])) ))
-        lmr_dai_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:]-ce_lmr_dai_unbiased[:,:])) ))
-    
-        ax = fig.add_subplot(3,2,k+1)    
-        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean))
-        plt.clim(-1,1)
-        ax.title.set_position([.5, 1.05])
 
-        ax = fig.add_subplot(3,2,k+2)    
-        LMR_plotter(ce_lmr_dai-ce_lmr_dai_unbiased,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean2))
-        plt.clim(-1,1)
-        ax.title.set_position([.5, 1.05])
-
-        k = k + 2
-        
     if availablePRCP:
         # LMR - GPCC
         lmr_gpcc_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_gpcc[:,:])) ))
@@ -1202,6 +1128,26 @@ if iplot:
         plt.title('LMR - GPCC CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_gpcc_cemean2))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
+
+        k = k + 2
+
+    if availablePDSI:
+        # LMR - DaiPDSI
+        lmr_dai_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:])) ))
+        lmr_dai_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:]-ce_lmr_dai_unbiased[:,:])) ))
+    
+        ax = fig.add_subplot(3,2,k+1)    
+        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(3,2,k+2)    
+        LMR_plotter(ce_lmr_dai-ce_lmr_dai_unbiased,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean2))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+        
         
     fig.tight_layout()
     if fsave:
