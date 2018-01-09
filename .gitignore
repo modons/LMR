@@ -40,6 +40,10 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+# Images
+*.pdf
+*.png
+
 #Data Files
 *.npy
 *.h5
