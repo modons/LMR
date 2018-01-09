@@ -755,7 +755,7 @@ class proxies(ConfigGroup):
     # --------------------------------------------------------
     # proxies specific to Deep Times Data Assimilation project
     # --------------------------------------------------------
-    class ncdcdtda(ConfigGroup):
+    class NCDCdtda(ConfigGroup):
         """
         Parameters for NCDCdtda proxy class
 
@@ -897,7 +897,7 @@ class proxies(ConfigGroup):
     def __init__(self, lmr_path=None, seed=None, **kwargs):
         self.PAGES2kv1 = self.PAGES2kv1(lmr_path=lmr_path, **kwargs.pop('PAGES2kv1', {}))
         self.LMRdb = self.LMRdb(lmr_path=lmr_path, **kwargs.pop('LMRdb', {}))
-        self.ncdcdtda = self.ncdcdtda(lmr_path=lmr_path, **kwargs.pop('ncdcdtda', {}))
+        self.NCDCdtda = self.NCDCdtda(lmr_path=lmr_path, **kwargs.pop('NCDCdtda', {}))
 
         super(self.__class__, self).__init__(**kwargs)
         

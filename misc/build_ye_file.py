@@ -157,29 +157,26 @@ if 'bilinear' in unique_psm_keys:
 # Loop over all psm types found in the configuration
 for psm_key in unique_psm_keys:
 
-    print 'Loading psm information for psm type:', psm_key, ' ...'
+    print('Loading psm information for psm type: %s ...' %psm_key)
     
     # re-assign current psm type to all proxy records
     # TODO: Could think of implementing filter to restrict to relevant proxy records only
     for p in proxy_types: proxy_cfg.proxy_psm_type[p] = psm_key
-        
-    proxy_objects = proxy_class.load_all_annual_no_filtering(cfg)
-
-    # Number of proxy objects (will be a dim of ye_out array)
-    num_proxy = len(proxy_objects)
-    print 'Calculating ye values for {:d} proxies'.format(num_proxy)
     
-        
+    pre_calib_file = None
     # Define the psm-dependent required state variables
     if psm_key == 'linear':
         statevars = cfg.psm.linear.psm_required_variables
         psm_avg = cfg.psm.avgPeriod
+        pre_calib_file =  cfg.psm.linear.pre_calib_datafile
     elif psm_key == 'linear_TorP':
         statevars = cfg.psm.linear_TorP.psm_required_variables
         psm_avg = cfg.psm.avgPeriod
+        pre_calib_file =  cfg.psm.linear_TorP.pre_calib_datafile
     elif psm_key == 'bilinear':
         statevars = cfg.psm.bilinear.psm_required_variables
         psm_avg = cfg.psm.avgPeriod
+        pre_calib_file =  cfg.psm.bilinear.pre_calib_datafile
     elif psm_key == 'h_interp':
         # h_interp psm class (interpolation of prior isotope data)
         psm_avg = 'annual' # annual only for this psm
@@ -207,6 +204,17 @@ for psm_key in unique_psm_keys:
     else:
         raise (SystemExit('Exiting! You must use the PSMbuild facility to generate the appropriate calibrated PSMs'))
 
+    if pre_calib_file:
+        print('  from file: %s' %pre_calib_file)
+
+    # loading all available proxy objects
+    proxy_objects = proxy_class.load_all_annual_no_filtering(cfg)
+
+    # Number of proxy objects (will be a dim of ye_out array)
+    num_proxy = len(proxy_objects)
+    print 'Calculating ye values for {:d} proxies'.format(num_proxy)
+
+        
     # Define required temporal averaging
     if psm_avg == 'annual':
         # calendar year as the only seasonality vector for all proxies

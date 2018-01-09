@@ -289,8 +289,11 @@ for t in sorted(proxy_types):
 print(' ')
 print('Creating maps of PSM correlation...')
 
-water = '#9DD4F0'
-continents = '#888888'
+#water = '#9DD4F0'
+#continents = '#888888'
+water = '#D3ECF8'
+continents = '#F2F2F2'
+    
 mapcolor = plt.cm.seismic
 cbarfmt = '%4.1f'
 

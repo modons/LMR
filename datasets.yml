@@ -259,8 +259,12 @@ ccsm3_trace21ka:
   info:
     multiple_vars: True
     template: '[vardef_template]'
-    available_vars: ['tas_sfc_Amon', 'tas_sfc_Adec', 'psl_sfc_Adec',
-                     'ts_sfc_Adec', 'tos_sfc_Odec', 'sos_sfc_Odec']
+    available_vars: ['tas_sfc_Amon', 'psl_sfc_Adec', 'sfcheight_sfc_Adec',
+                     'tas_sfc_Adec', 'ts_sfc_Adec', 'tsl_sfc_Adec',
+                     'prw_int_Adec', 'pr_sfc_Adec',
+                     'zg_500hPa_Adec', 'zg_850hPa_Adec', 'wap_700hPa_Adec',
+                     'ta_1000hPa_Adec', 'ta_850hPa_Adec', 'ta_700hPa_Adec', 'ta_600hPa_Adec', 'ta_500hPa_Adec', 
+                     'tos_sfc_Odec', 'sos_sfc_Odec']
 
   datadir: null
   datafile: '[vardef_template]_CCSM3_TraCE21ka.nc'

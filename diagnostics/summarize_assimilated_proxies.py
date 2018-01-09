@@ -42,8 +42,7 @@ plt.style.use('ggplot')
 datadir = '/home/disk/kalman3/rtardif/LMR/output'
 
 # name of reconstruction experiment
-#nexp = 'test'
-nexp = 'test2k_Proxies_LMRdbAllProxies'
+nexp = 'test'
 
 # range of Monte-Carlo iterations to consider
 iter_range = [0,0]
@@ -157,10 +156,14 @@ for iter in iters:
     fig = plt.figure()
     ax  = fig.add_axes([0.1,0.1,0.8,0.8])
     m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.
-    water = '#9DD4F0'
-    continents = '#888888'
+
+    #water = '#9DD4F0'
+    #continents = '#888888'
+    water = '#D3ECF8'
+    continents = '#F2F2F2'
+
     m.drawmapboundary(fill_color=water)
-    m.drawcoastlines(); m.drawcountries()
+    m.drawcoastlines(linewidth=0.5); m.drawcountries()
     m.fillcontinents(color=continents,lake_color=water)
     m.drawparallels(np.arange(-80.,81.,latres))
     m.drawmeridians(np.arange(-180.,181.,lonres))
