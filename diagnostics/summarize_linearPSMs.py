@@ -19,7 +19,7 @@ Module: summarize_linearPSMs.py
 """
 import sys
 import os
-import cPickle
+import pickle
 import numpy as np
 import pandas as pd
 import math
@@ -75,7 +75,7 @@ if not os.path.isdir(dirfig):
 
 fname = inputdir+'/PSMs_LMRdb_'+calib_tag+'_diag.pckl'
 infile = open(fname,'r')
-psm_data = cPickle.load(infile)
+psm_data = pickle.load(infile)
 infile.close()
 
 proxy_types_sites = sorted(psm_data.keys())

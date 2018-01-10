@@ -29,7 +29,7 @@ from matplotlib import ticker
 from matplotlib.colors import from_levels_and_colors
 from matplotlib import rc
 from spharm import Spharmt, getspecindx, regrid
-import cPickle
+import pickle
 import warnings
 
 # LMR specific imports
@@ -175,8 +175,8 @@ Xprior_statevector = np.load(file_prior)
 Xb_one = Xprior_statevector['Xb_one']
 # extract variable (sfc temperature) from state vector
 state_info = Xprior_statevector['state_info'].item()
-print state_info
-variables_available = state_info.keys()
+print(state_info)
+variables_available = list(state_info.keys())
 if varPDSI in variables_available: availablePDSI = True
 if varPRCP in variables_available: availablePRCP = True
 
@@ -236,7 +236,7 @@ for dir in mcdir:
         lon2 = np.reshape(lon,(nlat,nlon))
 
         recon_times = npzfile['years']
-        LMR_time = np.array(map(int,recon_times))
+        LMR_time = np.array(list(map(int,recon_times)))
         years = recon_times
         nyrs =  len(years)
 
@@ -285,16 +285,16 @@ if availablePDSI:
     #  check..
     max_err = np.max(np.max(np.max(xamPDSI_check - xamPDSI)))
     if max_err > 1e-4:
-        print 'varPDSI max error = ' + str(max_err)
+        print('varPDSI max error = ' + str(max_err))
         raise Exception('sample mean does not match what is in the ensemble files!')
     # sample variance
     xamPDSI_var = xamPDSI_all.var(0)
 
-    print('Variable PDSI: %s' %varPDSI_label)
-    print np.shape(xamPDSI_var)
-    print '\n shape of the ensemble array: ' + str(np.shape(xamPDSI_all)) +'\n'
-    print '\n shape of the ensemble-mean array: ' + str(np.shape(xamPDSI)) +'\n'
-    print '\n shape of the ensemble-mean prior array: ' + str(np.shape(xbmPDSI)) +'\n'
+    print(('Variable PDSI: %s' %varPDSI_label))
+    print(np.shape(xamPDSI_var))
+    print('\n shape of the ensemble array: ' + str(np.shape(xamPDSI_all)) +'\n')
+    print('\n shape of the ensemble-mean array: ' + str(np.shape(xamPDSI)) +'\n')
+    print('\n shape of the ensemble-mean prior array: ' + str(np.shape(xbmPDSI)) +'\n')
 
     
 if availablePRCP:
@@ -307,16 +307,16 @@ if availablePRCP:
     #  check ..
     max_err = np.max(np.max(np.max(xamPRCP_check - xamPRCP)))
     if max_err > 1e-4:
-        print 'varPRCP max error = ' + str(max_err)
+        print('varPRCP max error = ' + str(max_err))
         raise Exception('sample mean does not match what is in the ensemble files!')
     # sample variance
     xamPRCP_var = xamPRCP_all.var(0)    
 
-    print('Variable PRCP: %s' %varPRCP_label)
-    print np.shape(xamPRCP_var)
-    print '\n shape of the ensemble array: ' + str(np.shape(xamPRCP_all)) +'\n'
-    print '\n shape of the ensemble-mean array: ' + str(np.shape(xamPRCP)) +'\n'
-    print '\n shape of the ensemble-mean prior array: ' + str(np.shape(xbmPRCP)) +'\n'
+    print(('Variable PRCP: %s' %varPRCP_label))
+    print(np.shape(xamPRCP_var))
+    print('\n shape of the ensemble array: ' + str(np.shape(xamPRCP_all)) +'\n')
+    print('\n shape of the ensemble-mean array: ' + str(np.shape(xamPRCP)) +'\n')
+    print('\n shape of the ensemble-mean prior array: ' + str(np.shape(xbmPRCP)) +'\n')
 
     
 lmr_lat_range = (lat2[0,0],lat2[-1,0])
@@ -333,7 +333,7 @@ print('\nloading verification data...\n')
 
 # Define month sequence for the calendar year 
 # (argument needed in upload of reanalysis data)
-annual = range(1,13)
+annual = list(range(1,13))
 
 
 # DaiPDSI product
@@ -439,7 +439,7 @@ iw = 0
 if nya > 0:
     iw = (nya-1)/2
 
-cyears = range(trange[0],trange[1])
+cyears = list(range(trange[0],trange[1]))
 
 # time series for combination of data products
 lmr_dai_csave   = np.zeros([len(cyears)])

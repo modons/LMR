@@ -32,9 +32,9 @@ Revisions:
            [ R. Tardif, Univ. of Washington, Sept 2017 ]
 """
 
-import LMR_psms
-from load_data import load_data_frame
-from LMR_utils import augment_docstr, class_docs_fixer
+from . import LMR_psms
+from .load_data import load_data_frame
+from .LMR_utils import augment_docstr, class_docs_fixer
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
@@ -82,7 +82,7 @@ class ProxyManager:
                                                   None)
             # Add to total lists
             self.all_proxies += proxies
-            for k, v in ids_by_grp.iteritems():
+            for k, v in ids_by_grp.items():
                 self.all_ids_by_group[k] += v
 
         proxy_frac = config.proxies.proxy_frac
@@ -94,7 +94,7 @@ class ProxyManager:
             nsites_assim = int(nsites * proxy_frac)
 
             seed(config.proxies.seed)
-            self.ind_assim = sample(range(nsites), nsites_assim)
+            self.ind_assim = sample(list(range(nsites)), nsites_assim)
             self.ind_assim.sort()
             self.ind_eval = list(set(range(nsites)) - set(self.ind_assim))
             self.ind_eval.sort()
@@ -108,7 +108,7 @@ class ProxyManager:
                     grp.remove(pobj.id)
 
         else:
-            self.ind_assim = range(nsites)
+            self.ind_assim = list(range(nsites))
             self.ind_eval = None
             self.assim_ids_by_group = self.all_ids_by_group
 
@@ -157,7 +157,7 @@ class ProxyManager:
             return []
 
 
-class BaseProxyObject:
+class BaseProxyObject(metaclass=ABCMeta):
     """
     Class defining attributes and methods for descendant proxy objects.
 
@@ -205,7 +205,6 @@ class BaseProxyObject:
     All proxy object classes should descend from the BaseProxyObject abstract
     class.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, config, pid, prox_type, start_yr, end_yr, 
                  lat, lon, elev, seasonality, values, time):
@@ -345,7 +344,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
         try:
             proxy_type = pages2kv1_cfg.proxy_type_mapping[(pages2kv1_type, pmeasure)]
         except (KeyError, ValueError) as e:
-            print 'Proxy type/measurement not found in mapping: {}'.format(e)
+            print('Proxy type/measurement not found in mapping: {}'.format(e))
             raise ValueError(e)
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
@@ -405,7 +404,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
         availability_mask |= True
         
         # Find indices matching filter specifications
-        for colname, filt_list in filters.iteritems():
+        for colname, filt_list in filters.items():
             simple_mask = meta_src[colname] == 0
             simple_mask &= False
 
@@ -476,7 +475,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
-                for group in proxy_id_by_type.values():
+                for group in list(proxy_id_by_type.values()):
                     if site in group:
                         group.remove(site)
                         break  # Should only be one instance
@@ -517,7 +516,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
                                      meta_src=meta_src, data_src=data_src)
                 proxy_objs.append(pobj)
             except ValueError as e:
-                print e
+                print(e)
 
         return proxy_objs
 
@@ -555,7 +554,7 @@ class ProxyLMRdb(BaseProxyObject):
         try:
             proxy_type = LMRdb_cfg.proxy_type_mapping[(LMRdb_type,pmeasure)]
         except (KeyError, ValueError) as e:
-            print 'Proxy type/measurement not found in mapping: {}'.format(e)
+            print('Proxy type/measurement not found in mapping: {}'.format(e))
             raise ValueError(e)
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
@@ -619,7 +618,7 @@ class ProxyLMRdb(BaseProxyObject):
         availability_mask |= True
         
         # Find indices matching simple filter specifications
-        for colname, filt_list in filters.iteritems():
+        for colname, filt_list in filters.items():
             simple_mask = meta_src[colname] == 0
             simple_mask &= False
 
@@ -723,7 +722,7 @@ class ProxyLMRdb(BaseProxyObject):
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
-                for group in proxy_id_by_type.values():
+                for group in list(proxy_id_by_type.values()):
                     if site in group:
                         group.remove(site)
                         break  # Should only be one instance
@@ -764,7 +763,7 @@ class ProxyLMRdb(BaseProxyObject):
                                      meta_src=meta_src, data_src=data_src)
                 proxy_objs.append(pobj)
             except ValueError as e:
-                print e
+                print(e)
 
         return proxy_objs
 
@@ -802,7 +801,7 @@ class ProxyNCDCdtda(BaseProxyObject):
         try:
             proxy_type = NCDCdtda_cfg.proxy_type_mapping[(NCDCdtda_type,pmeasure)]
         except (KeyError, ValueError) as e:
-            print 'Proxy type/measurement not found in mapping: {}'.format(e)
+            print('Proxy type/measurement not found in mapping: {}'.format(e))
             raise ValueError(e)
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
@@ -870,7 +869,7 @@ class ProxyNCDCdtda(BaseProxyObject):
         availability_mask |= True
         
         # Find indices matching simple filter specifications
-        for colname, filt_list in filters.iteritems():
+        for colname, filt_list in filters.items():
 
             simple_mask = meta_src[colname] == 0
             simple_mask &= False
@@ -981,7 +980,7 @@ class ProxyNCDCdtda(BaseProxyObject):
                 all_proxies.append(pobj)
             except ValueError as e:
                 # Proxy had no obs or didn't meet psm r crit
-                for group in proxy_id_by_type.values():
+                for group in list(proxy_id_by_type.values()):
                     if site in group:
                         group.remove(site)
                         break  # Should only be one instance
@@ -1022,7 +1021,7 @@ class ProxyNCDCdtda(BaseProxyObject):
                                      meta_src=meta_src, data_src=data_src)
                 proxy_objs.append(pobj)
             except ValueError as e:
-                print e
+                print(e)
 
         return proxy_objs
 

@@ -26,7 +26,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 from scipy import stats
 from netCDF4 import Dataset
 from datetime import datetime, timedelta
-import cPickle
+import pickle
 import warnings
 
 import pandas as pd
@@ -187,7 +187,7 @@ ptypes,nrecords = assimilated_proxies(workdir+'/r0/')
 print('--------------------------------------------------')
 print('Assimilated proxies by type:')
 for pt in sorted(ptypes.keys()):
-    print('%40s : %s' % (pt, str(ptypes[pt])))                
+    print('%40s : %s' % (pt, str(ptypes[pt])))
 print('%40s : %s' % ('Total',str(nrecords)))
 print('--------------------------------------------------')
 
@@ -247,13 +247,13 @@ MLOST_time = np.array(mlost_time)
 
 # Define month sequence for the calendar year 
 # (argument needed in upload of reanalysis data)
-annual = range(1,13)
+annual = list(range(1,13))
 
 # load ECMWF's 20th century reanalysis (ERA20C) reanalysis --------------------------------
 datadir = datadir_reanl+'/era20c'
 datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
@@ -275,7 +275,7 @@ era_gm = np.zeros([len(ERA20C_time)])
 era_nhm = np.zeros([len(ERA20C_time)])
 era_shm = np.zeros([len(ERA20C_time)])
 # Loop over years in dataset
-for i in xrange(0,len(ERA20C_time)): 
+for i in range(0,len(ERA20C_time)): 
     # compute the global & hemispheric mean temperature
     [era_gm[i],
      era_nhm[i],
@@ -285,7 +285,7 @@ for i in xrange(0,len(ERA20C_time)):
 datadir = datadir_reanl+'/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 
@@ -307,7 +307,7 @@ tcr_gm = np.zeros([len(TCR_time)])
 tcr_nhm = np.zeros([len(TCR_time)])
 tcr_shm = np.zeros([len(TCR_time)])
 # Loop over years in dataset
-for i in xrange(0,len(TCR_time)): 
+for i in range(0,len(TCR_time)): 
     # compute the global & hemispheric mean temperature
     [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],
                                                                  lat_TCR)
@@ -321,7 +321,7 @@ print('--------------------------------------------------')
 print('reading LMR GMT data...')
 print('--------------------------------------------------')
 kk = -1
-print 'IPLOT = ' + str(iplot)
+print('IPLOT = ' + str(iplot))
 if iplot:
     fig = plt.figure()
 
@@ -351,8 +351,8 @@ for dir in dirset:
     nhmt = npzfile['nhmt_ensemble']
     shmt = npzfile['shmt_ensemble']
     recon_times = npzfile['recon_times']
-    print recon_times
-    print gmtpfile
+    print(recon_times)
+    print(gmtpfile)
     gmt_shape = np.shape(gmt)
     nhmt_shape = np.shape(nhmt)
     shmt_shape = np.shape(shmt)
@@ -611,7 +611,7 @@ lg_err = lmr_gm[lmr_smatch:lmr_ematch] - gis_gm[gis_smatch:gis_ematch]
 svar = gmt_save[:,lmr_smatch:lmr_ematch].var(0,ddof=1)
 calib = lg_err.var(0,ddof=1)/svar.mean(0)
 print('--------------------------------------------------')
-print('ensemble calibration: %s' % str(calib))
+print(('ensemble calibration: %s' % str(calib)))
 print('--------------------------------------------------')
 
 # ========================================================
@@ -851,7 +851,7 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, verif_yrs))
 # save copies of the original data for residual estimates later
 lmr_gm_copy = np.copy(lmr_gm[ind_lmr])
 LMR_time_copy = np.copy(LMR_time[ind_lmr])
-xvar = range(len(lmr_gm_copy))
+xvar = list(range(len(lmr_gm_copy)))
 lmr_slope, lmr_intercept, r_value, p_value, std_err = stats.linregress(xvar,lmr_gm_copy)
 lmr_trend = lmr_slope*np.squeeze(xvar) + lmr_intercept
 lmr_gm_detrend = lmr_gm_copy - lmr_trend
@@ -864,7 +864,7 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_gis = np.searchsorted(GIS_time, np.intersect1d(GIS_time, overlap_yrs))
 GIS_time_copy = GIS_time[ind_gis]
 gis_gm_copy = np.copy(gis_gm[ind_gis])
-xvar = range(len(ind_gis))
+xvar = list(range(len(ind_gis)))
 gis_slope, gis_intercept, r_value, p_value, std_err = stats.linregress(xvar,gis_gm_copy)
 gis_trend = gis_slope*np.squeeze(xvar) + gis_intercept
 gis_gm_detrend = gis_gm_copy - gis_trend
@@ -899,7 +899,7 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_cru = np.searchsorted(CRU_time, np.intersect1d(CRU_time, overlap_yrs))
 CRU_time_copy = CRU_time[ind_cru]
 cru_gm_copy = np.copy(cru_gm[ind_cru])
-xvar = range(len(ind_cru))
+xvar = list(range(len(ind_cru)))
 cru_slope, cru_intercept, r_value, p_value, std_err = stats.linregress(xvar,cru_gm_copy)
 cru_trend = cru_slope*np.squeeze(xvar) + cru_intercept
 cru_gm_detrend = cru_gm_copy - cru_trend
@@ -923,7 +923,7 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_be = np.searchsorted(BE_time, np.intersect1d(BE_time, overlap_yrs))
 BE_time_copy = BE_time[ind_be]
 be_gm_copy = np.copy(be_gm[ind_be])
-xvar = range(len(ind_be))
+xvar = list(range(len(ind_be)))
 be_slope, be_intercept, r_value, p_value, std_err = stats.linregress(xvar,be_gm_copy)
 be_trend = be_slope*np.squeeze(xvar) + be_intercept
 be_gm_detrend = be_gm_copy - be_trend
@@ -947,7 +947,7 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_mlost = np.searchsorted(MLOST_time, np.intersect1d(MLOST_time, overlap_yrs))
 MLOST_time_copy = MLOST_time[ind_mlost]
 mlost_gm_copy = np.copy(mlost_gm[ind_mlost])
-xvar = range(len(ind_mlost))
+xvar = list(range(len(ind_mlost)))
 mlost_slope, mlost_intercept, r_value, p_value, std_err = stats.linregress(xvar,mlost_gm_copy)
 mlost_trend = mlost_slope*np.squeeze(xvar) + mlost_intercept
 mlost_gm_detrend = mlost_gm_copy - mlost_trend
@@ -971,7 +971,7 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_tcr = np.searchsorted(TCR_time, np.intersect1d(TCR_time, overlap_yrs))
 TCR_time_copy = TCR_time[ind_tcr]
 tcr_gm_copy = np.copy(tcr_gm[ind_tcr])
-xvar = range(len(ind_tcr))
+xvar = list(range(len(ind_tcr)))
 tcr_slope, tcr_intercept, r_value, p_value, std_err = stats.linregress(xvar,tcr_gm_copy)
 tcr_trend = tcr_slope*np.squeeze(xvar) + tcr_intercept
 tcr_gm_detrend = tcr_gm_copy - tcr_trend
@@ -995,7 +995,7 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_era = np.searchsorted(ERA20C_time, np.intersect1d(ERA20C_time, overlap_yrs))
 ERA_time_copy = ERA20C_time[ind_era]
 era_gm_copy = np.copy(era_gm[ind_era])
-xvar = range(len(ind_era))
+xvar = list(range(len(ind_era)))
 era_slope, era_intercept, r_value, p_value, std_err = stats.linregress(xvar,era_gm_copy)
 era_trend = era_slope*np.squeeze(xvar) + era_intercept
 era_gm_detrend = era_gm_copy - era_trend
@@ -1019,7 +1019,7 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_con = np.searchsorted(CON_time, np.intersect1d(CON_time, overlap_yrs))
 CON_time_copy = CON_time[ind_con]
 con_gm_copy = np.copy(con_gm[ind_con])
-xvar = range(len(ind_con))
+xvar = list(range(len(ind_con)))
 con_slope, con_intercept, r_value, p_value, std_err = stats.linregress(xvar,con_gm_copy)
 con_trend = con_slope*np.squeeze(xvar) + con_intercept
 con_gm_detrend = con_gm_copy - con_trend
@@ -1049,7 +1049,7 @@ cons   =  str(float('%.2f' % (con_slope*100.)))
 print('r:  %s %s' % (str(lgrf), str(lgrd)))
 print('ce: %s %s' % (str(lgcf), str(lgcd)))
 
-print 'LMR trend: '+str(lmrs) + ' K/100yrs'
+print('LMR trend: '+str(lmrs) + ' K/100yrs')
 # plots
 
 if iplot:
@@ -1406,9 +1406,9 @@ if stat_save:
     gmt_verification_stats['stat_metadata'] = stat_metadata
     # dump the dictionary to a pickle file
     spfile = nexp + '_' + str(niters) + '_iters_gmt_verification.pckl'
-    print 'writing statistics to pickle file: ' + spfile
+    print('writing statistics to pickle file: ' + spfile)
     outfile = open(spfile, 'w')
-    cPickle.dump(gmt_verification_stats, outfile)
+    pickle.dump(gmt_verification_stats, outfile)
 
 if interactive:
     plt.show(block=True)

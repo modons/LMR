@@ -18,7 +18,7 @@ Revisions:
 """
 
 #import numpy as np
-import cPickle
+import pickle
 
 import matplotlib
 # need to do this when running remotely, and to suppress figures
@@ -76,7 +76,7 @@ def print_verification_stats(expts, keyword):
         #print '---------------------------------------------------------------------'
         #print 'working on file: ',exfile
         infile = open(exfile,'r')
-        ddict = cPickle.load(infile)
+        ddict = pickle.load(infile)
 
         # NOTE: This line obliterates any variables in global scope with same name as ddict key
         # load keys into variables by the key name
@@ -84,7 +84,7 @@ def print_verification_stats(expts, keyword):
         stat_metadata = ddict['stat_metadata']
         
         # list out keys conditionally
-        for key in ddict.keys():
+        for key in list(ddict.keys()):
             #print key,ddict[key],stat_metadata[key]
             if keyword in stat_metadata[key]:
                 #print key,ddict[key],stat_metadata[key]
@@ -96,32 +96,32 @@ def print_verification_stats(expts, keyword):
 # ================================= MAIN =======================================
 #
 
-print '----------------------------------'
-print 'experiments:'
-print expts
-print '----------------------------------'
+print('----------------------------------')
+print('experiments:')
+print(expts)
+print('----------------------------------')
 
 # use a keyword to filter results
 keyword1 = 'consensus coefficient of efficiency'
-print '\nresults for all experiments for metric: ' + keyword1
+print('\nresults for all experiments for metric: ' + keyword1)
 dsave1 = print_verification_stats(expts, keyword1)
-print dsave1
+print(dsave1)
 
 #keyword2 = 'GIS detrended coefficient of efficiency'
 keyword2 = 'consensus detrended coefficient of efficiency'
-print '\nresults for all experiments for metric: ' + keyword2
+print('\nresults for all experiments for metric: ' + keyword2)
 dsave2 = print_verification_stats(expts, keyword2)
-print dsave2
+print(dsave2)
 
 keyword3 = 'consensus correlation'
-print '\nresults for all experiments for metric: ' + keyword3
+print('\nresults for all experiments for metric: ' + keyword3)
 dsave3 = print_verification_stats(expts, keyword3)
-print dsave3
+print(dsave3)
 
 keyword4 = 'LMR trend'
-print '\nresults for all experiments for metric: ' + keyword4
+print('\nresults for all experiments for metric: ' + keyword4)
 dsave3 = print_verification_stats(expts, keyword4)
-print dsave3
+print(dsave3)
 
 # make a simple plot
 # ------------------

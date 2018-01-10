@@ -4,11 +4,11 @@ Compares LMR output between two archive directories.
 """
 
 import glob
-import cPickle
+import pickle
 import numpy as np
 import os.path as path
 
-from itertools import izip
+
 
 # proxy-first version vs time-first version comparison
 is_proxy_first_driver_loop = False
@@ -58,9 +58,9 @@ assim2 = np.load(path.join(dir2, assim_fname))
 
 assim2_idx_match_to1 = []
 for proxy2 in assim2:
-    id2 = proxy2[proxy2.keys()[0]][0]
+    id2 = proxy2[list(proxy2.keys())[0]][0]
     for i, proxy in enumerate(assim1):
-        id1 = proxy[proxy.keys()[0]][0]
+        id1 = proxy[list(proxy.keys())[0]][0]
         if id1 == id2:
             assim2_idx_match_to1.append(i)
             break
@@ -81,7 +81,7 @@ for name in d1_names:
 for idx, file in enumerate(d1_files):
 
     idx2 = d2_names.index(d1_names[idx])
-    print d1_names[idx]
+    print(d1_names[idx])
 
     if diff_state_vectors:
         exclude = ['Xb_one.npz', 'gmt.npz', 'gmt_ensemble.npz']
@@ -92,13 +92,13 @@ for idx, file in enumerate(d1_files):
         f1 = np.load(file)
         f2 = np.load(d2_files[idx2])
 
-        for key, values in f1.iteritems():
+        for key, values in f1.items():
             values2 = f2[key]
 
-            print '\t', key, ': ', values.dtype
+            print('\t', key, ': ', values.dtype)
 
             if values.dtype.kind == 'S':
-                for i1, i2 in izip(values, values2):
+                for i1, i2 in zip(values, values2):
                     assert i1 == i2
             elif not values.dtype == np.object:
                 if is_proxy_first_driver_loop:
@@ -130,14 +130,14 @@ for idx, file in enumerate(d1_files):
 
     elif path.splitext(file)[1] == '.pckl':
         with open(file, 'r') as load_file:
-            f1 = cPickle.load(load_file)
+            f1 = pickle.load(load_file)
         with open(d2_files[idx2], 'r') as load_file:
-            f2 = cPickle.load(load_file)
+            f2 = pickle.load(load_file)
 
-        for key, dict in f1.iteritems():
+        for key, dict in f1.items():
             dict2 = f2[key]
 
-            for sub_key, value in dict.iteritems():
+            for sub_key, value in dict.items():
                 value2 = dict2[sub_key]
                 if is_proxy_first_driver_loop and sub_key == 'HXa':
                     # Proxy order is different between the two right now

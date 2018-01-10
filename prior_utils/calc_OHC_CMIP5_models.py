@@ -285,7 +285,7 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     for i in range(ntimeint):
         ibeg = i*inter
         iend = ibeg+inter
-        print('%d : times from %s to %s' %(i, str(dates[ibeg]), str(dates[iend])))
+        print(('%d : times from %s to %s' %(i, str(dates[ibeg]), str(dates[iend]))))
         ohc[ibeg:iend,:,:] = np.sum(wt*thetao[ibeg:iend,:,:,:],1)*rho_sw_mks*cp_sw_mks/areacello
 
     # do the remaining (residual) array elements not included in the interval chunks above
@@ -313,8 +313,8 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     # ------------------------------------------------------------
     # do time (annual or other) averaging here, if option selected
     if time_avg:
-        
-        avg_def = time_avg.keys()[0]
+
+        avg_def = list(time_avg.keys())[0]
         avg_seq = time_avg[avg_def]
         
         if hasattr(time, 'calendar'):
@@ -333,7 +333,7 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
         ntime = len(years)
         datesYears = np.array([datetime(y,1,1,0,0) for y in years])
 
-        print 'Averaging over month sequence:', avg_seq
+        print('Averaging over month sequence:', avg_seq)
         year_current = [m for m in avg_seq if m>0 and m<=12]
         year_before  = [abs(m) for m in avg_seq if m < 0]        
         year_follow  = [m-12 for m in avg_seq if m > 12]

@@ -33,7 +33,7 @@ def calibration_assignment(icalib):
     elif icalib == 'SPEI':
         calib_object = calibration_precip_SPEI()
     else:
-        print 'Error in calibration data specification! Exiting ...'
+        print('Error in calibration data specification! Exiting ...')
         exit(1)
       
     return calib_object
@@ -61,7 +61,7 @@ class calibration_GISTEMP(calibration_master):
     
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_GISTEMP
+        from .load_gridded_data import read_gridded_data_GISTEMP
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GISTEMP(self.datadir_calib,
                                                                                     self.datafile_calib,
                                                                                     self.calib_vars,
@@ -81,7 +81,7 @@ class calibration_HadCRUT(calibration_master):
 
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_HadCRUT
+        from .load_gridded_data import read_gridded_data_HadCRUT
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_HadCRUT(self.datadir_calib,
                                                                                     self.datafile_calib,
                                                                                     self.calib_vars,
@@ -101,7 +101,7 @@ class calibration_BerkeleyEarth(calibration_master):
     
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_BerkeleyEarth
+        from .load_gridded_data import read_gridded_data_BerkeleyEarth
 
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,
                                                                                           self.datafile_calib,
@@ -121,7 +121,7 @@ class calibration_MLOST(calibration_master):
     
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_MLOST
+        from .load_gridded_data import read_gridded_data_MLOST
 
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_MLOST(self.datadir_calib,
                                                                                   self.datafile_calib,
@@ -147,7 +147,7 @@ class calibration_precip_GPCC(calibration_master):
     
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_GPCC
+        from .load_gridded_data import read_gridded_data_GPCC
 
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GPCC(self.datadir_calib,
                                                                                  self.datafile_calib,
@@ -171,7 +171,7 @@ class calibration_precip_DaiPDSI(calibration_master):
     
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_DaiPDSI
+        from .load_gridded_data import read_gridded_data_DaiPDSI
 
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_DaiPDSI(self.datadir_calib,
                                                                                     self.datafile_calib,
@@ -195,7 +195,7 @@ class calibration_precip_SPEI(calibration_master):
     
     # read the data
     def read_calibration(self):
-        from load_gridded_data import read_gridded_data_SPEI
+        from .load_gridded_data import read_gridded_data_SPEI
 
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_SPEI(self.datadir_calib,
                                                                                  self.datafile_calib,

@@ -74,8 +74,7 @@ save_instead_of_plot = True
 ### ----------------------------------------------------------------------------
 
 if proxy_db == 'PAGES2kv1':
-    proxy_def = \
-                {
+    proxy_def = {
                 'Tree ring_Width': ['Ring width',
                                     'Tree ring width',
                                     'Total ring width',
@@ -101,28 +100,27 @@ if proxy_db == 'PAGES2kv1':
                 }
 
 elif proxy_db == 'LMRdb':
-    proxy_def = \
-                {
-                'Tree Rings_WidthPages2'               : ['trsgi'],\
-                'Tree Rings_WidthBreit'                : ['trsgi_breit'],\
-                'Tree Rings_WoodDensity'               : ['max_d','min_d','early_d','earl_d','late_d','MXD','density'],\
-                'Tree Rings_Isotopes'                  : ['d18O'],\
-                'Corals and Sclerosponges_d18O'        : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm','d18o_avg','d18o_ave','dO18','d18O_4'],\
-                'Corals and Sclerosponges_SrCa'        : ['Sr/Ca','Sr_Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],\
-                'Corals and Sclerosponges_Rates'       : ['ext','calc','calcification','calcification rate', 'composite'],\
-                'Ice Cores_d18O'                       : ['d18O','delta18O','delta18o','d18o','d18o_int','d18O_int','d18O_norm','d18o_norm','dO18','d18O_anom'],\
-                'Ice Cores_dD'                         : ['deltaD','delD','dD'],\
-                'Ice Cores_Accumulation'               : ['accum','accumu'],\
-                'Ice Cores_MeltFeature'                : ['MFP','melt'],\
-                'Lake Cores_Varve'                     : ['varve', 'varve_thickness', 'varve thickness', 'thickness'],\
-                'Lake Cores_BioMarkers'                : ['Uk37', 'TEX86', 'tex86'],\
-                'Lake Cores_GeoChem'                   : ['Sr/Ca', 'Mg/Ca','Cl_cont'],\
-                'Lake Cores_Misc'                      : ['RABD660_670','X_radiograph_dark_layer','massacum'],\
-                'Marine Cores_d18O'                    : ['d18O'],\
-                'Marine Cores_tex86'                   : ['tex86'],\
-                'Marine Cores_uk37'                    : ['uk37','UK37'],\
-                'Speleothems_d18O'                     : ['d18O'],\
-                'Bivalve_d18O'                         : ['d18O'],\
+    proxy_def = {
+                'Tree Rings_WidthPages2'               : ['trsgi'],
+                'Tree Rings_WidthBreit'                : ['trsgi_breit'],
+                'Tree Rings_WoodDensity'               : ['max_d','min_d','early_d','earl_d','late_d','MXD','density'],
+                'Tree Rings_Isotopes'                  : ['d18O'],
+                'Corals and Sclerosponges_d18O'        : ['d18O','delta18O','d18o','d18O_stk','d18O_int','d18O_norm','d18o_avg','d18o_ave','dO18','d18O_4'],
+                'Corals and Sclerosponges_SrCa'        : ['Sr/Ca','Sr_Ca','Sr/Ca_norm','Sr/Ca_anom','Sr/Ca_int'],
+                'Corals and Sclerosponges_Rates'       : ['ext','calc','calcification','calcification rate', 'composite'],
+                'Ice Cores_d18O'                       : ['d18O','delta18O','delta18o','d18o','d18o_int','d18O_int','d18O_norm','d18o_norm','dO18','d18O_anom'],
+                'Ice Cores_dD'                         : ['deltaD','delD','dD'],
+                'Ice Cores_Accumulation'               : ['accum','accumu'],
+                'Ice Cores_MeltFeature'                : ['MFP','melt'],
+                'Lake Cores_Varve'                     : ['varve', 'varve_thickness', 'varve thickness', 'thickness'],
+                'Lake Cores_BioMarkers'                : ['Uk37', 'TEX86', 'tex86'],
+                'Lake Cores_GeoChem'                   : ['Sr/Ca', 'Mg/Ca','Cl_cont'],
+                'Lake Cores_Misc'                      : ['RABD660_670','X_radiograph_dark_layer','massacum'],
+                'Marine Cores_d18O'                    : ['d18O'],
+                'Marine Cores_tex86'                   : ['tex86'],
+                'Marine Cores_uk37'                    : ['uk37','UK37'],
+                'Speleothems_d18O'                     : ['d18O'],
+                'Bivalve_d18O'                         : ['d18O'],
                 }
 
 
@@ -161,9 +159,9 @@ archive_types = np.unique(metadata['Archive type'])
 for ptype in archive_types:
     archive_counts[ptype] = np.unique(metadata['Proxy measurement'][metadata['Archive type'] == ptype],return_counts=True)
 
-print "================="
-print " Archive counts:"
-print "================="
+print("=================")
+print(" Archive counts:")
+print("=================")
 for ptype in archive_types:
     for units in range(0,len(archive_counts[ptype][0])):
         print('%25s - %23s : %3d' % (ptype, archive_counts[ptype][0][units], archive_counts[ptype][1][units]))
@@ -177,7 +175,7 @@ for ptype in archive_types:
 sumnbproxies = 0
 print(' ')
 print('Proxy types for data assimilation -------------------')
-proxy_types =  proxy_def.keys()
+proxy_types =  list(proxy_def.keys())
 for ptype in sorted(proxy_types):
     latslons = []    
     latslons.append([(metadata['Lat (N)'][i],metadata['Lon (E)'][i]) for i in range(0,len(metadata['Proxy ID'])) \
@@ -209,7 +207,8 @@ for ptype in sorted(proxy_types):
         continents = '#F2F2F2'
         
         m.drawmapboundary(fill_color=water)
-        m.drawcoastlines((linewidth=0.5); m.drawcountries()
+        m.drawcoastlines(linewidth=0.5)
+        m.drawcountries()
         m.fillcontinents(color=continents,lake_color=water)
         m.drawparallels(np.arange(-80.,81.,latres))
         m.drawmeridians(np.arange(-180.,181.,lonres))
@@ -234,14 +233,14 @@ print('%35s : %4d' %('Total',sumnbproxies))
 # Save a list of all records with PSMs.
 records_with_psms = []
 for i in range(0,len(psms)):
-    records_with_psms.append(psms.keys()[i][1])
+    records_with_psms.append(list(psms.keys())[i][1])
 
 
 plt.style.use('ggplot')
 
 #for i in range(0,3):  # To make sample figures, use this line instead of the next line.
 for i in range(0,len(metadata['Proxy ID'])):
-    print "Proxy: ",i+1,"/",len(metadata['Proxy ID']), metadata['Proxy ID'][i]
+    print("Proxy: ",i+1,"/",len(metadata['Proxy ID']), metadata['Proxy ID'][i])
     if metadata['Proxy ID'][i] in records_with_psms: has_psm = "YES"
     else: has_psm = "NO"
     

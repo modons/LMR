@@ -103,7 +103,7 @@ class _YamlStorage(object):
     """
 
     def __init__(self, filename):
-        print 'Loading information from {}'.format(filename)
+        print('Loading information from {}'.format(filename))
         try:
             f = open(join(SRC_DIR, filename), 'r')
             self.data = yaml.load(f)
@@ -526,7 +526,7 @@ class proxies(ConfigGroup):
             
             # Create mapping for Proxy Type/Measurement Type to type names above
             self.proxy_type_mapping = {}
-            for ptype, measurements in self.proxy_assim2.iteritems():
+            for ptype, measurements in self.proxy_assim2.items():
                 # Fetch proxy type name that occurs before underscore
                 type_name = ptype.split('_', 1)[0]
                 for measure in measurements:
@@ -742,7 +742,7 @@ class proxies(ConfigGroup):
             self.proxy_availability_fraction = proxies.proxy_availability_fraction
             
             self.proxy_type_mapping = {}
-            for ptype, measurements in self.proxy_assim2.iteritems():
+            for ptype, measurements in self.proxy_assim2.items():
                 # Fetch proxy type name that occurs before underscore
                 type_name = ptype.split('_', 1)[0]
                 for measure in measurements:
@@ -884,7 +884,7 @@ class proxies(ConfigGroup):
             self.proxy_availability_fraction = proxies.proxy_availability_fraction
             
             self.proxy_type_mapping = {}
-            for ptype, measurements in self.proxy_assim2.iteritems():
+            for ptype, measurements in self.proxy_assim2.items():
                 # Fetch proxy type name that occurs before underscore
                 type_name = ptype.split('_', 1)[0]
                 for measure in measurements:
@@ -986,9 +986,9 @@ class psm(ConfigGroup):
             self.psm_r_crit = self.psm_r_crit
 
             if '-'.join(proxies.use_from) == 'PAGES2kv1' and 'season' in psm.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
-                print '       No seasonality metadata provided in that dataset. Exiting!'
-                print '       Change avgPeriod to "annual" in your configuration.'
+                print('ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.')
+                print('       No seasonality metadata provided in that dataset. Exiting!')
+                print('       Change avgPeriod to "annual" in your configuration.')
                 raise SystemExit()
 
             if lmr_path is None:
@@ -1122,9 +1122,9 @@ class psm(ConfigGroup):
             self.psm_r_crit = self.psm_r_crit
             
             if '-'.join(proxies.use_from) == 'PAGES2kv1' and 'season' in psm.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
-                print '       No seasonality metadata provided in that dataset. Exiting!'
-                print '       Change avgPeriod to "annual" in your configuration.'
+                print('ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.')
+                print('       No seasonality metadata provided in that dataset. Exiting!')
+                print('       Change avgPeriod to "annual" in your configuration.')
                 raise SystemExit()
 
             try:
@@ -1265,9 +1265,9 @@ class psm(ConfigGroup):
             self.psm_r_crit = self.psm_r_crit
 
             if '-'.join(proxies.use_from) == 'PAGES2kv1' and 'season' in psm.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
-                print '       No seasonality metadata provided in that dataset. Exiting!'
-                print '       Change avgPeriod to "annual" in your configuration.'
+                print('ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.')
+                print('       No seasonality metadata provided in that dataset. Exiting!')
+                print('       Change avgPeriod to "annual" in your configuration.')
                 raise SystemExit()
 
             try:
@@ -1746,7 +1746,7 @@ def update_config_class_yaml(yaml_dict, cfg_module):
             else:
                 setattr(cfg_module, attr_name, cfg_attr)
         except (AttributeError, KeyError) as e:
-            print e
+            print(e)
 
     return yaml_dict
 

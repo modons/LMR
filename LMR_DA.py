@@ -8,7 +8,7 @@
 #==========================================================================================
 
 import numpy as np
-import LMR_utils
+from . import LMR_utils
 
 def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
     """
@@ -53,8 +53,8 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
     try:
         innov = obvalue - mye
     except:
-        print 'innovation error. obvalue = ' + str(obvalue) + ' mye = ' + str(mye)
-        print 'returning Xb unchanged...'
+        print('innovation error. obvalue = ' + str(obvalue) + ' mye = ' + str(mye))
+        print('returning Xb unchanged...')
         return Xb
     
     # innovation variance (denominator of serial Kalman gain)
@@ -127,8 +127,7 @@ def cov_localization(locRad, Y, X, X_coords):
     # i.e. fields with (lat,lon)
     localizeable = covLoc == 1. # Initialize as True
     
-    state_vars = X.trunc_state_info.keys()
-    for var in state_vars:
+    for var in X.trunc_state_info.keys():
         [var_state_pos_begin,var_state_pos_end] =  X.trunc_state_info[var]['pos']
         # if variable is not a field with lats & lons, tag localizeable as False
         if X.trunc_state_info[var]['spacecoords'] != ('lat', 'lon'):

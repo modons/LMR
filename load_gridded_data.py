@@ -294,7 +294,7 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq):
     ntime = len(data.dimensions['time'])
 
     time_yrs = []
-    for i in xrange(0,len(data.variables['time'][:])):
+    for i in range(0,len(data.variables['time'][:])):
         yrAD = data.variables['time'][i]
         year = int(yrAD)
         rem = yrAD - year
@@ -846,17 +846,17 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
 
     # Loop over state variables to load
     for v in range(len(data_vars)):
-        vardef = data_vars.keys()[v]
+        vardef = list(data_vars.keys())[v]
         data_file_read = string.replace(data_file,'[vardef_template]',vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read
         if not os.path.isfile(infile):
-            print 'Error in specification of gridded dataset'
-            print 'File ', infile, ' does not exist! - Exiting ...'
+            print('Error in specification of gridded dataset')
+            print('File ', infile, ' does not exist! - Exiting ...')
             raise SystemExit()
         else:
-            print 'Reading file: ', infile
+            print('Reading file: ', infile)
 
         # Get file content
         data = Dataset(infile,'r')
@@ -883,7 +883,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         
         # One of the dims has to be time! 
         if 'time' not in vardimnames:
-            print 'Variable does not have *time* as a dimension! Exiting!'
+            print('Variable does not have *time* as a dimension! Exiting!')
             raise SystemExit()
         else:
             # read in the time netCDF4.Variable
@@ -922,8 +922,8 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             tunits = time.units
             since_yr_idx = tunits.index('since ') + 6
             year = int(tunits[since_yr_idx:since_yr_idx+4])
-            year_diff = year - 0001
-            new_start_date = datetime(0001, 01, 01, 0, 0, 0)
+            year_diff = year - 1
+            new_start_date = datetime(1, 1, 1, 0, 0, 0)
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
             if hasattr(time, 'calendar'):
@@ -979,10 +979,10 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             elif 'lat' in spacecoords and 'lev' in spacecoords:
                 vartype = '2D:meridional_vertical'
             else:
-                print 'Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!'
+                print('Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!')
                 raise SystemExit()
         else:
-            print 'Cannot handle this variable yet! Too many dimensions... Exiting!'
+            print('Cannot handle this variable yet! Too many dimensions... Exiting!')
             raise SystemExit()
         
         
@@ -993,7 +993,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
 
         data_var_shape = data_var.shape
         if vartype == '2D:horizontal' and len(data_var_shape) > 3: data_var = np.squeeze(data_var)
-        print data_var.shape
+        print(data_var.shape)
 
         ntime = len(data.dimensions['time'])
         dates = time_yrs
@@ -1007,7 +1007,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             # which dim is lat & which is lon?
             indlat = spacecoords.index('lat')
             indlon = spacecoords.index('lon')
-            print 'indlat=', indlat, ' indlon=', indlon
+            print('indlat=', indlat, ' indlon=', indlon)
             
             if indlon == 0:
                 vlon = spacevar1
@@ -1058,7 +1058,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                     else:
                         fliplat = False
                 else:
-                    print 'ERROR!'
+                    print('ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
@@ -1090,12 +1090,12 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             vardims = data_var.shape
 
 
-            print '::vardims=', vardims
+            print('::vardims=', vardims)
             
             # which dim is lat and which is lev?
             indlat = spacecoords.index('lat')
             indlev = spacecoords.index('lev')
-            print 'indlat=', indlat, ' inlev=', indlev
+            print('indlat=', indlat, ' inlev=', indlev)
 
             if indlev == 0:
                 vlev = spacevar1
@@ -1156,7 +1156,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                     else:
                         fliplat = False
                 else:
-                    print 'ERROR!'
+                    print('ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
@@ -1184,7 +1184,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             
             # which dim is lat?
             indlat = spacecoords.index('lat')
-            print 'indlat=', indlat
+            print('indlat=', indlat)
             
             # Check if latitudes are defined in the [-90,90] domain
             fliplat = None
@@ -1219,7 +1219,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
             climo_month = np.zeros([12, vardims[1], vardims[2]], dtype=float)
         
         if not kind or kind == 'anom':
-            print 'Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...'
+            print('Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...')
             # loop over months
             for i in range(12):
                 m = i+1
@@ -1228,29 +1228,29 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                 data_var[indsm] = (data_var[indsm] - climo_month[i])
 
         elif kind == 'full':
-            print 'Full field provided as the prior'
+            print('Full field provided as the prior')
             # do nothing else...
         else:
-            print 'ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...'
+            print('ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...')
             raise SystemExit()
 
-        print var_to_extract, ': Global(monthly): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
+        print(var_to_extract, ': Global(monthly): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))
 
         # Possibly detrend the prior
         if detrend:
-            print 'Detrending the prior for variable: '+var_to_extract
+            print('Detrending the prior for variable: '+var_to_extract)
 
             data_var_copy = np.copy(data_var)
 
             if vartype == '0D:time series':
                 xdim = data_var.shape[0]
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy)
                 trend = slope*np.squeeze(xvar) + intercept
                 data_var = data_var_copy - trend
             elif vartype == '1D:meridional':
                 [xdim,dim1] = data_var.shape
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 # loop over grid points
                 for i in range(dim1):
                     slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy[:,i])
@@ -1261,7 +1261,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                         data_var[:,i] = np.nan
             elif '2D' in vartype: 
                 [xdim,dim1,dim2] = data_var.shape
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 # loop over grid points
                 for i in range(dim1):
                     for j in range(dim2):
@@ -1272,7 +1272,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                         else:
                             data_var[:,i,j] = np.nan
                         
-            print var_to_extract, ': Global(monthly/detrend): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
+            print(var_to_extract, ': Global(monthly/detrend): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))
 
 
         # ----------------------------------------------------------------
@@ -1285,14 +1285,14 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         if type(outtimeavg) is dict:
             outtimeavg_dict = outtimeavg
             # check key - there should be only one...
-            outtimeavg_key = outtimeavg_dict.keys()[0]
+            outtimeavg_key = list(outtimeavg_dict.keys())[0]
             # here, it should be 'annual'. No other definition allowed.
             if outtimeavg_key == 'annual':
                 outtimeavg_val = outtimeavg_dict['annual']
             else:
                 # Set to calendar year first, to perform averaging over
                 # annual cycle before averaging over multiple years
-                outtimeavg_val = range(1,13)
+                outtimeavg_val = list(range(1,13))
         else:
             # not a dict, must be a list or tuple of lists providing
             # sequence(s) of months over which to average
@@ -1321,11 +1321,11 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         elif type(outtimeavg_val) is list:
             outtimeavg_var =  outtimeavg_val
         else:
-            print 'ERROR: outtimeavg has to be a list or a tuple of lists, but is:', outtimeavg
+            print('ERROR: outtimeavg has to be a list or a tuple of lists, but is:', outtimeavg)
             raise SystemExit()
 
 
-        print 'Averaging over month sequence:', outtimeavg_var
+        print('Averaging over month sequence:', outtimeavg_var)
         
         year_current = [m for m in outtimeavg_var if m>0 and m<=12]
         year_before  = [abs(m) for m in outtimeavg_var if m < 0]        
@@ -1367,7 +1367,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
                     value[i,:,:] = np.nanmean(data_var[indsyr],axis=0)
 
         
-        print var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+        print(var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
 
         climo = np.mean(climo_month[indsclimo], axis=0)
         
@@ -1376,7 +1376,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         if outtimeavg_key == 'multiyear':
             # multiyear: Averaging available data over a time interval 
             # corresponding to the specified number of years.
-            print outtimeavg_dict
+            print(outtimeavg_dict)
             print('Averaging period (years): ', outtimeavg_dict['multiyear'][0])
 
             avg_period = float(outtimeavg_dict['multiyear'][0])
@@ -1480,11 +1480,11 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
         # Check if file exists
         infile = data_dir + '/' + data_file_read
         if not os.path.isfile(infile):
-            print 'Error in specification of gridded dataset'
-            print 'File ', infile, ' does not exist! - Exiting ...'
+            print('Error in specification of gridded dataset')
+            print('File ', infile, ' does not exist! - Exiting ...')
             raise SystemExit()
         else:
-            print 'Reading file: ', infile
+            print('Reading file: ', infile)
 
         # Get file content
         data = Dataset(infile,'r')
@@ -1511,7 +1511,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
 
         # One of the dims has to be time! 
         if 'time' not in vardimnames:
-            print 'Variable does not have *time* as a dimension! Exiting!'
+            print('Variable does not have *time* as a dimension! Exiting!')
             raise SystemExit()
         else:
             # read in the time netCDF4.Variable
@@ -1533,8 +1533,8 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
             tunits = time.units
             since_yr_idx = tunits.index('since ') + 6
             year = int(tunits[since_yr_idx:since_yr_idx+4])
-            year_diff = year - 0001
-            new_start_date = datetime(0001, 01, 01, 0, 0, 0)
+            year_diff = year - 1
+            new_start_date = datetime(1, 1, 1, 0, 0, 0)
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
             if hasattr(time, 'calendar'):
@@ -1567,10 +1567,10 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
             elif 'lat' in spacecoords and 'lev' in spacecoords:
                 vartype = '2D:meridional_vertical'
             else:
-                print 'Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!'
+                print('Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!')
                 raise SystemExit()
         else:
-            print 'Cannot handle this variable yet! Too many dimensions... Exiting!'
+            print('Cannot handle this variable yet! Too many dimensions... Exiting!')
             raise SystemExit()
 
 
@@ -1579,7 +1579,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
         # Upload data array
         # -----------------
         data_var = data.variables[var_to_extract][:]
-        print data_var.shape
+        print(data_var.shape)
 
         ntime = len(data.dimensions['time'])
         dates = time_yrs
@@ -1590,7 +1590,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
             # which dim is lat & which is lon?
             indlat = spacecoords.index('lat')
             indlon = spacecoords.index('lon')
-            print 'indlat=', indlat, ' indlon=', indlon
+            print('indlat=', indlat, ' indlon=', indlon)
 
             if indlon == 0:
                 varlon = spacevar1
@@ -1639,7 +1639,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
             climo_month = np.zeros([12, len(spacevar1), len(spacevar2)], dtype=float)
 
         if not kind or kind == 'anom':
-            print 'Removing the temporal mean (for every gridpoint) from the prior...'
+            print('Removing the temporal mean (for every gridpoint) from the prior...')
             # loop over months
             for i in range(12):
                 m = i+1
@@ -1648,20 +1648,20 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
                 data_var[indsm] = (data_var[indsm] - climo_month[i])
 
         elif kind == 'full':
-            print 'Full field provided as the prior'
+            print('Full field provided as the prior')
             # do nothing else...
         else:
-            print 'ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...'
+            print('ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...')
             raise SystemExit()
 
-        print var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
+        print(var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))
 
         # Possibly detrend the prior
         if detrend:
-            print 'Detrending the prior for variable: '+var_to_extract
+            print('Detrending the prior for variable: '+var_to_extract)
             if vartype == '0D:time series':
                 xdim = data_var.shape[0]
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 data_var_copy = np.copy(data_var)
                 slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy)
                 trend = slope*np.squeeze(xvar) + intercept
@@ -1669,7 +1669,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
             elif '2D' in vartype: 
                 data_var_copy = np.copy(data_var)
                 [xdim,dim1,dim2] = data_var.shape
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 # loop over grid points
                 for i in range(dim1):
                     for j in range(dim2):
@@ -1677,7 +1677,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
                         trend = slope*np.squeeze(xvar) + intercept
                         data_var[:,i,j] = data_var_copy[:,i,j] - trend
 
-            print var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
+            print(var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))
 
 
         if outfreq == 'annual':
@@ -1717,10 +1717,10 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
             value = data_var
             climo = climo_month
         else:
-            print 'ERROR: Unsupported averaging interval for prior!'
+            print('ERROR: Unsupported averaging interval for prior!')
             raise SystemExit()
 
-        print var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+        print(var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
 
         
         # Dictionary of dictionaries
@@ -1789,11 +1789,11 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
         # Check if file exists
         infile = data_dir + '/' + data_file_read
         if not os.path.isfile(infile):
-            print 'Error in specification of gridded dataset'
-            print 'File ', infile, ' does not exist! - Exiting ...'
+            print('Error in specification of gridded dataset')
+            print('File ', infile, ' does not exist! - Exiting ...')
             exit(1)
         else:
-            print 'Reading file: ', infile
+            print('Reading file: ', infile)
 
         # Load entire dataset from file
         data = Dataset(infile,'r')
@@ -1820,7 +1820,7 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
 
         # One of the dims has to be time! 
         if 'time' not in vardimnames:
-            print 'Variable does not have *time* as a dimension! Exiting!'
+            print('Variable does not have *time* as a dimension! Exiting!')
             exit(1)
         else:
             # read in the time netCDF4.Variable
@@ -1838,8 +1838,8 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
             tunits = time.units
             since_yr_idx = tunits.index('since ') + 6
             year = int(tunits[since_yr_idx:since_yr_idx+4])
-            year_diff = year - 0001
-            new_start_date = datetime(0001, 01, 01, 0, 0, 0)
+            year_diff = year - 0o001
+            new_start_date = datetime(0o001, 0o1, 0o1, 0, 0, 0)
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
             time_yrs = num2date(time[:], new_units, calendar=time.calendar)
@@ -1860,7 +1860,7 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
             nbmems = len(memberdims)
         else:
             nbmems = 1
-        print 'nbmems=', nbmems, 'indmem=', indmem
+        print('nbmems=', nbmems, 'indmem=', indmem)
 
         # Query info on spatial coordinates ...
         # get rid of "time" and "member" in list        
@@ -1884,22 +1884,22 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
             elif 'lat' in spacecoords and 'lev' in spacecoords:
                 vartype = '2D:meridional_vertical'
             else:
-                print 'Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!'
+                print('Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!')
                 exit(1)
         else:
-            print 'Cannot handle this variable yet! To many dimensions... Exiting!'
+            print('Cannot handle this variable yet! To many dimensions... Exiting!')
             exit(1)
 
         # data array
         data = data.variables[var_to_extract][:]
-        print data.shape
+        print(data.shape)
 
         # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
         if vartype == '2D:horizontal':
             # which dim is lat & which is lon?
             indlat = spacecoords.index('lat')
             indlon = spacecoords.index('lon')
-            print 'indlat=', indlat, ' indlon=', indlon
+            print('indlat=', indlat, ' indlon=', indlon)
 
             if indlon == 0:
                 varlon = spacevar1
@@ -1963,10 +1963,10 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
         #print 'mean=', np.nanmean(value), ' std-dev=', np.nanstd(value)
         #value = (value - np.nanmean(value))/np.nanstd(value)
 
-        print 'Removing the temporal mean (for every gridpoint) from the prior...'
+        print('Removing the temporal mean (for every gridpoint) from the prior...')
         climo = np.nanmean(value,axis=0)
         value = (value - climo)
-        print var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+        print(var_to_extract, ': Global: mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
 
         time_yrs_all = np.tile(time_yrs,nbmems)
         value_all = np.squeeze(value[:,0,:,:]) # 1st member
@@ -2055,17 +2055,17 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
     # Loop over state variables to load
     for v in range(len(data_vars)):
 
-        vardef = data_vars.keys()[v]
+        vardef = list(data_vars.keys())[v]
         data_file_read = string.replace(data_file,'[vardef_template]',vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read
         if not os.path.isfile(infile):
-            print 'Error in specification of gridded dataset'
-            print 'File ', infile, ' does not exist! - Exiting ...'
+            print('Error in specification of gridded dataset')
+            print('File ', infile, ' does not exist! - Exiting ...')
             exit(1)
         else:
-            print 'Reading file: ', infile
+            print('Reading file: ', infile)
 
         # Load entire dataset from file
         data = Dataset(infile,'r')
@@ -2092,7 +2092,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 
         # One of the dims has to be time! 
         if 'time' not in vardimnames:
-            print 'Variable does not have *time* as a dimension! Exiting!'
+            print('Variable does not have *time* as a dimension! Exiting!')
             exit(1)
         else:
             # read in the time netCDF4.Variable
@@ -2116,7 +2116,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             # annual or interannual data available
             time_resolution = np.rint(time_diff_mean)
 
-        print ':: Data temporal resolution = ', time_resolution, 'yrs'
+        print(':: Data temporal resolution = ', time_resolution, 'yrs')
 
         # List years available in dataset and sort
         years_all = [int(d) for d in np.rint(dates)]
@@ -2154,15 +2154,15 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             elif 'lat' in spacecoords and 'lev' in spacecoords:
                 vartype = '2D:meridional_vertical'
             else:
-                print 'Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!'
+                print('Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!')
                 exit(1)
         else:
-            print 'Cannot handle this variable yet! Too many dimensions... Exiting!'
+            print('Cannot handle this variable yet! Too many dimensions... Exiting!')
             exit(1)
 
         # data array
         data_var = data.variables[var_to_extract][:]
-        print data_var.shape
+        print(data_var.shape)
         
         # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
         if vartype == '2D:horizontal':
@@ -2172,7 +2172,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             # which dim is lat & which is lon?
             indlat = spacecoords.index('lat')
             indlon = spacecoords.index('lon')
-            print 'indlat=', indlat, ' indlon=', indlon
+            print('indlat=', indlat, ' indlon=', indlon)
             
             if indlon == 0:
                 vlon = spacevar1
@@ -2220,7 +2220,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                     else:
                         fliplat = False
                 else:
-                    print 'ERROR!'
+                    print('ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
@@ -2254,7 +2254,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             # which dim is lat and which is lev?
             indlat = spacecoords.index('lat')
             indlev = spacecoords.index('lev')
-            print 'indlat=', indlat, ' inlev=', indlev
+            print('indlat=', indlat, ' inlev=', indlev)
 
             if indlev == 0:
                 vlev = spacevar1
@@ -2302,7 +2302,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                     else:
                         fliplat = False
                 else:
-                    print 'ERROR!'
+                    print('ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
@@ -2329,7 +2329,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             
             # which dim is lat?
             indlat = spacecoords.index('lat')
-            print 'indlat=', indlat
+            print('indlat=', indlat)
             
             # Check if latitudes are defined in the [-90,90] domain
             fliplat = None
@@ -2358,7 +2358,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         kind = data_vars[vardef]
         
         if not kind or kind == 'anom':
-            print 'Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...'
+            print('Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...')
 
             # monthly data?
             if time_resolution == monthly:
@@ -2410,31 +2410,31 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 data_var = (data_var - climo)
                 
         elif kind == 'full':
-            print 'Full field provided as the prior'
+            print('Full field provided as the prior')
             # Calculating climo nevertheless. Needed as output.
             climo = np.nanmean(data_var,axis=0)
             # do nothing else...
         else:
             raise SystemExit('ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...')
 
-        print var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)        
+        print(var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))        
 
         
         # --------------------------
         # Possibly detrend the prior
         # --------------------------
         if detrend:
-            print 'Detrending the prior for variable: '+var_to_extract
+            print('Detrending the prior for variable: '+var_to_extract)
             if vartype == '0D:time series':
                 xdim = data_var.shape[0]
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 data_var_copy = np.copy(data_var)
                 slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy)
                 trend = slope*np.squeeze(xvar) + intercept
                 data_var = data_var_copy - trend
             elif vartype == '1D:meridional':
                 [xdim,dim1] = data_var.shape
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 # loop over grid points
                 for i in range(dim1):
                     slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy[:,i])
@@ -2446,7 +2446,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             elif '2D' in vartype: 
                 data_var_copy = np.copy(data_var)
                 [xdim,dim1,dim2] = data_var.shape
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 # loop over grid points
                 for i in range(dim1):
                     for j in range(dim2):
@@ -2457,7 +2457,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                         else:
                             data_var[:,i,j] = np.nan
                             
-            print var_to_extract, ': Global(detrended): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
+            print(var_to_extract, ': Global(detrended): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))
 
 
         # ------------------------------------------------------------------------
@@ -2473,8 +2473,8 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         #    averaging interval.
         # ------------------------------------------------------------------------
 
-        if outtimeavg.keys()[0] == 'annual':
-            print 'Averaging over month sequence:', outtimeavg['annual']
+        if list(outtimeavg.keys())[0] == 'annual':
+            print('Averaging over month sequence:', outtimeavg['annual'])
 
             # check availability of monthly data
             if time_resolution == monthly:
@@ -2519,27 +2519,27 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                         else:
                             value[i,:,:] = np.nanmean(data_var[indsyr],axis=0)
                         
-                print var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+                print(var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
                     
                 climo = np.mean(climo_month[indsclimo], axis=0)
 
             else:
-                print 'ERROR: Specified averaging requires monthly data'
-                print '       Here we have data with temporal resolution of ', time_resolution, 'years'
-                print '       Exiting!'
+                print('ERROR: Specified averaging requires monthly data')
+                print('       Here we have data with temporal resolution of ', time_resolution, 'years')
+                print('       Exiting!')
                 raise SystemExit()
                 
-        elif outtimeavg.keys()[0] == 'multiyear':
-            print 'Averaging period (years):', outtimeavg['multiyear']
+        elif list(outtimeavg.keys())[0] == 'multiyear':
+            print('Averaging period (years):', outtimeavg['multiyear'])
 
             avg_period = float(outtimeavg['multiyear'][0])
 
             # check if specified avg. period compatible with the available data
             if avg_period < time_resolution:
-                print 'ERROR: Specified averaging requires data with higher temporal resolution!'
-                print '       Here we have data with temporal resolution of ', time_resolution, 'years'
-                print '       while specified averaging period is:', avg_period, ' yrs'
-                print '       Exiting!'
+                print('ERROR: Specified averaging requires data with higher temporal resolution!')
+                print('       Here we have data with temporal resolution of ', time_resolution, 'years')
+                print('       while specified averaging period is:', avg_period, ' yrs')
+                print('       Exiting!')
                 raise SystemExit()
             else:
                 pass # ok, do nothing here
@@ -2650,17 +2650,17 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
     # Loop over state variables to load
     for v in range(len(data_vars)):
 
-        vardef = data_vars.keys()[v]
+        vardef = list(data_vars.keys())[v]
         data_file_read = string.replace(data_file,'[vardef_template]',vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read
         if not os.path.isfile(infile):
-            print 'Error in specification of gridded dataset'
-            print 'File ', infile, ' does not exist! - Exiting ...'
+            print('Error in specification of gridded dataset')
+            print('File ', infile, ' does not exist! - Exiting ...')
             exit(1)
         else:
-            print 'Reading file: ', infile
+            print('Reading file: ', infile)
 
         # Load entire dataset from file
         data = Dataset(infile,'r')
@@ -2687,7 +2687,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
 
         # One of the dims has to be time! 
         if 'time' not in vardimnames:
-            print 'Variable does not have *time* as a dimension! Exiting!'
+            print('Variable does not have *time* as a dimension! Exiting!')
             exit(1)
         else:
             # read in the time netCDF4.Variable
@@ -2711,7 +2711,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
             # annual or interannual data available
             time_resolution = np.rint(time_diff_mean)
 
-        print ':: Data temporal resolution = ', time_resolution, 'yrs'
+        print(':: Data temporal resolution = ', time_resolution, 'yrs')
 
         # List years available in dataset and sort
         years_all = [int(d) for d in np.rint(dates)]
@@ -2748,15 +2748,15 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
             elif 'lat' in spacecoords and 'lev' in spacecoords:
                 vartype = '2D:meridional_vertical'
             else:
-                print 'Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!'
+                print('Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!')
                 exit(1)
         else:
-            print 'Cannot handle this variable yet! Too many dimensions... Exiting!'
+            print('Cannot handle this variable yet! Too many dimensions... Exiting!')
             exit(1)
 
         # data array
         data_var = data.variables[var_to_extract][:]
-        print data_var.shape
+        print(data_var.shape)
         
         # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
         if vartype == '2D:horizontal':
@@ -2766,7 +2766,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
             # which dim is lat & which is lon?
             indlat = spacecoords.index('lat')
             indlon = spacecoords.index('lon')
-            print 'indlat=', indlat, ' indlon=', indlon
+            print('indlat=', indlat, ' indlon=', indlon)
             
             if indlon == 0:
                 vlon = spacevar1
@@ -2814,7 +2814,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
                     else:
                         fliplat = False
                 else:
-                    print 'ERROR!'
+                    print('ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
@@ -2862,7 +2862,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
             # which dim is lat and which is lev?
             indlat = spacecoords.index('lat')
             indlev = spacecoords.index('lev')
-            print 'indlat=', indlat, ' inlev=', indlev
+            print('indlat=', indlat, ' inlev=', indlev)
 
             if indlev == 0:
                 vlev = spacevar1
@@ -2910,7 +2910,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
                     else:
                         fliplat = False
                 else:
-                    print 'ERROR!'
+                    print('ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
@@ -2937,7 +2937,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
             
             # which dim is lat?
             indlat = spacecoords.index('lat')
-            print 'indlat=', indlat
+            print('indlat=', indlat)
             
             # Check if latitudes are defined in the [-90,90] domain
             fliplat = None
@@ -2966,7 +2966,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
         kind = data_vars[vardef]
         
         if not kind or kind == 'anom':
-            print 'Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...'
+            print('Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...')
 
             # monthly data?
             if time_resolution == monthly:
@@ -3018,31 +3018,31 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
                 data_var = (data_var - climo)
                 
         elif kind == 'full':
-            print 'Full field provided as the prior'
+            print('Full field provided as the prior')
             # Calculating climo nevertheless. Needed as output.
             climo = np.nanmean(data_var,axis=0)
             # do nothing else...
         else:
             raise SystemExit('ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...')
 
-        print var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)        
+        print(var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))        
 
         
         # --------------------------
         # Possibly detrend the prior
         # --------------------------
         if detrend:
-            print 'Detrending the prior for variable: '+var_to_extract
+            print('Detrending the prior for variable: '+var_to_extract)
             if vartype == '0D:time series':
                 xdim = data_var.shape[0]
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 data_var_copy = np.copy(data_var)
                 slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy)
                 trend = slope*np.squeeze(xvar) + intercept
                 data_var = data_var_copy - trend
             elif vartype == '1D:meridional':
                 [xdim,dim1] = data_var.shape
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 # loop over grid points
                 for i in range(dim1):
                     slope, intercept, r_value, p_value, std_err = stats.linregress(xvar,data_var_copy[:,i])
@@ -3054,7 +3054,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
             elif '2D' in vartype: 
                 data_var_copy = np.copy(data_var)
                 [xdim,dim1,dim2] = data_var.shape
-                xvar = range(xdim)
+                xvar = list(range(xdim))
                 # loop over grid points
                 for i in range(dim1):
                     for j in range(dim2):
@@ -3065,7 +3065,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
                         else:
                             data_var[:,i,j] = np.nan
                             
-            print var_to_extract, ': Global(detrended): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var)
+            print(var_to_extract, ': Global(detrended): mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))
 
 
         # ------------------------------------------------------------------------
@@ -3081,8 +3081,8 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
         #    averaging interval.
         # ------------------------------------------------------------------------
 
-        if outtimeavg.keys()[0] == 'annual':
-            print 'Averaging over month sequence:', outtimeavg['annual']
+        if list(outtimeavg.keys())[0] == 'annual':
+            print('Averaging over month sequence:', outtimeavg['annual'])
 
             # check availability of monthly data
             if time_resolution == monthly:
@@ -3127,27 +3127,27 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
                         else:
                             value[i,:,:] = np.nanmean(data_var[indsyr],axis=0)
                         
-                print var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value)
+                print(var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
                     
                 climo = np.mean(climo_month[indsclimo], axis=0)
 
             else:
-                print 'ERROR: Specified averaging requires monthly data'
-                print '       Here we have data with temporal resolution of ', time_resolution, 'years'
-                print '       Exiting!'
+                print('ERROR: Specified averaging requires monthly data')
+                print('       Here we have data with temporal resolution of ', time_resolution, 'years')
+                print('       Exiting!')
                 raise SystemExit()
                 
-        elif outtimeavg.keys()[0] == 'multiyear':
-            print 'Averaging period (years):', outtimeavg['multiyear']
+        elif list(outtimeavg.keys())[0] == 'multiyear':
+            print('Averaging period (years):', outtimeavg['multiyear'])
 
             avg_period = float(outtimeavg['multiyear'][0])
 
             # check if specified avg. period compatible with the available data
             if avg_period < time_resolution:
-                print 'ERROR: Specified averaging requires data with higher temporal resolution!'
-                print '       Here we have data with temporal resolution of ', time_resolution, 'years'
-                print '       while specified averaging period is:', avg_period, ' yrs'
-                print '       Exiting!'
+                print('ERROR: Specified averaging requires data with higher temporal resolution!')
+                print('       Here we have data with temporal resolution of ', time_resolution, 'years')
+                print('       while specified averaging period is:', avg_period, ' yrs')
+                print('       Exiting!')
                 raise SystemExit()
             else:
                 pass # ok, do nothing here

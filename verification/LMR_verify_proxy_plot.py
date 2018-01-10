@@ -20,7 +20,7 @@ Revisions:
 """
 import os
 import numpy as np
-import cPickle    
+import pickle    
 from time import time
 from os.path import join
 
@@ -172,12 +172,12 @@ def main():
             '/reconstruction_eval_withheld_proxy_summary.pckl'
 
         infile_assim   = open(fname_assim,'r')
-        assim_dict[p] = cPickle.load(infile_assim)
+        assim_dict[p] = pickle.load(infile_assim)
         infile_assim.close()
 
         if os.path.isfile(fname_verif):
             infile_verif   = open(fname_verif,'r')
-            verif_dict[p] = cPickle.load(infile_verif)
+            verif_dict[p] = pickle.load(infile_verif)
             infile_verif.close()
             verif_data = True
         else:
@@ -186,10 +186,10 @@ def main():
     # get list of all proxy types in the assimilated/withheld data
     lst = []
     for p in range(nbperiods):
-        a_sites = assim_dict[p].keys()
+        a_sites = list(assim_dict[p].keys())
         lst = lst + list(set([item[0] for item in a_sites]))
         if verif_data:
-            v_sites = verif_dict[p].keys()
+            v_sites = list(verif_dict[p].keys())
             lst = lst + list(set([item[0] for item in v_sites]))
     master_proxy_types = list(set([item for item in lst]))
     master_proxy_types.insert(0,'All')
@@ -217,7 +217,7 @@ def main():
         fig = plt.figure(figsize=(12,8))
 
         irow = 1
-        for v in vtype.keys(): # "assim" & "verif" proxies
+        for v in list(vtype.keys()): # "assim" & "verif" proxies
 
             if v == 'verif' and not verif_data:
                 break
@@ -249,7 +249,7 @@ def main():
                 # pick right dict and associate to "workdict"
                 dname = v+'_dict'
                 workdict = eval(dname)
-                sitetag = workdict[p].keys()
+                sitetag = list(workdict[p].keys())
                 if proxy == 'All':
                     proxy_types = list(set([item[0] for item in sitetag]))
                 else:
@@ -328,7 +328,7 @@ def main():
                 # pick right dict and associate to "workdict"
                 dname = v+'_dict'
                 workdict = eval(dname)
-                sitetag = workdict[p].keys()
+                sitetag = list(workdict[p].keys())
                 if proxy == 'All':
                     proxy_types = list(set([item[0] for item in sitetag]))
                 else:
@@ -404,7 +404,7 @@ def main():
                 # pick right dict and associate to "workdict"
                 dname = v+'_dict'
                 workdict = eval(dname)
-                sitetag = workdict[p].keys()
+                sitetag = list(workdict[p].keys())
                 if proxy == 'All':
                     proxy_types = list(set([item[0] for item in sitetag]))
                 else:
@@ -424,8 +424,8 @@ def main():
                 dCEplus = [stat[i] for i in range(len(stat)) if stat[i] > 0.0]
                 frac = int(float(len(dCEplus))/float(len(stat))*100.)
                 fractiondCEplus = str(int('%d' % frac ))
-                print 'CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
-                    ' Fraction of +change:', fractiondCEplus, '%'
+                print('CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
+                    ' Fraction of +change:', fractiondCEplus, '%')
 
                 results, edges = np.histogram(stat, bins=bins_ce, normed=True)
                 leg = str(verif_period[p][0])+' to '+str(verif_period[p][1])+' : % +change='+str(fractiondCEplus)
@@ -485,14 +485,14 @@ def main():
     continents = '#F2F2F2'
     
     # Loop over proxy sets (assim vs verif)
-    for v in vtype.keys():
+    for v in list(vtype.keys()):
 
         # Loop over verification periods
         for p in range(nbperiods):
             # pick right dict and associate to "workdict"
             dname = v+'_dict'
             workdict = eval(dname)
-            sites = workdict[p].keys()
+            sites = list(workdict[p].keys())
             proxy_types = list(set([item[0] for item in sitetag]))
 
             verif_period_label = str(verif_period[p][0])+'-'+str(verif_period[p][1])
@@ -583,7 +583,7 @@ def main():
 
             dplot = {'Prior':'PriorMeanCE', 'Posterior':'MeanCE'}
             irow = 1
-            for dd in dplot.keys():
+            for dd in list(dplot.keys()):
 
                 ax = fig.add_subplot(2,1,irow)   
                 m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.  # GLOBAL            
@@ -691,7 +691,7 @@ def main():
 
             dplot = {'Prior':'PriorMeanCalRatio', 'Posterior':'MeanCalRatio'}
             irow = 1
-            for dd in dplot.keys():
+            for dd in list(dplot.keys()):
 
                 ax = fig.add_subplot(2,1,irow)   
                 m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.  # GLOBAL            

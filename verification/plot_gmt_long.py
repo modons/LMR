@@ -49,7 +49,7 @@ for nexp in expts:
         nhmt = npzfile['nhmt_ensemble']
         shmt = npzfile['shmt_ensemble']
         recon_times = npzfile['recon_times']
-        print gmtpfile
+        print(gmtpfile)
         gmt_shape = np.shape(gmt)
         nhmt_shape = np.shape(nhmt)
         shmt_shape = np.shape(shmt)

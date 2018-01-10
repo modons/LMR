@@ -61,7 +61,7 @@ expdir = datadir + '/'+nexp
 # where the netcdf files are created 
 outdir = expdir
 
-print '\n Getting information on Monte-Carlo realizations...\n'
+print('\n Getting information on Monte-Carlo realizations...\n')
 
 dirs = glob.glob(expdir+"/r*")
 # sorted
@@ -71,10 +71,10 @@ mcdirs = [item.split('/')[-1] for item in dirs]
 # number of MC realizations found
 niters = len(mcdirs) 
 
-print 'mcdirs:' + str(mcdirs)
-print 'niters = ' + str(niters)
+print('mcdirs:' + str(mcdirs))
+print('niters = ' + str(niters))
 
-print '\n Getting information on reconstructed variables...\n'
+print('\n Getting information on reconstructed variables...\n')
 
 # look in first "mcdirs" only. It should be the same for all. 
 workdir = expdir+'/'+mcdirs[0]
@@ -87,11 +87,11 @@ listfiles = [item.split('/')[-1] for item in listdirfiles]
 # strip everything but variable name
 listvars = [(item.replace('ensemble_mean_','')).replace('.npz','') for item in listfiles]
 
-print 'Variables:', listvars, '\n'
+print('Variables:', listvars, '\n')
 
 # Loop over variables
 for var in listvars:
-    print '\n Variable:', var
+    print('\n Variable:', var)
     # Loop over realizations
     r = 0
     for dir in mcdirs:
@@ -104,7 +104,7 @@ for var in listvars:
         if r == 0: # first realization
 
             npzcontent = npzfile.files
-            print '  file contents:', npzcontent
+            print('  file contents:', npzcontent)
             
             # get the years in the reconstruction ... for some reason stored in an array of strings ...
             years_str =  npzfile['years']
@@ -114,39 +114,39 @@ for var in listvars:
             # Determine type of variation, get spatial coordinates if present
             if 'lat' in npzcontent and 'lon' in npzcontent:
                 field_type = '2D:horizontal'
-                print '  field type:', field_type
+                print('  field type:', field_type)
                 # get lat/lon data
                 lat2d = npzfile['lat']
                 lon2d = npzfile['lon']
                 #print '  ', lat2d.shape, lon2d.shape
                 lat1d = lat2d[:,0]
                 lon1d = lon2d[0,:]
-                print '  nlat/nlon=', lat1d.shape, lon1d.shape
+                print('  nlat/nlon=', lat1d.shape, lon1d.shape)
 
             elif 'lat' in npzcontent and 'lev' in npzcontent:
                 field_type = '2D:meridional_vertical'
-                print '  field type:', field_type
+                print('  field type:', field_type)
                 # get lat/lev data
                 lat2d = npzfile['lat']
                 lev2d = npzfile['lev']
                 #print '  ', lat2d.shape, lev2d.shape
                 lat1d = lat2d[:,0]
                 lev1d = lev2d[0,:]
-                print '  nlat/nlev=', lat1d.shape, lev1d.shape
+                print('  nlat/nlev=', lat1d.shape, lev1d.shape)
                  
             elif 'lat' not in npzcontent and 'lon' not in npzcontent and 'lev' not in npzcontent:
                 # no spatial coordinate, must be a scalar (time series)
                 field_type='1D:time_series'
-                print '  field type:', field_type
+                print('  field type:', field_type)
             else:
-                print 'Cannot handle this variable yet! Variable of unrecognized dimensions... Exiting!'
+                print('Cannot handle this variable yet! Variable of unrecognized dimensions... Exiting!')
                 exit(1)
 
             
             # declare master array that will contain data from all the M-C realizations 
             # (i.e. the "Monte-Carlo ensemble")
             dims = field_values.shape
-            print '  xam field dimensions', dims
+            print('  xam field dimensions', dims)
             tmp = np.expand_dims(field_values, axis=0)
             # Form the array with the right total dimensions
             mc_ens = np.repeat(tmp,niters,axis=0)
@@ -263,7 +263,7 @@ for var in listvars:
         varout[:] = mc_ens_outarr        
         
     else:
-        print 'Variable of unrecognized dimensions... Exiting!'
+        print('Variable of unrecognized dimensions... Exiting!')
         exit(1)
         
     

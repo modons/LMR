@@ -23,7 +23,7 @@ Revisions:
 """
 import os, sys
 import numpy as np
-import cPickle
+import pickle
 import timeit
 import pandas as pd
 from time import time
@@ -289,7 +289,7 @@ class v_proxies(object):
             
             # Create mapping for Proxy Type/Measurement Type to type names above
             self.proxy_type_mapping = {}
-            for type, measurements in self.proxy_assim2.iteritems():
+            for type, measurements in self.proxy_assim2.items():
                 # Fetch proxy type name that occurs before underscore
                 type_name = type.split('_', 1)[0]
                 for measure in measurements:
@@ -478,7 +478,7 @@ class v_proxies(object):
             self.proxy_availability_fraction = v_proxies.proxy_availability_fraction
             
             self.proxy_type_mapping = {}
-            for ptype, measurements in self.proxy_assim2.iteritems():
+            for ptype, measurements in self.proxy_assim2.items():
                 # Fetch proxy type name that occurs before underscore
                 type_name = ptype.split('_', 1)[0]
                 for measure in measurements:
@@ -935,25 +935,25 @@ def main():
     proxy_database = Cfg.proxies.use_from[0]
     verif_period = Cfg.core.verif_period
 
-    print 'Experiment          :', nexp
-    print 'Proxies             :', proxy_database
-    print 'Verif. period       :', verif_period
+    print('Experiment          :', nexp)
+    print('Proxies             :', proxy_database)
+    print('Verif. period       :', verif_period)
 
     dimtime = (verif_period[1] - verif_period[0]) + 1
     
     if proxy_database == 'pages':
-        print 'Proxy data location :', Cfg.proxies.pages.datadir_proxy
+        print('Proxy data location :', Cfg.proxies.pages.datadir_proxy)
     elif proxy_database == 'NCDC':
-        print 'Proxy data location :', Cfg.proxies.ncdc.datadir_proxy
+        print('Proxy data location :', Cfg.proxies.ncdc.datadir_proxy)
     else:
-        print 'ERROR in specification of proxy database. Exiting!'
+        print('ERROR in specification of proxy database. Exiting!')
         exit(1)
 
     # get proxy class
     proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
     # load proxy data
     beginload = timeit.default_timer()
-    print 'Loading proxy & associated psm objects ...' 
+    print('Loading proxy & associated psm objects ...') 
     proxy_ids_by_grp, proxy_objects = proxy_class.load_all(Cfg,
                                                            verif_period,
                                                            None)
@@ -961,17 +961,17 @@ def main():
     master_proxy_list = []
     for proxy_idx, Y in enumerate(proxy_objects): master_proxy_list.append((Y.type,Y.id))
     
-    print '--------------------------------------------------------------------'
-    print 'Uploaded proxies : counts per proxy type:'
+    print('--------------------------------------------------------------------')
+    print('Uploaded proxies : counts per proxy type:')
     # count the total number of proxies
     total_proxy_count = len(proxy_objects)
-    for pkey, plist in proxy_ids_by_grp.iteritems():
+    for pkey, plist in proxy_ids_by_grp.items():
         print('%45s : %5d' % (pkey, len(plist)))
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
-    print '--------------------------------------------------------------------'
+    print('--------------------------------------------------------------------')
     endload = timeit.default_timer()
-    print 'Loading completed in:', (endload-beginload)/60.0 , ' mins'
-    print ' '
+    print('Loading completed in:', (endload-beginload)/60.0 , ' mins')
+    print(' ')
 
     #for pobj_idx, pobj in enumerate(proxy_objects): print pobj.id, pobj.psm_obj.__dict__
     
@@ -983,7 +983,7 @@ def main():
     elif proxy_database == 'pages':
         proxy_cfg = Cfg.proxies.pages
     else:
-        print 'ERROR in specification of proxy database.'
+        print('ERROR in specification of proxy database.')
         raise SystemExit()
 
     # proxy types activated in configuration
@@ -992,7 +992,7 @@ def main():
     psm_keys = list(set([proxy_cfg.proxy_psm_type[p] for p in proxy_types]))
 
     # Forming list of required state variables
-    psmclasses = dict([(name,cls)  for name, cls in Cfg.psm.__dict__.items()])
+    psmclasses = dict([(name,cls)  for name, cls in list(Cfg.psm.__dict__.items())])
     psm_required_variables = []
     calib_sources = []
     for psm_type in psm_keys:
@@ -1034,13 +1034,13 @@ def main():
         # Experiment data directory
         workdir = datadir_input+'/'+nexp+'/r'+str(iter)
 
-        print ' Working on: ' + workdir
+        print(' Working on: ' + workdir)
 
         # Check availability of files containing required variables
         for var in psm_required_variables:
             datafile = workdir+'/ensemble_mean_'+var+'.npz'
             if not os.path.isfile(datafile):
-                raise(SystemExit('ERROR: Required file %s  does not exist. Exiting!' % datafile))
+                raise SystemExit
         
 
         # ======================================================
@@ -1053,15 +1053,15 @@ def main():
         nb_loaded_proxies = len(loaded_proxies)
 
         # Filter to match proxy sites in set of calibrated PSMs
-        indp = [k for k in range(nb_loaded_proxies) if (loaded_proxies[k].keys()[0],loaded_proxies[k][loaded_proxies[k].keys()[0]][0]) in master_proxy_list]
+        indp = [k for k in range(nb_loaded_proxies) if (list(loaded_proxies[k].keys())[0],loaded_proxies[k][list(loaded_proxies[k].keys())[0]][0]) in master_proxy_list]
         assim_proxies = loaded_proxies[indp]
         nb_assim_proxies = len(assim_proxies)
 
         # in list form
-        assim_proxies_list = [(assim_proxies[k].keys()[0],assim_proxies[k][assim_proxies[k].keys()[0]][0]) for k in range(nb_assim_proxies)]
+        assim_proxies_list = [(list(assim_proxies[k].keys())[0],assim_proxies[k][list(assim_proxies[k].keys())[0]][0]) for k in range(nb_assim_proxies)]
 
-        print '------------------------------------------------'
-        print 'Number of proxy sites in assimilated set :',  nb_assim_proxies
+        print('------------------------------------------------')
+        print('Number of proxy sites in assimilated set :',  nb_assim_proxies)
 
 
         # List of non-assimilated proxies
@@ -1077,14 +1077,14 @@ def main():
             nb_loaded_proxies = len(loaded_proxies)
 
             # Filter to match proxy sites in set of calibrated PSMs
-            indp = [k for k in range(nb_loaded_proxies) if (loaded_proxies[k].keys()[0],loaded_proxies[k][loaded_proxies[k].keys()[0]][0]) in master_proxy_list]
+            indp = [k for k in range(nb_loaded_proxies) if (list(loaded_proxies[k].keys())[0],loaded_proxies[k][list(loaded_proxies[k].keys())[0]][0]) in master_proxy_list]
             verif_proxies = loaded_proxies[indp]
             nb_verif_proxies = len(verif_proxies)
             # in list form
-            verif_proxies_list = [(verif_proxies[k].keys()[0],verif_proxies[k][verif_proxies[k].keys()[0]][0]) for k in range(nb_verif_proxies)]
+            verif_proxies_list = [(list(verif_proxies[k].keys())[0],verif_proxies[k][list(verif_proxies[k].keys())[0]][0]) for k in range(nb_verif_proxies)]
         
-        print 'Number of proxy sites in verification set:',  nb_verif_proxies
-        print '------------------------------------------------'
+        print('Number of proxy sites in verification set:',  nb_verif_proxies)
+        print('------------------------------------------------')
 
         
         # ============================
@@ -1102,7 +1102,7 @@ def main():
             pass
         if os.path.isfile(fnameYe):
             infile  = open(fnameYe,'r')
-            assimYe = cPickle.load(infile)
+            assimYe = pickle.load(infile)
             infile.close()
 
         
@@ -1112,12 +1112,12 @@ def main():
         file_prior = workdir+'/Xb_one.npz'
         Xprior_statevector = np.load(file_prior)
         Xb_state_info = Xprior_statevector['state_info'].item()
-        available_state_variables = Xb_state_info.keys()
+        available_state_variables = list(Xb_state_info.keys())
         Xb_one = Xprior_statevector['Xb_one']
         Xb_coords = Xprior_statevector['Xb_one_coords']
 
         # prepare array to contain "state vector"
-        print Xb_state_info
+        print(Xb_state_info)
         totlength = 0
         for var in psm_required_variables:
             position = Xb_state_info[var]['pos']
@@ -1243,24 +1243,24 @@ def main():
                 indok = df['y'].notnull()
 
                 if verbose > 0:
-                    print '================================================'
-                    print 'Site:', sitetag
-                    print 'status:', pstatus
-                    print 'Number of verification points  :', obcount            
-                    print 'Mean of proxy values           :', np.mean(df['y'][indok])
-                    print 'Mean ensemble-mean             :', np.mean(df['Ye_recon'][indok])
-                    print 'Mean ensemble-mean error       :', np.mean(df['Ye_recon_error'][indok])
-                    print 'Ensemble-mean RMSE             :', rmsef(df['Ye_recon'][indok],df['y'][indok])
-                    print 'Correlation                    :', np.corrcoef(df['y'][indok],df['Ye_recon'][indok])[0,1]
-                    print 'CE                             :', coefficient_efficiency(df['y'][indok],df['Ye_recon'][indok])
-                    print 'Mean ensemble-mean(prior)      :', np.mean(df['Ye_prior'][indok])
-                    print 'Mean ensemble-mean error(prior):', np.mean(df['Ye_prior_error'][indok])
-                    print 'Ensemble-mean RMSE(prior)      :', rmsef(df['Ye_prior'][indok],df['y'][indok])
+                    print('================================================')
+                    print('Site:', sitetag)
+                    print('status:', pstatus)
+                    print('Number of verification points  :', obcount)            
+                    print('Mean of proxy values           :', np.mean(df['y'][indok]))
+                    print('Mean ensemble-mean             :', np.mean(df['Ye_recon'][indok]))
+                    print('Mean ensemble-mean error       :', np.mean(df['Ye_recon_error'][indok]))
+                    print('Ensemble-mean RMSE             :', rmsef(df['Ye_recon'][indok],df['y'][indok]))
+                    print('Correlation                    :', np.corrcoef(df['y'][indok],df['Ye_recon'][indok])[0,1])
+                    print('CE                             :', coefficient_efficiency(df['y'][indok],df['Ye_recon'][indok]))
+                    print('Mean ensemble-mean(prior)      :', np.mean(df['Ye_prior'][indok]))
+                    print('Mean ensemble-mean error(prior):', np.mean(df['Ye_prior_error'][indok]))
+                    print('Ensemble-mean RMSE(prior)      :', rmsef(df['Ye_prior'][indok],df['y'][indok]))
                     corr = np.corrcoef(df['y'][indok],df['Ye_prior'][indok])[0,1]
                     if not np.isfinite(corr): corr = 0.0
-                    print 'Correlation (prior)            :', corr
-                    print 'CE (prior)                     :', coefficient_efficiency(df['y'][indok],df['Ye_prior'][indok])
-                    print '================================================'            
+                    print('Correlation (prior)            :', corr)
+                    print('CE (prior)                     :', coefficient_efficiency(df['y'][indok],df['Ye_prior'][indok]))
+                    print('================================================')            
 
                 
                 # Fill "verif" and "assim" dictionaries with data generated above
@@ -1350,7 +1350,7 @@ def main():
                     evald_verif[sitetag]['ts_EnsMean']        = df['Ye_recon'][indok].values
 
                 else:
-                    print 'pstatus undefined...'
+                    print('pstatus undefined...')
 
         
 
@@ -1379,21 +1379,21 @@ def main():
         if Cfg.core.write_full_verif_dict:
             # Dump dictionary to pickle files
             outfile = open('%s/reconstruction_eval_verif_proxy_full.pckl' % (outdir),'w')
-            cPickle.dump(verif_listdict,outfile)
+            pickle.dump(verif_listdict,outfile)
             outfile.close()
 
         # For each site :
         # List of sites in the verif dictionary
         list_tmp = []
         for i in range(len(verif_listdict)):
-            for j in range(len(verif_listdict[i].keys())):
-                list_tmp.append(verif_listdict[i].keys()[j])
+            for j in range(len(list(verif_listdict[i].keys()))):
+                list_tmp.append(list(verif_listdict[i].keys())[j])
         list_sites = list(set(list_tmp)) # filter to unique elements
     
         summary_stats_verif = {}
         for k in range(len(list_sites)):
             # indices in verif_listdict where this site is present
-            inds  = [j for j in range(len(verif_listdict)) if list_sites[k] in verif_listdict[j].keys()]
+            inds  = [j for j in range(len(verif_listdict)) if list_sites[k] in list(verif_listdict[j].keys())]
 
         
             summary_stats_verif[list_sites[k]] = {}
@@ -1459,7 +1459,7 @@ def main():
 
         # Dump data to pickle file
         outfile = open('%s/reconstruction_eval_verif_proxy_summary.pckl' % (outdir),'w')
-        cPickle.dump(summary_stats_verif,outfile)
+        pickle.dump(summary_stats_verif,outfile)
         outfile.close()
 
         
@@ -1469,21 +1469,21 @@ def main():
     # Dump dictionary to pickle files
     if Cfg.core.write_full_verif_dict:
         outfile = open('%s/reconstruction_eval_assim_proxy_full.pckl' % (outdir),'w')
-        cPickle.dump(assim_listdict,outfile)
+        pickle.dump(assim_listdict,outfile)
         outfile.close()
 
     # For each site :    
     # List of sites in the assim dictionary
     list_tmp = []
     for i in range(len(assim_listdict)):
-        for j in range(len(assim_listdict[i].keys())):
-            list_tmp.append(assim_listdict[i].keys()[j])
+        for j in range(len(list(assim_listdict[i].keys()))):
+            list_tmp.append(list(assim_listdict[i].keys())[j])
     list_sites = list(set(list_tmp)) # filter to unique elements
 
     summary_stats_assim = {}
     for k in range(len(list_sites)):
         # indices in assim_listdict where this site is present
-        inds  = [j for j in range(len(assim_listdict)) if list_sites[k] in assim_listdict[j].keys()]
+        inds  = [j for j in range(len(assim_listdict)) if list_sites[k] in list(assim_listdict[j].keys())]
 
         summary_stats_assim[list_sites[k]] = {}
         summary_stats_assim[list_sites[k]]['lat']            = assim_listdict[inds[0]][list_sites[k]]['lat']
@@ -1550,13 +1550,13 @@ def main():
 
     # Dump data to pickle file
     outfile = open('%s/reconstruction_eval_assim_proxy_summary.pckl' % (outdir),'w')
-    cPickle.dump(summary_stats_assim,outfile)
+    pickle.dump(summary_stats_assim,outfile)
     outfile.close()
 
     verif_time = time() - begin_time
-    print '======================================================='
-    print 'Verification completed in '+ str(verif_time/3600.0)+' hours'
-    print '======================================================='
+    print('=======================================================')
+    print('Verification completed in '+ str(verif_time/3600.0)+' hours')
+    print('=======================================================')
 
 
 # =============================================================================

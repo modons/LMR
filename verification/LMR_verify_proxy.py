@@ -30,7 +30,7 @@ Revisions:
 """
 import os, sys
 import numpy as np
-import cPickle
+import pickle
 import pandas as pd
 import yaml
 import glob
@@ -111,7 +111,7 @@ yaml_file = join(dirset[0], 'config.yml')
 cfgpy_file = join(dirset[0], 'LMR_config.py')
 if isfile(yaml_file):
     # .yml file?
-    print 'Loading configuration: {}'.format(yaml_file)
+    print('Loading configuration: {}'.format(yaml_file))
 
     f = open(yaml_file, 'r')
     yml_dict = yaml.load(f)
@@ -119,7 +119,7 @@ if isfile(yaml_file):
                                                         LMR_config)
 elif isfile(cfgpy_file):
     # LMR_config.py file?
-    print 'Loading configuration: {}'.format(cfgpy_file)
+    print('Loading configuration: {}'.format(cfgpy_file))
     file_name = cfgpy_file.split('/')[-1]
     module_name = file_name.rstrip('.py')
     path = list(sys.path)
@@ -177,9 +177,9 @@ for dir in dirset:
     # Load the Ye data and parse between assimilated and withheld records
     filn = join(dir,'analysis_Ye.pckl')
     infile = open(filn,'rb')
-    Ye_data_MC = cPickle.load(infile)
+    Ye_data_MC = pickle.load(infile)
     infile.close()
-    prx_sites = Ye_data_MC.keys()
+    prx_sites = list(Ye_data_MC.keys())
 
     # Load the prior Ye ensemble data
     file_prior = join(dir,'Xb_one.npz')
@@ -308,27 +308,27 @@ for dir in dirset:
 
         
         if verbose > 0:
-            print '================================================'
-            print 'Site:', p
-            print 'status:', pstatus
-            print 'Number of verification points    :', obcount            
-            print 'Mean of proxy values             :', np.mean(df['y'][indok])
-            print 'Mean ensemble-mean               :', np.mean(df['Ye_recon_ensMean'][indok])
-            print 'Mean ensemble-mean error         :', np.mean(df_error['Ye_recon_ensMean_error'][indok])
-            print 'Ensemble-mean RMSE               :', rmsef(df['Ye_recon_ensMean'][indok],df['y'][indok])
-            print 'Ensemble-mean Correlation        :', np.corrcoef(df['y'][indok],df['Ye_recon_ensMean'][indok])[0,1]
-            print 'Ensemble-mean CE                 :', coefficient_efficiency(df['y'][indok],df['Ye_recon_ensMean'][indok])
-            print 'Ensemble calibration ratio       :', recon_calib_ratio
-            print '..................................'
-            print 'Mean ensemble-mean(prior)        :', np.mean(dfp['Ye_prior_ensMean'][indok])
-            print 'Mean ensemble-mean error(prior)  :', np.mean(dfp_error['Ye_prior_ensMean_error'][indok])
-            print 'Ensemble-mean RMSE(prior)        :', rmsef(dfp['Ye_prior_ensMean'][indok],dfp['y'][indok])
+            print('================================================')
+            print('Site:', p)
+            print('status:', pstatus)
+            print('Number of verification points    :', obcount)            
+            print('Mean of proxy values             :', np.mean(df['y'][indok]))
+            print('Mean ensemble-mean               :', np.mean(df['Ye_recon_ensMean'][indok]))
+            print('Mean ensemble-mean error         :', np.mean(df_error['Ye_recon_ensMean_error'][indok]))
+            print('Ensemble-mean RMSE               :', rmsef(df['Ye_recon_ensMean'][indok],df['y'][indok]))
+            print('Ensemble-mean Correlation        :', np.corrcoef(df['y'][indok],df['Ye_recon_ensMean'][indok])[0,1])
+            print('Ensemble-mean CE                 :', coefficient_efficiency(df['y'][indok],df['Ye_recon_ensMean'][indok]))
+            print('Ensemble calibration ratio       :', recon_calib_ratio)
+            print('..................................')
+            print('Mean ensemble-mean(prior)        :', np.mean(dfp['Ye_prior_ensMean'][indok]))
+            print('Mean ensemble-mean error(prior)  :', np.mean(dfp_error['Ye_prior_ensMean_error'][indok]))
+            print('Ensemble-mean RMSE(prior)        :', rmsef(dfp['Ye_prior_ensMean'][indok],dfp['y'][indok]))
             corr = np.corrcoef(dfp['y'][indok],dfp['Ye_prior_ensMean'][indok])[0,1]
             if not np.isfinite(corr): corr = 0.0
-            print 'Ensemble-mean Correlation(prior) :', corr
-            print 'Ensemble-mean CE(prior)          :', coefficient_efficiency(dfp['y'][indok],dfp['Ye_prior_ensMean'][indok])
-            print 'Ensemble calibration ratio(prior):', prior_calib_ratio
-            print '================================================'
+            print('Ensemble-mean Correlation(prior) :', corr)
+            print('Ensemble-mean CE(prior)          :', coefficient_efficiency(dfp['y'][indok],dfp['Ye_prior_ensMean'][indok]))
+            print('Ensemble calibration ratio(prior):', prior_calib_ratio)
+            print('================================================')
 
 
         # Fill dictionaries with verification statistics for this MC iteration
@@ -394,7 +394,7 @@ for dir in dirset:
             dict_verif[p]['ts_EnsMean'] = df['Ye_recon_ensMean'][indok].values
             dict_verif[p]['ts_PriorEnsMean'] = dfp['Ye_prior_ensMean'][indok].values            
         else:
-            print 'proxy status undefined...'
+            print('proxy status undefined...')
                         
     verif_listdict.append(dict_verif)
     assim_listdict.append(dict_assim)
@@ -422,21 +422,21 @@ if nb_tot_verif > 0:
     if write_full_verif_dict:
         # Dump dictionary to pickle files
         outfile = open('%s/reconstruction_eval_withheld_proxy_full.pckl' % (outdir),'w')
-        cPickle.dump(verif_listdict,outfile,protocol=2)
+        pickle.dump(verif_listdict,outfile,protocol=2)
         outfile.close()
 
 
     # List of sites in the verif dictionary
     list_tmp = []
     for i in range(len(verif_listdict)):
-        for j in range(len(verif_listdict[i].keys())):
-            list_tmp.append(verif_listdict[i].keys()[j])
+        for j in range(len(list(verif_listdict[i].keys()))):
+            list_tmp.append(list(verif_listdict[i].keys())[j])
     list_sites = list(set(list_tmp)) # filter to unique elements
 
     summary_stats_verif = {}
     for k in range(len(list_sites)):
         # indices in verif_listdict where this site is present
-        inds  = [j for j in range(len(verif_listdict)) if list_sites[k] in verif_listdict[j].keys()]
+        inds  = [j for j in range(len(verif_listdict)) if list_sites[k] in list(verif_listdict[j].keys())]
 
         summary_stats_verif[list_sites[k]] = {}
         summary_stats_verif[list_sites[k]]['lat']          = verif_listdict[inds[0]][list_sites[k]]['lat']
@@ -499,7 +499,7 @@ if nb_tot_verif > 0:
         
     # Dump data to pickle file
     outfile = open('%s/reconstruction_eval_withheld_proxy_summary.pckl' % (outdir),'w')
-    cPickle.dump(summary_stats_verif,outfile,protocol=2)
+    pickle.dump(summary_stats_verif,outfile,protocol=2)
     outfile.close()
 
 
@@ -511,21 +511,21 @@ if nb_tot_assim > 0:
     if write_full_verif_dict:
         # Dump dictionary to pickle files
         outfile = open('%s/reconstruction_eval_assimilated_proxy_full.pckl' % (outdir),'w')
-        cPickle.dump(assim_listdict,outfile,protocol=2)
+        pickle.dump(assim_listdict,outfile,protocol=2)
         outfile.close()
 
 
     # List of sites in the assim dictionary
     list_tmp = []
     for i in range(len(assim_listdict)):
-        for j in range(len(assim_listdict[i].keys())):
-            list_tmp.append(assim_listdict[i].keys()[j])
+        for j in range(len(list(assim_listdict[i].keys()))):
+            list_tmp.append(list(assim_listdict[i].keys())[j])
     list_sites = list(set(list_tmp)) # filter to unique elements
 
     summary_stats_assim = {}
     for k in range(len(list_sites)):
         # indices in assim_listdict where this site is present
-        inds  = [j for j in range(len(assim_listdict)) if list_sites[k] in assim_listdict[j].keys()]
+        inds  = [j for j in range(len(assim_listdict)) if list_sites[k] in list(assim_listdict[j].keys())]
 
         summary_stats_assim[list_sites[k]] = {}
         summary_stats_assim[list_sites[k]]['lat']          = assim_listdict[inds[0]][list_sites[k]]['lat']
@@ -588,11 +588,11 @@ if nb_tot_assim > 0:
         
     # Dump data to pickle file
     outfile = open('%s/reconstruction_eval_assimilated_proxy_summary.pckl' % (outdir),'w')
-    cPickle.dump(summary_stats_assim,outfile,protocol=2)
+    pickle.dump(summary_stats_assim,outfile,protocol=2)
     outfile.close()
 
     
 verif_time = time() - begin_time
-print '======================================================='
-print 'Verification completed in '+ str(verif_time/3600.0)+' hours'
-print '======================================================='
+print('=======================================================')
+print('Verification completed in '+ str(verif_time/3600.0)+' hours')
+print('=======================================================')

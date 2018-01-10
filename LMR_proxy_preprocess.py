@@ -46,17 +46,17 @@ import re
 import six
 import ast
 from os.path import join
-import cPickle as pickle
+import pickle as pickle
 import gzip
 import calendar
 
 # LMR imports
-from LMR_utils import gaussianize
+from .LMR_utils import gaussianize
 
 # =========================================================================================
 
 class EmptyError(Exception):
-    print Exception
+    print(Exception)
 
 # =========================================================================================
 # ---------------------------------------- MAIN -------------------------------------------
@@ -714,7 +714,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         # 'growing season' was mapped to summer.
         season_orig = pages2k_data[counter]['climateInterpretation_seasonality']
         if any(char.isdigit() for char in season_orig):
-            pages2k_data_seasonality = map(int,season_orig.split(' '))
+            pages2k_data_seasonality = list(map(int,season_orig.split(' ')))
         elif season_orig == 'annual':
             if year_type == 'tropical year': pages2k_data_seasonality = [4,5,6,7,8,9,10,11,12,13,14,15]
             else: pages2k_data_seasonality = [1,2,3,4,5,6,7,8,9,10,11,12]
@@ -813,21 +813,21 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
             proxy_measurement = [item+'_breit' for item in proxy_measurement]
 
         nb = []
-        for siteID in proxy_dict_pagesv2.keys():
+        for siteID in list(proxy_dict_pagesv2.keys()):
             if proxy_dict_pagesv2[siteID]['Archive'] == proxy_archive and proxy_dict_pagesv2[siteID]['Measurement'] in proxy_measurement:
                 nb.append(siteID)
 
-        print('   %s : %d' %('{:40}'.format(key), len(nb)))
+        print(('   %s : %d' %('{:40}'.format(key), len(nb))))
         tot.append(len(nb))
     nbtot = sum(tot)
     print('  ------------------------------------------------------')
-    print('   %s : %d' %('{:40}'.format('Total:'), nbtot))
+    print(('   %s : %d' %('{:40}'.format('Total:'), nbtot)))
     print('----------------------------------------------------------------------')
     print(' ')
 
 
     elapsed_time = clock.time() - begin_time
-    print('PAGES2k phase2 data extraction completed in %s secs' %str(elapsed_time))    
+    print('PAGES2k phase2 data extraction completed in %s secs' %str(elapsed_time))
 
     return proxy_dict_pagesv2
 
@@ -850,7 +850,7 @@ def colonReader(string, fCon, fCon_low, end):
     From Julien Emile-Geay (Univ. of Southern California)
     '''
 
-    if isinstance(string, basestring):
+    if isinstance(string, str):
         lstr = string + ': ' # append the annoying stuff
         Index = fCon_low.find(lstr)
         Len = len(lstr)
@@ -1229,7 +1229,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             if year_type == 'tropical year' and d['Seasonality'] == [1,2,3,4,5,6,7,8,9,10,11,12]:
                 d['Seasonality'] = [4,5,6,7,8,9,10,11,12,13,14,15]
 
-        except EmptyError, e:
+        except EmptyError as e:
             print(e)
             return (None, None)
 
@@ -1278,7 +1278,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
 
         
         # Cross-reference "ShortName" entries with possible proxy measurements specified in proxy_def dictionary
-        proxy_types_all = proxy_def.keys()
+        proxy_types_all = list(proxy_def.keys())
 
         # Restrict to those matching d['Archive']
         proxy_types_keep = [s for s in proxy_types_all if d['Archive'] in s or d['Archive'] in s.lower()]
@@ -1317,7 +1317,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                     proxy_types_in_file[proxy_types[0]] = (d['DataColumn' + format(ivar+1, '02') + '_ShortName'], ivar)
 
         
-        dkeys = proxy_types_in_file.keys()
+        dkeys = list(proxy_types_in_file.keys())
         nbvalid = len(dkeys)
         if nbvalid > 0:
             DataColumns_ided = True
@@ -1607,9 +1607,9 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
         if proxy_list: # if returned list is not empty
             # extract data from list and populate the master proxy dictionary
             for item in proxy_list:                    
-                proxy_name = item.keys()[0]
+                proxy_name = list(item.keys())[0]
                 # test if dict element already exists
-                if proxy_name in proxy_dict_ncdc.keys():
+                if proxy_name in list(proxy_dict_ncdc.keys()):
                     dupelist.append(proxy_name)
                 else:
                     proxy_dict_ncdc[proxy_name] = item[proxy_name]
@@ -1644,7 +1644,7 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
             proxy_measurement = [item+'_breit' for item in proxy_measurement]
 
         nb = []
-        for siteID in proxy_dict_ncdc.keys():
+        for siteID in list(proxy_dict_ncdc.keys()):
             if proxy_dict_ncdc[siteID]['Archive'] == proxy_archive and proxy_dict_ncdc[siteID]['Measurement'] in proxy_measurement:
                 nb.append(siteID)
 
@@ -1703,7 +1703,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
         # numpy array containing names of proxy records to eliminate
         toflush = dupes['Record_To_Eliminate'].values
 
-        for siteID in merged_dict.keys():
+        for siteID in list(merged_dict.keys()):
             if siteID in toflush:
                 try:
                     del merged_dict[siteID]
@@ -1731,7 +1731,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
             proxy_measurement = [item+'_breit' for item in proxy_measurement]
                 
         nb = []
-        for siteID in merged_dict.keys():
+        for siteID in list(merged_dict.keys()):
             if merged_dict[siteID]['Archive'] == proxy_archive and merged_dict[siteID]['Measurement'] in proxy_measurement:
                 nb.append(siteID)
 
@@ -1769,7 +1769,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
         if key == 'Tree Rings_WidthBreit':
             proxy_def[key] = [item+'_breit' for item in proxy_def[key]]
         
-        for siteID in merged_dict.keys():
+        for siteID in list(merged_dict.keys()):
             
             if merged_dict[siteID]['Archive'] == proxy_archive and merged_dict[siteID]['Measurement'] in proxy_def[key]:
                 
@@ -1804,7 +1804,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     print(' ')
 
     counter = 0
-    for siteID in merged_dict.keys():
+    for siteID in list(merged_dict.keys()):
 
         years = merged_dict[siteID]['Years']
         data = merged_dict[siteID]['Data']
@@ -1833,7 +1833,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     df.sort_index(inplace=True)
 
     # Write data to file
-    print 'Now writing to file:', data_outfile
+    print('Now writing to file:', data_outfile)
     df.to_pickle(data_outfile)
 
     print('Done!')
@@ -1897,7 +1897,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     # eliminate duplicates if option activated
     if eliminate_duplicates:
         final_proxy_list = []
-        master_proxy_siteIDs = [item.keys()[0].split(':')[0] for item in master_proxy_list]
+        master_proxy_siteIDs = [list(item.keys())[0].split(':')[0] for item in master_proxy_list]
         inds = [i for i, item in enumerate(master_proxy_siteIDs) if item not in master_duplicate_list]
         nbduplicates = len(master_proxy_list) - len(inds)
         # extract those not in list of duplicates
@@ -1913,16 +1913,16 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
 
     # Summary of the final_proxy_list
     nbchronol = len(final_proxy_list)
-    print ' '
-    print ' '
-    print '----------------------------------------------------------------------'
-    print ' SUMMARY: '
-    print '  Total nb of files found & queried           : ', nbsites
-    print '  Total nb of files with valid data           : ', nbsites_valid
-    print '  Number of proxy chronologies extracted      : ', nbextracted
-    print '  Number of identified duplicate chronologies : ', nbduplicates
-    print '  Number of proxy chronologies included in df : ', nbchronol
-    print '  ------------------------------------------------------'
+    print(' ')
+    print(' ')
+    print('----------------------------------------------------------------------')
+    print(' SUMMARY: ')
+    print('  Total nb of files found & queried           : ', nbsites)
+    print('  Total nb of files with valid data           : ', nbsites_valid)
+    print('  Number of proxy chronologies extracted      : ', nbextracted)
+    print('  Number of identified duplicate chronologies : ', nbduplicates)
+    print('  Number of proxy chronologies included in df : ', nbchronol)
+    print('  ------------------------------------------------------')
     
     tot = []
     # Loop over proxy types specified in *main*
@@ -1949,7 +1949,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
             
         nb = []
         for item in final_proxy_list:
-            siteID = item.keys()[0]
+            siteID = list(item.keys())[0]
             if item[siteID]['Archive'] == proxy_archive and item[siteID]['Measurement'] in proxy_def[key]:
                 nb.append(siteID)
                 # *** for v.0.0.0:
@@ -1977,31 +1977,31 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
 
                 counter = counter + 1
 
-        print '   ', '{:40}'.format(key), ' : ', len(nb)
+        print('   ', '{:40}'.format(key), ' : ', len(nb))
         tot.append(len(nb))
     nbtot = sum(tot)
-    print '  ------------------------------------------------------'
-    print '   ','{:40}'.format('Total:'), ' : ', nbtot
-    print '----------------------------------------------------------------------'
-    print ' '
+    print('  ------------------------------------------------------')
+    print('   ','{:40}'.format('Total:'), ' : ', nbtot)
+    print('----------------------------------------------------------------------')
+    print(' ')
     
     # Redefine column headers
     metadf.columns = headers
 
     # Write metadata to file
-    print 'Now writing metadata to file:', metaout
+    print('Now writing metadata to file:', metaout)
     metadf.to_pickle(metaout)
 
     # -----------------------------------------------------
     # Build the proxy **data** DataFrame and output to file
     # -----------------------------------------------------
-    print ' '
-    print 'Now creating & loading the data in the pandas DataFrame...'
-    print ' '
+    print(' ')
+    print('Now creating & loading the data in the pandas DataFrame...')
+    print(' ')
 
     counter = 0
     for item in final_proxy_list:
-        siteID = item.keys()[0]
+        siteID = list(item.keys())[0]
 
         years = item[siteID]['Years']
         data = item[siteID]['Data']
@@ -2030,10 +2030,10 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     df.sort_index(inplace=True)
 
     # Write data to file
-    print 'Now writing to file:', dataout
+    print('Now writing to file:', dataout)
     df.to_pickle(dataout)
-    print ' '
-    print 'Done!'
+    print(' ')
+    print('Done!')
 
 
 # =========================================================================================

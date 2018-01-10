@@ -136,7 +136,7 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-verif_vars = verif_dict.keys()
+verif_vars = list(verif_dict.keys())
 
 workdir = datadir_output + '/' + nexp
 print('working directory = %s' % workdir)
@@ -178,7 +178,7 @@ for var in verif_vars:
         if first:
             first = False
             recon_times = npzfile['years']
-            LMR_time = np.array(map(int,recon_times))
+            LMR_time = np.array(list(map(int,recon_times)))
             lat = npzfile['lat']
             lon = npzfile['lon']
             nlat = npzfile['nlat']
@@ -205,7 +205,7 @@ for var in verif_vars:
 
     # sample variance
     xam_var = xam_all.var(0)
-    print np.shape(xam_var)
+    print(np.shape(xam_var))
 
     print('\n shape of the ensemble array: %s \n' % str(np.shape(xam_all)))
     print('\n shape of the ensemble-mean array: %s \n' % str(np.shape(xam)))
@@ -219,7 +219,7 @@ for var in verif_vars:
 
     # Define month sequence for the calendar year 
     # (argument needed in upload of reanalysis data)
-    annual = range(1,13)
+    annual = list(range(1,13))
 
     # load 20th century reanalysis (TCR) reanalysis --------------------------------
     vardict = {var: verif_dict[var][0]}
@@ -344,7 +344,7 @@ for var in verif_vars:
     if nya > 0:
         iw = (nya-1)/2
 
-    cyears = range(trange[0],trange[1])
+    cyears = list(range(trange[0],trange[1]))
     lt_csave = np.zeros([len(cyears)])
     le_csave = np.zeros([len(cyears)])
     te_csave = np.zeros([len(cyears)])

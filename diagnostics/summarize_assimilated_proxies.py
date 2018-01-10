@@ -23,7 +23,7 @@ Module: summarize_assimilated_proxies.py
 import os
 import glob
 import re
-import cPickle
+import pickle
 import numpy as np
 from os.path import join
 
@@ -125,7 +125,7 @@ for iter in iters:
     runname = 'r'+str(iter)
     dirname = expdir+'/'+runname
 
-    print 'Reconstruction:', dirname
+    print('Reconstruction:', dirname)
 
     fname = dirname+'/assimilated_proxies.npy'
 
@@ -137,8 +137,8 @@ for iter in iters:
     sites_assim_lat   = []
     sites_assim_lon   = []
     sites_assim_years = []
-    for k in xrange(len(assim_proxies)):
-        key = assim_proxies[k].keys()
+    for k in range(len(assim_proxies)):
+        key = list(assim_proxies[k].keys())
         sites_assim_name.append(assim_proxies[k][key[0]][0])
         sites_assim_type.append(key[0])
         sites_assim_lat.append(assim_proxies[k][key[0]][1])
@@ -147,7 +147,7 @@ for iter in iters:
 
     sites_assim_type_set = sorted(list(set(sites_assim_type)))
     nb_assim_proxies = len(sites_assim_name)
-    print 'Assimilated proxies =>',len(sites_assim_name), 'sites'
+    print('Assimilated proxies =>',len(sites_assim_name), 'sites')
 
     # ===============================================================================
     # 1) Map of assimilated proxies
@@ -170,7 +170,7 @@ for iter in iters:
 
     l = []
     ptype_legend = []
-    for k in xrange(len(sites_assim_type_set)):
+    for k in range(len(sites_assim_type_set)):
         marker = proxy_symbols_color[sites_assim_type_set[k]][0]
         color_dots = proxy_symbols_color[sites_assim_type_set[k]][1]
         

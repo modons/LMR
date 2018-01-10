@@ -18,7 +18,7 @@ Revisions:
 """
 
 #import numpy as np
-import cPickle
+import pickle
 
 import matplotlib
 # need to do this when running remotely, and to suppress figures
@@ -46,6 +46,7 @@ expts = [
 #         'test_1',
 #         'test_PAGES_annual_TorP_1'
 #         'V2_PAGES2_seasonal_T_1']
+    ]
 
 expts = [
 #    'pages2_loc1000_11',
@@ -78,10 +79,10 @@ def print_verification_stats(expts, keyword):
     dsave = []
     for ex in expts:
         exfile = ex+'_iters_grid_verification.pckl'
-        print '---------------------------------------------------------------------'
-        print 'working on file: ',exfile
+        print('---------------------------------------------------------------------')
+        print('working on file: ',exfile)
         infile = open(exfile,'r')
-        ddict = cPickle.load(infile)
+        ddict = pickle.load(infile)
 
         # NOTE: This line obliterates any variables in global scope with same name as ddict key
         # load keys into variables by the key name
@@ -89,10 +90,10 @@ def print_verification_stats(expts, keyword):
         stat_metadata = ddict['stat_metadata']
         
         # list out keys conditionally
-        for key in ddict.keys():
+        for key in list(ddict.keys()):
             #print key,ddict[key],stat_metadata[key]
             if keyword in stat_metadata[key]:
-                print key,ddict[key],stat_metadata[key]
+                print(key,ddict[key],stat_metadata[key])
                 # save data
                 dsave.append(ddict[key])
 
@@ -102,26 +103,26 @@ def print_verification_stats(expts, keyword):
 # ================================= MAIN =======================================
 #
 
-print '----------------------------------'
-print 'experiments:'
-print expts
-print '----------------------------------'
+print('----------------------------------')
+print('experiments:')
+print(expts)
+print('----------------------------------')
 
 
 keyword1 = 'LMR_BE coefficient of efficiency global mean'
-print '\nresults for all experiments for metric: ' + keyword1
+print('\nresults for all experiments for metric: ' + keyword1)
 dsave1 = print_verification_stats(expts, keyword1)
-print dsave1
+print(dsave1)
 
 keyword2 = 'LMR_GIS coefficient of efficiency global mean'
-print '\nresults for all experiments for metric: ' + keyword2
+print('\nresults for all experiments for metric: ' + keyword2)
 dsave2 = print_verification_stats(expts, keyword2)
-print dsave2
+print(dsave2)
 
 keyword3 = 'GIS time-mean spatial anomaly correlation'
-print '\nresults for all experiments for metric: ' + keyword3
+print('\nresults for all experiments for metric: ' + keyword3)
 dsave3 = print_verification_stats(expts, keyword3)
-print dsave3
+print(dsave3)
 
 # make a simple plot
 # ------------------

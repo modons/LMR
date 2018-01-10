@@ -14,7 +14,7 @@ import sys
 import os
 import glob
 import re
-import cPickle
+import pickle
 import numpy as np
 from scipy.interpolate import griddata
 
@@ -145,7 +145,7 @@ if make_gmt_plot:
     for iter in iters:
         dirname_test = expdir_test+'/r'+str(iter)
         dirname_refe = expdir_refe+'/r'+str(iter)
-        print iter, dirname_test
+        print(iter, dirname_test)
         list_iters_test.append(dirname_test)
         list_iters_refe.append(dirname_refe)
         # check presence of gmt file 
@@ -240,7 +240,7 @@ if make_gmt_plot:
                 recon_test_shmt[citer,:,:] = recon_test_data.T # flip time/nens dims
                 
             else:
-                print 'Unrecognized option for infile. Exiting.'
+                print('Unrecognized option for infile. Exiting.')
                 SystemExit(1)
 
             # load prior data ---
@@ -249,7 +249,7 @@ if make_gmt_plot:
             Xb_one = Xprior_statevector['Xb_one']
             # extract variable (sfc temperature) from state vector
             state_info = Xprior_statevector['state_info'].item()
-            vars = state_info.keys()
+            vars = list(state_info.keys())
             indvar = [j for j, k in enumerate(vars) if 'tas' in k]
             if indvar:
                 # surface air temp is in the state vector?
@@ -299,7 +299,7 @@ if make_gmt_plot:
                 recon_refe_shmt[citer,:,:] = recon_refe_data.T # flip time/nens dims
                 
             else:
-                print 'Unrecognized option for infile. Exiting.'
+                print('Unrecognized option for infile. Exiting.')
                 SystemExit(1)
 
             # load prior data ---
@@ -308,7 +308,7 @@ if make_gmt_plot:
             Xb_one = Xprior_statevector['Xb_one']
             # extract variable (sfc temperature) from state vector
             state_info = Xprior_statevector['state_info'].item()
-            vars = state_info.keys()
+            vars = list(state_info.keys())
             indvar = [j for j, k in enumerate(vars) if 'tas' in k]
             if indvar:
                 # surface air temp is in the state vector?
@@ -714,15 +714,15 @@ if make_map_plots:
     mcdir_test = dirs[iter_range[0]:iter_range[1]+1]
     niters_test = len(mcdir_test)
 
-    print 'mcdir (test):' + str(mcdir_test)
-    print 'niters (test) = ' + str(niters_test)
+    print('mcdir (test):' + str(mcdir_test))
+    print('niters (test) = ' + str(niters_test))
 
     dirs = [item.split('/')[-1] for item in glob.glob(expdir_refe+"/r*")]
     mcdir_refe = dirs[iter_range[0]:iter_range[1]+1]
     niters_refe = len(mcdir_refe)
 
-    print 'mcdir (refe):' + str(mcdir_refe)
-    print 'niters (refe) = ' + str(niters_refe)
+    print('mcdir (refe):' + str(mcdir_refe))
+    print('niters (refe) = ' + str(niters_refe))
 
     
     # for info on assimilated proxies
@@ -730,7 +730,7 @@ if make_map_plots:
     assimprox_refe = {}
 
     # read ensemble mean data (test recon)
-    print '\n reading LMR ensemble-mean data (test recon)...\n'
+    print('\n reading LMR ensemble-mean data (test recon)...\n')
 
     first = True
     k = -1
@@ -739,9 +739,9 @@ if make_map_plots:
         # Posterior (reconstruction)
         ensfiln = expdir_test + '/' + dir + '/ensemble_mean_'+var_to_plot+'.npz'
         npzfile = np.load(ensfiln)
-        print  npzfile.files
+        print(npzfile.files)
         tmp = npzfile['xam']
-        print 'shape of tmp: ' + str(np.shape(tmp))
+        print('shape of tmp: ' + str(np.shape(tmp)))
 
         # load prior data
         file_prior = expdir_test + '/' + dir + '/Xb_one.npz'
@@ -795,7 +795,7 @@ if make_map_plots:
             assimproxiter = np.load(assimproxfiln)
             nbassimprox, = assimproxiter.shape
             for i in range(nbassimprox):
-                ptype = assimproxiter[i].keys()[0]
+                ptype = list(assimproxiter[i].keys())[0]
                 psite = assimproxiter[i][ptype][0]
                 plat  = assimproxiter[i][ptype][1]
                 plon  = assimproxiter[i][ptype][2]
@@ -825,22 +825,22 @@ if make_map_plots:
     #  check..
     max_err = np.max(np.max(np.max(xam_check_test - xam_test)))
     if max_err > 1e-4:
-        print 'max error = ' + str(max_err)
+        print('max error = ' + str(max_err))
         raise Exception('sample mean does not match what is in the ensemble files!')
 
     # sample variance
     xam_test_var = xam_all_test.var(0)
-    print np.shape(xam_test_var)
+    print(np.shape(xam_test_var))
 
-    print ' shape of the ensemble array: ' + str(np.shape(xam_all_test)) +'\n'
-    print ' shape of the ensemble-mean array: ' + str(np.shape(xam_test)) +'\n'
-    print ' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_test)) +'\n'
+    print(' shape of the ensemble array: ' + str(np.shape(xam_all_test)) +'\n')
+    print(' shape of the ensemble-mean array: ' + str(np.shape(xam_test)) +'\n')
+    print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_test)) +'\n')
 
     lmr_lat_range = (lat2[0,0],lat2[-1,0])
     lmr_lon_range = (lon2[0,0],lon2[0,-1])
-    print 'LMR grid info:'
-    print ' lats=', lmr_lat_range
-    print ' lons=', lmr_lon_range
+    print('LMR grid info:')
+    print(' lats=', lmr_lat_range)
+    print(' lons=', lmr_lon_range)
 
     recon_times = years.astype(np.float)
 
@@ -851,7 +851,7 @@ if make_map_plots:
 
 
     # read ensemble mean data (refe recon)
-    print '\n reading LMR ensemble-mean data (refe recon)...\n'
+    print('\n reading LMR ensemble-mean data (refe recon)...\n')
 
     first = True
     k = -1
@@ -860,9 +860,9 @@ if make_map_plots:
         # Posterior (reconstruction)
         ensfiln = expdir_refe + '/' + dir + '/ensemble_mean_'+var_to_plot+'.npz'
         npzfile = np.load(ensfiln)
-        print  npzfile.files
+        print(npzfile.files)
         tmp = npzfile['xam']
-        print 'shape of tmp: ' + str(np.shape(tmp))
+        print('shape of tmp: ' + str(np.shape(tmp)))
 
         # load prior data
         file_prior = expdir_refe + '/' + dir + '/Xb_one.npz'
@@ -916,7 +916,7 @@ if make_map_plots:
             assimproxiter = np.load(assimproxfiln)
             nbassimprox, = assimproxiter.shape
             for i in range(nbassimprox):
-                ptype = assimproxiter[i].keys()[0]
+                ptype = list(assimproxiter[i].keys())[0]
                 psite = assimproxiter[i][ptype][0]
                 plat  = assimproxiter[i][ptype][1]
                 plon  = assimproxiter[i][ptype][2]
@@ -946,22 +946,22 @@ if make_map_plots:
     #  check..
     max_err = np.max(np.max(np.max(xam_check_refe - xam_refe)))
     if max_err > 1e-4:
-        print 'max error = ' + str(max_err)
+        print('max error = ' + str(max_err))
         raise Exception('sample mean does not match what is in the ensemble files!')
 
     # sample variance
     xam_refe_var = xam_all_refe.var(0)
-    print np.shape(xam_refe_var)
+    print(np.shape(xam_refe_var))
 
-    print ' shape of the ensemble array: ' + str(np.shape(xam_all_refe)) +'\n'
-    print ' shape of the ensemble-mean array: ' + str(np.shape(xam_refe)) +'\n'
-    print ' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_refe)) +'\n'
+    print(' shape of the ensemble array: ' + str(np.shape(xam_all_refe)) +'\n')
+    print(' shape of the ensemble-mean array: ' + str(np.shape(xam_refe)) +'\n')
+    print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_refe)) +'\n')
 
     lmr_lat_range = (lat2[0,0],lat2[-1,0])
     lmr_lon_range = (lon2[0,0],lon2[0,-1])
-    print 'LMR grid info:'
-    print ' lats=', lmr_lat_range
-    print ' lons=', lmr_lon_range
+    print('LMR grid info:')
+    print(' lats=', lmr_lat_range)
+    print(' lons=', lmr_lon_range)
 
     recon_times = years.astype(np.float)
 
@@ -972,8 +972,8 @@ if make_map_plots:
     # ----------------------------------
 
     recon_interval = np.diff(recon_times)[0]
-    proxsites_test = assimprox_test.keys()
-    proxsites_refe = assimprox_refe.keys()
+    proxsites_test = list(assimprox_test.keys())
+    proxsites_refe = list(assimprox_refe.keys())
     
     # loop over recon_times within user specified "year_range"
     ntimes, = recon_times.shape
@@ -984,7 +984,7 @@ if make_map_plots:
     for it in inds_in_range:
 
         year = int(recon_times[it])    
-        print ' plotting:', year
+        print(' plotting:', year)
 
 
         # assimilated proxies

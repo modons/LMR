@@ -18,7 +18,7 @@ import sys
 import os
 import glob
 import re
-import cPickle
+import pickle
 import numpy as np
 from scipy.interpolate import griddata
 
@@ -141,7 +141,7 @@ if make_gmt_plot:
     iters = np.arange(iter_range[0], iter_range[1]+1)
     for iter in iters:
         dirname = expdir+'/r'+str(iter)
-        print iter, dirname
+        print(iter, dirname)
         list_iters.append(dirname)
         # check presence of gmt file 
         if os.path.exists(dirname+'/'+infile+'.npz'): count +=1
@@ -165,7 +165,7 @@ if make_gmt_plot:
             nbproxy = 0
             file_to_read = 'gmt_ensemble'
         else:
-            print 'Error in infile! Exiting!'
+            print('Error in infile! Exiting!')
             SystemExit(1)
 
 
@@ -214,7 +214,7 @@ if make_gmt_plot:
                 recon_shmt[citer,:,:] = recon_data.T # flip time/nens dims
                 
             else:
-                print 'Unrecognized option for infile. Exiting.'
+                print('Unrecognized option for infile. Exiting.')
                 SystemExit(1)
 
 
@@ -224,7 +224,7 @@ if make_gmt_plot:
             Xb_one = Xprior_statevector['Xb_one']
             # extract variable (sfc temperature) from state vector
             state_info = Xprior_statevector['state_info'].item()
-            vars = state_info.keys()
+            vars = list(state_info.keys())
             indvar = [j for j, k in enumerate(vars) if 'tas' in k]
             if indvar:
                 # surface air temp is in the state vector?
@@ -454,14 +454,14 @@ if make_map_plots:
     mcdir = [item.split('/')[-1] for item in dirs]
     niters = len(mcdir)
 
-    print 'mcdir:' + str(mcdir)
-    print 'niters = ' + str(niters)
+    print('mcdir:' + str(mcdir))
+    print('niters = ' + str(niters))
 
     # for info on assimilated proxies
     assimprox = {}
 
     # read ensemble mean data
-    print '\n reading LMR ensemble-mean data...\n'
+    print('\n reading LMR ensemble-mean data...\n')
 
     first = True
     k = -1
@@ -470,9 +470,9 @@ if make_map_plots:
         # Posterior (reconstruction)
         ensfiln = expdir + '/' + dir + '/ensemble_mean_'+var_to_plot+'.npz'
         npzfile = np.load(ensfiln)
-        print  npzfile.files
+        print(npzfile.files)
         tmp = npzfile['xam']
-        print 'shape of tmp: ' + str(np.shape(tmp))
+        print('shape of tmp: ' + str(np.shape(tmp)))
 
         # load prior data
         file_prior = expdir + '/' + dir + '/Xb_one.npz'
@@ -526,7 +526,7 @@ if make_map_plots:
             assimproxiter = np.load(assimproxfiln)
             nbassimprox, = assimproxiter.shape
             for i in range(nbassimprox):
-                ptype = assimproxiter[i].keys()[0]
+                ptype = list(assimproxiter[i].keys())[0]
                 psite = assimproxiter[i][ptype][0]
                 plat  = assimproxiter[i][ptype][1]
                 plon  = assimproxiter[i][ptype][2]
@@ -556,22 +556,22 @@ if make_map_plots:
     #  check..
     max_err = np.max(np.max(np.max(xam_check - xam)))
     if max_err > 1e-4:
-        print 'max error = ' + str(max_err)
+        print('max error = ' + str(max_err))
         raise Exception('sample mean does not match what is in the ensemble files!')
 
     # sample variance
     xam_var = xam_all.var(0)
-    print np.shape(xam_var)
+    print(np.shape(xam_var))
 
-    print ' shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
-    print ' shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
-    print ' shape of the ensemble-mean prior array: ' + str(np.shape(xbm)) +'\n'
+    print(' shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n')
+    print(' shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n')
+    print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm)) +'\n')
 
     lmr_lat_range = (lat2[0,0],lat2[-1,0])
     lmr_lon_range = (lon2[0,0],lon2[0,-1])
-    print 'LMR grid info:'
-    print ' lats=', lmr_lat_range
-    print ' lons=', lmr_lon_range
+    print('LMR grid info:')
+    print(' lats=', lmr_lat_range)
+    print(' lons=', lmr_lon_range)
 
     recon_times = years.astype(np.float)
 
@@ -581,7 +581,7 @@ if make_map_plots:
     # ----------------------------------
 
     recon_interval = np.diff(recon_times)[0]
-    proxsites = assimprox.keys()
+    proxsites = list(assimprox.keys())
 
     # loop over recon_times within user specified "year_range"
     ntimes, = recon_times.shape
@@ -592,7 +592,7 @@ if make_map_plots:
     for it in inds_in_range:
 
         year = int(recon_times[it])    
-        print ' plotting:', year
+        print(' plotting:', year)
 
 
         # assimilated proxies

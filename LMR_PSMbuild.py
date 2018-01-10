@@ -49,14 +49,14 @@
 """
 import os
 import numpy as np
-import cPickle    
+import pickle    
 import datetime
 from time import time
 from os.path import join
 from copy import deepcopy
 
-import LMR_proxy_pandas_rework
-import LMR_calibrate
+from . import LMR_proxy_pandas_rework
+from . import LMR_calibrate
 
 import matplotlib.pyplot as plt
 
@@ -313,7 +313,7 @@ class v_proxies(object):
             
             # Create mapping for Proxy Type/Measurement Type to type names above
             self.proxy_type_mapping = {}
-            for ptype, measurements in self.proxy_assim2.iteritems():
+            for ptype, measurements in self.proxy_assim2.items():
                 # Fetch proxy type name that occurs before underscore
                 type_name = ptype.split('_', 1)[0]
                 for measure in measurements:
@@ -568,7 +568,7 @@ class v_proxies(object):
             for p in self.proxy_order: self.proxy_psm_type[p] = v_core.psm_type
 
             self.proxy_type_mapping = {}
-            for ptype, measurements in self.proxy_assim2.iteritems():
+            for ptype, measurements in self.proxy_assim2.items():
                 # Fetch proxy type name that occurs before underscore
                 type_name = ptype.split('_', 1)[0]
                 for measure in measurements:
@@ -682,9 +682,9 @@ class v_psm(object):
             self.avgPeriod = v_psm.avgPeriod
             
             if '-'.join(v_proxies.use_from) == 'PAGES2kv1' and 'season' in self.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
-                print '       No seasonality metadata provided in that dataset. Exiting!'
-                print '       Change avgPeriod to "annual" in your configuration.'
+                print('ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.')
+                print('       No seasonality metadata provided in that dataset. Exiting!')
+                print('       Change avgPeriod to "annual" in your configuration.')
                 raise SystemExit()
             
             if self.datadir_calib is None:
@@ -784,9 +784,9 @@ class v_psm(object):
             self.avgPeriod = v_psm.avgPeriod
 
             if '-'.join(v_proxies.use_from) == 'PAGES2kv1' and 'season' in self.avgPeriod:
-                print 'ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.'
-                print '       No seasonality metadata provided in that dataset. Exiting!'
-                print '       Change avgPeriod to "annual" in your configuration.'
+                print('ERROR: Trying to use seasonality information with the PAGES2kv1 proxy records.')
+                print('       No seasonality metadata provided in that dataset. Exiting!')
+                print('       Change avgPeriod to "annual" in your configuration.')
                 raise SystemExit()
             
             if self.datadir_calib is None:
@@ -844,15 +844,15 @@ def main():
     proxy_database = Cfg.proxies.use_from[0]
     psm_type = Cfg.core.psm_type
 
-    print 'Proxies             :', proxy_database
-    print 'PSM type            :', psm_type
-    print 'Calib. period       :', Cfg.core.calib_period
+    print('Proxies             :', proxy_database)
+    print('PSM type            :', psm_type)
+    print('Calib. period       :', Cfg.core.calib_period)
     
     if proxy_database == 'PAGES2kv1':
-        print 'Proxy data location :', Cfg.proxies.PAGES2kv1.datadir_proxy
+        print('Proxy data location :', Cfg.proxies.PAGES2kv1.datadir_proxy)
         proxy_psm_seasonality =  Cfg.proxies.PAGES2kv1.proxy_psm_seasonality
     elif proxy_database == 'LMRdb':
-        print 'Proxy data location :', Cfg.proxies.LMRdb.datadir_proxy
+        print('Proxy data location :', Cfg.proxies.LMRdb.datadir_proxy)
         proxy_psm_seasonality =  Cfg.proxies.LMRdb.proxy_psm_seasonality
     else:
         raise SystemExit('ERROR in specification of proxy database. Exiting!')
@@ -860,7 +860,7 @@ def main():
     # psm type
     if psm_type == 'linear':
         datatag_calib = Cfg.psm.linear.datatag_calib
-        print 'Calibration source  :', datatag_calib
+        print('Calibration source  :', datatag_calib)
         psm_file = Cfg.psm.linear.pre_calib_datafile
         calib_avgPeriod = Cfg.psm.linear.avgPeriod
 
@@ -872,7 +872,7 @@ def main():
     elif psm_type == 'bilinear':
         datatag_calib_T = Cfg.psm.bilinear.datatag_calib_T
         datatag_calib_P = Cfg.psm.bilinear.datatag_calib_P
-        print 'Calibration sources :', datatag_calib_T, '+', datatag_calib_P
+        print('Calibration sources :', datatag_calib_T, '+', datatag_calib_P)
         psm_file = Cfg.psm.bilinear.pre_calib_datafile
         calib_avgPeriod = Cfg.psm.bilinear.avgPeriod
 
@@ -887,7 +887,7 @@ def main():
     else:
         raise SystemExit('ERROR: problem with the specified type of psm. Exiting!')
     
-    print 'PSM calibration/parameters file:', psm_file
+    print('PSM calibration/parameters file:', psm_file)
 
     
     # corresponding file containing complete diagnostics
@@ -904,15 +904,15 @@ def main():
     prox_manager = LMR_proxy_pandas_rework.ProxyManager(Cfg, Cfg.core.calib_period)
     type_site_calib = prox_manager.assim_ids_by_group
 
-    print '--------------------------------------------------------------------'
-    print 'Total proxies available: counts per proxy type:'
+    print('--------------------------------------------------------------------')
+    print('Total proxies available: counts per proxy type:')
     # count the total number of proxies
     total_proxy_count = len(prox_manager.ind_assim)
-    for pkey, plist in sorted(type_site_calib.iteritems()):
+    for pkey, plist in sorted(type_site_calib.items()):
         print('%45s : %5d' % (pkey, len(plist)))
-    print '--------------------------------------------------------------------'
+    print('--------------------------------------------------------------------')
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
-    print '--------------------------------------------------------------------'
+    print('--------------------------------------------------------------------')
 
     
     # Loop over proxies
@@ -921,8 +921,8 @@ def main():
     for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
         sitetag = (Y.type,Y.id)
 
-        print ' '
-        print sitetag
+        print(' ')
+        print(sitetag)
 
         
         # -----------------------------------------------------
@@ -997,8 +997,8 @@ def main():
                     # Calibrate the statistical forward model (psm)
                     test_psm_obj = psm_obj(Cfg, Y, calib_obj=C)
                 
-                    print '=>', "{:2d}".format(i), "{:45s}".format(s), "{:12.4f}".format(test_psm_obj.slope), "{:12.4f}".format(test_psm_obj.intercept), \
-                        "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R), '(', "{:10.5f}".format(test_psm_obj.R2adj), ')'
+                    print('=>', "{:2d}".format(i), "{:45s}".format(s), "{:12.4f}".format(test_psm_obj.slope), "{:12.4f}".format(test_psm_obj.intercept), \
+                        "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R), '(', "{:10.5f}".format(test_psm_obj.R2adj), ')')
                 
                     # BIC used as the selection criterion
                     #metric[i] = test_psm_obj.BIC
@@ -1038,9 +1038,9 @@ def main():
                         # Calibrate the statistical forward model (psm)
                         test_psm_obj = psm_obj(Cfg, Y, calib_obj_T=C_T, calib_obj_P=C_P)
 
-                        print '=>', "{:2d}".format(i), "{:40s}".format(sT), "{:40s}".format(sM), \
+                        print('=>', "{:2d}".format(i), "{:40s}".format(sT), "{:40s}".format(sM), \
                             "{:12.4f}".format(test_psm_obj.slope_temperature), "{:12.4f}".format(test_psm_obj.slope_moisture), \
-                            "{:12.4f}".format(test_psm_obj.intercept), "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R)
+                            "{:12.4f}".format(test_psm_obj.intercept), "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R))
                 
                         # BIC used as the selection criterion
                         #metric[i] = test_psm_obj.BIC
@@ -1143,40 +1143,40 @@ def main():
 
     # Summary of calibrated proxy sites
     # ---------------------------------
-    calibrated_sites = psm_dict.keys()
+    calibrated_sites = list(psm_dict.keys())
     calibrated_types = list(set([item[0] for item in calibrated_sites]))
 
-    print '--------------------------------------------------------------------'
-    print 'Calibrated proxies : counts per proxy type:'
+    print('--------------------------------------------------------------------')
+    print('Calibrated proxies : counts per proxy type:')
     # count the total number of proxies
     total_proxy_count = len(calibrated_sites)
 
     for ptype in sorted(calibrated_types):
         plist= [item[1] for item in calibrated_sites if item[0] == ptype]
         print('%45s : %5d' % (ptype, len(plist)))
-    print '--------------------------------------------------------------------'
+    print('--------------------------------------------------------------------')
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
-    print '--------------------------------------------------------------------'
+    print('--------------------------------------------------------------------')
 
     
     # Dump dictionaries to pickle files
     outfile = open('%s' % (psm_file),'w')
     # using protocol 2 for more efficient storing
-    cPickle.dump(psm_dict,outfile,protocol=2)
-    cPickle.dump(psm_info,outfile,protocol=2)
+    pickle.dump(psm_dict,outfile,protocol=2)
+    pickle.dump(psm_info,outfile,protocol=2)
     outfile.close()
 
     outfile_diag = open('%s' % (psm_file_diag),'w')
     # using protocol 2 for more efficient storing
-    cPickle.dump(psm_dict_diag,outfile_diag,protocol=2)
-    cPickle.dump(psm_info,outfile_diag,protocol=2)
+    pickle.dump(psm_dict_diag,outfile_diag,protocol=2)
+    pickle.dump(psm_info,outfile_diag,protocol=2)
     outfile_diag.close()
 
     
     end_time = time() - begin_time
-    print '========================================================='
-    print 'PSM calibration completed in '+ str(end_time/60.0)+' mins'
-    print '========================================================='
+    print('=========================================================')
+    print('PSM calibration completed in '+ str(end_time/60.0)+' mins')
+    print('=========================================================')
 
 # =============================================================================
 

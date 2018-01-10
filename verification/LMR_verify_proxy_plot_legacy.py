@@ -16,7 +16,7 @@ Revisions:
 """
 import os
 import numpy as np
-import cPickle    
+import pickle    
 from time import time
 from os.path import join
 
@@ -116,7 +116,7 @@ elif proxies == 'NCDC':
                    'Speleothems_d18O'              :'h',\
     }
 else:
-    print 'ERROR in the especification of the proxy dataset that will be considered. Exiting...'
+    print('ERROR in the especification of the proxy dataset that will be considered. Exiting...')
     exit(1)
     
 # Only keep proxy sites for which the linear PSM has a correlation >= than this value
@@ -188,12 +188,12 @@ def main():
 
         
         infile_assim   = open(fname_assim,'r')
-        assim_dict[p] = cPickle.load(infile_assim)
+        assim_dict[p] = pickle.load(infile_assim)
         infile_assim.close()
 
         if os.path.isfile(fname_verif):
             infile_verif   = open(fname_verif,'r')
-            verif_dict[p] = cPickle.load(infile_verif)
+            verif_dict[p] = pickle.load(infile_verif)
             infile_verif.close()
             verif_data = True
         else:
@@ -251,7 +251,7 @@ def main():
             # pick right dict and associate to "workdict"
             dname = v+'_dict'
             workdict = eval(dname)
-            sitetag = workdict[p].keys()
+            sitetag = list(workdict[p].keys())
             proxy_types = list(set([item[0] for item in sitetag]))
 
             #tmp = [workdict[p][k]['GrandEnsCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
@@ -296,7 +296,7 @@ def main():
             # pick right dict and associate to "workdict"
             dname = v+'_dict'
             workdict = eval(dname)
-            sitetag = workdict[p].keys()
+            sitetag = list(workdict[p].keys())
             proxy_types = list(set([item[0] for item in sitetag]))
 
             #tmp = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
@@ -344,7 +344,7 @@ def main():
             # pick right dict and associate to "workdict"
             dname = v+'_dict'
             workdict = eval(dname)
-            sitetag = workdict[p].keys()
+            sitetag = list(workdict[p].keys())
             proxy_types = list(set([item[0] for item in sitetag]))
 
             #tmpPost  = [workdict[p][k]['GrandEnsCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMcorrel'])>=r_crit]
@@ -363,8 +363,8 @@ def main():
             dCEplus = [stat[i] for i in range(len(stat)) if stat[i] > 0.0]
             frac = float(len(dCEplus))/float(len(stat))
             fractiondCEplus = str(float('%.2f' % frac ))
-            print 'CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
-                ' Fraction of +change:', fractiondCEplus
+            print('CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
+                ' Fraction of +change:', fractiondCEplus)
 
             results, edges = np.histogram(stat, bins=bins_ce, normed=True)
             plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
@@ -403,7 +403,7 @@ def main():
             # pick right dict and associate to "workdict"
             dname = v+'_dict'
             workdict = eval(dname)
-            sites = workdict[p].keys()
+            sites = list(workdict[p].keys())
             proxy_types = list(set([item[0] for item in sitetag]))
 
             verif_period_label = str(verif_period[p][0])+'-'+str(verif_period[p][1])
@@ -487,7 +487,7 @@ def main():
 
             dplot = {'Prior':'PriorMeanCE', 'Posterior':'MeanCE'}
             irow = 1
-            for dd in dplot.keys():
+            for dd in list(dplot.keys()):
 
                 ax = fig.add_subplot(2,1,irow)   
                 m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.            # GLOBAL            
@@ -594,9 +594,9 @@ def main():
 
 
     end_time = time() - begin_time
-    print '======================================================='
-    print 'All completed in '+ str(end_time/60.0)+' mins'
-    print '======================================================='
+    print('=======================================================')
+    print('All completed in '+ str(end_time/60.0)+' mins')
+    print('=======================================================')
 
 
 

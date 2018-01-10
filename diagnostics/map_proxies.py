@@ -29,7 +29,7 @@ import glob
 
 # Plot the location of proxies on a map.  Specify a year or "all" for all years.  See the comments above for more customization.
 def map_proxies(experiment_dir,m,year='all',marker='o',size=10,color='k',edgecolor='k',alpha=1):
-    print "Plotting locations of assimilated proxies."
+    print("Plotting locations of assimilated proxies.")
     #
     directories = glob.glob(experiment_dir+'/r*')
     #
@@ -44,7 +44,7 @@ def map_proxies(experiment_dir,m,year='all',marker='o',size=10,color='k',edgecol
         #
         # Determine the names of all the assimilated proxies which exist for a given year.
         for i in range(0,len(assimilated_proxies)):
-            proxy_type = assimilated_proxies[i].keys()[0]
+            proxy_type = list(assimilated_proxies[i].keys())[0]
             proxy_name = assimilated_proxies[i][proxy_type][0]
             #
             # Find only the proxies for the given year.  If a proxy has already been loaded, don't load it again.

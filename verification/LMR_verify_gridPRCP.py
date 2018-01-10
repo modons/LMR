@@ -122,12 +122,12 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-verif_vars = verif_dict.keys()
+verif_vars = list(verif_dict.keys())
 
 workdir = datadir_output + '/' + nexp
-print 'working directory = ' + workdir
+print('working directory = ' + workdir)
 
-print '\n getting file system information...\n'
+print('\n getting file system information...\n')
 
 # get number of mc realizations from directory count
 # RT: modified way to determine list of directories with mc realizations
@@ -143,14 +143,14 @@ else:
 mcdir = [item.split('/')[-1] for item in dirset]
 niters = len(mcdir)
 
-print 'mcdir:' + str(mcdir)
-print 'niters = ' + str(niters)
+print('mcdir:' + str(mcdir))
+print('niters = ' + str(niters))
 
 # Loop over verif. variables
 for var in verif_vars:
 
     # read ensemble mean data
-    print '\n reading LMR ensemble-mean data...\n'
+    print('\n reading LMR ensemble-mean data...\n')
 
     first = True
     k = -1
@@ -158,13 +158,13 @@ for var in verif_vars:
         k = k + 1
         ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
         npzfile = np.load(ensfiln)
-        print  dir, ':', npzfile.files
+        print(dir, ':', npzfile.files)
         tmp = npzfile['xam']
-        print 'shape of tmp: ' + str(np.shape(tmp))
+        print('shape of tmp: ' + str(np.shape(tmp)))
         if first:
             first = False
             recon_times = npzfile['years']
-            LMR_time = np.array(map(int,recon_times))
+            LMR_time = np.array(list(map(int,recon_times)))
             lat = npzfile['lat']
             lon = npzfile['lon']
             nlat = npzfile['nlat']
@@ -186,15 +186,15 @@ for var in verif_vars:
     # check..
     max_err = np.max(np.max(np.max(xam_check - xam)))
     if max_err > 1e-4:
-        print 'max error = ' + str(max_err)
+        print('max error = ' + str(max_err))
         raise Exception('sample mean does not match what is in the ensemble files!')
 
     # sample variance
     xam_var = xam_all.var(0)
-    print np.shape(xam_var)
+    print(np.shape(xam_var))
 
-    print '\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
-    print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
+    print('\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n')
+    print('\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n')
 
 
     # Convert units to match verif dataset: from kg m-2 s-1 to mm (per year)
@@ -308,7 +308,7 @@ for var in verif_vars:
 
     # Define month sequence for the calendar year 
     # (argument needed in upload of reanalysis data)
-    annual = range(1,13)
+    annual = list(range(1,13))
     
     # 20th Century reanalysis (TCR) ---------------------------------
     vardict = {var: verif_dict[var][0]}
@@ -436,17 +436,17 @@ for var in verif_vars:
     
 
     # Precip accum. anomalies ---
-    print 'Removing the temporal mean (for every gridpoint) from the prior...'
+    print('Removing the temporal mean (for every gridpoint) from the prior...')
     climo = np.nanmean(GPCP,axis=0)
     GPCP = (GPCP - climo)
     climo = np.nanmean(CMAP,axis=0)
     CMAP = (CMAP - climo)
 
-    print 'GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP)
-    print 'CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP)
-    print 'TCR  : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR)
-    print 'ERA  : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA)
-    print 'LMR  : Global: mean=', np.nanmean(xam), ' , std-dev=', np.nanstd(xam)
+    print('GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP))
+    print('CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP))
+    print('TCR  : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR))
+    print('ERA  : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA))
+    print('LMR  : Global: mean=', np.nanmean(xam), ' , std-dev=', np.nanstd(xam))
 
 
     ###############################################################
@@ -458,7 +458,7 @@ for var in verif_vars:
     # user-defined reference period (e.g. 20th century)
     # ----------------------------------------------------------
     
-    print 'Re-center on %s-%s period' % (str(ref_period[0]), str(ref_period[1]))
+    print('Re-center on %s-%s period' % (str(ref_period[0]), str(ref_period[1])))
 
     stime = ref_period[0]
     etime = ref_period[1]
@@ -482,17 +482,17 @@ for var in verif_vars:
     ERA = ERA - np.mean(ERA[smatch:ematch,:,:],axis=0)
 
 
-    print 'GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP)
-    print 'CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP)
-    print 'TCR : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR)
-    print 'ERA : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA)
-    print 'LMR  : Global: mean=', np.nanmean(LMR), ' , std-dev=', np.nanstd(LMR)
+    print('GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP))
+    print('CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP))
+    print('TCR : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR))
+    print('ERA : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA))
+    print('LMR  : Global: mean=', np.nanmean(LMR), ' , std-dev=', np.nanstd(LMR))
 
 
     # -----------------------------------
     # Regridding the data for comparisons
     # -----------------------------------
-    print '\n regridding data to a common T42 grid...\n'
+    print('\n regridding data to a common T42 grid...\n')
 
     iplot_loc= False
     #iplot_loc= True
@@ -521,14 +521,14 @@ for var in verif_vars:
     # create instance of the spherical harmonics object for the new grid
     specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
     lmr_trunc = np.zeros([nyrs,nlat_new,nlon_new])
-    print 'lmr_trunc shape: ' + str(np.shape(lmr_trunc))
+    print('lmr_trunc shape: ' + str(np.shape(lmr_trunc)))
 
     # loop over years of interest and transform...specify trange at top of file
     iw = 0
     if nya > 0:
         iw = (nya-1)/2
 
-    cyears = range(trange[0],trange[1])
+    cyears = list(range(trange[0],trange[1]))
     lg_csave = np.zeros([len(cyears)])
     lc_csave = np.zeros([len(cyears)])
     lt_csave = np.zeros([len(cyears)])
@@ -959,7 +959,7 @@ for var in verif_vars:
     plt.subplots_adjust(left=0.1, bottom=0.25, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
     fig.suptitle(verif_dict[var][2]+' anomaly correlation',fontweight='bold') 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf', bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
@@ -1039,7 +1039,7 @@ for var in verif_vars:
     plt.subplots_adjust(left=0.1, bottom=0.35, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
     fig.suptitle(verif_dict[var][2]+' anomaly correlation',fontweight='bold') 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_'+str(trange[0])+'-'+str(trange[1])+'_reference.png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_'+str(trange[0])+'-'+str(trange[1])+'_reference.pdf', bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
@@ -1436,7 +1436,7 @@ for var in verif_vars:
     plt.suptitle('LMR zonal-mean verification - '+verif_dict[var][2],fontweight='bold')
     fig.tight_layout(pad = 2.0)
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') 
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
@@ -1500,7 +1500,7 @@ for var in verif_vars:
 
         fig.tight_layout()
         if fsave:
-            print 'saving to .png'
+            print('saving to .png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
             plt.close()
@@ -1564,7 +1564,7 @@ for var in verif_vars:
         
         fig.tight_layout()
         if fsave:
-            print 'saving to .png'
+            print('saving to .png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_reference.png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_reference.pdf',bbox_inches='tight', dpi=300, format='pdf')
             plt.close()
@@ -1575,16 +1575,16 @@ for var in verif_vars:
 
 
     # ensemble calibration
-    print np.shape(lg_err)
-    print np.shape(xam_var)
+    print(np.shape(lg_err))
+    print(np.shape(xam_var))
     LMR_smatch, LMR_ematch = find_date_indices(LMR_time,trange[0],trange[1])
-    print LMR_smatch, LMR_ematch
+    print(LMR_smatch, LMR_ematch)
     svar = xam_var[LMR_smatch:LMR_ematch,:,:]
-    print np.shape(svar)
+    print(np.shape(svar))
 
     calib = lg_err.var(0)/svar.mean(0)
-    print np.shape(calib)
-    print calib[0:-1,:].mean()
+    print(np.shape(calib))
+    print(calib[0:-1,:].mean())
 
 
     # create the plot
@@ -1595,7 +1595,7 @@ for var in verif_vars:
     # overlay stations!
     plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n '+verif_dict[var][2])
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')  
 
 

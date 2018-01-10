@@ -24,7 +24,7 @@ from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
-import cPickle
+import pickle
 import warnings
 
 # LMR specific imports
@@ -189,7 +189,7 @@ for dir in mcdir:
     #ensfiln = workdir + '/' + dir + '/ensemble_mean.npz'
     ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
     npzfile = np.load(ensfiln)
-    print  npzfile.files
+    print(npzfile.files)
     tmp = npzfile['xam']
     print('shape of tmp: %s' % str(np.shape(tmp)))
 
@@ -199,7 +199,7 @@ for dir in mcdir:
     Xb_one = Xprior_statevector['Xb_one']
     # extract variable (sfc temperature) from state vector
     state_info = Xprior_statevector['state_info'].item()
-    print state_info
+    print(state_info)
     posbeg = state_info[var]['pos'][0]
     posend = state_info[var]['pos'][1]
     tas_prior = Xb_one[posbeg:posend+1,:]
@@ -207,7 +207,7 @@ for dir in mcdir:
     if first:
         first = False
         recon_times = npzfile['years']
-        LMR_time = np.array(map(int,recon_times))
+        LMR_time = np.array(list(map(int,recon_times)))
         lat = npzfile['lat']
         lon = npzfile['lon']
         nlat = npzfile['nlat']
@@ -242,22 +242,22 @@ xam_check = xam_all.mean(0)
 #  check..
 max_err = np.max(np.max(np.max(xam_check - xam)))
 if max_err > 1e-4:
-    print 'max error = ' + str(max_err)
+    print('max error = ' + str(max_err))
     raise Exception('sample mean does not match what is in the ensemble files!')
 
 # sample variance
 xam_var = xam_all.var(0)
-print np.shape(xam_var)
+print(np.shape(xam_var))
 
-print '\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
-print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
-print '\n shape of the ensemble-mean prior array: ' + str(np.shape(xbm)) +'\n'
+print('\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n')
+print('\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n')
+print('\n shape of the ensemble-mean prior array: ' + str(np.shape(xbm)) +'\n')
 
 lmr_lat_range = (lat2[0,0],lat2[-1,0])
 lmr_lon_range = (lon2[0,0],lon2[0,-1])
 print('LMR grid info:')
-print(' lats=%s' % str(lmr_lat_range))
-print(' lons=%s' % str(lmr_lon_range))
+print((' lats=%s' % str(lmr_lat_range)))
+print((' lons=%s' % str(lmr_lon_range)))
 
 
 # ===========================================================================================================
@@ -272,13 +272,13 @@ print('\nloading verification data...\n')
 
 # Define month sequence for the calendar year 
 # (argument needed in upload of reanalysis data)
-annual = range(1,13)
+annual = list(range(1,13))
 
 # load ERA20C reanalysis -------------------------------------------------------
 datadir = datadir_reanl+'/era20c'
 datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 rtime = dd[vardef]['years']
@@ -313,7 +313,7 @@ ERA20C = ERA20C - ref_mean_era
 datadir = datadir_reanl+'/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
 dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
 rtime = dd[vardef]['years']
@@ -386,7 +386,7 @@ print('CRU grid info:')
 print(' lats=%s' % str(cru_lat_range))
 print(' lons=%s' % str(cru_lon_range))
 # CRU longitudes are off by 180 degrees
-print ' Shifting longitudes by 180 degrees'
+print(' Shifting longitudes by 180 degrees')
 lat2d_CRU = np.roll(lat2d_CRU,shift=nlon_CRU/2,axis=1)
 lon2d_CRU = np.roll(lon2d_CRU,shift=nlon_CRU/2,axis=1)
 CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU/2,axis=2)
@@ -406,7 +406,7 @@ print('BE grid info:')
 print(' lats=%s' % str(be_lat_range))
 print(' lons=%s' % str(be_lon_range))
 # BE longitudes are off by 180 degrees
-print ' Shifting longitudes by 180 degrees'
+print(' Shifting longitudes by 180 degrees')
 lat2d_BE = np.roll(lat2d_BE,shift=nlon_BE/2,axis=1)
 lon2d_BE = np.roll(lon2d_BE,shift=nlon_BE/2,axis=1)
 BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE/2,axis=2)
@@ -483,7 +483,7 @@ iw = 0
 if nya > 0:
     iw = (nya-1)/2
 
-cyears = range(trange[0],trange[1])
+cyears = list(range(trange[0],trange[1]))
 
 # time series for combination of data products
 lmr_tcr_csave   = np.zeros([len(cyears)])
@@ -973,7 +973,7 @@ ax.set_ylim(ymin,ymax)
 ypos = ymax-0.15*(ymax-ymin)
 xpos = xmin+0.025*(xmax-xmin)
 ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_gis_csave)),fontsize=11,fontweight='bold')
-print 'LMR-GIS mean anomaly correlation: ' + str (np.nanmean(lmr_gis_csave))
+print('LMR-GIS mean anomaly correlation: ' + str (np.nanmean(lmr_gis_csave)))
 
 # BE
 ax = fig.add_subplot(6,2,7)
@@ -1591,7 +1591,7 @@ xbm_gis_biasmean_global = str(float('%.2f' %biasmean_global[0]))
 xbm_gis_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
 xbm_gis_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 
-print 'LMR-GIS globa-mean CE:' + str(lmr_gis_cemean_global)
+print('LMR-GIS globa-mean CE:' + str(lmr_gis_cemean_global))
 
 # ------
 # LMR_BE
@@ -2635,6 +2635,6 @@ if stat_save:
 
     # dump the dictionary to a pickle file
     spfile = nexp+'_'+str(niters)+'_iters_grid_verification.pckl'
-    print 'writing statistics to pickle file: ' + spfile
+    print('writing statistics to pickle file: ' + spfile)
     outfile = open(spfile,'w')
-    cPickle.dump(grid_verification_stats,outfile)
+    pickle.dump(grid_verification_stats,outfile)
