@@ -42,15 +42,15 @@ Revisions:
 import numpy as np
 import logging
 import os.path
-from . import LMR_calibrate
-from .LMR_utils import haversine, get_distance, smooth2D, get_data_closest_gridpt, class_docs_fixer
+import LMR_calibrate
+from LMR_utils import haversine, get_distance, smooth2D, get_data_closest_gridpt, class_docs_fixer
 
 import pandas as pd
 from scipy.stats import linregress
 import statsmodels.formula.api as sm
 
 from abc import ABCMeta, abstractmethod
-from .load_data import load_cpickle
+from load_data import load_cpickle
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

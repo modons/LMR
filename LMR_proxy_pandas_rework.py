@@ -32,9 +32,9 @@ Revisions:
            [ R. Tardif, Univ. of Washington, Sept 2017 ]
 """
 
-from . import LMR_psms
-from .load_data import load_data_frame
-from .LMR_utils import augment_docstr, class_docs_fixer
+import LMR_psms
+from load_data import load_data_frame
+from LMR_utils import augment_docstr, class_docs_fixer
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict

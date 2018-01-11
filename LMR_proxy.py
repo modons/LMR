@@ -60,7 +60,7 @@ class proxy_master(object):
         import os.path
         import numpy as np
         from scipy import stats
-        from . import LMR_utils
+        import LMR_utils
         from random import sample
 
         try:
@@ -287,7 +287,7 @@ class proxy_tree_ring_width(proxy_master):
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -313,7 +313,7 @@ class proxy_tree_ring_density(proxy_master):
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -327,14 +327,14 @@ class proxy_tree_ring_density(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_coral_d18O(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Coral_d18O'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -348,14 +348,14 @@ class proxy_coral_d18O(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_coral_luminescence(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Coral_Luminescence'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -369,14 +369,14 @@ class proxy_coral_luminescence(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_ice_core_d18O(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Ice core_d18O'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -390,14 +390,14 @@ class proxy_ice_core_d18O(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_ice_core_d2H(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Ice core_d2H'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -411,14 +411,14 @@ class proxy_ice_core_d2H(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_ice_core_accumulation(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Ice core_Accumulation'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -432,14 +432,14 @@ class proxy_ice_core_accumulation(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_lake_sediment_all(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Lake sediment_All'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -453,14 +453,14 @@ class proxy_lake_sediment_all(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_marine_sediment_all(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Marine sediment_All'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -474,14 +474,14 @@ class proxy_marine_sediment_all(proxy_master):
 # -------------------------------------------------------------------------------
 class proxy_speleothem_all(proxy_master):
     
-    from .load_proxy_data import read_proxy_data_S1csv_site
+    from load_proxy_data import read_proxy_data_S1csv_site
 
     proxy_type         = 'Speleothem_All'
 
     def read_proxy(self,proxy_site):
 
         import numpy as np
-        from .load_proxy_data import read_proxy_data_S1csv_site
+        from load_proxy_data import read_proxy_data_S1csv_site
 
         [self.id,self.lat,self.lon,self.alt,self.time,self.value] = read_proxy_data_S1csv_site(self.proxy_datadir,self.proxy_datafile,proxy_site)
 
@@ -501,7 +501,7 @@ class pseudo_proxy_temperature(proxy_master):
 
     # variable proxy_site is empty and not used, but here for compatability
     def read_proxy(self,proxy_site):
-        from .load_gridded_data import read_gridded_data_ccsm4_last_millenium
+        from load_gridded_data import read_gridded_data_ccsm4_last_millenium
 
         # do we need self.alt? (see S1 read)
         [self.time,self.lat,self.lon,self.value] = read_gridded_data_ccsm4_last_millenium(self.proxy_datadir,self.proxy_datafile,self.statevars)

@@ -51,7 +51,7 @@ import gzip
 import calendar
 
 # LMR imports
-from .LMR_utils import gaussianize
+from LMR_utils import gaussianize
 
 # =========================================================================================
 

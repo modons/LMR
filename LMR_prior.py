@@ -353,7 +353,7 @@ class prior_ccsm4_last_millenium(prior_master):
 
     def read_prior(self):
     
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -366,7 +366,7 @@ class prior_ccsm4_last_millenium(prior_master):
 class prior_ccsm4_preindustrial_control(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -379,7 +379,7 @@ class prior_ccsm4_preindustrial_control(prior_master):
 class prior_ccsm4_isotope_controlrun(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -392,7 +392,7 @@ class prior_ccsm4_isotope_controlrun(prior_master):
 class prior_mpi_esm_p_last_millenium(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -405,7 +405,7 @@ class prior_mpi_esm_p_last_millenium(prior_master):
 class prior_gfdl_cm3_preindustrial_control(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -418,7 +418,7 @@ class prior_gfdl_cm3_preindustrial_control(prior_master):
 class prior_20cr(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -431,7 +431,7 @@ class prior_20cr(prior_master):
 class prior_era20c(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -444,7 +444,7 @@ class prior_era20c(prior_master):
 class prior_era20cm(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_CMIP5_model_ensemble
+        from load_gridded_data import read_gridded_data_CMIP5_model_ensemble
         self.prior_dict = read_gridded_data_CMIP5_model_ensemble(self.prior_datadir,
                                                                  self.prior_datafile,
                                                                  self.statevars)
@@ -455,7 +455,7 @@ class prior_loveclim_goosse2005(prior_master):
 
     def read_prior(self):
     
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -469,7 +469,7 @@ class prior_icesm_last_millennium(prior_master):
 
     def read_prior(self):
     
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -483,7 +483,7 @@ class prior_icesm_last_millennium_historical(prior_master):
 
     def read_prior(self):
     
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -498,7 +498,7 @@ class prior_ihadcm3_preindustrial_control(prior_master):
 
     def read_prior(self):
     
-        from .load_gridded_data import read_gridded_data_CMIP5_model
+        from load_gridded_data import read_gridded_data_CMIP5_model
         self.prior_dict = read_gridded_data_CMIP5_model(self.prior_datadir,
                                                         self.prior_datafile,
                                                         self.statevars,
@@ -511,7 +511,7 @@ class prior_ihadcm3_preindustrial_control(prior_master):
 class prior_ccsm3_trace21ka(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_TraCE21ka
+        from load_gridded_data import read_gridded_data_TraCE21ka
         self.prior_dict = read_gridded_data_TraCE21ka(self.prior_datadir,
                                                       self.prior_datafile,
                                                       self.statevars,
@@ -525,7 +525,7 @@ class prior_ccsm3_trace21ka(prior_master):
 class prior_cgenie_petm(prior_master):
 
     def read_prior(self):
-        from .load_gridded_data import read_gridded_data_cGENIE_model
+        from load_gridded_data import read_gridded_data_cGENIE_model
         self.prior_dict = read_gridded_data_cGENIE_model(self.prior_datadir,
                                                       self.prior_datafile,
                                                       self.statevars,

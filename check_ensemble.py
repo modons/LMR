@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from . import LMR_utils
+import LMR_utils
 
 
 # set number of ensemble members and degrees of freedom, and bogus lat,lon data

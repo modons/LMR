@@ -847,7 +847,7 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
     # Loop over state variables to load
     for v in range(len(data_vars)):
         vardef = list(data_vars.keys())[v]
-        data_file_read = string.replace(data_file,'[vardef_template]',vardef)
+        data_file_read = data_file.replace('[vardef_template]', vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read
@@ -1475,7 +1475,7 @@ def read_gridded_data_CMIP5_model_old(data_dir,data_file,data_vars,outfreq,detre
     # Loop over state variables to load
     for v in range(len(data_vars)):
         vardef = data_vars[v]
-        data_file_read = string.replace(data_file,'[vardef_template]',vardef)
+        data_file_read = data_file.replace('[vardef_template]',vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read
@@ -1784,7 +1784,7 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
     # Loop over state variables to load
     for v in range(len(data_vars)):
         vardef = data_vars[v]
-        data_file_read = string.replace(data_file,'[vardef_template]',vardef)
+        data_file_read = data_file.replace('[vardef_template]',vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read
@@ -2056,7 +2056,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
     for v in range(len(data_vars)):
 
         vardef = list(data_vars.keys())[v]
-        data_file_read = string.replace(data_file,'[vardef_template]',vardef)
+        data_file_read = data_file.replace('[vardef_template]',vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read
@@ -2651,7 +2651,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
     for v in range(len(data_vars)):
 
         vardef = list(data_vars.keys())[v]
-        data_file_read = string.replace(data_file,'[vardef_template]',vardef)
+        data_file_read = data_file.replace('[vardef_template]',vardef)
         
         # Check if file exists
         infile = data_dir + '/' + data_file_read

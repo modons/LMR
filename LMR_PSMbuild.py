@@ -55,8 +55,8 @@ from time import time
 from os.path import join
 from copy import deepcopy
 
-from . import LMR_proxy_pandas_rework
-from . import LMR_calibrate
+import LMR_proxy_pandas_rework
+import LMR_calibrate
 
 import matplotlib.pyplot as plt
 

@@ -68,12 +68,12 @@ import numpy as np
 from os.path import join
 from time import time
 
-from . import LMR_proxy_pandas_rework
-from . import LMR_prior
-from . import LMR_utils
-from . import LMR_config as BaseCfg
-from .LMR_DA import enkf_update_array, cov_localization
-from .LMR_utils import FlagError
+import LMR_proxy_pandas_rework
+import LMR_prior
+import LMR_utils
+import LMR_config as BaseCfg
+from LMR_DA import enkf_update_array, cov_localization
+from LMR_utils import FlagError
 
 
 def LMR_driver_callable(cfg=None):

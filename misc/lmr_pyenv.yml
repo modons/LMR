@@ -1,22 +1,23 @@
-name: lmr
+name: lmr_py3
 
 channels:
   - conda-forge
-  - ajdawson
+  - nesii/label/dev-esmf
 
 dependencies:
-  - python=2.*
+  - python=3.*
   - netCDF4
   - numpy
   - scipy
   - matplotlib
   - statsmodels
-  - pyspharm
+  - pyspharmq
   - pyyaml
-  - pandas=0.19.2 # currently necessary for loading pages2k v2 pckl file?
+  - pandas
   - xlrd
   - pytest
   - ipython
   - jpeg
   - basemap
+  - cartopy
   - esmpy
