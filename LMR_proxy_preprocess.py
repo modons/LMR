@@ -67,10 +67,9 @@ def main():
     # Section for User-defined options: begin
     # 
 
-    proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
+    # proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
     # ---
-    #proxy_data_source = 'LMRdb'     # proxies from PAGES2k phase 2 (2017) +
-                                    # "in-house" collection in NCDC-templated files
+    proxy_data_source = 'LMRdb'     # proxies from PAGES2k phase 2 (2017) + "in-house" collection in NCDC-templated files
 
     # Determine which dataset(s) (NCDC and/or PAGES2kv2) to include in the DF.
     # - Both           : include_NCDC = True,  include_PAGES2kphase2 = True
@@ -114,7 +113,8 @@ def main():
     
     # outdir: directory where the proxy database files will be created
     #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py 
-    outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    # outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    outdir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
 
     # 
     # Section for User-defined options: end
@@ -591,9 +591,10 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         print(' Uploading data from %s ...' %infile)
         try:
             # try to read as a straight pckl file
-            f = open(infile,'rb')
-            pages2k_data = pickle.load(f)
-            f.close()
+            pages2k_data = pd.read_pickle(infile)
+            # f = open(infile,'rb')
+            # pages2k_data = pickle.load(f)
+            # f.close()
         except:
             # failed to read so try as a compressed pckl (pklz) file
             try:
@@ -940,7 +941,10 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         fileroot = '_'.join(file_s.split('.')[:-1])
 
         # Open the file and port content to a string object
-        filein      = open(filename,'U') # use the "universal newline mode" (U) to handle DOS formatted files
+
+        # Changed assumed encoding to UTF-8, anything not readable replaced with
+        # a '?' --AP Jan 2018
+        filein      = open(filename, encoding='utf-8', errors='replace')
         fileContent = filein.read()
         fileContent_low = fileContent.lower()
 
@@ -1099,7 +1103,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 # extract fields that are in {}. This produces a list.
                 jsdata = re.findall('\{.*?\}',notes)
                 bad_chars = '{}"'
-                jsdata = [item.translate(string.maketrans("", "", ), bad_chars) for item in jsdata]
+                jsdata = [item.translate(str.maketrans("", "", bad_chars)) for item in jsdata]
 
                 # Look for database information
                 # -----------------------------

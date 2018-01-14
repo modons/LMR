@@ -1280,7 +1280,7 @@ def global_hemispheric_means(field,lat):
     W = np.multiply(lat_weight,tmp).T
 
     # define hemispheres
-    eqind = nlat/2 
+    eqind = nlat//2
 
     if lat[0] > 0:
         # data has NH -> SH format

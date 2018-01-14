@@ -88,14 +88,14 @@ class v_core(object):
     ##** BEGIN User Parameters **##
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HadCRUT...) and proxies.
-    #lmr_path = '/home/katabatic/wperkins/data/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    lmr_path = '/home/katabatic/wperkins/data/LMR'
+    # lmr_path = '/home/disk/kalman3/rtardif/LMR'
 
     calib_period = (1850, 2015)
 
     # PSM type to calibrate: 'linear' or 'bilinear'
     psm_type = 'linear'
-    #psm_type = 'bilinear'
+    # psm_type = 'bilinear'
 
     # Boolean to indicate whether upload of existing PSM data is to be performed. Keep False here. 
     load_psmobj = False 
@@ -128,7 +128,7 @@ class v_proxies(object):
     ##** BEGIN User Parameters **##
 
     # Which proxy database to use ?
-    #use_from = ['PAGES2kv1']
+    # use_from = ['PAGES2kv1']
     use_from = ['LMRdb']
 
     ##** END User Parameters **##
@@ -602,8 +602,8 @@ class v_psm(object):
     load_precalib = False
     
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
-    avgPeriod = 'annual'
-    #avgPeriod = 'season'
+    # avgPeriod = 'annual'
+    avgPeriod = 'season'
 
     # Boolean flag indicating whether PSMs are to be calibrated using objectively-derived
     # proxy seasonality instead of using the "seasonality" metadata included in the data
@@ -997,8 +997,13 @@ def main():
                     # Calibrate the statistical forward model (psm)
                     test_psm_obj = psm_obj(Cfg, Y, calib_obj=C)
                 
-                    print('=>', "{:2d}".format(i), "{:45s}".format(s), "{:12.4f}".format(test_psm_obj.slope), "{:12.4f}".format(test_psm_obj.intercept), \
-                        "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R), '(', "{:10.5f}".format(test_psm_obj.R2adj), ')')
+                    print(('=>', "{:2d}".format(i),
+                           "{:45s}".format(str(s)),
+                           "{:12.4f}".format(test_psm_obj.slope),
+                           "{:12.4f}".format(test_psm_obj.intercept),
+                           "{:12.4f}".format(test_psm_obj.corr),
+                           "{:12.4f}".format(test_psm_obj.R),
+                           '(', "{:10.5f}".format(test_psm_obj.R2adj), ')'))
                 
                     # BIC used as the selection criterion
                     #metric[i] = test_psm_obj.BIC
@@ -1007,8 +1012,10 @@ def main():
                     
                     test_psm_obj_dict[str(s)] =  test_psm_obj
                 
-                except:
-                    print('Test on seasonnality %s could not be completed.' %str(s))
+                except ValueError as e:
+                    print(e)
+                    print('Test on seasonnality %s could not be completed.' %
+                          str(s))
 
 
                 i += 1
@@ -1038,9 +1045,14 @@ def main():
                         # Calibrate the statistical forward model (psm)
                         test_psm_obj = psm_obj(Cfg, Y, calib_obj_T=C_T, calib_obj_P=C_P)
 
-                        print('=>', "{:2d}".format(i), "{:40s}".format(sT), "{:40s}".format(sM), \
-                            "{:12.4f}".format(test_psm_obj.slope_temperature), "{:12.4f}".format(test_psm_obj.slope_moisture), \
-                            "{:12.4f}".format(test_psm_obj.intercept), "{:12.4f}".format(test_psm_obj.corr), "{:12.4f}".format(test_psm_obj.R))
+                        print('=>', "{:2d}".format(i),
+                              "{:40s}".format(str(sT)),
+                              "{:40s}".format(str(sM)),
+                              "{:12.4f}".format(test_psm_obj.slope_temperature),
+                              "{:12.4f}".format(test_psm_obj.slope_moisture),
+                              "{:12.4f}".format(test_psm_obj.intercept),
+                              "{:12.4f}".format(test_psm_obj.corr),
+                              "{:12.4f}".format(test_psm_obj.R))
                 
                         # BIC used as the selection criterion
                         #metric[i] = test_psm_obj.BIC
@@ -1160,13 +1172,13 @@ def main():
 
     
     # Dump dictionaries to pickle files
-    outfile = open('%s' % (psm_file),'w')
+    outfile = open('%s' % (psm_file),'wb')
     # using protocol 2 for more efficient storing
     pickle.dump(psm_dict,outfile,protocol=2)
     pickle.dump(psm_info,outfile,protocol=2)
     outfile.close()
 
-    outfile_diag = open('%s' % (psm_file_diag),'w')
+    outfile_diag = open('%s' % (psm_file_diag),'wb')
     # using protocol 2 for more efficient storing
     pickle.dump(psm_dict_diag,outfile_diag,protocol=2)
     pickle.dump(psm_info,outfile_diag,protocol=2)
