@@ -11,7 +11,7 @@ dependencies:
   - scipy
   - matplotlib
   - statsmodels
-  - pyspharmq
+  - pyspharm
   - pyyaml
   - pandas
   - xlrd
