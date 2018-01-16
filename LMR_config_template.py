@@ -1732,7 +1732,7 @@ def update_config_class_yaml(yaml_dict, cfg_module):
     instance then please use keyword arguments during initialization.
     """
 
-    for attr_name in yaml_dict.keys():
+    for attr_name in list(yaml_dict.keys()):
         try:
             curr_cfg_obj = getattr(cfg_module, attr_name)
             cfg_attr = yaml_dict.pop(attr_name)
