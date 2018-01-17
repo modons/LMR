@@ -1,4 +1,4 @@
-name: lmr
+name: lmr_py2
 
 channels:
   - conda-forge
