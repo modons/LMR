@@ -1781,6 +1781,10 @@ class BayesRegUK37PSM(BasePSM):
         
         return BayesData_dict
 
+    @staticmethod
+    def get_kwargs(config):
+        pass
+
 
 # Mapping dict to PSM object type, this is where proxy_type/psm relations
 # should be specified (I think.) - AP
