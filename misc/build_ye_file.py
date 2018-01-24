@@ -105,7 +105,7 @@ if proxy_database == 'PAGES2kv1':
 elif proxy_database == 'LMRdb':
     proxy_cfg = cfg.proxies.LMRdb
 elif proxy_database == 'NCDCdtda':
-    proxy_cfg = cfg.proxies.ncdcdtda
+    proxy_cfg = cfg.proxies.NCDCdtda
 else:
     print('ERROR in specification of proxy database.')
     raise SystemExit()
@@ -174,7 +174,8 @@ for psm_key in unique_psm_keys:
     elif psm_key == 'linear_TorP':
         statevars = cfg.psm.linear_TorP.psm_required_variables
         psm_avg = cfg.psm.avgPeriod
-        pre_calib_file =  cfg.psm.linear_TorP.pre_calib_datafile
+        # two files required for this psm type
+        pre_calib_file =  [cfg.psm.linear_TorP.pre_calib_datafile_T,cfg.psm.linear_TorP.pre_calib_datafile_P]
     elif psm_key == 'bilinear':
         statevars = cfg.psm.bilinear.psm_required_variables
         psm_avg = cfg.psm.avgPeriod
@@ -208,8 +209,13 @@ for psm_key in unique_psm_keys:
         raise SystemExit
 
     if pre_calib_file:
-        print('  from file: {}'.format(pre_calib_file))
+        if isinstance(pre_calib_file, (list,tuple)):
+            print('  from files: {}\n'
+                  '         and: {}'.format(pre_calib_file[0],pre_calib_file[1]))
+        else:
+            print('  from file: {}'.format(pre_calib_file))
 
+        
     # loading all available proxy objects
     proxy_objects = proxy_class.load_all_annual_no_filtering(cfg)
 
@@ -257,8 +263,7 @@ for psm_key in unique_psm_keys:
         
         season_unique = []
         for item in season_vects:
-            if item not in season_unique:season_unique.append(item)        
-
+            if item not in season_unique:season_unique.append(item)
         base_time_interval = 'annual'
 
     elif  psm_avg == 'multiyear':
@@ -274,9 +279,14 @@ for psm_key in unique_psm_keys:
     firstloop = True
     for season in season_unique:
 
-        print('Calculating estimates for proxies with seasonality: {'
-              '}'.format(season))
+        if base_time_interval == 'annual':
+            print('Calculating estimates for proxies with seasonality: '
+                  '{}'.format(season))
+        elif base_time_interval == 'multiyear':
+            print('Calculating estimates for proxies with multiyear averaging: '
+                  '{}'.format(season))
 
+            
         # Create prior source object
         X = LMR_prior.prior_assignment(cfg.prior.prior_source)
         X.prior_datadir = cfg.prior.datadir_prior

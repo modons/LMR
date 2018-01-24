@@ -88,14 +88,15 @@ class v_core(object):
     ##** BEGIN User Parameters **##
     
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HadCRUT...) and proxies.
-    lmr_path = '/home/katabatic/wperkins/data/LMR'
+    # lmr_path = '/home/katabatic/wperkins/data/LMR'
     # lmr_path = '/home/disk/kalman3/rtardif/LMR'
+    lmr_path = '/home/disk/kalman3/rtardif/LMRpy3'    
 
     calib_period = (1850, 2015)
 
     # PSM type to calibrate: 'linear' or 'bilinear'
     psm_type = 'linear'
-    # psm_type = 'bilinear'
+    #psm_type = 'bilinear'
 
     # Boolean to indicate whether upload of existing PSM data is to be performed. Keep False here. 
     load_psmobj = False 
@@ -602,8 +603,8 @@ class v_psm(object):
     load_precalib = False
     
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
-    # avgPeriod = 'annual'
-    avgPeriod = 'season'
+    avgPeriod = 'annual'
+    # avgPeriod = 'season'
 
     # Boolean flag indicating whether PSMs are to be calibrated using objectively-derived
     # proxy seasonality instead of using the "seasonality" metadata included in the data
@@ -957,9 +958,9 @@ def main():
                     seasons_T = proxy_psm_seasonality[Y.type]['seasons_T'][:]
                     seasons_M = proxy_psm_seasonality[Y.type]['seasons_M'][:]
 
-                    # insert entry from metadata at beginning of list
-                    seasons_T.insert(0, Y.seasonality)
-                    seasons_M.insert(0, Y.seasonality)
+                    # insert entry from metadata at beginning of list, if not part of list already
+                    if Y.seasonality not in seasons_T: seasons_T.insert(0, Y.seasonality)
+                    if Y.seasonality not in seasons_M: seasons_M.insert(0, Y.seasonality)
                     
             else:
                 # revert back to proxy metadata
@@ -996,15 +997,16 @@ def main():
                 try:
                     # Calibrate the statistical forward model (psm)
                     test_psm_obj = psm_obj(Cfg, Y, calib_obj=C)
-                
-                    print(('=>', "{:2d}".format(i),
+                    
+                    print('=>', "{:2d}".format(i),
                            "{:45s}".format(str(s)),
                            "{:12.4f}".format(test_psm_obj.slope),
                            "{:12.4f}".format(test_psm_obj.intercept),
                            "{:12.4f}".format(test_psm_obj.corr),
                            "{:12.4f}".format(test_psm_obj.R),
-                           '(', "{:10.5f}".format(test_psm_obj.R2adj), ')'))
-                
+                           '(', "{:10.5f}".format(test_psm_obj.R2adj), ')')
+                    
+                                        
                     # BIC used as the selection criterion
                     #metric[i] = test_psm_obj.BIC
                     # Adjusted R-squared used as the selection criterion

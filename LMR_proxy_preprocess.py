@@ -63,12 +63,21 @@ class EmptyError(Exception):
 # =========================================================================================
 def main():
 
-    # ***************************************************************
+    # ********************************************************************************
     # Section for User-defined options: begin
     # 
 
-    # proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
-    # ---
+    # -------------------------------- PAGES2Kv1 --------------------------------
+
+    #proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
+
+    # ------------------------------- DTDA proxies ------------------------------
+
+    #proxy_data_source = 'DTDA'
+    #dtda_dbversion = 'v0.0.1'
+
+    # ------------------------------ LMRdb proxies ------------------------------
+
     proxy_data_source = 'LMRdb'     # proxies from PAGES2k phase 2 (2017) + "in-house" collection in NCDC-templated files
 
     # Determine which dataset(s) (NCDC and/or PAGES2kv2) to include in the DF.
@@ -88,9 +97,13 @@ def main():
     #LMRdb_dbversion = 'v0.0.0'
     # - PAGES2k2013 trees taken out, but with NCDC-templated records from PAGES2k phase 2, version 1.9.0
     #LMRdb_dbversion = 'v0.1.0'
-    # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0). stored in .pklz file
+    # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0).
     LMRdb_dbversion = 'v0.2.0'
 
+    eliminate_duplicates = True
+
+    # ---------------------------------------------------------------------------
+    # ------------------------- general options ---------------------------------
     
     # This option transforms all data to a Gaussian distribution.  It should only be used for
     # linear regressions, not physically-based PSMs.
@@ -100,13 +113,6 @@ def main():
     year_type = "calendar year"
     #year_type = "tropical year"
     
-    # ---
-    #proxy_data_source = 'DTDA'
-    #dtda_dbversion = 'v0.0.0'
-
-    
-    eliminate_duplicates = True
-
     # datadir: directory where the original proxy datafiles are located
     # datadir = '/home/katabatic2/wperkins/data/LMR/proxies/'
     datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
@@ -114,11 +120,12 @@ def main():
     # outdir: directory where the proxy database files will be created
     #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py 
     # outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
-    outdir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
+    outdir  = '/home/disk/kalman3/rtardif/LMRpy3/data/proxies/'
+    #outdir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
 
     # 
     # Section for User-defined options: end
-    # ***************************************************************
+    # ********************************************************************************
 
     main_begin_time = clock.time() 
     
@@ -129,6 +136,7 @@ def main():
 
         take_average_out = False
 
+        datadir = datadir+'PAGES2kv1/'
         fname = datadir + 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
         meta_outfile = outdir + 'Pages2kv1_Metadata.df.pckl'
         outfile = outdir + 'Pages2kv1_Proxies.df.pckl'
@@ -223,6 +231,7 @@ def main():
 
         take_average_out = False
 
+        datadir = datadir+'DTDA/'
         fname = datadir + 'DTDA_proxies_'+dtda_dbversion+'.xlsx'
         meta_outfile = outdir + 'DTDA_'+dtda_dbversion+'_Metadata.df.pckl'
         outfile = outdir + 'DTDA_'+dtda_dbversion+'_Proxies.df.pckl'
@@ -483,12 +492,10 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
         # -- just for print out - looking into time axis for each record
         # age difference between consecutive data
-        diff = np.diff(pdata[pdata.columns[0]][1:], 1)
-        
-        print('%s : mean= %s median= %s min= %s max= %s' %('{:7.1f}'.format(np.mean(diff)),'{:7.1f}'.format(np.median(diff)),\
-                                                           '{:7.1f}'.format(np.min(diff)),'{:7.1f}'.format(np.max(diff))))
-
-        
+        diff = np.diff(pdata[pdata.columns[0]][1:], 1)        
+        print('{:10s}'.format(pdata.columns[1]), ' : temporal resolution : mean=', '{:7.1f}'.format(np.mean(diff)), ' median=', '{:7.1f}'.format(np.median(diff)),\
+              ' min=', '{:7.1f}'.format(np.min(diff)), ' max=', '{:7.1f}'.format(np.max(diff)))
+                
         resolution = np.mean(diff) # take average difference as representative "resolution"
         # update resolution info in the metadata
         metadata.loc[i,'Resolution (yr)'] = int(resolution)

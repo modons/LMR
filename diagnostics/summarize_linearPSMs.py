@@ -40,8 +40,8 @@ LMRdbversion = 'v0.2.0'
 psm_type     = 'linear'        # linear or bilinear (only linear for now!)
 calib_source = 'GISTEMP'       # linear: GISTEMP, MLOST, HadCRUT, BerkeleyEarth, GPCC or DaiPDSI
 calib_season = 'annual'        # annual, seasonMETA, seasonPSM
-inputdir     = '/home/disk/kalman3/rtardif/LMR/PSM'
-dbdir        = '/home/disk/kalman3/rtardif/LMR/data/proxies'
+inputdir     = '/home/disk/kalman3/rtardif/LMRpy3/PSM'
+dbdir        = '/home/disk/kalman3/rtardif/LMRpy3/data/proxies'
 
 PSM_Rcrit    = 0.2 # sites w/ "good" calibration 
 
@@ -67,16 +67,23 @@ calib_source_var = {'GISTEMP': 'temperature',
                     }
 
 calib_tag = LMRdbversion+'_'+calib_season+'_'+calib_source
-dirfig = inputdir+'/Figs_'+calib_tag
+dirfig = inputdir+'/Figs_LMRdb_'+calib_tag
 
 # create dirfig if it does not exist
 if not os.path.isdir(dirfig):
     os.system('mkdir {}'.format(dirfig))
 
+# upload the calibrated PSM data
 fname = inputdir+'/PSMs_LMRdb_'+calib_tag+'_diag.pckl'
-infile = open(fname,'r')
-psm_data = pickle.load(infile)
-infile.close()
+try:
+    print('Reading file:', fname)
+    infile = open(fname,'rb')
+    psm_data = pickle.load(infile)
+    infile.close()
+except IOError:
+    raise SystemExit(('Could not open/read file: {}. Exiting.'
+                      '\nPlease check that you have run LMR_PSMbuild.py'
+                      ' for the desired PSM configuration.').format(fname))
 
 proxy_types_sites = sorted(psm_data.keys())
 proxy_types = list(set([proxy_types_sites[k][0] for k in range(len(proxy_types_sites))]))
@@ -356,7 +363,7 @@ for t in proxy_types:
         raise SystemExit('Unrecognized region for mapping!')
 
     m.drawmapboundary(fill_color=water)
-    m.drawcoastlines(); m.drawcountries()
+    m.drawcoastlines(linewidth=0.5); m.drawcountries()
     m.fillcontinents(color=continents,lake_color=water)
     m.drawparallels(np.arange(-80.,81.,latres))
     m.drawmeridians(np.arange(-180.,181.,lonres))

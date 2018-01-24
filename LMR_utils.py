@@ -604,7 +604,7 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
             
         # Dump dictionary to pickle file
         # using protocol 2 for more efficient storing
-        outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'w')
+        outfile = open('{}/analysis_Ye.pckl'.format(workdir), 'wb')
         pickle.dump(YeDict, outfile, protocol=2)
         outfile.close()
 

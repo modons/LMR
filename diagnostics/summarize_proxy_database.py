@@ -29,9 +29,10 @@ Module: summarize_proxy_database.py
 
 """
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
-from os.path import join
+from os.path import join, exists
 from mpl_toolkits.basemap import Basemap
 
 
@@ -40,7 +41,8 @@ from mpl_toolkits.basemap import Basemap
 
 # directory where data from reconstruction experiments are located 
 #data_directory = "/home/scec-00/lmr/erbm/LMR/"
-data_directory = "/home/disk/kalman3/rtardif/LMR/"
+#data_directory = "/home/disk/kalman3/rtardif/LMR/"
+data_directory = "/home/disk/kalman3/rtardif/LMRpy3/"
 
 # which proxy database? PAGES2kv2 or LMRdb
 #proxy_db = 'PAGES2kv1'
@@ -57,7 +59,8 @@ temporal_resolution_range = (1,1); resolution_tag = 'annual'
 # ----------------------------------------------------------
 #output_directory = "/home/scec-00/lmr/erbm/analysis/results/LMR/pages2kv2/figures/"
 #output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/PAGES2kv1/Figs/"
-output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/LMRdb/Figs/summary_v0.2.0/"
+#output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/LMRdb/Figs/summary_v0.2.0/"
+output_directory = "/home/disk/kalman3/rtardif/LMRpy3/data/proxies/LMRdb/Figs/summary_v0.2.0/"
 
 # Swith to indicate whether you want the figure to the produced on-screen (False)
 # or save in .png files (True)
@@ -67,7 +70,9 @@ save_instead_of_plot = True
 # --------------  End: user-defined parameters  -------------- #
 # ------------------------------------------------------------ #
 
-
+if not exists(output_directory):
+    print('Output directory does not exist. Creating it now.')
+    os.makedirs(output_directory)
 
 ### ----------------------------------------------------------------------------
 ### Proxy type definitions
@@ -281,8 +286,11 @@ for i in range(0,len(metadata['Proxy ID'])):
                     except UnicodeDecodeError:
                         metadata_entry = metadata_entry.decode('iso-8859-1')
                         trc = 3
-                metadata_entry.encode('ascii', 'ignore')
 
+                if isinstance(metadata_entry, bytes):
+                    metadata_entry = metadata_entry.decode()
+                metadata_entry.encode('ascii', 'ignore')
+                
             plt.text(.23,-.3-offsetscale*offset,metadata_entry,transform=ax.transAxes,fontsize=fntsize)
             
     plt.text(0,-.4-offsetscale*offset,"Proxy is in given PSM file:",transform=ax.transAxes,fontsize=fntsize)
