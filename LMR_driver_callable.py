@@ -500,8 +500,8 @@ def LMR_driver_callable(cfg=None):
     lasttime = time()
     for yr_idx, t in enumerate(range(recon_period[0], recon_period[1]+1, recon_timescale)):
         
-        start_yr = int(t-recon_timescale/2)
-        end_yr = int(t+recon_timescale/2)
+        start_yr = int(t-recon_timescale//2)
+        end_yr = int(t+recon_timescale//2)
         
         if verbose > 0:
             if start_yr == end_yr:

@@ -15,14 +15,14 @@ is_proxy_first_driver_loop = False
 
 # Use this if the two reconstructions use different state variables
 # Also use the
-diff_state_vectors = True
+diff_state_vectors = False
 
 # All close testing tolerances (checks for diff > atol + rtol*desired_value)
 rtol = 1e-4
 atol = 1e-6
 
 #base_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
-base_dir = '/home/katabatic2/wperkins/LMR_output/testing'
+base_dir = '/home/katabatic3/wperkins/LMR_output/testing'
 # sim_dir1 = 'testdev_production_comparison_1900_1960_seed0_nens10/r0/'
 # sim_dir2 = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens/r0/'
 #sim_dir1 = 'testdev_precalcye_pages_linearTorP_no_tas/r0/'
@@ -33,8 +33,8 @@ base_dir = '/home/katabatic2/wperkins/LMR_output/testing'
 # sim_dir1 = 'test_ncdc_bilinear_precalc_p/r0'
 # sim_dir2 = 'test_ncdc_bilinear_noprecalc_tp/r0'
 
-sim_dir1 = 'testdev_yaml_config_update/r0'
-sim_dir2 = 'reference_pages/r0'
+sim_dir1 = 'test_regrid_spharm_py3_pagesv1/r0'
+sim_dir2 = 'test_regrid_spharm_py2_pagesv1/r0'
 
 
 dir1 = path.join(base_dir, sim_dir1)
@@ -56,21 +56,26 @@ assim_fname = 'assimilated_proxies.npy'
 assim1 = np.load(path.join(dir1, assim_fname))
 assim2 = np.load(path.join(dir2, assim_fname))
 
+print('Comparing assimilated proxy files...')
 assim2_idx_match_to1 = []
 for proxy2 in assim2:
-    id2 = proxy2[list(proxy2.keys())[0]][0]
+    key2, item2 = next(iter(proxy2.items()))
+    id2 = item2[0]
     for i, proxy in enumerate(assim1):
-        id1 = proxy[list(proxy.keys())[0]][0]
+        key, item = next(iter(proxy.items()))
+        id1 = item[0]
         if id1 == id2:
             assim2_idx_match_to1.append(i)
+            for obj1, obj2 in zip(item, item2):
+                if isinstance(obj1, np.ndarray):
+                    np.testing.assert_array_equal(obj1, obj2)
+                else:
+                    assert obj1 == obj2
             break
-
-# for i, idx in enumerate(assim2_idx_match_to1):
-#     print assim1[idx].keys()
-#     print assim2[i].keys()
 
 nproxies = len(assim2)
 assert len(assim2) == len(assim1)
+print('Found and matched content of {:d} assimilated proxies'.format(nproxies))
 
 #Test that they created the same files. NOTE: if first dir is missing files
 # they will not be checked.  Reference (first directory) should be the benchmark
@@ -85,8 +90,16 @@ for idx, file in enumerate(d1_files):
 
     if diff_state_vectors:
         exclude = ['Xb_one.npz', 'gmt.npz', 'gmt_ensemble.npz']
-        if d1_names[idx] in exclude:
-            continue
+
+    exclude = [
+        # 'ensemble_mean_tas_sfc_Amon.npz',
+        # 'ensemble_variance_tas_sfc_Amon.npz',
+        # 'gmt.npz',
+        # 'gmt_ensemble.npz',
+    ]
+
+    if d1_names[idx] in exclude:
+        continue
 
     if path.splitext(file)[1] == '.npz':
         f1 = np.load(file)
@@ -97,7 +110,9 @@ for idx, file in enumerate(d1_files):
 
             print('\t', key, ': ', values.dtype)
 
-            if values.dtype.kind == 'S':
+            if values.dtype.kind == 'S' or 'U' in values.dtype.kind:
+                values = values.astype(str)
+                values2 = values.astype(str)
                 for i1, i2 in zip(values, values2):
                     assert i1 == i2
             elif not values.dtype == np.object:
