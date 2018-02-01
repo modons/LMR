@@ -67,9 +67,9 @@ def main():
     # Section for User-defined options: begin
     # 
 
-    proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
+    #proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
     # ---
-    #proxy_data_source = 'LMRdb'     # proxies from PAGES2k phase 2 (2017) +
+    proxy_data_source = 'LMRdb'     # proxies from PAGES2k phase 2 (2017) +
                                     # "in-house" collection in NCDC-templated files
 
     # Determine which dataset(s) (NCDC and/or PAGES2kv2) to include in the DF.
@@ -82,7 +82,8 @@ def main():
     PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pckl'
     
     # File containing info on duplicates in proxy records
-    infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.2.0.xlsx'
+    #infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.2.0.xlsx'
+    infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.3.0.xlsx'
 
     # version of the LMRdb proxy db to process
     # - first set put together, including PAGES2k2013 trees
@@ -90,8 +91,8 @@ def main():
     # - PAGES2k2013 trees taken out, but with NCDC-templated records from PAGES2k phase 2, version 1.9.0
     #LMRdb_dbversion = 'v0.1.0'
     # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0). stored in .pklz file
-    LMRdb_dbversion = 'v0.2.0'
-
+    #LMRdb_dbversion = 'v0.2.0'
+    LMRdb_dbversion = 'v0.3.0'
     
     # This option transforms all data to a Gaussian distribution.  It should only be used for
     # linear regressions, not physically-based PSMs.
