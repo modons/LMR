@@ -33,14 +33,13 @@ import pandas as pd
 
 # LMR specific imports
 sys.path.append('../')
-from LMR_plot_support import *
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
 from load_gridded_data import read_gridded_data_MLOST
 from load_gridded_data import read_gridded_data_CMIP5_model
-from LMR_plot_support import *
+from LMR_plot_support import find_date_indices, moving_average
 
 # =============================================================================
 def truncate_colormap(cmap, minval=0.0,maxval=1.0,n=100):
@@ -70,7 +69,7 @@ nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
 iplot = True
 
 # Open interactive windows of figures
-interactive = False
+interactive = True
 
 if interactive:
     plt.ion()
@@ -79,11 +78,11 @@ else:
     matplotlib.use('agg')
     matplotlib.pyplot.switch_backend('agg')
 # option to save figures to a file
-fsave = True
-#fsave = False
+# fsave = True
+fsave = False
 
 # save statistics file
-stat_save = True
+stat_save = False
 
 # file specification
 #
@@ -121,7 +120,7 @@ stat_save = True
 #nexp = 'pages2_loc25000_seasonal_bilinear_nens200_meta'
 #nexp = 'pages2_noloc_seasonal_bilinear_nens1000'
 #nexp = 'pages2_loc25000_seasonal_bilinear_nens1000'
-nexp = 'pages2_loc25000_seasonal_bilinear_nens50_75pct'
+nexp = 'test_instrumental_recon_py3'
 
 # perform verification using all recon. MC realizations ( MCset = None )
 # or over a custom selection ( MCset = (begin,end) )
@@ -135,8 +134,8 @@ MCset = None
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/home/disk/kalman3/hakim/LMR'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+# datadir_output = '/home/disk/kalman3/hakim/LMR'
+datadir_output = '/home/disk/katabatic3/wperkins/LMR_output/testing'
 #datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 
 
@@ -575,7 +574,7 @@ print('GIS_ERA       correlation: %s' % gec)
 print('GIS_CRU       correlation: %s' % gcc)
 print('GIS_BE        correlation: %s' % gbc)
 print('LMR_consensus correlation: %s' % loc)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
 
 
 ltce = str(float('%.2f' % lmr_tcr_ce))

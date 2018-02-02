@@ -99,7 +99,7 @@ def moving_average(data,xvals,window=5):
     # window is the number of entries in data to average over (should be ODD)
     # the first value in data_smoothed is the mean of the first window values in data
     
-    edge = (window-1)/2
+    edge = (window-1)//2
     weigths = np.repeat(1.0, window)/window
     data_smoothed = np.convolve(data, weigths, 'valid')
     
