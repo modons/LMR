@@ -21,20 +21,10 @@ diff_state_vectors = False
 rtol = 1e-4
 atol = 1e-6
 
-#base_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
 base_dir = '/home/katabatic3/wperkins/LMR_output/testing'
-# sim_dir1 = 'testdev_production_comparison_1900_1960_seed0_nens10/r0/'
-# sim_dir2 = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens/r0/'
-#sim_dir1 = 'testdev_precalcye_pages_linearTorP_no_tas/r0/'
-#sim_dir2 = 'testdev_production_pages_linearTorP_comparison/r0/'
-# --
-#sim_dir1 = 'test_ncdc_bilinear_precalc_tp/r0'
-#sim_dir1 = 'test_ncdc_bilinear_precalc_t/r0'
-# sim_dir1 = 'test_ncdc_bilinear_precalc_p/r0'
-# sim_dir2 = 'test_ncdc_bilinear_noprecalc_tp/r0'
 
-sim_dir1 = 'test_regrid_spharm_py3_pagesv1/r0'
-sim_dir2 = 'test_regrid_spharm_py2_pagesv1/r0'
+sim_dir1 = 'test_regrid_spharm_py2_lmrdb_seasonal/r0'
+sim_dir2 = 'test_regrid_spharm_py3_lmrdb_seasonal/r0'
 
 
 dir1 = path.join(base_dir, sim_dir1)
@@ -53,8 +43,8 @@ d2_names = [path.split(fpath)[1] for fpath in d2_files]
 # Match assimilated proxies
 assim_fname = 'assimilated_proxies.npy'
 
-assim1 = np.load(path.join(dir1, assim_fname))
-assim2 = np.load(path.join(dir2, assim_fname))
+assim1 = np.load(path.join(dir1, assim_fname), encoding='latin1')
+assim2 = np.load(path.join(dir2, assim_fname), encoding='latin1')
 
 print('Comparing assimilated proxy files...')
 assim2_idx_match_to1 = []
@@ -130,16 +120,13 @@ for idx, file in enumerate(d1_files):
                     elif key == 'gmt_save':
                         # Proxies assimilated in different order check ending
                         np.testing.assert_allclose(values[-1], values2[-1],
-                                                   rtol=rtol,
-                                                   atol=atol)
+                                                   rtol=rtol)
                 elif len(values.shape) > 1:
                     np.testing.assert_allclose(values.mean(axis=1),
                                                values2.mean(axis=1),
-                                               rtol=rtol,
-                                               atol=atol)
+                                               rtol=rtol)
                 else:
-                    np.testing.assert_allclose(values, values2, rtol=rtol,
-                                               atol=atol)
+                    np.testing.assert_allclose(values, values2, rtol=rtol)
             else:
                 assert values == values2
 
