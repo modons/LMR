@@ -1,23 +1,23 @@
 """
 Module: LMR_proxy_preprocess.py
 
-Purpose: Takes proxy data in their native format (.xlsx file for PAGES or collection of
+Purpose: Takes proxy data in their native format (e.g. .pckl file for PAGES2k or collection of
           NCDC-templated .txt files) and generates Pandas DataFrames stored in pickle files
           containing metadata and actual data from proxy records. The "pickled" DataFrames
           are used as input by the Last Millennium Reanalysis software.
           Currently, the data is stored as *annual averages* for original records with
           subannual data.
- 
+
  Originator : Robert Tardif | Dept. of Atmospheric Sciences, Univ. of Washington
                             | January 2016
-              (Based on code written by Andre Perkins (U. of Washington) to handle 
+              (Based on code written by Andre Perkins (U. of Washington) to handle
               PAGES(2013) proxies)
 
   Revisions :
             - Addition of proxy types corresponding to "deep-times" proxy records, which are
               being included in the NCDC-templated proxy collection.
               [R. Tardif, U. of Washington, March 2017]
-            - Addition of recognized time/age definitions used in "deep-times" proxy records 
+            - Addition of recognized time/age definitions used in "deep-times" proxy records
               and improved conversion of time/age data to year CE (convention used in LMR).
               [R. Tardif, U. of Washington, March 2017]
             - Improved detection & treatment of missing data, now using tags found
@@ -25,11 +25,11 @@ Purpose: Takes proxy data in their native format (.xlsx file for PAGES or collec
               [R. Tardif, U. of Washington, March 2017]
             - Added functionalities related to the merging of proxies coming from two
               sources (PAGES2k phase 2 data contained in a single compressed pickle file
-              and "in-house" collections contained in NCDC-templated text files). 
+              and "in-house" collections contained in NCDC-templated text files).
               The possibility to "gaussianize" records and to calculate annual averages
               on "tropical year" (Apr to Mar) or calendar year have also been implemented.
               [R. Tardif, U. of Washington, Michael Erb, USC, May 2017]
-            - Renamed the proxy databases to less-confusing convention. 
+            - Renamed the proxy databases to less-confusing convention.
               'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
               [R. Tardif, U. of Washington, Sept 2017]
 """
@@ -65,7 +65,7 @@ def main():
 
     # ********************************************************************************
     # Section for User-defined options: begin
-    # 
+    #
 
     #proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
     # ---
@@ -80,7 +80,7 @@ def main():
     include_PAGES2kphase2 = True
     #PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pklz' # compressed version of the file
     PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pckl'
-    
+
     # File containing info on duplicates in proxy records
     #infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.2.0.xlsx'
     infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.3.0.xlsx'
@@ -93,36 +93,36 @@ def main():
     # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0). stored in .pklz file
     #LMRdb_dbversion = 'v0.2.0'
     LMRdb_dbversion = 'v0.3.0'
-    
+
     # This option transforms all data to a Gaussian distribution.  It should only be used for
     # linear regressions, not physically-based PSMs.
     gaussianize_data = False
-    
+
     # Specify the type of year to use for data averaging. "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
     year_type = "calendar year"
     #year_type = "tropical year"
-    
+
     # ---
     #proxy_data_source = 'DTDA'
     #dtda_dbversion = 'v0.0.0'
 
-    
+
     eliminate_duplicates = True
 
     # datadir: directory where the original proxy datafiles are located
     # datadir = '/home/katabatic2/wperkins/data/LMR/proxies/'
     datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
-    
+
     # outdir: directory where the proxy database files will be created
-    #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py 
+    #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py
     outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
 
-    # 
+    #
     # Section for User-defined options: end
     # ***************************************************************
 
-    main_begin_time = clock.time() 
-    
+    main_begin_time = clock.time()
+
     if proxy_data_source == 'PAGES2Kv1':
         # ============================================================================
         # PAGES2Kv1 proxy data -------------------------------------------------------
@@ -135,22 +135,22 @@ def main():
         outfile = outdir + 'Pages2kv1_Proxies.df.pckl'
         pages_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
 
-        
+
     elif  proxy_data_source == 'LMRdb':
         # ============================================================================
         # LMRdb proxy data -----------------------------------------------------------
         # ============================================================================
-        
+
         datadir = datadir+'LMRdb/ToPandas_'+LMRdb_dbversion+'/'
 
 
         infoDuplicates = datadir+infoDuplicates
 
-        
+
         meta_outfile = outdir + 'LMRdb_'+LMRdb_dbversion+'_Metadata.df.pckl'
         data_outfile = outdir + 'LMRdb_'+LMRdb_dbversion+'_Proxies.df.pckl'
 
-        
+
         # Specify all proxy types & associated proxy measurements to look for & extract from the data files
         # This is to take into account all the possible different names found in the PAGES2kv2 and NCDC data files.
         proxy_def = \
@@ -199,14 +199,14 @@ def main():
 #                'Corals and Sclerosponges_Temperature' : ['temperature'],\
 #                'Climate Reconstructions'              : ['sst_ORSTOM','sss_ORSTOM','temp_anom'],\
             }
-        
+
 
         # --- data from LMR's NCDC-templated files
         if include_NCDC:
             ncdc_dict = ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data)
         else:
             ncdc_dict = []
-            
+
         # --- PAGES2k phase2 (2017) data
         if include_PAGES2kphase2:
             pages2kv2_dict = pages2kv2_pickle_to_dict(datadir, PAGES2kphase2file, proxy_def, year_type, gaussianize_data)
@@ -214,8 +214,8 @@ def main():
             pages2kv2_dict = []
 
         # --- Merge datasets, scrub duplicates and write metadata & data to file
-        merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile, data_outfile, infoDuplicates, eliminate_duplicates) 
-        
+        merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile, data_outfile, infoDuplicates, eliminate_duplicates)
+
 
     elif proxy_data_source == 'DTDA':
         # ============================================================================
@@ -230,15 +230,15 @@ def main():
         outfile = outdir + 'DTDA_'+dtda_dbversion+'_Proxies.df.pckl'
         DTDA_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
 
-        
+
     else:
         raise SystemExit('ERROR: Unkown proxy data source! Exiting!')
 
-    
+
     elapsed_time = clock.time() - main_begin_time
     print('Build of integrated proxy database completed in %s mins' %str(elapsed_time/60.))
 
-        
+
 # =========================================================================================
 # ------------------------------------- END OF MAIN ---------------------------------------
 # =========================================================================================
@@ -286,14 +286,14 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
         nbvalid = 1
     else:
         raise SystemExit('ERROR in compute_annual_means: Unrecognized shape of data input array.')
-    
-        
+
+
     time_between_records = np.diff(time_raw, n=1)
 
     # Temporal resolution of the data, calculated as the mode of time difference.
     time_resolution = abs(stats.mode(time_between_records)[0][0])
 
-    # check if time_resolution = 0.0 !!! sometimes adjacent records are tagged at same time ... 
+    # check if time_resolution = 0.0 !!! sometimes adjacent records are tagged at same time ...
     if time_resolution == 0.0:
         print('***WARNING! Found adjacent records with same times!')
         inderr = np.where(time_between_records == 0.0)
@@ -315,7 +315,7 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
     years = sorted(years) # sort the list
 
     years = np.insert(years,0,years[0]-1) # M. Erb
-    
+
     # bounds, for calendar year : [years_beg,years_end[
     years_beg = np.asarray(years,dtype=np.float64) # inclusive lower bound
     years_end = years_beg + 1.                     # exclusive upper bound
@@ -338,20 +338,20 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
                 years_end[i] = float(yr+1)+((31+29+31)/float(366))
             else:
                 years_end[i] = float(yr+1)+((31+28+31)/float(365))
-        
+
     time_annual = np.asarray(years,dtype=np.float64)
     data_annual = np.zeros(shape=[len(years),nbvalid], dtype=np.float64)
     # fill with NaNs for default values
-    data_annual[:] = np.NAN        
-       
+    data_annual[:] = np.NAN
+
     # Calculate the mean of all data points with the same year.
-    for i in range(len(years)):         
+    for i in range(len(years)):
         ind = [j for j, year in enumerate(time_raw) if (year >= years_beg[i]) and (year < years_end[i])]
         nbdat = len(ind)
-        
+
         # TODO: check nb of non-NaN values !!!!! ... ... ... ... ... ...
 
-        if time_resolution <= 1.0: 
+        if time_resolution <= 1.0:
             frac = float(nbdat)/float(max_nb_per_year)
             if frac > valid_frac:
                 data_annual[i,:] = np.nanmean(data_raw[ind],axis=0)
@@ -361,14 +361,14 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
                 print('   year= %d %d' %(years[i], nbdat))
             # Note: this calculates the mean if multiple entries found
             data_annual[i,:] = np.nanmean(data_raw[ind],axis=0)
-            
+
 
     # check and modify time_annual array to reflect only the valid data present in the annual record
-    # for correct tagging of "Oldest" and "Youngest" data     
+    # for correct tagging of "Oldest" and "Youngest" data
     indok = np.where(np.isfinite(data_annual))[0]
     keep = np.arange(indok[0],indok[-1]+1,1)
 
-    
+
     return time_annual[keep], data_annual[keep,:], proxy_resolution
 
 
@@ -398,12 +398,12 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     # rename 'PAGES ID' column header to more general 'Proxy ID'
     metadata.rename(columns = {'PAGES ID':'Proxy ID'},inplace=True)
     metadata.to_pickle(metaout)
-    
+
     record_sheet_names = ['AntProxies', 'ArcProxies', 'AsiaProxies',
                           'AusProxies', 'EurProxies', 'NAmPol', 'NAmTR',
                           'SAmProxies']
 
-    
+
     for i, sheet in enumerate(record_sheet_names):
         tmp = pd.read_excel(filename, sheet)
         # for key, series in tmp.iteritems():
@@ -425,11 +425,11 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     if take_average_out:
         # copy of dataframe
-        df_tmp = df                          
+        df_tmp = df
         # fill dataframe with new values where temporal averages over proxy records are subtracted
         df = df_tmp.sub(df_tmp.mean(axis=0), axis=1)
-    
-        
+
+
     # TODO: make sure year index is consecutive
     #write data to file
     df.to_pickle(dataout)
@@ -453,7 +453,7 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     Author: Robert Tardif, Univ. of Washington
 
-    Based on pages_xcel_to_dataframes function written by 
+    Based on pages_xcel_to_dataframes function written by
     Andre Perkins (Univ. of Washington)
 
     """
@@ -468,20 +468,20 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     metadata.loc[:,'Seasonality'] = '[1,2,3,4,5,6,7,8,9,10,11,12]'
 
     metadata.loc[:,'Elev'] = 0.0
-    
+
     nbrecords = len(metadata)
 
     # One proxy record per sheet, all named as DataXXX
     record_sheet_names = ['Data'+str("{0:03d}".format(i+1)) for i in range(nbrecords)]
 
-    
+
     for i, sheet in enumerate(record_sheet_names):
         pdata = pd.read_excel(filename, sheet)
 
         # rounding age data to nearest year (Jess Tierney, pers. comm.)
         age = (pdata[pdata.columns[0]][1:]).astype('float').round()
         pdata[pdata.columns[0]][1:] = age
-        
+
 
         # -- just for print out - looking into time axis for each record
         # age difference between consecutive data
@@ -492,7 +492,7 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
         resolution = np.mean(diff) # take average difference as representative "resolution"
         # update resolution info in the metadata
         metadata.loc[i,'Resolution (yr)'] = int(resolution)
-        
+
         if i == 0:
             df = pdata
         else:
@@ -513,24 +513,24 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     else:
         print('Unrecognized time definition...')
         raise SystemExit()
-    
+
     df.set_index(col0, drop=True, inplace=True)
     df.index.name = newcol0
     df = df.ix[1:]
     df.sort_index(inplace=True)
 
-    
+
     # Checkin for duplicate ages in proxy record. If present, calculate average (Jess Tierney, pers. comm.)
     df = df.astype(float)
     df_f = df.groupby(df.index).mean()
-    
+
     if take_average_out:
         # copy of dataframe
         df_tmp = df_f
         # fill dataframe with new values where temporal averages over proxy records are subtracted
         df_f = df_tmp.sub(df_tmp.mean(axis=0), axis=1)
 
-    
+
     # TODO: make sure year index is consecutive
     #write data to file
     df_f.to_pickle(dataout)
@@ -538,8 +538,8 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     # Make sure ...
     metadata['Archive type'] = metadata['Archive type'].astype(str)
-    
-    
+
+
     # Add 'Youngest (C.E.)', 'Oldest (C.E.)' 'Elev' and 'Seasonality' info to metadata
     sites = list(df_f)
     for s in sites:
@@ -547,14 +547,14 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
         values = df_f[s]
         values = values[values.notnull()]
         times = values.index.values
-        
-        meta_ind = metadata[metadata['Proxy ID'] == s].index        
+
+        meta_ind = metadata[metadata['Proxy ID'] == s].index
         metadata.loc[meta_ind,'Oldest (C.E.)'] = np.min(times)
         metadata.loc[meta_ind,'Youngest (C.E.)'] = np.max(times)
-        
+
     # write metadata to file
     metadata.to_pickle(metaout)
-    
+
 
 # ===================================================================================
 # For PAGES2k phase 2 (2017) proxy data ---------------------------------------------
@@ -563,12 +563,12 @@ def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaussianize_data):
     """
 
-    Takes in a Pages2k pickle (pklz) file and converts it to python dictionary  storage.  
+    Takes in a Pages2k pickle (pklz) file and converts it to python dictionary  storage.
 
     Authors: R. Tardif, Univ. of Washington, Jan 2016.
              M. Erb, Univ. of Southern California, Feb 2017
 
-    Revisions: 
+    Revisions:
            - Modified output, storing proxy information in dictionary returned
              by the function, instead of storing in pandas dataframe dumped to
              pickle file, as done in the original version by M. Erb.
@@ -577,13 +577,13 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
     """
 
     valid_frac = 0.5
-    
+
     # ===============================================================================
     # Upload proxy data from Pages2k v2 pickle file
     # ===============================================================================
 
-    begin_time = clock.time() 
-    
+    begin_time = clock.time()
+
     # Open the pickle file containing the Pages2k data, if it exists in target directory
     infile = os.path.join(datadir, pages2kv2_file)
     if os.path.isfile(infile):
@@ -609,7 +609,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
                          ' but corresponding data file could not be found!'
                          ' Please place file {} in directory {}').format(pages2kv2_file,datadir))
 
-    
+
     # Summary of the uploaded data
     nbsites = len(pages2k_data)
 
@@ -626,7 +626,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
 
         print(' Processing %s/%s : %s' %(str(counter+1), str(len(pages2k_data)), pages2k_data[counter]['paleoData_pages2kID']))
 
-        # Look for publication title & authors            
+        # Look for publication title & authors
         if 'NEEDS A TITLE' not in pages2k_data[counter]['pub1_title']:
             pages2k_data[counter]['pub_title'] = pages2k_data[counter]['pub1_title']
             pages2k_data[counter]['pub_author'] = pages2k_data[counter]['pub1_author']
@@ -636,9 +636,9 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
                 pages2k_data[counter]['pub_author'] = pages2k_data[counter]['pub2_author']
             else:
                 pages2k_data[counter]['pub_title'] = 'Unknown'
-                pages2k_data[counter]['pub_author'] = 'Unknown'                
+                pages2k_data[counter]['pub_author'] = 'Unknown'
 
-        
+
         # If the time axis goes backwards (i.e. newer to older), reverse it.
         if pages2k_data[counter]['year'][-1] - pages2k_data[counter]['year'][-2] < 0:
             pages2k_data[counter]['year'].reverse()
@@ -648,7 +648,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         time_raw = np.array(pages2k_data[counter]['year'],dtype=np.float)
         data_raw = np.array(pages2k_data[counter]['paleoData_values'],dtype=np.float)
 
-        # Remove values where either time or data is nan. 
+        # Remove values where either time or data is nan.
         nan_indices = np.isnan(time_raw)+np.isnan(data_raw)
         time_raw = time_raw[~nan_indices]
         data_raw = data_raw[~nan_indices]
@@ -656,8 +656,8 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         # Use the following function to make annual-means.
         # Inputs: time_raw, data_raw, valid_frac, year_type.  Outputs: time_annual, data_annual
         time_annual, data_annual, proxy_resolution = compute_annual_means(time_raw,data_raw,valid_frac,year_type)
-        data_annual = np.squeeze(data_annual)        
-        
+        data_annual = np.squeeze(data_annual)
+
         # If gaussianize_data is set to true, transform the proxy data to Gaussian.
         # This option should only be used when using regressions, not physically-based PSMs.
         if gaussianize_data == True:
@@ -683,14 +683,14 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         elif pages2k_data[counter]['archiveType'] == 'tree':
             pages2k_data[counter]['archiveType'] = 'Tree Rings'
         elif pages2k_data[counter]['archiveType'] == 'bivalve':
-            pages2k_data[counter]['archiveType'] = 'Bivalve'            
+            pages2k_data[counter]['archiveType'] = 'Bivalve'
         elif pages2k_data[counter]['archiveType'] == 'borehole':
-            pages2k_data[counter]['archiveType'] = 'Borehole'            
+            pages2k_data[counter]['archiveType'] = 'Borehole'
         elif pages2k_data[counter]['archiveType'] == 'documents':
-            pages2k_data[counter]['archiveType'] = 'Documents'            
+            pages2k_data[counter]['archiveType'] = 'Documents'
         elif pages2k_data[counter]['archiveType'] == 'hybrid':
-            pages2k_data[counter]['archiveType'] = 'Hybrid'            
-            
+            pages2k_data[counter]['archiveType'] = 'Hybrid'
+
         # Rename some of the the proxy measurements to be more standard.
         if (pages2k_data[counter]['archiveType'] == 'Ice Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'd18O1'):
             pages2k_data[counter]['paleoData_variableName'] = 'd18O'
@@ -700,7 +700,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
             pages2k_data[counter]['paleoData_variableName'] = 'temperature'
         elif (pages2k_data[counter]['archiveType'] == 'Lake Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'temperature3'):
             pages2k_data[counter]['paleoData_variableName'] = 'temperature'
-            
+
         # Not all records have data for elevation.  In these cases, set elevation to nan.
         if 'geo_meanElev' not in pages2k_data[counter]:
             pages2k_data[counter]['geo_meanElev'] = np.nan
@@ -742,7 +742,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         if year_type == 'tropical year' and pages2k_data_seasonality == [1,2,3,4,5,6,7,8,9,10,11,12]:
             pages2k_data_seasonality = [4,5,6,7,8,9,10,11,12,13,14,15]
 
-        
+
         # Some code to fix two erroneous seasonality metadata found in the PAGES2kv2 file:
         # The data in the file itself should be fixed, but error dealt with here in the mean time.
         if pages2k_data_seasonality == [6,7,2008]:
@@ -750,8 +750,8 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         elif pages2k_data_seasonality == [7,8,2009]:
             pages2k_data_seasonality = [7,8,9]
 
-            
-            
+
+
         # Spell out the name of the interpretation variable.
         if pages2k_data[counter]['climateInterpretation_variable'] == 'T':
             pages2k_data[counter]['climateInterpretation_variable'] = 'temperature'
@@ -761,7 +761,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
         # ----------------------------------------------------------------------
         # Filter the records which correspond to the proxy types & measurements
         # specified in proxy_def dictionary. For records retained, transfer
-        # a subset of the available information to elements used in used in 
+        # a subset of the available information to elements used in used in
         # theLMR proxy database.
         # ----------------------------------------------------------------------
 
@@ -790,7 +790,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
                 proxy_dict_pagesv2[proxy_name]['climateVariable']      = pages2k_data[counter]['climateInterpretation_variable']
                 proxy_dict_pagesv2[proxy_name]['Realm']                = pages2k_data[counter]['climateInterpretation_variableDetail']
                 proxy_dict_pagesv2[proxy_name]['climateVariableDirec'] = pages2k_data[counter]['climateInterpretation_interpDirection']
-                # data                        
+                # data
                 proxy_dict_pagesv2[proxy_name]['Years']                = pages2k_data[counter]['time_annual']
                 proxy_dict_pagesv2[proxy_name]['Data']                 = pages2k_data[counter]['data_annual']
 
@@ -808,7 +808,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
     for key in sorted(proxy_def.keys()):
         proxy_archive = key.split('_')[0]
         proxy_measurement =  proxy_def[key]
-        
+
         # change the associated between proxy type and proxy measurement for Breitenmoser tree ring data
         if key == 'Tree Rings_WidthBreit':
             proxy_measurement = [item+'_breit' for item in proxy_measurement]
@@ -833,7 +833,7 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
     return proxy_dict_pagesv2
 
 
-    
+
 # ===================================================================================
 # For NCDC-templated proxy data files -----------------------------------------------
 # ===================================================================================
@@ -869,7 +869,7 @@ def colonReader(string, fCon, fCon_low, end):
         rstring = "" # initialize returned string
 
         for k in range(0,num_str):  # loop over possible strings
-            lstr = string[k] + ': ' # append the annoying stuff  
+            lstr = string[k] + ': ' # append the annoying stuff
             Index = fCon_low.find(lstr)
             Len = len(lstr)
             if Index != -1:
@@ -890,31 +890,31 @@ def colonReader(string, fCon, fCon_low, end):
 def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=False):
 #====================================================================================
 # Purpose: Reads data from a selected site (chronology) in NCDC proxy dataset
-# 
+#
 # Input   :
-#      - site        : Full name of proxy data file, including the directory where 
+#      - site        : Full name of proxy data file, including the directory where
 #                      file is located.
-#      - proxy_def   : Dictionary containing information on proxy types to look for 
-#                      and associated characteristics, such as possible proxy 
-#                      measurement labels for the specific proxy type 
-#                      (ex. ['d18O','d18o','d18o_stk','d18o_int','d18o_norm'] 
+#      - proxy_def   : Dictionary containing information on proxy types to look for
+#                      and associated characteristics, such as possible proxy
+#                      measurement labels for the specific proxy type
+#                      (ex. ['d18O','d18o','d18o_stk','d18o_int','d18o_norm']
 #                      for delta 18 oxygen isotope measurements)
 #
 # Returns :
 #      - id      : Site id read from the data file
 #      - lat/lon : latitude & longitude of the site
 #      - alt     : Elevation of the site
-#      - time    : Array containing the time of uploaded data  
+#      - time    : Array containing the time of uploaded data
 #      - value   : Array of uploaded proxy data
 #
-# Author(s): Robert Tardif, Univ. of Washington, Dept. of Atmospheric Sciences 
-#            based on "ncdc_file_parser.py" code from Julien Emile-Geay 
+# Author(s): Robert Tardif, Univ. of Washington, Dept. of Atmospheric Sciences
+#            based on "ncdc_file_parser.py" code from Julien Emile-Geay
 #            (Univ. of Southern California)
 #
 # Date     : March 2015
 #
 # Revision : None
-# 
+#
 #====================================================================================
 
 
@@ -931,7 +931,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
 
     valid_frac = 0.5
 
-    
+
     if os.path.isfile(filename):
         print(' ')
         print('File: %s' % filename)
@@ -951,7 +951,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         # Initialize empty dictionary
         d = {}
 
-        # Assign default values to some metadata  
+        # Assign default values to some metadata
         d['ElevationUnit'] = 'm'
         d['TimeUnit']      = 'y_ad'
 
@@ -1030,7 +1030,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 print('*** %s' % err.args)
                 print('*** WARNING ***: Valid values of lat/lon were not found! Skipping proxy record...')
                 return (None, None)
-                
+
             # get elevation info
             elev = colonReader('elevation', SiteInfo, SiteInfo_low, '\n')
             if 'nan' not in elev and len(elev)>0:
@@ -1049,9 +1049,9 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                     elev_s_dec = ''.join(c for c in elev_s_split[1] if c.isdigit())
                     d['Elevation'] = float(sign+elev_s_int+'.'+elev_s_dec)
                 else:
-                    d['Elevation'] = float(sign+''.join(c for c in elev_s[0] if c.isdigit())) # to only keep digits ...            
-                
-            else:   
+                    d['Elevation'] = float(sign+''.join(c for c in elev_s[0] if c.isdigit())) # to only keep digits ...
+
+            else:
                 d['Elevation'] = float('NaN')
 
 
@@ -1088,7 +1088,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             d['MostRecentYear'] = None
             if EarliestYearStr: d['EarliestYear'] = float(EarliestYearStr)
             if EarliestYearStr: d['MostRecentYear'] = float(MostRecentYearStr)
-                
+
             d['TimeUnit'] = colonReader('time_unit', DataColl, DataColl_low, '\n')
             if not d['TimeUnit']: d['TimeUnit'] = colonReader('time unit', DataColl, DataColl_low, '\n')
             if d['TimeUnit'] not in time_defs:
@@ -1112,11 +1112,11 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 # TODO: ... think about using try/except instead ...
                 dbinfo = None
                 jsdata_db = [item for i, item in enumerate(jsdata) if 'database:' in item]
-                if jsdata_db: 
+                if jsdata_db:
                     db_lst = re.sub('database:', '', jsdata_db[0]).split(',')
                     if len(db_lst) > 1:
                         dbinfo = [item.split(':')[1] for item in db_lst]
-                    else:                    
+                    else:
                         dbinfo = db_lst
 
                 # check if some db info exists
@@ -1136,19 +1136,19 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 climateVariable = None
                 climateVariableRealm = None
                 climateVariableDirec = None
-                
+
                 jsdata_clim = [item for i, item in enumerate(jsdata) if 'climateInterpretation:' in item]
-                if jsdata_clim: 
+                if jsdata_clim:
                     clim_lst = re.sub('climateInterpretation:', '', jsdata_clim[0])
                     clim_lst = clim_lst.replace('[','(').replace(']',')')
                     tmp =  re.split(r',\s*(?![^()]*\))',clim_lst)
                     clim_elements = [item.replace('(','[').replace(')',']') for item in tmp]
-                    
+
                     seasonality          = [item.split(':')[1] for item in clim_elements if 'seasonality:' in item][0]
                     climateVariable      = [item.split(':')[1] for item in clim_elements if 'climateVariable:' in item][0]
                     climateVariableRealm = [item.split(':')[1] for item in clim_elements if 'climateVariableDetail:' in item][0]
                     climateVariableDirec = [item.split(':')[1] for item in clim_elements if 'interpDirection:' in item][0]
-                    
+
                     if len(seasonality) == 0: seasonality = [1,2,3,4,5,6,7,8,9,10,11,12]
                     if len(climateVariable) == 0: climateVariable = None
                     if len(climateVariableRealm) == 0: climateVariableRealm = None
@@ -1159,14 +1159,14 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                     if climateVariable == 'M': climateVariable = 'moisture'
 
                 # test whether seasonality is a string or already a list
-                # if a string, convert to list                
-                if type(seasonality) is not list: 
+                # if a string, convert to list
+                if type(seasonality) is not list:
                     if isinstance(seasonality,six.string_types):
                         seasonality = ast.literal_eval(seasonality)
                     else:
                         print('Problem with seasonality metadata! Exiting!')
                         SystemExit(1)
-                
+
                 d['Seasonality'] = seasonality
                 d['climateVariable'] =  climateVariable
                 d['climateVariableRealm'] = climateVariableRealm
@@ -1184,12 +1184,12 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                         dup_lst = [item.rstrip('.txt') for item in tmp]
 
                 d['Duplicates'] = dup_lst
-                
 
-                
+
+
                 """
                 # Old code that worked for NCDC v0.0.0
-                
+
                 # Look for information on relation to temperature
                 # -----------------------------------------------
                 clim_temp_relation = [item.split(':')[1] for item in jsdata if item.split(':')[0] == 'relationship']
@@ -1212,8 +1212,8 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 d['Relation_to_temp'] = None
                 d['Sensitivity'] = None
 
-                
-                    
+
+
             else:
                 # Default values if not found.
                 #d['Databases'] = None
@@ -1225,7 +1225,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 d['climateVariableDirec'] = None
 
                 d['Duplicates'] = []
-                
+
                 d['Relation_to_temp'] = None
                 d['Sensitivity'] = None
 
@@ -1242,7 +1242,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         # Extract the data from file ------------------------------------------------
         # ===========================================================================
         # ===========================================================================
-        
+
         # ===========================================================================
         # Extract information from the "Variables" section of the file --------------
         # ===========================================================================
@@ -1280,13 +1280,13 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
 
         print('Site ID: %s Archive: %s' %(d['CollectionName'], d['Archive']))
 
-        
+
         # Cross-reference "ShortName" entries with possible proxy measurements specified in proxy_def dictionary
         proxy_types_all = list(proxy_def.keys())
 
         # Restrict to those matching d['Archive']
         proxy_types_keep = [s for s in proxy_types_all if d['Archive'] in s or d['Archive'] in s.lower()]
-        
+
         # Which columns contain the important data (time & proxy values) to be extracted?
         # Referencing variables (time/age & proxy data) with data column IDsx
         # Time/age
@@ -1320,7 +1320,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 else:
                     proxy_types_in_file[proxy_types[0]] = (d['DataColumn' + format(ivar+1, '02') + '_ShortName'], ivar)
 
-        
+
         dkeys = list(proxy_types_in_file.keys())
         nbvalid = len(dkeys)
         if nbvalid > 0:
@@ -1328,7 +1328,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             print('  Found %d valid proxy variables:' %nbvalid)
             for i in range(nbvalid):
                 print(' %d : %s %s' %(i,dkeys[i],proxy_types_in_file[dkeys[i]]))
-        
+
         # Check status of what has been found in the data file
         # If nothing found, just return (exit function by returning None)
         if not TimeColumn_ided or not DataColumns_ided:
@@ -1340,8 +1340,8 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         # -- Checking time/age definition --
         tdef = d['TimeUnit']
 
-        # Crude sanity checks on make-up of tdef string 
-        if contains_blankspace(tdef): 
+        # Crude sanity checks on make-up of tdef string
+        if contains_blankspace(tdef):
             tdef = tdef.replace(' ', '_')
         tdef_parsed = tdef.split('_')
         if len(tdef_parsed) != 2:
@@ -1353,7 +1353,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
                 print('*** WARNING *** Unrecognized time definition. Skipping proxy record...')
                 return (None, None)
 
-        
+
         # ===========================================================================
         # Extract the numerical data from the "Data" section of the file ------------
         # ===========================================================================
@@ -1366,7 +1366,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
 
         # Look for missing value info
         missing_info_line= [line for line in fileContent_datalines if 'missing value' in line.lower()]
-        
+
         if len(missing_info_line) > 0:
             missing_info = missing_info_line[0].split(':')[-1].replace(' ', '')
             if len(missing_info) > 0:
@@ -1377,7 +1377,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         else:
             # Line not found
             missing_values = np.array([-999.0, np.nan])
-            
+
 
         # Find where the actual data begin
         start_line_index = 0
@@ -1392,9 +1392,9 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             line_nb +=1
 
 
-        # Extract column descriptions (headers) of the data matrix    
+        # Extract column descriptions (headers) of the data matrix
         DataColumn_headers = fileContent_datalines[start_line_index].splitlines()[0].split('\t')
-        # Strip possible blanks in column headers 
+        # Strip possible blanks in column headers
         DataColumn_headers = [item.strip() for item in  DataColumn_headers]
         nc = len(DataColumn_headers)
 
@@ -1410,7 +1410,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         # Strip any empty lines
         datalist = [x for x in datalist if x]
         nbdata = len(datalist)
-        
+
         # into numpy arrays
         time_raw = np.zeros(shape=[nbdata])
         data_raw = np.zeros(shape=[nbdata,nbvalid])
@@ -1439,11 +1439,11 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         ntime, ncols = data_raw.shape
         for c in range(ncols):
             data_raw[np.in1d(data_raw[:,c], missing_values), c] = np.NAN
-        
 
-        
+
+
         # --- Modify "time" array into "years CE" if not already ---
-        
+
         # Here, tdef_parsed *should* have the expected structure
         if len(tdef_parsed) == 2 and tdef_parsed[0] and tdef_parsed[1]:
 
@@ -1475,11 +1475,11 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         # Initial range in years for which data is available
         yearRange = (int('%.0f' % d['EarliestYear']),int('%.0f' %d['MostRecentYear']))
 
-                
+
         # proxy identifier and geo location
         id  = d['CollectionName']
         alt = d['Elevation']
-    
+
         # Something crude in assignement of lat/lon:
         if d['NorthernmostLatitude'] != d['SouthernmostLatitude']:
             lat = (d['NorthernmostLatitude'] + d['SouthernmostLatitude'])/2.0
@@ -1497,22 +1497,22 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
 
         # If subannual, average up to annual --------------------------------------------------------
         time_annual, data_annual, proxy_resolution = compute_annual_means(time_raw,data_raw,valid_frac,year_type)
-        
+
         # If gaussianize_data is set to true, transform the proxy data to Gaussian.
         # This option should only be used when using regressions, not physically-based PSMs.
         if gaussianize_data == True:
             data_annual = gaussianize(data_annual)
-        
+
         # update to yearRange given availability of annual data
         yearRange = (int('%.0f' %time_annual[0]),int('%.0f' %time_annual[-1]))
-        
-        
+
+
         # Define and fill list of dictionaries to be returned by function
         returned_list = []
         duplicate_list = []
-        for k in range(len(dkeys)):            
+        for k in range(len(dkeys)):
             key = dkeys[k]
-            
+
             ind = proxy_types_in_file[key][1]
             proxy_units = d['DataColumn' + format(ind+1, '02') + '_Units']
             proxy_archive = key.split('_')[0]
@@ -1521,7 +1521,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
 
             if key == 'Tree Rings_WidthBreit': proxy_measurement = proxy_measurement + '_breit'
             proxy_name = d['CollectionName']+':'+proxy_measurement
-            
+
             proxydata_dict = {}
             proxydata_dict[proxy_name] = {}
 
@@ -1544,11 +1544,11 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             proxydata_dict[proxy_name]['climateVariable']      = d['climateVariable']
             proxydata_dict[proxy_name]['Realm']                = d['climateVariableRealm']
             proxydata_dict[proxy_name]['climateVariableDirec'] = d['climateVariableDirec']
-            
+
             # *** for v.0.1.0:
             #proxydata_dict[proxy_name]['Relation_to_temp'] = d['Relation_to_temp']
             #proxydata_dict[proxy_name]['Sensitivity']      = d['Sensitivity']
-                        
+
             proxydata_dict[proxy_name]['Years']            = time_annual
             proxydata_dict[proxy_name]['Data']             = data_annual[:,k]
 
@@ -1563,7 +1563,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
         print('***File NOT FOUND: %s' % filename)
         returned_list = []
         duplicate_list = []
-        
+
     return returned_list, duplicate_list
 
 # =========================================================================================
@@ -1575,11 +1575,11 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
 
 
     :param datadir   :
-    :param proxy_def : 
+    :param proxy_def :
     :param metaout   :
     :param dataout   :
     :return:
-    
+
     Author: R. Tardif, Univ. of Washington, Jan 2016.
 
     """
@@ -1593,7 +1593,7 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
     print('Data from LMR NCDC-templated text files:')
 
     valid_frac = 0.5
-    
+
     # List filenames im the data directory (dirname)
     # files is a python list contining file names to be read
     sites_data = glob.glob(datadir+"/*.txt")
@@ -1610,7 +1610,7 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
 
         if proxy_list: # if returned list is not empty
             # extract data from list and populate the master proxy dictionary
-            for item in proxy_list:                    
+            for item in proxy_list:
                 proxy_name = list(item.keys())[0]
                 # test if dict element already exists
                 if proxy_name in list(proxy_dict_ncdc.keys()):
@@ -1620,9 +1620,9 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
             nbsites_valid = nbsites_valid + 1
         else: # returned list is empty, just move to next site
             pass
-    
+
     # ===============================================================================
-    # Produce a summary of uploaded proxy data & 
+    # Produce a summary of uploaded proxy data &
     # generate integrated database in pandas DataFrame format
     # ===============================================================================
 
@@ -1642,7 +1642,7 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
     for key in sorted(proxy_def.keys()):
         proxy_archive = key.split('_')[0]
         proxy_measurement =  proxy_def[key]
-        
+
         # change the association between proxy type and proxy measurement for Breitenmoser tree ring data
         if key == 'Tree Rings_WidthBreit':
             proxy_measurement = [item+'_breit' for item in proxy_measurement]
@@ -1664,33 +1664,33 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
     if dupelist:
         print('***WARNING***: Proxy records with these names were found multiple times:')
         print(dupelist)
-        
+
     elapsed_time = clock.time() - begin_time
     print('NCDC data extraction completed in %s secs' %str(elapsed_time))
-    
+
     return proxy_dict_ncdc
-    
+
 
 # =========================================================================================
 
 def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile, data_outfile, \
                               duplicates_file, eliminate_duplicates):
     """
-    Merges two dictionaries containing proxy metadata and data from two data sources 
-    (PAGES2k phase 2 and NCDC-templated proxy data files) into one, 
+    Merges two dictionaries containing proxy metadata and data from two data sources
+    (PAGES2k phase 2 and NCDC-templated proxy data files) into one,
     and writes out metadata and data into pickled pandas DataFrames.
-    
+
     Originator: Robert Tardif, Univ. of Washington, May 2017
 
     """
 
-    
+
     if len(ncdc_dict) > 0:
         merged_dict = deepcopy(ncdc_dict)
         if len(pages2kv2_dict) > 0:
             merged_dict.update(pages2kv2_dict)
     elif len(pages2kv2_dict) > 0:
-        merged_dict = deepcopy(pages2kv2_dict)            
+        merged_dict = deepcopy(pages2kv2_dict)
     else:
         raise SystemExit('No dataset has been selected for inclusion in the proxy database!')
 
@@ -1715,8 +1715,8 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
                     dupecount += 1
                 except KeyError:
                     print(' -- not found: %s' % siteID)
-                    pass    
-    
+                    pass
+
     print(' ')
     print('----------------------------------------------------------------------')
     print(' FINAL SUMMARY: ')
@@ -1733,7 +1733,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
         # change the association between proxy type and proxy measurement for Breitenmoser tree ring data
         if key == 'Tree Rings_WidthBreit':
             proxy_measurement = [item+'_breit' for item in proxy_measurement]
-                
+
         nb = []
         for siteID in list(merged_dict.keys()):
             if merged_dict[siteID]['Archive'] == proxy_archive and merged_dict[siteID]['Measurement'] in proxy_measurement:
@@ -1746,12 +1746,12 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     print('   %s : %d' %('{:40}'.format('Total:'), nbtot))
     print('----------------------------------------------------------------------')
     print(' ')
-        
+
     # ---------------------------------------------------------------------
     # Preparing pandas DataFrames containing merged proxy metadata and data
     # and output to pickle files
     # ---------------------------------------------------------------------
-    
+
     # Loop over proxy types specified in *main*
     counter = 0
     # Build up pandas DataFrame
@@ -1765,18 +1765,18 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
                'Resolution (yr)','Oldest (C.E.)','Youngest (C.E.)','Location','climateVariable','Realm','Relation_to_climateVariable',\
                'Seasonality', 'Databases']
 
-    
+
     for key in sorted(proxy_def.keys()):
         proxy_archive = key.split('_')[0]
 
         # change the associated between proxy type and proxy measurement for Breitenmoser tree ring data
         if key == 'Tree Rings_WidthBreit':
             proxy_def[key] = [item+'_breit' for item in proxy_def[key]]
-        
+
         for siteID in list(merged_dict.keys()):
-            
+
             if merged_dict[siteID]['Archive'] == proxy_archive and merged_dict[siteID]['Measurement'] in proxy_def[key]:
-                
+
                 frame  = pd.DataFrame({'a':siteID, 'b':merged_dict[siteID]['StudyName'], 'c':merged_dict[siteID]['Investigators'], \
                                        'd':merged_dict[siteID]['SiteName'], 'e':merged_dict[siteID]['Lat'], 'f':merged_dict[siteID]['Lon'], \
                                        'g':merged_dict[siteID]['Elevation'], 'h':merged_dict[siteID]['Archive'], 'i':merged_dict[siteID]['Measurement'], \
@@ -1792,7 +1792,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
                 metadf = metadf.append(frame)
 
                 counter = counter + 1
-        
+
     # Redefine column headers
     metadf.columns = headers
 
@@ -1829,7 +1829,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
             df = df.merge(frame, how='outer', on='Proxy ID')
 
         counter = counter + 1
-    
+
     # Fix DataFrame index and column name
     col0 = df.columns[0]
     df.set_index(col0, drop=True, inplace=True)
@@ -1848,17 +1848,17 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
 
 def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_duplicates):
     """
-    Takes in NCDC text proxy data and converts it to dataframe storage.  
+    Takes in NCDC text proxy data and converts it to dataframe storage.
 
     Caveat: This increases size on disk due to the joining along the time index (lots of null values).
     But: Makes it easier to query and grab data for the proxy data assimilation experiments.
 
     :param datadir   :
-    :param proxy_def : 
+    :param proxy_def :
     :param metaout   :
     :param dataout   :
     :return:
-    
+
     Author: R. Tardif, Univ. of Washington, Jan 2016.
 
     """
@@ -1872,7 +1872,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     sites_data = glob.glob(datadir+"/*.txt")
 
     nbsites = len(sites_data)
-    
+
     # Master list containing dictionaries of all proxy chronologies extracted from the data files.
     master_proxy_list = []
     master_duplicate_list = []
@@ -1884,7 +1884,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
 
         proxy_list, duplicate_list = read_proxy_data_NCDCtxt(file_site,proxy_def)
 
-        
+
         if eliminate_duplicates and duplicate_list:
              master_duplicate_list.extend(duplicate_list)
         if proxy_list: # if returned list is not empty
@@ -1908,10 +1908,10 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
         for k in inds: final_proxy_list.append(master_proxy_list[k])
     else:
         final_proxy_list = master_proxy_list
-        
-    
+
+
     # ===============================================================================
-    # Produce a summary of uploaded proxy data & 
+    # Produce a summary of uploaded proxy data &
     # generate integrated database in pandas DataFrame format
     # ===============================================================================
 
@@ -1927,7 +1927,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     print('  Number of identified duplicate chronologies : ', nbduplicates)
     print('  Number of proxy chronologies included in df : ', nbchronol)
     print('  ------------------------------------------------------')
-    
+
     tot = []
     # Loop over proxy types specified in *main*
     counter = 0
@@ -1942,15 +1942,15 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
                'Oldest (C.E.)','Youngest (C.E.)','Location','climateVariable','Realm','Relation_to_climateVariable',\
                'Seasonality', 'Databases']
 
-    
-    
+
+
     for key in sorted(proxy_def.keys()):
         proxy_archive = key.split('_')[0]
 
         # change the associated between proxy type and proxy measurement for Breitenmoser tree ring data
         if key == 'Tree Rings_WidthBreit':
             proxy_def[key] = [item+'_breit' for item in proxy_def[key]]
-            
+
         nb = []
         for item in final_proxy_list:
             siteID = list(item.keys())[0]
@@ -1988,7 +1988,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
     print('   ','{:40}'.format('Total:'), ' : ', nbtot)
     print('----------------------------------------------------------------------')
     print(' ')
-    
+
     # Redefine column headers
     metadf.columns = headers
 
@@ -2026,7 +2026,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
             df = df.merge(frame, how='outer', on='Proxy ID')
 
         counter = counter + 1
-    
+
     # Fix DataFrame index and column name
     col0 = df.columns[0]
     df.set_index(col0, drop=True, inplace=True)
@@ -2044,5 +2044,3 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
 # =========================================================================================
 if __name__ == "__main__":
     main()
-
-
