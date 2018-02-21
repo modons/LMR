@@ -15,6 +15,9 @@ import os, glob
 import numpy as np
 from netCDF4 import Dataset, num2date
 
+# LMR-specific import
+from LMR_utils import natural_sort
+
 # --- Begin section of user-defined parameters ---
 
 # name of directory where the output of LMR experiments are located
@@ -24,7 +27,6 @@ datadir = '/home/disk/kalman3/rtardif/LMR/output'
 # name of the experiment
 nexp = 'test'
 
-
 # Dictionary containing definitions of variables that can be handled by this code
 var_desc = \
     {
@@ -33,6 +35,7 @@ var_desc = \
         'psl_sfc_Amon'              : ('MSLP', 'Mean sea level pressure anomaly', 'Pa'),       \
         'pr_sfc_Amon'               : ('PRCP', 'Precipitation rate anomaly', 'kg/m2/s1'),      \
         'scpdsi_sfc_Amon'           : ('scpdsi','self-calibrated Palmer Drought Severity Index', ''), \
+        'scpdsipm_sfc_Amon'         : ('scpdsi','self-calibrated Palmer Drought Severity Index (Penman-Monteith)', ''), \
         'uas_sfc_Amon'              : ('Usfc', 'Near surface zonal wind anomaly', 'm/s'),      \
         'vas_sfc_Amon'              : ('Vsfc', 'Near surface meridional wind anomaly', 'm/s'), \
         'zg_500hPa_Amon'            : ('H500', '500hPa geopotential height anomaly', 'm'),     \
@@ -64,10 +67,10 @@ outdir = expdir
 print('\n Getting information on Monte-Carlo realizations...\n')
 
 dirs = glob.glob(expdir+"/r*")
-# sorted
-dirs.sort()
 # keep names of MC directories (i.r. "r...") only 
 mcdirs = [item.split('/')[-1] for item in dirs]
+# Make sure list is properly sorted
+mcdirs = natural_sort(mcdirs)
 # number of MC realizations found
 niters = len(mcdirs) 
 
@@ -92,6 +95,13 @@ print('Variables:', listvars, '\n')
 # Loop over variables
 for var in listvars:
     print('\n Variable:', var)
+
+    if var not in list(var_desc.keys()):
+        print(' ***WARNING: Variable %s does not have a corresponding entry in variable definitions'
+              ' (var_desc) at the top of this program. Please make necessary edits to have this variable'
+              ' included in the format conversion output' %var)
+        continue
+
     # Loop over realizations
     r = 0
     for dir in mcdirs:
@@ -140,7 +150,7 @@ for var in listvars:
                 print('  field type:', field_type)
             else:
                 print('Cannot handle this variable yet! Variable of unrecognized dimensions... Exiting!')
-                exit(1)
+                raise SystemExit(1)
 
             
             # declare master array that will contain data from all the M-C realizations 
@@ -264,7 +274,7 @@ for var in listvars:
         
     else:
         print('Variable of unrecognized dimensions... Exiting!')
-        exit(1)
+        raise SystemExit(1)
         
     
     # Closing the file
