@@ -1604,12 +1604,24 @@ class h_interpPSM(BasePSM):
                 raise SystemExit(1)
 
             else:
-                # this returns an array of tuples (proxy type of type string, proxy site name of type string, R value of type float)
-                # transformed into a list
-                Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None).tolist()
+                # This returns a python dictionary with entries as: {(proxy type, proxy name): Rvalue}
+                Rdata_dict={}
+                with open(R_data_file,'r') as f:
+                    linenb = 0
+                    for line in f:
+                        try:
+                            ptype,pname,Rval = line.split(',') # expects commas as field separator
+                            Rval = Rval.strip('\n') # remove end-or-line chars
+                            # removes quotes (single or double) around the R value if present
+                            if (Rval.startswith('"') and Rval.endswith('"')) or \
+                               (Rval.startswith("'") and Rval.endswith("'")):
+                                Rval = Rval[1:-1]
+                            # populate dictionary entry, make sure R value is a float
+                            Rdata_dict[(ptype,pname)] = float(Rval)
+                        except:
+                            print('WARNING: In "h_interpPSM", load_psm_data: Error reading/parsing data on line', linenb, ':', line)
 
-                # transform into a dictionary with (proxy type, proxy site) tuples as keys and R as the paired values
-                Rdata_dict = dict([((item[0],item[1]),item[2]) for item in Rdata_list])            
+                        linenb +=1
 
         else:
             Rdata_dict = {}
