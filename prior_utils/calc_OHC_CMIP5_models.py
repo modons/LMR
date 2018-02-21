@@ -1,8 +1,8 @@
 """
 Module: calc_OHC_CMIP5_models.py
 
-Purpose: Calculates gridded ocean heat content over ocean layers of specified depths
-         using grin info and gridded sea water potential temperature as input.
+Purpose: Calculate gridded ocean heat content over ocean layers of specified depths
+         using grid info and gridded sea water potential temperature as input.
 
  Required files:
           1) 'thetao_...'     : File containing sea water potential temperature for all
@@ -15,12 +15,26 @@ Purpose: Calculates gridded ocean heat content over ocean layers of specified de
                                 grid cells of the ocean model.
                                 ex. areacello_fx_CCSM4_past1000_r0i0p0.nc
 
+          Note: For now, can only handle models/simulations with static ocean model grids. 
+                Some models have ocean grid specs (ex. thickness of grid cells as in GFDL model)
+                that vary with time. 
+
 Originator: Robert Tardif, University of Washington, August 2017
 
             Adapted from code originally written by 
             Dan Amrhein, University of Washington, July 2017
 
 Revisions: 
+            - Minor bugfix to handling of missing data attributes.
+              [R. Tardif, U. of Washington - Feb. 2018]
+            - Fixed handling of missing data in volcello array that caused an overflow.
+              [R. Tardif, U. of Washington - Feb. 2018]
+
+
+                   ***... detected bug UNRESOLVED ...***
+        Spurious isolated much larger values (compared to surrounding values) 
+       being generated. This behavior appears to be random (in space and time)
+
 
 """
 
@@ -31,10 +45,13 @@ from datetime import datetime, timedelta
 
 import matplotlib.pyplot as plt
 
+
 # ==============================================================================
 
 def main():
 
+    # Will exit if any warning is generated in numpy array operation
+    np.seterr(all='raise')
     
     # --------------------- begin user input -----------------------------
 
@@ -192,6 +209,9 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
 
     """
 
+    np.seterr(invalid='raise')
+
+    
     # specific heat salt water (J/kg/K)
     cp_sw_mks = 3850.
     # density of salt water (kg/m^3)
@@ -199,7 +219,7 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     
     # Boundaries between ocean levels in m. Use this to interpolate over depths
     lev_bnds = filedata.variables['lev_bnds'][:]
-
+    
     # Shape of filevol.variables['volcello'] is (depth, lat, lon)
     # This is the volume of ocean cells in m^3
     volcello = filevol.variables['volcello']
@@ -215,12 +235,13 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     # the weights will be equal to grid box volumes multiplied by fraction of depth spanned by stopdepth
     # over the grid box at dlev.
     wt = np.copy(volcello[:])
+
     
     # Eliminate missing values (land) (force weights to zero)
     if hasattr(volcello,'missing_value'):
         missing = volcello.missing_value
     elif hasattr(volcello,'_FillValue'):
-        missing = volcello.missing_value
+        missing = volcello._FillValue
     else:
         raise SystemExit('ERROR: Missing values undefined. Cannot continue. Exiting!')
 
@@ -230,13 +251,18 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     if stopdepth < lev_bnds[-1,1]:
         # All levels whose shallower bounds are greater than stopdepth are set to 0 
         wt[lev_bnds[:,0] > stopdepth,:,:] = 0.
+        
         # Finding dlev (which includes stopdepth) as the first level whose deeper boundary is larger than stopdepth
         dlev = np.argmax(lev_bnds[:,1] > stopdepth)
+
         # determine the length of overlap between the level indexed by dlev and the distance over which we are integrating
         d_in_dlev = stopdepth-lev_bnds[dlev,0]
+
         # determine the fraction of flev that we want to include in the calculation
         frac_in_dlev = d_in_dlev/(lev_bnds[dlev,1]-lev_bnds[dlev,0])
-        wt[dlev,:,:] = frac_in_dlev*volcello[dlev,:,:]
+        #wt[dlev,:,:] = frac_in_dlev*volcello[dlev,:,:] # RT ... ... ... 
+        wt[dlev,:,:] = frac_in_dlev*wt[dlev,:,:]
+        
         
     if startdepth > lev_bnds[0,0]:
         # All levels whose deeper bounds are greater than startdepth are set to 0 
@@ -250,9 +276,12 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
 
         # determine the fraction of flev that we want to include in the calculation
         frac_in_flev = d_in_flev/(lev_bnds[flev,1]-lev_bnds[flev,0])
-        wt[flev,:,:] = frac_in_flev*volcello[flev,:,:]
+        #wt[flev,:,:] = frac_in_flev*volcello[flev,:,:] # RT ... ... ... 
+        wt[flev,:,:] = frac_in_flev*wt[flev,:,:]
 
-    
+
+
+        
     # times in the simulation
     time = filedata.variables['time']
     ntime, = time.shape 
@@ -272,13 +301,16 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
     thetao = filedata.variables['thetao']
     
     # declare output array
-    ohc = np.nan*np.empty([ntime,nlat,nlon])
+    #ohc = np.nan*np.empty([ntime,nlat,nlon])
+    ohc = np.zeros([ntime,nlat,nlon])
+    ohc[:] = np.nan
 
+    
     # breaking down calculations: applying vectorized calculations over array slices (along time dimension)
     # speeds up compared to looping over single time elements
     # while vectorized calculations over entire array lead to "memory error" on my machine (RT)
 
-    inter = 120 # nb of indices per time slice
+    inter = 120 # nb of indices (i.e. months if monthly data) per time slice
     
     ntimeint = int(ntime / inter)
     # looping over time slices
@@ -286,15 +318,39 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
         ibeg = i*inter
         iend = ibeg+inter
         print(('%d : times from %s to %s' %(i, str(dates[ibeg]), str(dates[iend]))))
-        ohc[ibeg:iend,:,:] = np.sum(wt*thetao[ibeg:iend,:,:,:],1)*rho_sw_mks*cp_sw_mks/areacello
 
+
+        """
+        # RT test ... ... ...
+
+        tmp = np.sum(wt*thetao[ibeg:iend,:,:,:],1)
+        #print(tmp.shape)
+
+        tmp2 = tmp*rho_sw_mks*cp_sw_mks/areacello
+        print(tmp2.shape)
+        print(np.min(tmp2), np.max(tmp2))
+
+        tmp3 = tmp*rho_sw_mks*cp_sw_mks/areacello[:]
+        print(tmp3.shape)
+        print(np.min(tmp3), np.max(tmp3))
+        
+        exit(1)
+
+        # RT test ... ... ...
+        """
+
+        #ohc[ibeg:iend,:,:] = np.sum(wt*thetao[ibeg:iend,:,:,:],1)*rho_sw_mks*cp_sw_mks/areacello # RT ... ... ...
+        ohc[ibeg:iend,:,:] = np.sum(wt*thetao[ibeg:iend,:,:,:],1)*rho_sw_mks*cp_sw_mks/areacello[:]
+
+        
     # do the remaining (residual) array elements not included in the interval chunks above
     time_resids = np.arange(ntimeint*inter,ntime)
     # looping over single time elements
     for i in time_resids:
         print('single time : %s' %str(dates[i]))
-        ohc[i,:,:] = np.sum(wt*thetao[i,:,:,:],0)*rho_sw_mks*cp_sw_mks/areacello
-
+        #ohc[i,:,:] = np.sum(wt*thetao[i,:,:,:],0)*rho_sw_mks*cp_sw_mks/areacello # RT ... ... ...
+        ohc[i,:,:] = np.sum(wt*thetao[i,:,:,:],0)*rho_sw_mks*cp_sw_mks/areacello[:]
+        
         
     """ amrhein code ...
     # The full field is
@@ -323,7 +379,7 @@ def depth_average_OHC(filedata,filevol,filearea,startdepth,stopdepth,time_avg=No
             dates = num2date(time[:], time.units)
             
         dates_list = [datetime(d.year, d.month, d.day,
-                                  d.hour, d.minute, d.second)
+                               d.hour, d.minute, d.second)
                       for d in dates]
 
         # List years available in dataset and sort

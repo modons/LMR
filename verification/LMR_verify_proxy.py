@@ -41,7 +41,7 @@ from os.path import join, isfile
 sys.path.append('../')
 import LMR_config
 import LMR_proxy_pandas_rework
-from LMR_utils import coefficient_efficiency, rmsef
+from LMR_utils import coefficient_efficiency, rmsef, natural_sort
 
 # ------------------------------------------------------------ #
 # -------------- Begin: user-defined parameters -------------- #
@@ -68,8 +68,8 @@ MCset = None
 # period of reconstruction over which to perform the evaluation
 # (inclusive)
 #verif_period = (0, 1879)
-verif_period = (1880, 2000)
-#verif_period = (1985, 2000)
+#verif_period = (1880, 2000)
+verif_period = (1900, 2000)
 
 # Output directory, where the verification results & figs will be dumped.
 datadir_output = datadir_input # if want to keep things tidy
@@ -158,7 +158,7 @@ ids_by_grp, proxy_objects = proxy_class.load_all(cfg,verif_period,None)
 
 
 print('\ntotal number of iterations in directory: ' + str(ntotiters))
-print 'number of iterations considered        : ' + str(niters)
+print('number of iterations considered        : ' + str(niters))
 
 
 # ---------------------------------------------
@@ -421,7 +421,7 @@ nb_tot_assim = sum([len(assim_listdict[k]) for k in range(len(assim_listdict))])
 if nb_tot_verif > 0:
     if write_full_verif_dict:
         # Dump dictionary to pickle files
-        outfile = open('%s/reconstruction_eval_withheld_proxy_full.pckl' % (outdir),'w')
+        outfile = open('%s/reconstruction_eval_withheld_proxy_full.pckl' % (outdir),'wb')
         pickle.dump(verif_listdict,outfile,protocol=2)
         outfile.close()
 
@@ -498,7 +498,7 @@ if nb_tot_verif > 0:
 
         
     # Dump data to pickle file
-    outfile = open('%s/reconstruction_eval_withheld_proxy_summary.pckl' % (outdir),'w')
+    outfile = open('%s/reconstruction_eval_withheld_proxy_summary.pckl' % (outdir),'wb')
     pickle.dump(summary_stats_verif,outfile,protocol=2)
     outfile.close()
 
@@ -510,7 +510,7 @@ if nb_tot_verif > 0:
 if nb_tot_assim > 0:
     if write_full_verif_dict:
         # Dump dictionary to pickle files
-        outfile = open('%s/reconstruction_eval_assimilated_proxy_full.pckl' % (outdir),'w')
+        outfile = open('%s/reconstruction_eval_assimilated_proxy_full.pckl' % (outdir),'wb')
         pickle.dump(assim_listdict,outfile,protocol=2)
         outfile.close()
 
@@ -587,7 +587,7 @@ if nb_tot_assim > 0:
 
         
     # Dump data to pickle file
-    outfile = open('%s/reconstruction_eval_assimilated_proxy_summary.pckl' % (outdir),'w')
+    outfile = open('%s/reconstruction_eval_assimilated_proxy_summary.pckl' % (outdir),'wb')
     pickle.dump(summary_stats_assim,outfile,protocol=2)
     outfile.close()
 

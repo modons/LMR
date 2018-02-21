@@ -1,7 +1,18 @@
-#
-# plot long time series of GMT to compare different experiments
-#
-# borrowed heavily from LMR_verify_GM.py
+"""
+Module: plot_gmt_long.py
+
+Purpose: Plot multiple long time series of GMT to compare different 
+         reconstruction experiments
+
+Originator: Greg Hakim | Dept. of Atmospheric Sciences, Univ. of Washington
+                       | January 2017
+
+Revisions:
+
+                        ***... work in progress ...***
+                     borrowed heavily from LMR_verify_GM.py
+"""
+
 import matplotlib
 # need to do this when running remotely, and to suppress figures
 matplotlib.use('Agg')

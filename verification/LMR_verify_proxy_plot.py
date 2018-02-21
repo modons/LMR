@@ -25,7 +25,8 @@ from time import time
 from os.path import join
 
 from scipy import stats
-from sklearn.neighbors import KernelDensity
+import statsmodels.api as sm
+
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -132,10 +133,10 @@ datadir_input = '/home/disk/kalman3/rtardif/LMR/output'
 
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 #nexp = 'production_mlost_ccsm4_pagesall_0.75'
-nexp = 'test'
+nexp = 'test_py3'
 
-verif_period = [[1880,2000],[0,1879]]
-#verif_period = [[1880,2000],[1759,1879]]
+#verif_period = [[1880,2000],[0,1879]]
+verif_period = [[1900,2000],[1800,1899]]
 
 # Output directory, where the figs will be dumped.
 #datadir_output = datadir_input # if want to keep things tidy
@@ -171,12 +172,12 @@ def main():
         fname_verif = datadir_input+'/'+nexp+'/'+'verifProxy_'+str(verif_period[p][0])+'to'+str(verif_period[p][1])+\
             '/reconstruction_eval_withheld_proxy_summary.pckl'
 
-        infile_assim   = open(fname_assim,'r')
-        assim_dict[p] = pickle.load(infile_assim)
+        infile_assim   = open(fname_assim,'rb')
+        assim_dict[p] = pickle.load(infile_assim)        
         infile_assim.close()
 
         if os.path.isfile(fname_verif):
-            infile_verif   = open(fname_verif,'r')
+            infile_verif   = open(fname_verif,'rb')
             verif_dict[p] = pickle.load(infile_verif)
             infile_verif.close()
             verif_data = True
@@ -264,17 +265,18 @@ def main():
                 plt.bar(edges[:-1]+binwidth/2,results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,align="center")
 
                 #  kernel density estimation
-                statv = np.asarray(stat)[:,np.newaxis]
-                kde = KernelDensity(kernel='gaussian',bandwidth=binwidth).fit(statv)
-                statv_plot = (edges[:-1]+binwidth/2)[:,np.newaxis]
-                log_dens = kde.score_samples(statv_plot)
-                plt.plot(statv_plot,np.exp(log_dens),color=fcolor[p],lw=2,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
-
+                statv = np.asarray(stat)
+                kde = sm.nonparametric.KDEUnivariate(statv)
+                nbpts, = statv.shape
+                if nbpts > 0:
+                    kde.fit(kernel='gau')
+                    plt.plot(kde.support,kde.density,color=fcolor[p],lw=2,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
+                    stat_comp.append(stat)
+                    
                 # Accumulate prior stat
                 tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
                 prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
-                stat_comp.append(stat)
 
             # Kolmogorov-Smirnov significance testing of difference between distributions from both tested periods
             nbdist = len(stat_comp)
@@ -344,19 +346,19 @@ def main():
                 results, edges = np.histogram(stat, bins=bins_ce, normed=True)
                 plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0)
 
-                # kernel density estimation
-                statv = np.asarray(stat)[:,np.newaxis]
-                kde = KernelDensity(kernel='gaussian',bandwidth=binwidth).fit(statv)
-                statv_plot = (edges[:-1]+binwidth/2)[:,np.newaxis]
-                log_dens = kde.score_samples(statv_plot)
-                plt.plot(statv_plot,np.exp(log_dens),color=fcolor[p],lw=2,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
-
+                #  kernel density estimation
+                statv = np.asarray(stat)
+                kde = sm.nonparametric.KDEUnivariate(statv)
+                nbpts, = statv.shape
+                if nbpts > 0:
+                    kde.fit(kernel='gau')
+                    plt.plot(kde.support,kde.density,color=fcolor[p],lw=2,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))                
+                    stat_comp.append(stat)
                 
                 # Accumulate prior stat
                 tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
                 prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
-                stat_comp.append(stat)
 
             # Kolmogorov-Smirnov significance testing of difference between distributions from both tested periods
             nbdist = len(stat_comp)
@@ -422,8 +424,12 @@ def main():
                 std_stat = np.std(stat)
                 # % of positive change
                 dCEplus = [stat[i] for i in range(len(stat)) if stat[i] > 0.0]
-                frac = int(float(len(dCEplus))/float(len(stat))*100.)
-                fractiondCEplus = str(int('%d' % frac ))
+                if nbdata > 0:
+                    frac = int(float(len(dCEplus))/float(len(stat))*100.)
+                    fractiondCEplus = str(int('%d' % frac ))
+                else:
+                    fractiondCEplus = 'n/a'
+                
                 print('CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
                     ' Fraction of +change:', fractiondCEplus, '%')
 
@@ -431,14 +437,14 @@ def main():
                 leg = str(verif_period[p][0])+' to '+str(verif_period[p][1])+' : % +change='+str(fractiondCEplus)
                 plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0)
 
-                # kernel density estimation
-                statv = np.asarray(stat)[:,np.newaxis]
-                kde = KernelDensity(kernel='gaussian',bandwidth=binwidth).fit(statv)
-                statv_plot = (edges[:-1]+binwidth/2)[:,np.newaxis]
-                log_dens = kde.score_samples(statv_plot)
-                plt.plot(statv_plot,np.exp(log_dens),color=fcolor[p],lw=2,label=leg)
-
-                stat_comp.append(stat)                
+                #  kernel density estimation
+                statv = np.asarray(stat)
+                kde = sm.nonparametric.KDEUnivariate(statv)
+                nbpts, = statv.shape
+                if nbpts > 0:
+                    kde.fit(kernel='gau')
+                    plt.plot(kde.support,kde.density,color=fcolor[p],lw=2,label=leg)
+                    stat_comp.append(stat)
             
             # Kolmogorov-Smirnov significance testing of difference between distributions from both periods
             nbdist = len(stat_comp)

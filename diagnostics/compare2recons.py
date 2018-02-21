@@ -7,7 +7,8 @@ Originator: Robert Tardif - Univ. of Washington, Dept. of Atmospheric Sciences
             August 2017
 
 Revisions: 
-
+            - Handling of reconstructions with different temporal coverages.
+              [R. Tardif, U. of Washington - Feb. 2018]
 
 """
 import sys
@@ -47,13 +48,14 @@ datadir = '/home/disk/kalman3/rtardif/LMR/output'
 exps = ['test2', 'test']
 
 # --
-iter_range = [0,10]
+iter_range = [0,0]
 #iter_range = [0,100]
 # --
 year_range = [1800,2000]
 #year_range = [0,2000]
 #year_range = [-25000,2000]
 #year_range = [-115000,2000]
+# --
 
 # options of which figures to produce
 make_gmt_plot  = True   # time series of gmt, nhmt and shmt
@@ -106,8 +108,8 @@ mapmin = -2.; mapmax = +2.; mapint = 0.5; cmap = plt.cm.bwr; cbarfmt = '%4.1f'  
 # ---- End section of user-defined parameters ----
 # ------------------------------------------------
 
+plt.style.use('ggplot')
 bckgcolor = 'gray'
-
 
 exp_test = exps[0]
 exp_refe = exps[1]
@@ -161,6 +163,17 @@ if make_gmt_plot:
         recon_times_test  = gmt_data_test['recon_times']
         gmt_data_refe     = np.load(list_iters_refe[0]+'/'+infile+'.npz')
         recon_times_refe  = gmt_data_refe['recon_times']
+
+        # check available times in both reconstructions (vs year_range)
+        
+        if (year_range[0] not in recon_times_refe) or (year_range[1] not in recon_times_refe):
+            print('Years in reference reconstruction are inconsistent '
+            'with user-specified year_range. Please make necessary adjustements.')
+            raise SystemExit()
+        if (year_range[0] not in recon_times_test) or (year_range[1] not in recon_times_test):
+            print('Years in test reconstruction are inconsistent '
+            'with user-specified year_range. Please make necessary adjustements.')
+            raise SystemExit()
         
         if infile == 'gmt':
             recon_gmt_data_test          = gmt_data_test['gmt_save']
@@ -494,18 +507,30 @@ if make_gmt_plot:
         # -------------------------------------
         # Calculate differences (ensemble mean)
         # -------------------------------------
-        recon_diff_years = recon_refe_years 
+        #recon_diff_years = recon_refe_years 
 
-        recon_diff_gmt_ensmean = recon_test_gmt_ensmean - recon_refe_gmt_ensmean
-        prior_diff_gmt_ensmean = prior_test_gmt_ensmean - prior_refe_gmt_ensmean        
-
-        recon_diff_nhmt_ensmean = recon_test_nhmt_ensmean - recon_refe_nhmt_ensmean
-        prior_diff_nhmt_ensmean = prior_test_nhmt_ensmean - prior_refe_nhmt_ensmean        
-
-        recon_diff_shmt_ensmean = recon_test_shmt_ensmean - recon_refe_shmt_ensmean
-        prior_diff_shmt_ensmean = prior_test_shmt_ensmean - prior_refe_shmt_ensmean        
+        yrs_refe = recon_refe_years[0,:]
+        yrs_test = recon_test_years[0,:]
+        recon_diff_years =  yrs_refe[(yrs_refe>=year_range[0]) & (yrs_refe<=year_range[1])]
+        
         
 
+        
+        recon_diff_gmt_ensmean = recon_test_gmt_ensmean[(yrs_test>=year_range[0]) & (yrs_test<=year_range[1])] - \
+                                 recon_refe_gmt_ensmean[(yrs_refe>=year_range[0]) & (yrs_refe<=year_range[1])]
+        prior_diff_gmt_ensmean = prior_test_gmt_ensmean[(yrs_test>=year_range[0]) & (yrs_test<=year_range[1])] - \
+                                 prior_refe_gmt_ensmean[(yrs_refe>=year_range[0]) & (yrs_refe<=year_range[1])]
+
+        recon_diff_nhmt_ensmean = recon_test_nhmt_ensmean[(yrs_test>=year_range[0]) & (yrs_test<=year_range[1])] - \
+                                  recon_refe_nhmt_ensmean[(yrs_refe>=year_range[0]) & (yrs_refe<=year_range[1])]
+        prior_diff_nhmt_ensmean = prior_test_nhmt_ensmean[(yrs_test>=year_range[0]) & (yrs_test<=year_range[1])] - \
+                                  prior_refe_nhmt_ensmean[(yrs_refe>=year_range[0]) & (yrs_refe<=year_range[1])]
+
+        recon_diff_shmt_ensmean = recon_test_shmt_ensmean[(yrs_test>=year_range[0]) & (yrs_test<=year_range[1])] - \
+                                  recon_refe_shmt_ensmean[(yrs_refe>=year_range[0]) & (yrs_refe<=year_range[1])]
+        prior_diff_shmt_ensmean = prior_test_shmt_ensmean[(yrs_test>=year_range[0]) & (yrs_test<=year_range[1])] - \
+                                  prior_refe_shmt_ensmean[(yrs_refe>=year_range[0]) & (yrs_refe<=year_range[1])]
+        
         
         # -----------------------------------------------
         # Plotting time series of global mean temperature
@@ -550,10 +575,10 @@ if make_gmt_plot:
 
         # diff
         fig.add_subplot(3,1,3)
-        p1 = plt.plot(recon_diff_years[0,:],recon_diff_gmt_ensmean,'-b',linewidth=2, label='Posterior')
+        p1 = plt.plot(recon_diff_years,recon_diff_gmt_ensmean,'-b',linewidth=2, label='Posterior')
         #plt.fill_between(recon_diff_years[0,:], recon_diff_gmt_low, recon_diff_gmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
         xmin,xmax,ymin,ymax = plt.axis()
-        p2 = plt.plot(recon_diff_years[0,:],prior_diff_gmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        p2 = plt.plot(recon_diff_years,prior_diff_gmt_ensmean,'-',color='black',linewidth=2,label='Prior')
         #plt.fill_between(recon_diff_years[0,:], prior_diff_gmt_low, prior_diff_gmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
 
         p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
@@ -612,10 +637,10 @@ if make_gmt_plot:
 
         # diff
         fig.add_subplot(3,1,3)
-        p1 = plt.plot(recon_diff_years[0,:],recon_diff_nhmt_ensmean,'-b',linewidth=2, label='Posterior')
+        p1 = plt.plot(recon_diff_years,recon_diff_nhmt_ensmean,'-b',linewidth=2, label='Posterior')
         #plt.fill_between(recon_diff_years[0,:], recon_diff_nhmt_low, recon_diff_nhmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
         xmin,xmax,ymin,ymax = plt.axis()
-        p2 = plt.plot(recon_diff_years[0,:],prior_diff_nhmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        p2 = plt.plot(recon_diff_years,prior_diff_nhmt_ensmean,'-',color='black',linewidth=2,label='Prior')
         #plt.fill_between(recon_diff_years[0,:], prior_diff_nhmt_low, prior_diff_nhmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
 
         p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
@@ -675,10 +700,10 @@ if make_gmt_plot:
 
         # diff
         fig.add_subplot(3,1,3)
-        p1 = plt.plot(recon_diff_years[0,:],recon_diff_shmt_ensmean,'-b',linewidth=2, label='Posterior')
+        p1 = plt.plot(recon_diff_years,recon_diff_shmt_ensmean,'-b',linewidth=2, label='Posterior')
         #plt.fill_between(recon_diff_years[0,:], recon_diff_shmt_low, recon_diff_shmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
         xmin,xmax,ymin,ymax = plt.axis()
-        p2 = plt.plot(recon_diff_years[0,:],prior_diff_shmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        p2 = plt.plot(recon_diff_years,prior_diff_shmt_ensmean,'-',color='black',linewidth=2,label='Prior')
         #plt.fill_between(recon_diff_years[0,:], prior_diff_shmt_low, prior_diff_shmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
 
         p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
@@ -1136,11 +1161,11 @@ if make_map_plots:
         if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
             m.fillcontinents(color=bckgcolor)
 
-        plt.title('Difference between reconstructions',fontsize=12)
+        plt.title('Difference between reconstructions',fontsize=10)
         
 
         fig.tight_layout()
-        plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
+        plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.15)
         plt.suptitle(var_to_plot+', Year:'+str(year),fontsize=12,fontweight='bold')        
 
         plt.savefig('%s/%s_vs_%s_%s_%syr.png' % (figdir,exp_test,exp_refe,var_to_plot,year),bbox_inches='tight')

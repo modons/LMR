@@ -52,9 +52,9 @@ fsave = True
 # override datadir
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
-datadir_output = '/home/disk/kalman3/hakim/LMR'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
 
 # Directories where precip and reanalysis data can be found
 datadir_precip = '/home/disk/kalman3/rtardif/LMR/data/verification'
@@ -70,10 +70,8 @@ datadir_reanl  = '/home/disk/kalman3/rtardif/LMR/data/model'
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 'test'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
-#nexp = 'pages2_loc15000_seasonal_bilinear_nens200'
-nexp = 'pages2_loc10000_seasonal_bilinear_nens200'
+nexp = 'test'
+# ---
 
 # perform verification using all recon. MC realizations ( MCset = None )
 # or over a custom selection ( MCset = (begin,end) )
@@ -1573,32 +1571,7 @@ for var in verif_vars:
     if iplot:
         plt.show()
 
-
-    # ensemble calibration
-    print(np.shape(lg_err))
-    print(np.shape(xam_var))
-    LMR_smatch, LMR_ematch = find_date_indices(LMR_time,trange[0],trange[1])
-    print(LMR_smatch, LMR_ematch)
-    svar = xam_var[LMR_smatch:LMR_ematch,:,:]
-    print(np.shape(svar))
-
-    calib = lg_err.var(0)/svar.mean(0)
-    print(np.shape(calib))
-    print(calib[0:-1,:].mean())
-
-
-    # create the plot
-    mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
-    fig = plt.figure()
-    cb = LMR_plotter(calib,lat2_new,lon2_new,mapcolor_calib,11,0,10,extend='max',nticks=10)
-    #cb.set_ticks(range(11))
-    # overlay stations!
-    plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n '+verif_dict[var][2])
-    if fsave:
-        print('saving to .png')
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')  
-
-
+        
     # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
         
     # NEW look at trends over specified time periods as a function of latitude

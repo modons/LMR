@@ -68,7 +68,9 @@ def main():
     # 
 
     #proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
-    # ---
+
+    # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
+
     proxy_data_source = 'LMRdb'     # proxies from PAGES2k phase 2 (2017) +
                                     # "in-house" collection in NCDC-templated files
 
@@ -98,14 +100,17 @@ def main():
     # linear regressions, not physically-based PSMs.
     gaussianize_data = False
     
-    # Specify the type of year to use for data averaging. "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
+    # Specify the type of year to use for data averaging. "calendar year" (Jan-Dec)
+    # or "tropical year" (Apr-Mar)
     year_type = "calendar year"
     #year_type = "tropical year"
     
-    # ---
+    # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
+
     #proxy_data_source = 'DTDA'
     #dtda_dbversion = 'v0.0.0'
 
+    # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
     
     eliminate_duplicates = True
 

@@ -394,7 +394,7 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
                 years.append(year)
                 Xatmp = np.load(f)
                 Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
-                xam[k,:,:,:] = Xa                     # total ensemble
+                xa_ens[k,:,:,:] = Xa                  # total ensemble
                 xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
                 xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
 
@@ -1128,7 +1128,7 @@ def coefficient_efficiency(ref,test,valid=None):
     # check array dimensions
     dims_test = test.shape
     dims_ref  = ref.shape
-    #print 'dims_test: ', dims_test, ' dims_ref: ', dims_ref
+    #print('dims_test: ', dims_test, ' dims_ref: ', dims_ref)
 
     if len(dims_ref) == 3:   # 3D: time + 2D spatial
         dims = dims_ref[1:3]
@@ -1137,11 +1137,11 @@ def coefficient_efficiency(ref,test,valid=None):
     elif len(dims_ref) == 1: # 0D: time series
         dims = 1
     else:
-        print('Problem with input array dimension! Exiting...')
-        exit(1)
-
+        print('In coefficient_efficiency(): Problem with input array dimension! Exiting...')
+        SystemExit(1)
+        
     CE = np.zeros(dims)
-
+    
     # error
     error = test - ref
 
@@ -1159,7 +1159,7 @@ def coefficient_efficiency(ref,test,valid=None):
         dim_indbad = len(indbad)
         testlist = [indbad[k].size for k in range(dim_indbad)]
         if not all(v == 0 for v in testlist): 
-            if dims>1:
+            if isinstance(dims,(tuple,list)):
                 CE[indbad] = np.nan
             else:
                 CE = np.nan

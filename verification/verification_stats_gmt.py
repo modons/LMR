@@ -9,12 +9,11 @@ Originator: Greg Hakim | Dept. of Atmospheric Sciences, Univ. of Washington
 
 Revisions:
 
-                             ***... work in progress ...***
-          Requires copying the .pckl files from all experiment directories
-                       and place them in the current directory.
-      Lots of parameters the user needs to modify in the main part of the code 
-                        depending on the summary to produce.
-
+                        ***... work in progress ...***
+          Requires copying the .pckl files from all chosen experiment 
+               directories and place them in the current directory.
+    Lots of parameters the user needs to modify in the main part of the code 
+                      depending on the summary to produce.
 """
 
 #import numpy as np
@@ -31,16 +30,17 @@ import matplotlib.pyplot as plt
 #iplot = True
 iplot = False
 
-# list with pickle files containing results; these are experiment names
+# list with pickle files containing results;
+# these are strings corresponding to experiment names and nb of MC
+# iterations. These strings should correspond to the root of the names of .pckl
+# files containing summary verification stats generated with LMR_verify_GM.py:
+#               <<string>>_iters_gmt_verification.pckl
+# ---------------------------------------------------------------------
 #expts = ['production_mlost_ccsm4_pagesall_0.75_101',
-#         'production_mlost_ccsm4_pagesall_0.75_1',
 #         'production_gis_ccsm4_pagesall_0.75_101',
-#         'production_gis_ccsm4_pagesall_0.75_1',
 #         'production_cru_ccsm4_pagesall_0.75_101',
-#         'production_cru_ccsm4_pagesall_0.75_1',
 #         'production_mlost_era20c_pagesall_0.75_101',
-#         'production_mlost_era20c_pagesall_0.75_1',
-#         'test_V2proto_TorP_1']
+#    ]
 expts = [
 #    'pages2_loc1000_11',
 #    'pages2_loc5000_11',
@@ -54,9 +54,11 @@ expts = [
 #    'pages2_loc20000_pages2k2_seasonal_TorP_nens200_11',
 #    'pages2_loc25000_pages2k2_seasonal_TorP_nens200_5',
 #    'pages2_loc20000_seasonal_bilinear_nens200_11',
-    'pages2_loc25000_seasonal_bilinear_nens200_11',
-    'pages2_loc25000_seasonal_bilinear_nens200_75pct_11',
-    'pages2_loc25000_seasonal_bilinear_nens200_meta_11'
+#    'pages2_loc25000_seasonal_bilinear_nens200_11',
+#    'pages2_loc25000_seasonal_bilinear_nens200_75pct_11',
+#    'pages2_loc25000_seasonal_bilinear_nens200_meta_11'
+    'test_py3_2',
+    'test_py3b_2',
     ]
          
 # use a metadata keyword to filter results for quick assessment
@@ -75,7 +77,7 @@ def print_verification_stats(expts, keyword):
         exfile = ex+'_iters_gmt_verification.pckl'
         #print '---------------------------------------------------------------------'
         #print 'working on file: ',exfile
-        infile = open(exfile,'r')
+        infile = open(exfile,'rb')
         ddict = pickle.load(infile)
 
         # NOTE: This line obliterates any variables in global scope with same name as ddict key
@@ -132,14 +134,17 @@ pvar = dsave2; keyw = keyword2
 #pvar = dsave4; keyw = keyword4
 
 if iplot:
-    xvals=['1000','5000','10000','12000','15000','20000','40000']
-    xlabs=['1000','5000','10000','12000','15000','20000','no loc']
+#    xvals=['1000','5000','10000','12000','15000','20000','40000']
+#    xlabs=['1000','5000','10000','12000','15000','20000','no loc']
+    xvals=['exp1','exp2']
+    xlabs=['exp1','exp2']
+    
     plt.plot(xvals,pvar,'ko')
     plt.plot(xvals,pvar,'k-')
     plt.xlabel(xlabel)
     plt.ylabel(keyw)
     plt.title('GMT verification ' + keyw)
-    figname = keyw+'_GMT.png'
+    figname = keyw.replace(' ','_')+'_GMT.png'
     print('saving to '+ figname)
     plt.savefig(figname)
 

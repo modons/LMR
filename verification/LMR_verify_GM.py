@@ -69,7 +69,7 @@ nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
 iplot = True
 
 # Open interactive windows of figures
-interactive = True
+interactive = False
 
 if interactive:
     plt.ion()
@@ -77,12 +77,13 @@ else:
     # need to do this when running remotely, and to suppress figures
     matplotlib.use('agg')
     matplotlib.pyplot.switch_backend('agg')
+
 # option to save figures to a file
-# fsave = True
-fsave = False
+fsave = True
+#fsave = False
 
 # save statistics file
-stat_save = False
+stat_save = True
 
 # file specification
 #
@@ -95,32 +96,8 @@ stat_save = False
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 'test'
-#nexp = 'pages2_noloc'
-#nexp = 'pages2_loc10000'
-#nexp = 'pages2_loc1000'
-#nexp = 'pages2_loc5000'
-#nexp = 'pages2_loc12000'
-#nexp = 'pages2_loc15000'
-#nexp = 'pages2_loc20000'
-#nexp = 'pages2_loc12000_breit_seasonal_MetaTandP'
-#nexp = 'pages2_loc12000_breit_seasonal_TorP'
-#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
-#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP_nens500'
-#nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.25'
-#nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.5'
-#nexp = 'pages2_noloc_nens200'
-#nexp = 'pages2_loc20000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc20000_seasonal_bilinear_nens200'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_75pct'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_meta'
-#nexp = 'pages2_noloc_seasonal_bilinear_nens1000'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens1000'
-nexp = 'test_instrumental_recon_py3'
+nexp = 'test'
+# ---
 
 # perform verification using all recon. MC realizations ( MCset = None )
 # or over a custom selection ( MCset = (begin,end) )
@@ -128,15 +105,13 @@ nexp = 'test_instrumental_recon_py3'
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
 #     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
-#MCset = (0,0)
+#MCset = (0,10)
 
 # specify directories for LMR data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-# datadir_output = '/home/disk/kalman3/hakim/LMR'
-datadir_output = '/home/disk/katabatic3/wperkins/LMR_output/testing'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/katabatic3/wperkins/LMR_output/testing'
 
 
 # Directory where historical griddded data products can be found
@@ -171,7 +146,6 @@ print('--------------------------------------------------')
 workdir = datadir_output + '/' + nexp
 
 # get directory and information for later use
-
 print('--------------------------------------------------')
 print('working directory: %s' % workdir)
 print('--------------------------------------------------')
@@ -180,9 +154,7 @@ print('--------------------------------------------------')
 dirs = glob.glob(workdir+"/r*")
 
 # query file for assimilated proxy information (for now, ONLY IN THE r0 directory!)
-
 ptypes,nrecords = assimilated_proxies(workdir+'/r0/')
-
 print('--------------------------------------------------')
 print('Assimilated proxies by type:')
 for pt in sorted(ptypes.keys()):
@@ -1357,7 +1329,7 @@ if stat_save:
                  'ltc','lec','lgc','lcc','lbc','lmc','loc',
                  'ltce','lece','lgce','lcce','lbce','lmce','loce',
                  'lgrd','lgcd', 'lconcd','lconrd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
-                 'lmrs','gs','crus','bes','mlosts','tcrs','eras']
+                 'lmrs','gs','crus','bes','mlosts','tcrs','eras','cons',]
 
     stat_metadata = {'stime':"starting year of verification time period",
                      'etime':"ending year of verification time period",
@@ -1396,6 +1368,7 @@ if stat_save:
                      'mlosts':'MLOST trend (K/100 years)',
                      'tcrs':'TCR trend (K/100 years)',
                      'eras':'ERA trend (K/100 years)',
+                     'cons':'Consensus trend (K/100 years)',
                      'stat_metadata':'metdata'
                      }
 
@@ -1406,7 +1379,7 @@ if stat_save:
     # dump the dictionary to a pickle file
     spfile = nexp + '_' + str(niters) + '_iters_gmt_verification.pckl'
     print('writing statistics to pickle file: ' + spfile)
-    outfile = open(spfile, 'w')
+    outfile = open(spfile, 'wb')
     pickle.dump(gmt_verification_stats, outfile)
 
 if interactive:

@@ -370,9 +370,13 @@ class v_proxies(object):
         #  v0.2.0: merge of v0.1.0 NCDC proxies (w/o the NCDC-templated PAGES2k phase2) with
         #          published version (2.0.0) of the PAGES2k2017 proxies contained in a pickle
         #          file exported directly from the LiPD database. 
+        #  v0.3.0: second version of merged proxy db: published version (2.0.0) of the 
+        #          PAGES2k2017 proxies and additional records collected as part of LMR project.
+        #          Lingering duplicate records in v0.2.0 were eliminated. 
         #dbversion = 'v0.0.0'
         #dbversion = 'v0.1.0'
-        dbversion = 'v0.2.0' 
+        #dbversion = 'v0.2.0'
+        dbversion = 'v0.3.0'
         
         datadir_proxy = None
         datafile_proxy = 'LMRdb_%s_Proxies.df.pckl' %(dbversion)
@@ -643,9 +647,11 @@ class v_psm(object):
         psm_r_crit: float
             Usage threshold for correlation of linear PSM
         """
-        datadir_calib = None
 
         ##** BEGIN User Parameters **##
+
+        datadir_calib = None
+        pre_calib_datafile = None
         
         # Choice between:
         #datatag_calib = 'MLOST'
@@ -669,8 +675,6 @@ class v_psm(object):
         #datatag_calib = 'SPEI'
         #datafile_calib = 'spei_monthly_v2.4_190001-201412.nc'
                 
-        pre_calib_datafile = None
-        
         psm_r_crit = 0.0
 
         ##** END User Parameters **##
@@ -742,7 +746,8 @@ class v_psm(object):
         ##** BEGIN User Parameters **##
         
         datadir_calib = None
-
+        pre_calib_datafile = None
+        
         # calibration w.r.t. temperature
         # -----------------------------
         # Choice between:
@@ -770,7 +775,6 @@ class v_psm(object):
         #datatag_calib_P = 'SPEI'
         #datafile_calib_P = 'spei_monthly_v2.4_190001-201412.nc'
 
-        pre_calib_datafile = None
         psm_r_crit = 0.0
 
         

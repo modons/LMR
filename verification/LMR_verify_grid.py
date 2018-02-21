@@ -75,29 +75,7 @@ stat_save = True
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 'test'
-#nexp = 'pages2_loc20000'
-#nexp = 'pages2_loc12000'
-#nexp = 'pages2_loc15000'
-#nexp = 'pages2_loc10000'
-#nexp = 'pages2_loc1000'
-#nexp = 'pages2_loc5000'
-#nexp = 'pages2_noloc'
-#nexp = 'pages2_loc12000_breit'
-#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP'
-#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP_nens500'
-#nexp = 'pages2_loc12000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc15000_pages2k2_seasonal_TorP_nens200_inflate1.5'
-#nexp = 'pages2_noloc_nens200'
-#nexp = 'pages2_loc20000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc25000_pages2k2_seasonal_TorP_nens200'
-#nexp = 'pages2_loc20000_seasonal_bilinear_nens200'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_75pct'
-#nexp = 'pages2_loc25000_seasonal_bilinear_nens200_meta'
-nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
-
+nexp = 'test'
 # ---
 
 # perform verification using all recon. MC realizations ( MCset = None )
@@ -106,15 +84,15 @@ nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
 #     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
-#MCset = (0,0)
+#MCset = (0,10)
 
 # override datadir
 #datadir_output = './data/'
-#datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/katabatic2/wperkins/LMR_output/testing'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
+
 
 # Directory where reanalysis data can be found
 datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model'
@@ -367,9 +345,9 @@ print(' lats=%s' % str(gis_lat_range))
 print(' lons=%s' % str(gis_lon_range))
 # GIS longitudes are off by 180 degrees
 print(' Shifting longitudes by 180 degrees')
-lat2d_GIS = np.roll(lat2d_GIS,shift=nlon_GIS/2,axis=1)
-lon2d_GIS = np.roll(lon2d_GIS,shift=nlon_GIS/2,axis=1)
-GIS_anomaly = np.roll(GIS_anomaly,shift=nlon_GIS/2,axis=2)
+lat2d_GIS = np.roll(lat2d_GIS,shift=nlon_GIS//2,axis=1)
+lon2d_GIS = np.roll(lon2d_GIS,shift=nlon_GIS//2,axis=1)
+GIS_anomaly = np.roll(GIS_anomaly,shift=nlon_GIS//2,axis=2)
 
 # load HadCRUT -----------------------------------------------------------------
 # Note: Anomalies w.r.t. 1961-1990 mean
@@ -387,9 +365,9 @@ print(' lats=%s' % str(cru_lat_range))
 print(' lons=%s' % str(cru_lon_range))
 # CRU longitudes are off by 180 degrees
 print(' Shifting longitudes by 180 degrees')
-lat2d_CRU = np.roll(lat2d_CRU,shift=nlon_CRU/2,axis=1)
-lon2d_CRU = np.roll(lon2d_CRU,shift=nlon_CRU/2,axis=1)
-CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU/2,axis=2)
+lat2d_CRU = np.roll(lat2d_CRU,shift=nlon_CRU//2,axis=1)
+lon2d_CRU = np.roll(lon2d_CRU,shift=nlon_CRU//2,axis=1)
+CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU//2,axis=2)
 
 # load BerkeleyEarth -----------------------------------------------------------
 # Note: Anomalies w.r.t. 1951-1980 mean
@@ -407,9 +385,9 @@ print(' lats=%s' % str(be_lat_range))
 print(' lons=%s' % str(be_lon_range))
 # BE longitudes are off by 180 degrees
 print(' Shifting longitudes by 180 degrees')
-lat2d_BE = np.roll(lat2d_BE,shift=nlon_BE/2,axis=1)
-lon2d_BE = np.roll(lon2d_BE,shift=nlon_BE/2,axis=1)
-BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE/2,axis=2)
+lat2d_BE = np.roll(lat2d_BE,shift=nlon_BE//2,axis=1)
+lon2d_BE = np.roll(lon2d_BE,shift=nlon_BE//2,axis=1)
+BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE//2,axis=2)
 
 # load MLOST -------------------------------------------------------------------
 # Note: Anomalies w.r.t. 1961-1990 mean
@@ -2471,44 +2449,7 @@ if iplot:
 if iplot:
     plt.show(block=True)
 
-# ensemble calibration
-
-# Need to project TCR on LMR grid
-nyears,nlat,nlon = np.shape(xam_var)
-nyears_tcr,nlat_tcr,nlon_tcr = tcr_allyears.shape
-tcr_on_lmr = np.zeros(shape=[len(cyears),nlat,nlon])
-lmr_err_vs_tcr = np.zeros(shape=[len(cyears),nlat,nlon])
-be_on_lmr = np.zeros(shape=[len(cyears),nlat,nlon])
-lmr_err_vs_be = np.zeros(shape=[len(cyears),nlat,nlon])
-
-k = -1
-for yr in cyears:
-    k = k + 1
-    tcr_on_lmr[k,:,:] = regrid(specob_tcr,specob_lmr,tcr_allyears[k,:,:], ntrunc=None, smooth=None)
-    LMR_smatch, LMR_ematch = find_date_indices(LMR_time,yr,yr+1)
-    pdata_lmr = np.mean(xam[LMR_smatch:LMR_ematch,:,:],0)
-    lmr_err_vs_tcr[k,:,:] =  pdata_lmr - tcr_on_lmr[k,:,:]
-
-
-print(np.shape(lmr_err_vs_tcr))
-print(np.shape(xam_var))
-LMR_smatch, LMR_ematch = find_date_indices(LMR_time,trange[0],trange[1])
-svar = xam_var[LMR_smatch:LMR_ematch,:,:]
-calib_tcr = lmr_err_vs_tcr.var(0)/svar.mean(0)
-print(calib_tcr[0:-1,:].mean())
-
-
-# create the plot
-mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
-fig = plt.figure()
-cb = LMR_plotter(calib_tcr,lat2,lon2,mapcolor_calib,11,0,10,extend='max',nticks=10)
-#cb.set_ticks(range(11))
-# overlay stations!
-plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n Surface air temperature')
-if fsave:
-    print('saving to .png')
-    plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')
-
+    
 
 # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
 
@@ -2636,5 +2577,5 @@ if stat_save:
     # dump the dictionary to a pickle file
     spfile = nexp+'_'+str(niters)+'_iters_grid_verification.pckl'
     print('writing statistics to pickle file: ' + spfile)
-    outfile = open(spfile,'w')
+    outfile = open(spfile,'wb')
     pickle.dump(grid_verification_stats,outfile)

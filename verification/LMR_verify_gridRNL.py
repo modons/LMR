@@ -56,9 +56,9 @@ fsave = True
 # where to find reconstruction data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
-datadir_output = '/home/disk/kalman3/hakim/LMR'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
 
 # Directory where reanalysis data can be found
 datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model/'
@@ -73,9 +73,8 @@ datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model/'
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 'test'
-nexp = 'pages2_loc25000_seasonal_bilinear_nens200'
-#nexp = 'pages2_loc15000_seasonal_bilinear_nens200'
+nexp = 'test'
+# ---
 
 # perform verification using all recon. MC realizations ( MCset = None )
 # or over a custom selection ( MCset = (begin,end) )
@@ -89,19 +88,19 @@ MCset = None
 #                        kind   name     variable long name        bounds   units   mult. factor
 verif_dict = \
     {
-    #'psl_sfc_Amon'   : ('anom', 'MSLP', 'Mean sea level pressure',-8.0,8.0,'(hPa)',0.01), \
-    'zg_500hPa_Amon' : ('anom','Z500', '500hPa geopotential height',-60.0,60.0,'(m)',1.0), \
-    #'wap_500hPa_Amon': ('anom','W500', '500hPa vertical motion',-0.04,0.04,'(Pa/s)',1.0), \
+    #'psl_sfc_Amon'    : ('anom', 'MSLP', 'Mean sea level pressure',-8.0,8.0,'(hPa)',0.01), \
+    'zg_500hPa_Amon'  : ('anom','Z500', '500hPa geopotential height',-60.0,60.0,'(m)',1.0), \
+    #'wap_500hPa_Amon' : ('anom','W500', '500hPa vertical motion',-0.04,0.04,'(Pa/s)',1.0), \
     #'ua_1000hPa_Amon' : ('anom','U1000', '1000hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
     #'va_1000hPa_Amon' : ('anom','V1000', '1000hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-    #'ua_850hPa_Amon' : ('anom','U850', '850hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-    #'va_850hPa_Amon' : ('anom','V850', '850hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-    #'ua_700hPa_Amon' : ('anom','U700', '700hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-    #'va_700hPa_Amon' : ('anom','V700', '700hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-    #'ua_600hPa_Amon' : ('anom','U600', '600hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-    #'va_600hPa_Amon' : ('anom','V600', '600hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
-    #'ua_500hPa_Amon' : ('anom','U500', '500hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
-    #'ua_250hPa_Amon' : ('anom','U250', '250Pa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_850hPa_Amon'  : ('anom','U850', '850hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'va_850hPa_Amon'  : ('anom','V850', '850hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_700hPa_Amon'  : ('anom','U700', '700hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'va_700hPa_Amon'  : ('anom','V700', '700hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_600hPa_Amon'  : ('anom','U600', '600hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'va_600hPa_Amon'  : ('anom','V600', '600hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_500hPa_Amon'  : ('anom','U500', '500hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'ua_250hPa_Amon'  : ('anom','U250', '250Pa zonal wind',-2.0,2.0,'(m/s)',1.0), \
     }
 
 # time range for verification (in years CE)
@@ -953,35 +952,6 @@ for var in verif_vars:
             plt.close()
 
             # ================================================================================================================
-
-
-    if iplot:
-        plt.show()
-
-
-    # ensemble calibration
-    print(np.shape(lt_err))
-    print(np.shape(xam_var))
-    LMR_smatch, LMR_ematch = find_date_indices(LMR_time,trange[0],trange[1])
-    print(LMR_smatch, LMR_ematch)
-    svar = xam_var[LMR_smatch:LMR_ematch,:,:]
-    print(np.shape(svar))
-
-    calib = lt_err.var(0)/svar.mean(0)
-    print(np.shape(calib))
-    print(calib[0:-1,:].mean())
-
-
-    # create the plot
-    mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
-    fig = plt.figure()
-    cb = LMR_plotter(calib,lat2_new,lon2_new,mapcolor_calib,11,0,10,extend='max',nticks=10)
-    #cb.set_ticks(range(11))
-    # overlay stations!
-    plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n '+verif_dict[var][2])
-    if fsave:
-        print('saving to .png')
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')  
 
 
     # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def

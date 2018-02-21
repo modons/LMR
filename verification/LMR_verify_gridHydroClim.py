@@ -85,7 +85,7 @@ nexp = 'test'
 #     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
 #     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
-#MCset = (0,0)
+#MCset = (0,10)
 
 # override datadir
 #datadir_output = './data/'
@@ -136,7 +136,8 @@ alpha = 0.5
 ##################################
 
 # variables---this script is scpdsi and precip. only!
-varPDSI = 'scpdsi_sfc_Amon'; varPDSI_label = 'PDSI'
+#varPDSI = 'scpdsi_sfc_Amon'; varPDSI_label = 'PDSI'
+varPDSI = 'scpdsipm_sfc_Amon'; varPDSI_label = 'PDSI'
 varPRCP = 'pr_sfc_Amon'; varPRCP_label = 'PRCP'
 
 
@@ -353,9 +354,9 @@ print(' lons=%s' % str(Dai_lon_range))
 
 # DaiPDSI longitudes are off by 180 degrees
 print(' Shifting longitudes by 180 degrees')
-lat2d_Dai = np.roll(lat2d_Dai,shift=nlon_Dai/2,axis=1)
-lon2d_Dai = np.roll(lon2d_Dai,shift=nlon_Dai/2,axis=1)
-DaiPDSI = np.roll(DaiPDSI,shift=nlon_Dai/2,axis=2)
+lat2d_Dai = np.roll(lat2d_Dai,shift=nlon_Dai//2,axis=1)
+lon2d_Dai = np.roll(lon2d_Dai,shift=nlon_Dai//2,axis=1)
+DaiPDSI = np.roll(DaiPDSI,shift=nlon_Dai//2,axis=2)
 
 # PDSI is land-based data: use most recent data in array to estimate the fraction of land pts
 # (assumed that valid data is present on all land pts at that time) vs. total nb. of pts.
