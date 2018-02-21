@@ -31,6 +31,9 @@ Revisions:
           - Modified the read_gridded_data_CMIP5_model function for greater flexibility
             in handling names of geographical coordinates in input .nc files.
             [R. Tardif, U of Washington, Aug 2017]
+          - Bug fix to calculation of anomalies to specific reference period in 
+            read_gridded_data_GPCC, read_gridded_data_DaiPDSI and read_gridded_data_SPEI
+            [M. Erb, N. Arizona U. & R. Tardif, U of Washington, Feb 2018]
 """
 from netCDF4 import Dataset, date2num, num2date
 from datetime import datetime, timedelta
@@ -513,8 +516,9 @@ def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies,outfreq):
         # loop over months
         for i in range(12):
             m = i+1
-            indsm = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
-            climo_month[i] = np.nanmean(value[indsm], axis=0)
+            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            indsm = [j for j,v in enumerate(dates) if v.month == m]
+            climo_month[i] = np.nanmean(value[indsmref], axis=0)
             value[indsm] = (value[indsm] - climo_month[i])
     
     if outfreq == 'annual':
@@ -627,8 +631,9 @@ def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,outfreq
         # loop over months
         for i in range(12):
             m = i+1
-            indsm = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
-            climo_month[i] = np.nanmean(value[indsm], axis=0)
+            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            indsm = [j for j,v in enumerate(dates) if v.month == m]
+            climo_month[i] = np.nanmean(value[indsmref], axis=0)
             value[indsm] = (value[indsm] - climo_month[i])
     
     if outfreq == 'annual':
@@ -745,8 +750,9 @@ def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,outfreq):
         # loop over months
         for i in range(12):
             m = i+1
-            indsm = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
-            climo_month[i] = np.nanmean(value[indsm], axis=0)
+            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            indsm = [j for j,v in enumerate(dates) if v.month == m]
+            climo_month[i] = np.nanmean(value[indsmref], axis=0)
             value[indsm] = (value[indsm] - climo_month[i])
     
     if outfreq == 'annual':
@@ -1838,8 +1844,8 @@ def read_gridded_data_CMIP5_model_ensemble(data_dir,data_file,data_vars):
             tunits = time.units
             since_yr_idx = tunits.index('since ') + 6
             year = int(tunits[since_yr_idx:since_yr_idx+4])
-            year_diff = year - 0o001
-            new_start_date = datetime(0o001, 0o1, 0o1, 0, 0, 0)
+            year_diff = year - 1
+            new_start_date = datetime(1, 1, 1, 0, 0, 0)
 
             new_units = tunits[:since_yr_idx] + '0001-01-01 00:00:00'
             time_yrs = num2date(time[:], new_units, calendar=time.calendar)
