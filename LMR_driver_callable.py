@@ -592,12 +592,20 @@ def LMR_driver_callable(cfg=None):
                 nhmt_save[proxy_idx+1, yr_idx] = nhmt
                 shmt_save[proxy_idx+1, yr_idx] = shmt
 
+            # add check to detect whether recon has blown-up (and stop it if it has)
+            xbvar = Xb.var(axis=1, ddof=1)
+            xavar = Xa.var(ddof=1, axis=1)
+            vardiff = xavar - xbvar
+            if (not np.isfinite(np.min(vardiff))) or (not np.isfinite(np.max(vardiff))):
+                print('ERROR: Reconstruction has blown-up. Exiting!')
+                raise SystemExit(1)
+            
             # check the variance change for sign
             thistime = time()
             if verbose > 2:
-                xbvar = Xb.var(axis=1, ddof=1)
-                xavar = Xa.var(ddof=1, axis=1)
-                vardiff = xavar - xbvar
+                #xbvar = Xb.var(axis=1, ddof=1)
+                #xavar = Xa.var(ddof=1, axis=1)
+                #vardiff = xavar - xbvar
                 print('min/max change in variance: ('+str(np.min(vardiff))+','+str(np.max(vardiff))+')')
                 print('update took ' + str(thistime-lasttime) + 'seconds')
             lasttime = thistime
