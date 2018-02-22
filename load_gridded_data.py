@@ -34,6 +34,9 @@ Revisions:
           - Bug fix to calculation of anomalies to specific reference period in 
             read_gridded_data_GPCC, read_gridded_data_DaiPDSI and read_gridded_data_SPEI
             [M. Erb, N. Arizona U. & R. Tardif, U of Washington, Feb 2018]
+          - Reference period w.r.t. which anomalies are computed are now passed as argument
+            to functions tasked with uploading instrumental-era calibration datasets. 
+            [R. Tardif, U. of Washington, February 2018]
 """
 from netCDF4 import Dataset, date2num, num2date
 from datetime import datetime, timedelta
@@ -45,7 +48,7 @@ import os.path
 import string
 import math
 
-def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq):
+def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq,ref_period):
 #==========================================================================================
 #
 # Reads the monthly data of surface air temperature anomalies from the GISTEMP gridded 
@@ -61,6 +64,10 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq):
 #                       data (anomalies) are contained in the file.
 #
 #      - outfreq      : string indicating whether to return monthly or annual averages
+#
+#      - ref_period   : two-element list indicating the period w.r.t. which anomalies
+#                       are to be referenced. Set to None if no processing required,
+#                       otherwise expects [start,end] ex. [1951,1980]
 #
 # Output: (numpy arrays)
 #      - time_yrs     : Array with years over which data is available.
@@ -109,6 +116,18 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq):
     value = np.copy(data.variables['tempanomaly'])
     value[value == fillval] = np.NAN
 
+    if ref_period:
+        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+        # loop over months
+        for i in range(12):
+            m = i+1
+            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            indsm = [j for j,v in enumerate(dates) if v.month == m]
+            climo_month[i] = np.nanmean(value[indsmref], axis=0)
+            value[indsm] = (value[indsm] - climo_month[i])
+    else:
+        print('Warning: using default reference period defining temperature anomalies for GISTEMP product.')
+    
     if outfreq == 'annual':
         # List years available in dataset and sort
         years = list(set([d.year for d in dates])) # 'set' is used to get unique values in list
@@ -144,7 +163,7 @@ def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq):
 #==========================================================================================
 
 
-def read_gridded_data_HadCRUT(data_dir,data_file,data_vars,outfreq):
+def read_gridded_data_HadCRUT(data_dir,data_file,data_vars,outfreq,ref_period):
 #==========================================================================================
 #
 # Reads the monthly data of surface air temperature anomalies from the HadCRUT gridded 
@@ -159,6 +178,10 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars,outfreq):
 #                       Here should simply be ['Tsfc'], as only sfc temperature 
 #                       data (anomalies) are contained in the file.
 #      - outfreq      : string indicating whether to return monthly or annual averages
+#
+#      - ref_period   : two-element list indicating the period w.r.t. which anomalies
+#                       are to be referenced. Set to None if no processing required,
+#                       otherwise expects [start,end] ex. [1951,1980]
 #
 # Output: (numpy arrays)
 #      - time_yrs     : Array with years over which data is available.
@@ -205,6 +228,18 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars,outfreq):
     value = np.copy(data.variables['temperature_anomaly'])
     value[value == -1e+30] = np.NAN
 
+    if ref_period:
+        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+        # loop over months
+        for i in range(12):
+            m = i+1
+            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            indsm = [j for j,v in enumerate(dates) if v.month == m]
+            climo_month[i] = np.nanmean(value[indsmref], axis=0)
+            value[indsm] = (value[indsm] - climo_month[i])
+    else:
+        print('Warning: using default reference period defining temperature anomalies for HadCRUT product.')
+
     if outfreq == 'annual':
         # List years available in dataset and sort
         years = list(set([d.year for d in dates])) # 'set' is used to get unique values in list
@@ -240,7 +275,7 @@ def read_gridded_data_HadCRUT(data_dir,data_file,data_vars,outfreq):
 #==========================================================================================
 
 
-def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq):
+def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq,ref_period):
 #==========================================================================================
 #
 # Reads the monthly data of surface air temperature anomalies from the BerkeleyEarth gridded 
@@ -256,6 +291,10 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq):
 #                       data (anomalies) are contained in the file.
 #
 #      - outfreq      : string indicating whether to return monthly or annual averages
+#
+#      - ref_period   : two-element list indicating the period w.r.t. which anomalies
+#                       are to be referenced. Set to None if no processing required,
+#                       otherwise expects [start,end] ex. [1951,1980]
 #
 # Output: (numpy arrays)
 #      - time_yrs     : Array with years over which data is available.
@@ -310,6 +349,18 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq):
     value = np.copy(data.variables['temperature'])    
     value[value == fillval] = np.NAN
 
+    if ref_period:
+        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+        # loop over months
+        for i in range(12):
+            m = i+1
+            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            indsm = [j for j,v in enumerate(dates) if v.month == m]
+            climo_month[i] = np.nanmean(value[indsmref], axis=0)
+            value[indsm] = (value[indsm] - climo_month[i])
+    else:
+        print('Warning: using default reference period defining temperature anomalies for BEST product.')
+    
     if outfreq == 'annual':
         # List years available in dataset and sort
         years = list(set([d.year for d in dates])) # 'set' is used to get unique values in list
@@ -344,7 +395,7 @@ def read_gridded_data_BerkeleyEarth(data_dir,data_file,data_vars,outfreq):
 
 #==========================================================================================
 
-def read_gridded_data_MLOST(data_dir,data_file,data_vars,outfreq):
+def read_gridded_data_MLOST(data_dir,data_file,data_vars,outfreq,ref_period):
 #==========================================================================================
 #
 # Reads the monthly data of surface air temperature anomalies from the MLOST NOAA/NCDC 
@@ -360,6 +411,10 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars,outfreq):
 #                       data (anomalies) are contained in the file.
 #
 #      - outfreq      : string indicating whether to return monthly or annual averages
+#
+#      - ref_period   : two-element list indicating the period w.r.t. which anomalies
+#                       are to be referenced. Set to None if no processing required,
+#                       otherwise expects [start,end] ex. [1951,1980]
 #
 # Output: (numpy arrays)
 #      - time_yrs     : Array with years over which data is available.
@@ -407,6 +462,18 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars,outfreq):
     value = np.copy(data.variables['air'])
     value[value == fillval] = np.NAN
 
+    if ref_period:
+        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+        # loop over months
+        for i in range(12):
+            m = i+1
+            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+            indsm = [j for j,v in enumerate(dates) if v.month == m]
+            climo_month[i] = np.nanmean(value[indsmref], axis=0)
+            value[indsm] = (value[indsm] - climo_month[i])
+    else:
+        print('Warning: using default reference period defining temperature anomalies for MLOST product.')
+    
     if outfreq == 'annual':
         # List years available in dataset and sort
         years = list(set([d.year for d in dates])) # 'set' is used to get unique values in list
@@ -442,7 +509,7 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars,outfreq):
 
 #==========================================================================================
 
-def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies,outfreq):
+def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies,ref_period,outfreq):
 #==========================================================================================
 #
 # Reads the monthly data of surface air temperature anomalies from the GPCC 
@@ -459,6 +526,9 @@ def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies,outfreq):
 #
 #      - out_anomalies: Boolean indicating whether anomalies w.r.t. a referenced period
 #                       are to be csalculated and provided as output
+#
+#      - ref_period   : two-element list indicating the period w.r.t. which anomalies
+#                       are to be referenced. Use [start,end] ex. [1951,1980]
 #
 #      - outfreq      : string indicating whether to return monthly or annual averages
 #
@@ -511,16 +581,19 @@ def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies,outfreq):
     # Calculate anomalies w.r.t. reference period, if out_anomalies is set to True in
     # class calibration_precip_GPCC() in LMR_calibrate.py
     if out_anomalies:
-        ref_period = [1951,1980] # same as GISTEMP temperature anomalies
-        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
-        # loop over months
-        for i in range(12):
-            m = i+1
-            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
-            indsm = [j for j,v in enumerate(dates) if v.month == m]
-            climo_month[i] = np.nanmean(value[indsmref], axis=0)
-            value[indsm] = (value[indsm] - climo_month[i])
-    
+        if ref_period and type(ref_period) in [list,tuple] and len(ref_period) == 2:
+            climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+            # loop over months
+            for i in range(12):
+                m = i+1
+                indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+                indsm = [j for j,v in enumerate(dates) if v.month == m]
+                climo_month[i] = np.nanmean(value[indsmref], axis=0)
+                value[indsm] = (value[indsm] - climo_month[i])
+        else:
+            raise SystemExit('In read_gridded_data_GPCC: out_anomalies is set to True,'
+                             ' but a reference period is not properly defined. Exiting.')
+
     if outfreq == 'annual':
         # List years available in dataset and sort
         years = list(set([d.year for d in dates])) # 'set' is used to get unique values in list
@@ -556,7 +629,7 @@ def read_gridded_data_GPCC(data_dir,data_file,data_vars,out_anomalies,outfreq):
     
 #==========================================================================================
 
-def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,outfreq):
+def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,ref_period,outfreq):
 #==========================================================================================
 #
 # Reads the monthly data of Palmer Drought Severity Index (PDSI) anomalies from the
@@ -574,6 +647,9 @@ def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,outfreq
 #
 #      - out_anomalies: Boolean indicating whether anomalies w.r.t. a referenced period
 #                       are to be calculated and provided as output
+#
+#      - ref_period   : two-element list indicating the period w.r.t. which anomalies
+#                       are to be referenced. Use [start,end] ex. [1951,1980]
 #
 #      - outfreq      : string indicating whether to return monthly or annual averages
 #
@@ -626,16 +702,19 @@ def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,outfreq
     # Calculate anomalies w.r.t. reference period, if out_anomalies is set to True in class calibration_precip_DaiPDSI()
     # in LMR_calibrate.py
     if out_anomalies:
-        ref_period = [1951,1980] # same as GISTEMP temperature anomalies
-        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
-        # loop over months
-        for i in range(12):
-            m = i+1
-            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
-            indsm = [j for j,v in enumerate(dates) if v.month == m]
-            climo_month[i] = np.nanmean(value[indsmref], axis=0)
-            value[indsm] = (value[indsm] - climo_month[i])
-    
+        if ref_period and type(ref_period) in [list,tuple] and len(ref_period) == 2:
+            climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+            # loop over months
+            for i in range(12):
+                m = i+1
+                indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+                indsm = [j for j,v in enumerate(dates) if v.month == m]
+                climo_month[i] = np.nanmean(value[indsmref], axis=0)
+                value[indsm] = (value[indsm] - climo_month[i])
+        else:
+            raise SystemExit('In read_gridded_data_DaiPDSI: out_anomalies is set to True,'
+                             ' but a reference period is not properly defined. Exiting.')
+
     if outfreq == 'annual':
         # List years available in dataset and sort
         years = list(set([d.year for d in dates])) # 'set' is used to get unique values in list
@@ -671,7 +750,7 @@ def read_gridded_data_DaiPDSI(data_dir,data_file,data_vars,out_anomalies,outfreq
 
 #==========================================================================================
 
-def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,outfreq):
+def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,ref_period,outfreq):
 #==========================================================================================
 #
 # Reads the monthly data of Standardized Precipitation Evapotranspiration Index from
@@ -692,6 +771,9 @@ def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,outfreq):
 #
 #      - out_anomalies: Boolean indicating whether anomalies w.r.t. a referenced period
 #                       are to be calculated and provided as output
+#
+#      - ref_period   : two-element list indicating the period w.r.t. which anomalies
+#                       are to be referenced. Use [start,end] ex. [1951,1980]
 #
 #      - outfreq      : string indicating whether to return monthly or annual averages
 #
@@ -745,15 +827,18 @@ def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,outfreq):
     # Calculate anomalies w.r.t. reference period, if out_anomalies is set to True in class calibration_precip_DaiPDSI()
     # in LMR_calibrate.py
     if out_anomalies:
-        ref_period = [1951,1980] # same as GISTEMP temperature anomalies
-        climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
-        # loop over months
-        for i in range(12):
-            m = i+1
-            indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
-            indsm = [j for j,v in enumerate(dates) if v.month == m]
-            climo_month[i] = np.nanmean(value[indsmref], axis=0)
-            value[indsm] = (value[indsm] - climo_month[i])
+        if ref_period and type(ref_period) in [list,tuple] and len(ref_period) == 2:
+            climo_month = np.zeros([12, len(lat), len(lon)], dtype=float)
+            # loop over months
+            for i in range(12):
+                m = i+1
+                indsmref = [j for j,v in enumerate(dates) if v.year >= ref_period[0] and v.year <= ref_period[1] and v.month == m]
+                indsm = [j for j,v in enumerate(dates) if v.month == m]
+                climo_month[i] = np.nanmean(value[indsmref], axis=0)
+                value[indsm] = (value[indsm] - climo_month[i])
+        else:
+            raise SystemExit('In read_gridded_data_SPEI: out_anomalies is set to True,'
+                             ' but a reference period is not properly defined. Exiting.')
     
     if outfreq == 'annual':
         # List years available in dataset and sort

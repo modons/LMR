@@ -10,6 +10,9 @@ Revisions:
   [R. Tardif, U. of Washington, May 2016]
 - Addition of the SPEI dataset as a possible calibration moisture source.
   [R. Tardif, U. of Washington, December 2016]
+- Added parameter explicitely defining a reference period in the calculation
+  of anomalies in functions tasked with uploading instrumental-era calibration 
+  datasets. [R. Tardif, U. of Washington, February 2018]
 
 """
 # -------------------------------------------------------------------------------
@@ -58,6 +61,8 @@ class calibration_GISTEMP(calibration_master):
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
+    # reference period used to define anomalies (None: stick with product's definition)
+    anom_reference_period = None
     
     # read the data
     def read_calibration(self):
@@ -65,7 +70,8 @@ class calibration_GISTEMP(calibration_master):
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GISTEMP(self.datadir_calib,
                                                                                     self.datafile_calib,
                                                                                     self.calib_vars,
-                                                                                    self.outfreq)
+                                                                                    self.outfreq,
+                                                                                    self.anom_reference_period)
 
 
 # -------------------------------------------------------------------------------
@@ -78,6 +84,8 @@ class calibration_HadCRUT(calibration_master):
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
+    # reference period used to define anomalies (None: stick with product's definition)
+    anom_reference_period = None
 
     # read the data
     def read_calibration(self):
@@ -85,7 +93,8 @@ class calibration_HadCRUT(calibration_master):
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_HadCRUT(self.datadir_calib,
                                                                                     self.datafile_calib,
                                                                                     self.calib_vars,
-                                                                                    self.outfreq)
+                                                                                    self.outfreq,
+                                                                                    self.anom_reference_period)
 
 
 # -------------------------------------------------------------------------------
@@ -98,6 +107,8 @@ class calibration_BerkeleyEarth(calibration_master):
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
+    # reference period used to define anomalies (None: stick with product's definition)
+    anom_reference_period = None
     
     # read the data
     def read_calibration(self):
@@ -106,7 +117,8 @@ class calibration_BerkeleyEarth(calibration_master):
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,
                                                                                           self.datafile_calib,
                                                                                           self.calib_vars,
-                                                                                          self.outfreq)
+                                                                                          self.outfreq
+                                                                                          self.anom_reference_period)
 
 # -------------------------------------------------------------------------------
 # *** MLOST class --------------------------------------------------
@@ -118,6 +130,8 @@ class calibration_MLOST(calibration_master):
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
+    # reference period used to define anomalies (None: stick with product's definition)
+    anom_reference_period = None
     
     # read the data
     def read_calibration(self):
@@ -126,7 +140,8 @@ class calibration_MLOST(calibration_master):
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_MLOST(self.datadir_calib,
                                                                                   self.datafile_calib,
                                                                                   self.calib_vars,
-                                                                                  self.outfreq)
+                                                                                  self.outfreq,
+                                                                                  self.anom_reference_period)
 
 
 # -------------------------------------------------------------------------------
@@ -135,16 +150,15 @@ class calibration_MLOST(calibration_master):
 class calibration_precip_GPCC(calibration_master):
 
     source = 'GPCC'
-    #datafile_calib   = 'GPCC_precip.mon.total.0.5x0.5.v6.nc'
-    #datafile_calib   = 'GPCC_precip.mon.total.1x1.v6.nc'
-    #datafile_calib   = 'GPCC_precip.mon.total.2.5x2.5.v6.nc'
     datafile_calib   = 'GPCC_precip.mon.flux.1x1.v6.nc'
-
     dataformat_calib = 'NCD'
     calib_vars = ['precip']
-    out_anomalies = True
     outfreq = 'monthly'
-    
+    # read_calibration() to return anomalies w.r.t. a reference period (True or False)
+    out_anomalies = True
+    # reference period used to define anomalies, ex. [1951,1980]
+    anom_reference_period = [1951,1980] # same as GISTEMP temperature anomalies
+
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_GPCC
@@ -153,6 +167,7 @@ class calibration_precip_GPCC(calibration_master):
                                                                                  self.datafile_calib,
                                                                                  self.calib_vars,
                                                                                  self.out_anomalies,
+                                                                                 self.anom_reference_period,
                                                                                  self.outfreq)
 
 
@@ -166,7 +181,10 @@ class calibration_precip_DaiPDSI(calibration_master):
 
     dataformat_calib = 'NCD'
     calib_vars = ['pdsi']
+    # read_calibration() to return anomalies w.r.t. a reference period (True or False)
     out_anomalies = True
+    # reference period used to define anomalies, ex. [1951,1980]
+    anom_reference_period = [1951,1980] # same as GISTEMP temperature anomalies
     outfreq = 'monthly'
     
     # read the data
@@ -177,6 +195,7 @@ class calibration_precip_DaiPDSI(calibration_master):
                                                                                     self.datafile_calib,
                                                                                     self.calib_vars,
                                                                                     self.out_anomalies,
+                                                                                    self.anom_reference_period,
                                                                                     self.outfreq)
 
 
@@ -190,7 +209,10 @@ class calibration_precip_SPEI(calibration_master):
 
     dataformat_calib = 'NCD'
     calib_vars = ['spei']
+    # read_calibration() to return anomalies w.r.t. a reference period (True or False)
     out_anomalies = True
+    # reference period used to define anomalies, ex. [1951,1980]
+    anom_reference_period = [1951,1980] # same as GISTEMP temperature anomalies
     outfreq = 'monthly'
     
     # read the data
@@ -201,4 +223,5 @@ class calibration_precip_SPEI(calibration_master):
                                                                                  self.datafile_calib,
                                                                                  self.calib_vars,
                                                                                  self.out_anomalies,
+                                                                                 self.anom_reference_period,
                                                                                  self.outfreq)

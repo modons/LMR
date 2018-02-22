@@ -333,7 +333,8 @@ datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 # Note: Anomalies w.r.t. 1951-1980 mean
 datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
-[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=[1951,1980])
 GIS_time = np.array([d.year for d in gtime])
 nlat_GIS = len(GIS_lat)
 nlon_GIS = len(GIS_lon)
@@ -350,10 +351,11 @@ lon2d_GIS = np.roll(lon2d_GIS,shift=nlon_GIS//2,axis=1)
 GIS_anomaly = np.roll(GIS_anomaly,shift=nlon_GIS//2,axis=2)
 
 # load HadCRUT -----------------------------------------------------------------
-# Note: Anomalies w.r.t. 1961-1990 mean
+# Note: Product is anomalies w.r.t. 1961-1990 mean
 datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
 calib_vars = ['Tsfc']
-[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=[1951,1980])
 CRU_time = np.array([d.year for d in ctime])
 nlat_CRU = len(CRU_lat)
 nlon_CRU = len(CRU_lon)
@@ -373,7 +375,8 @@ CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU//2,axis=2)
 # Note: Anomalies w.r.t. 1951-1980 mean
 datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
 calib_vars = ['Tsfc']
-[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,
+                                                                   outfreq='annual',ref_period=[1951,1980])
 BE_time = np.array([d.year for d in btime])
 nlat_BE = len(BE_lat)
 nlon_BE = len(BE_lon)
@@ -390,10 +393,11 @@ lon2d_BE = np.roll(lon2d_BE,shift=nlon_BE//2,axis=1)
 BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE//2,axis=2)
 
 # load MLOST -------------------------------------------------------------------
-# Note: Anomalies w.r.t. 1961-1990 mean
+# Note: Product is anomalies w.r.t. 1961-1990 mean
 datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
 calib_vars = ['Tsfc']
-[mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,
+                                                                    outfreq='annual',ref_period=[1951,1980])
 MLOST_time = np.array([d.year for d in mtime])
 nlat_MLOST = len(MLOST_lat)
 nlon_MLOST = len(MLOST_lon)

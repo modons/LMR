@@ -169,7 +169,8 @@ print('--------------------------------------------------')
 # load GISTEMP
 datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
-[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=[1951,1980])
 GIS_time = np.array([d.year for d in gtime])
 nlat_GIS = len(GIS_lat)
 nlon_GIS = len(GIS_lon)
@@ -178,7 +179,8 @@ nlon_GIS = len(GIS_lon)
 # load HadCRUT
 datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
 calib_vars = ['Tsfc']
-[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=[1951,1980])
 CRU_time = np.array([d.year for d in ctime])
 
 ## use GMT time series computed by Hadley Centre instead !!!!!!!!!!!!
@@ -190,7 +192,8 @@ CRU_time = np.array([d.year for d in ctime])
 # load BerkeleyEarth
 datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
 calib_vars = ['Tsfc']
-[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,
+                                                                   outfreq='annual',ref_period=[1951,1980])
 BE_time = np.array([d.year for d in btime])
 
 # load NOAA MLOST
