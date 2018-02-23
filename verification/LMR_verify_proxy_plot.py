@@ -44,7 +44,7 @@ from mpl_toolkits.basemap import Basemap
 # ------------------------------
 
 make_plots = True
-make_plots_individual_sites = False
+make_plots_individual_sites = False # not fully enabled yet ...
 make_pdfs = False
 
 # set the default size of the figure in inches. ['figure.figsize'] = width, height;  

@@ -493,8 +493,8 @@ if nb_tot_verif > 0:
         summary_stats_verif[list_sites[k]]['ts_MeanRecon']   = np.mean(ts_recon,axis=0)
         summary_stats_verif[list_sites[k]]['ts_SpreadRecon'] = np.std(ts_recon,axis=0)
         ts_prior = [verif_listdict[j][list_sites[k]]['ts_PriorEnsMean'] for j in inds]
-        summary_stats_verif[list_sites[k]]['ts_MeanPrior']   = np.mean(ts_recon,axis=0)
-        summary_stats_verif[list_sites[k]]['ts_SpreadPrior'] = np.std(ts_recon,axis=0)
+        summary_stats_verif[list_sites[k]]['ts_MeanPrior']   = np.mean(ts_prior,axis=0)
+        summary_stats_verif[list_sites[k]]['ts_SpreadPrior'] = np.std(ts_prior,axis=0)
 
         
     # Dump data to pickle file
@@ -582,8 +582,8 @@ if nb_tot_assim > 0:
         summary_stats_assim[list_sites[k]]['ts_MeanRecon']   = np.mean(ts_recon,axis=0)
         summary_stats_assim[list_sites[k]]['ts_SpreadRecon'] = np.std(ts_recon,axis=0)
         ts_prior = [assim_listdict[j][list_sites[k]]['ts_PriorEnsMean'] for j in inds]
-        summary_stats_assim[list_sites[k]]['ts_MeanPrior']   = np.mean(ts_recon,axis=0)
-        summary_stats_assim[list_sites[k]]['ts_SpreadPrior'] = np.std(ts_recon,axis=0)
+        summary_stats_assim[list_sites[k]]['ts_MeanPrior']   = np.mean(ts_prior,axis=0)
+        summary_stats_assim[list_sites[k]]['ts_SpreadPrior'] = np.std(ts_prior,axis=0)
 
         
     # Dump data to pickle file
