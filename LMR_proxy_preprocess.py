@@ -128,6 +128,26 @@ def main():
 
     main_begin_time = clock.time()
 
+    # first checking that input and output directories exist on disk
+    if not os.path.isdir(datadir):
+        print('ERROR: Directory <<datadir>> does not exist. Please revise your'
+              ' entry for this user-defined parameter.')
+        raise SystemExit(1)
+    else:
+        # check that datadir ends with '/' -> expected thereafter
+        if not datadir[-1] == '/':
+            datadir = datadir+'/'
+
+    if not os.path.isdir(outdir):
+        print('ERROR: Directory <<outdir>> does not exist. Please revise your'
+              ' entry for this user-defined parameter.')
+        raise SystemExit(1)
+    else:
+        # check that outdir ends with '/' -> expected thereafter
+        if not outdir[-1] == '/':
+            outdir = outdir+'/'
+
+    
     if proxy_data_source == 'PAGES2Kv1':
         # ============================================================================
         # PAGES2Kv1 proxy data -------------------------------------------------------
@@ -148,8 +168,19 @@ def main():
 
         datadir = datadir+'LMRdb/ToPandas_'+LMRdb_dbversion+'/'
 
-
         infoDuplicates = datadir+infoDuplicates
+
+        # Some checks
+        if not os.path.isdir(datadir):
+            print('ERROR: Directory % is not found. Directory structure'
+                  ' <<datadir>>/LMRdb/ToPandas_vX.Y.Z is expected.'
+                  ' Please revise your set-up.' %datadir)
+            raise SystemExit(1)
+
+        if eliminate_duplicates and not os.path.isfile(infoDuplicates):
+            print('ERROR: eliminate_duplicates parameter set to True but'
+                  ' required file %s not found! Please rectify.' %infoDuplicates)
+            raise SystemExit(1)
 
 
         meta_outfile = outdir + 'LMRdb_'+LMRdb_dbversion+'_Metadata.df.pckl'
@@ -398,6 +429,12 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     """
 
+    # check that file <<filename>> exists
+    if not os.path.isfile(filename):
+        print('ERROR: File %s does not exist. Please make sure'
+              ' input file is located in right directory.' %filename)
+        raise SystemExit(1)    
+    
     meta_sheet_name = 'Metadata'
     metadata = pd.read_excel(filename, meta_sheet_name)
     # rename 'PAGES ID' column header to more general 'Proxy ID'
@@ -1604,6 +1641,12 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
     sites_data = glob.glob(datadir+"/*.txt")
     nbsites = len(sites_data)
 
+    if nbsites == 0:
+        print('ERROR: NCDC-templated proxy data files not found in directory:'
+              ' %s. Please revise your user-defined parameters or directory/'
+              ' data set-up.' %datadir)
+        raise SystemExit(1)
+        
     # Master dictionary containing all proxy chronologies extracted from the data files.
     proxy_dict_ncdc = {}
     dupelist = []
@@ -1791,8 +1834,12 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
                                        'p':merged_dict[siteID]['climateVariableDirec'], \
                                        'q':None, 'r':None}, index=[counter])
                 # To get seasonality & databases *lists* into columns 'o' and 'p' of DataFrame
-                frame.set_value(counter,'q',merged_dict[siteID]['Seasonality'])
-                frame.set_value(counter,'r',merged_dict[siteID]['Databases'])
+                # To be deprecated - frame.set_value(counter,'q',merged_dict[siteID]['Seasonality'])
+                # To be deprecated - frame.set_value(counter,'r',merged_dict[siteID]['Databases'])
+                frame.at[counter,'q'] = merged_dict[siteID]['Seasonality']
+                frame.at[counter,'r'] = merged_dict[siteID]['Databases']
+
+
                 # Append to main DataFrame
                 metadf = metadf.append(frame)
 
