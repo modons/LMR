@@ -117,7 +117,7 @@ class calibration_BerkeleyEarth(calibration_master):
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,
                                                                                           self.datafile_calib,
                                                                                           self.calib_vars,
-                                                                                          self.outfreq
+                                                                                          self.outfreq,
                                                                                           self.anom_reference_period)
 
 # -------------------------------------------------------------------------------
