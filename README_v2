@@ -120,8 +120,11 @@ You must read and understand the version 1 instructions (README) before proceedi
 
    Command:
    -------
-   To generate the Ye values, from the main LMR code directory, type
-   python misc/build_ye_file.py
+   To generate the Ye values, cd into the 'misc' directory and run
+   python build_ye_file.py [path/to/desired/config.yml]
+
+   Note: While specifying the config.yml is optional, if none is specified it
+   defaults to the config.yml in the LMR_SRC directory.
 
    .npz files containing the Ye values are generated in a /ye_precalc_files
    directory in your <<lmr_path>> directory.
