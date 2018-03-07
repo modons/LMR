@@ -89,18 +89,21 @@ def make_gmt_figure(analysis_data,analysis_time,fsave=None):
 
 """
 
-def make_plot(vplot,grid,savefig=None):
+def make_plot(vplot,grid,figsize=10,savefig=None,vmax=None):
 
     # add a wrap point for smooth plotting
-    vplot_wrap, lon_wrap = add_cyclic_point(vplot, coord=grid.lon[1,:], axis=1)
+    vplot_wrap, lon_wrap = add_cyclic_point(vplot, coord=grid.lon[0,:], axis=1)
 
     # figure size
-    plt.rcParams["figure.figsize"] = [10,10]
+    plt.rcParams["figure.figsize"] = [figsize,figsize]
 
     ax = plt.axes(projection=ccrs.Robinson(central_longitude=-90.))
     ax.coastlines()
     #cs = ax.contourf(lon,lat,vplot,transform=ccrs.PlateCarree(),cmap='bwr')
-    maxv = np.max(np.abs(vplot))
+    if vmax:
+        maxv = vmax
+    else:
+        maxv = np.nanmax(np.abs(vplot))
     cs = ax.pcolormesh(lon_wrap,grid.lat[:,0],vplot_wrap,transform=ccrs.PlateCarree(),cmap='bwr',shading='flat',vmin=-maxv,vmax=maxv)
     plt.colorbar(cs, extend='both', shrink=0.4)
     if savefig:
@@ -108,6 +111,24 @@ def make_plot(vplot,grid,savefig=None):
         plt.savefig(savefig+'.png',dpi=300)
     plt.show()
 
+class Grid(object):
+    def __init__(self,X=None):
+
+        if X:
+        # use first variable set in config file
+            var = list(X.statevars.keys())[0]
+
+            lat = X.prior_dict[var]['lat']
+            lon = X.prior_dict[var]['lon']
+            nlat = np.shape(lat)[0]
+            nlon = np.shape(lon)[1]
+
+            self.lat = lat
+            self.lon = lon
+            self.nlat = nlat
+            self.nlon = nlon
+            self.Nens = X.Nens
+            self.nens = X.Nens
 
 def make_grid(X):
     # make an empty class as a handy container for grid information
@@ -769,8 +790,11 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
         calib_vars = ['Tsfc']
         [gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,'annual',[satime,eatime])
         GIS_time = np.array([d.year for d in gtime])
-        nlat_GIS = len(GIS_lat)
+        # fix longitude shift
         nlon_GIS = len(GIS_lon)
+        nlat_GIS = len(GIS_lat)
+        GIS_lon = np.roll(GIS_lon,shift=nlon_GIS//2,axis=0)
+        GIS_anomaly = np.roll(GIS_anomaly,shift=nlon_GIS//2,axis=2)
         analysis_data['GIS']=GIS_anomaly
         analysis_time['GIS']=GIS_time
         analysis_lat['GIS']=GIS_lat
@@ -782,6 +806,11 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
         calib_vars = ['Tsfc']
         [ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,'annual',[satime,eatime])
         CRU_time = np.array([d.year for d in ctime])
+       # fix longitude shift
+        nlon_CRU = len(CRU_lon)
+        nlat_CRU = len(CRU_lat)
+        CRU_lon = np.roll(CRU_lon,shift=nlon_CRU//2,axis=0)
+        CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU//2,axis=2)
         analysis_data['CRU']=CRU_anomaly
         analysis_time['CRU']=CRU_time
         analysis_lat['CRU']=CRU_lat
@@ -791,31 +820,32 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
         print('loading BEST...')
         datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
         calib_vars = ['Tsfc']
-        [btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,'annual',[satime,eatime])
+        [btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,'annual',ref_period=[satime,eatime]
+)
         BE_time = np.array([d.year for d in btime])
+        # fix longitude shift
+        nlon_BE = BE_lon.shape[0]
+        BE_lon = np.roll(BE_lon,shift=nlon_BE//2,axis=0)
+        BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE//2,axis=2)
         analysis_data['BE']=BE_anomaly
         analysis_time['BE']=BE_time
         analysis_lat['BE']=BE_lat
         analysis_lon['BE']=BE_lon
 
         # load NOAA MLOST
+        # Note: Product is anomalies w.r.t. 1961-1990 mean
         print('loading MLOST...')
-        path = datadir_calib + '/NOAA/'
-        fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v4.0.0.201506.asc'
-        f = open(path+fname,'r')
-        dat = csv.reader(f)
-        mlost_time = []
-        mlost = []
-        for row in dat:
-            # this is the year
-            mlost_time.append(int(row[0].split()[0]))
-            # this is the GMT temperature anomaly
-            mlost.append(float(row[0].split()[1]))
-        # convert to numpy arrays
-        mlost_gm = np.array(mlost)
-        MLOST_time = np.array(mlost_time)
-        analysis_data['MLOST']=mlost_gm
+        #path = datadir_calib + '/NOAA/'
+        datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
+        calib_vars = ['Tsfc']
+        [mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,outfreq='annual',ref_period=[satime,eatime])
+        MLOST_time = np.array([d.year for d in mtime])
+        nlat_MLOST = len(MLOST_lat)
+        nlon_MLOST = len(MLOST_lon)
+        analysis_data['MLOST']=MLOST_anomaly
         analysis_time['MLOST']=MLOST_time
+        analysis_lat['MLOST']=MLOST_lat
+        analysis_lon['MLOST']=MLOST_lon
 
     if full_field:
         print('returning spatial fields...')
@@ -876,3 +906,37 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
     print('returning global means...')
     return analysis_data,analysis_time,analysis_lat,analysis_lon
 
+
+def make_obs(ob_lat,ob_lon,dat_lat,dat_lon,dat,verbose=False):
+
+    """
+    make observations from a gridded dataset given lat and lon locations
+    
+    Inputs:
+    ob_lat, ob_lon: vector lat,lon coordinates of observations. 
+    dat_lat,dat_lon: vector lat,lon coordinates of input data
+    dat: array of input data from which observations are drawn. (ntimes,nlat,nlon)
+
+    Output:
+    obs: the observations [nobs,nyears]
+    """
+    
+    nyears = dat.shape[0]
+    if verbose: print('nyears: '+str(nyears))
+
+    nobs = len(ob_lat)*len(ob_lon)
+    if verbose: print('nobs: '+str(nobs))
+
+    # initialize
+    obs = np.zeros([nobs,nyears])
+    k = -1
+    # make the obs
+    for lon in ob_lon:
+        for lat in ob_lat:
+            k = k + 1
+            dist = LMR_utils.get_distance(lon,lat,dat_lon,dat_lat)
+            jind, kind = np.unravel_index(dist.argmin(),dist.shape)
+            obs[k,:] = dat[:,jind,kind]
+            #print(lat,jind,kind,ob[100,k])
+            
+    return obs
