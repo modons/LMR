@@ -1,17 +1,49 @@
 
 Last Millennium Reanalysis (LMR) project codebase release 2.0
 
-Originators: R. Tardif, W. A. Perkins, G. J. Hakim
+Originators: R. Tardif, W. A. Perkins, G. J. Hakim, J. Emile-Geay
              University of Washington
-             September 2016
+             September 2016 - Updated March 2018
 
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 These are instructions for running version 2 ("v2") of the Last Millennium Reanalysis Project data assimilation code.
 
-You must read and understand the version 1 instructions (README) before proceeding.
 
-1) Build "LMR-ready" NCDC proxy database for assimilation (this builds the Pandas dataframes)
+
+0) Code dependencies
+your environment must have all of the dependencies needed by the LMR code. We strongly recommend using the Anaconda Python distribution.
+https://www.continuum.io/downloads
+
+Install the latest 3.x version. If at any point there is an error for a missing dependency, install it using conda (the installer that comes with Anaconda).
+
+The easiest way to handle dependencies it to use the lmr_pyenv.yml file in the /misc directory.
+
+cd misc
+conda env create -f lmr_pyenv.yml
+source activate lmr_py3 (conda <4.4; c shells not supported)
+
+if you are using a conda version >=4.4, then replace the last line by:
+ conda activate lmr_py3
+
+1) File dependencies
+Download this tar file: http://www.atmos.washington.edu/~hakim/lmr_data/LMR_data_control.tar
+
+and move it to a directory where you will unpack it; here we will call that directory /home/disk/foo/LMR.
+This directory must be readable from wherever you plan to perform the experiment.
+
+tar -xvf LMR_data_control.tar
+
+will give you something that looks like this in the /home/disk/foo/LMR directory:
+
+data/  LMR_data_control.tar  PSM/
+
+You need to softlink one file in the data/model/ccsm4_last_millenium/ subdirectory:
+
+cd data/model/ccsm4_last_millenium/
+ln -s tas_Amon_CCSM4_past1000_085001-185012.nc tas_sfc_Amon_CCSM4_past1000_085001-185012.nc
+
+2) Build "LMR-ready" NCDC proxy database for assimilation (this builds the Pandas dataframes)
 
    Module: LMR_proxy_preprocess.py
    ------
@@ -19,33 +51,33 @@ You must read and understand the version 1 instructions (README) before proceedi
    User-modifiable variables:
    -------------------------
    - proxy_data_source: 'NCDC' or 'PAGES2K'
-   
-   - dbversion: Version of the database to generate. ex: v0.1.0	
+
+   - dbversion: Version of the database to generate. ex: v0.1.0
      Note: Only relevant if proxy_data_source = 'NCDC'
 
    - eliminate_duplicates: True or False
      Note: Only relevant if proxy_data_source = 'NCDC'
 
-   - datadir: Directory where original proxy datafiles are located. 
-     . For proxy_data_source = 'PAGES2K': This is the directory where the 
+   - datadir: Directory where original proxy datafiles are located.
+     . For proxy_data_source = 'PAGES2K': This is the directory where the
        .xlsx file containing the proxy data is found.
 
      . For proxy_data_source = 'NCDC': This is the directory where subdirectories
-       NCDC/ToPandas_<<dbversion>> are located. 
-       The <<datadir>>/NCDC/ToPandas_<<dbversion>> directory should contain all 
+       NCDC/ToPandas_<<dbversion>> are located.
+       The <<datadir>>/NCDC/ToPandas_<<dbversion>> directory should contain all
        the NCDC-templated .txt files corresponding to the proxy records the user
-       wants to include in the database of proxies to be assimilated. 
+       wants to include in the database of proxies to be assimilated.
 
-   - outdir: Directory where the .pckl files containing the Pandas dataframes 
-     corresponding to the proxy metadata and actual yearly proxy data will be 
+   - outdir: Directory where the .pckl files containing the Pandas dataframes
+     corresponding to the proxy metadata and actual yearly proxy data will be
      generated.
 
-   Command: 
+   Command:
    -------
    To build the LMR-ready proxy datafiles, type
    python LMR_proxy_preprocess.py
 
-2) Linear PSM build facility (this will calibrate the linear PSMs on instrumental data for the chosen independent variables):
+3) Linear PSM build facility (this will calibrate the linear PSMs on instrumental data for the chosen independent variables):
 
    Module: LMR_PSMbuild.py
    ------
@@ -53,29 +85,29 @@ You must read and understand the version 1 instructions (README) before proceedi
    User-modifiable variables:
    -------------------------
    * In class v_core:
-     - lmr_path: Master directory of LMR. 
-       Datafiles containing PSM calibration parameters will be generated in 
-       <<lmr_path>>/PSM directory. 
+     - lmr_path: Master directory of LMR.
+       Datafiles containing PSM calibration parameters will be generated in
+       <<lmr_path>>/PSM directory.
 
      - calib_period: Tuple defining the period over which to consider
        the data (proxy and calibration dataset for PSM calibration.
        Ex. (1850,2000)
 
    * In class v_proxies:
-     - use_from: List defining the proxy database to 
+     - use_from: List defining the proxy database to
        Either ['pages'] or ['NCDC']
 
    * In class _ncdc:
-     - dbversion: Version of the proxy database for which to calibrate the 
+     - dbversion: Version of the proxy database for which to calibrate the
        linear PSMs. ex: v0.1.0
        Note: Only relevant if use_from is set to ['NCDC']
 
-     - proxy_resolution: List defining the temporal resoluton of proxy 
-       records for which to calibrate a linear PSM. Keep as [1.0] for now. 
-     
+     - proxy_resolution: List defining the temporal resoluton of proxy
+       records for which to calibrate a linear PSM. Keep as [1.0] for now.
+
      - proxy_timeseries_kind: String defining the "kind" of proxy timeseries
-       to use during PSM calibration. 
-       Expected values are: 'asis' (keep data as provided in the pandas dataframe file) 
+       to use during PSM calibration.
+       Expected values are: 'asis' (keep data as provided in the pandas dataframe file)
        or 'anom' (temporal mean removed)
 
    * In class v_psm:
@@ -83,7 +115,7 @@ You must read and understand the version 1 instructions (README) before proceedi
        Either 'linear' or 'bilinear'
 
      - avgPeriod: String defining the averaging period over which the calibration is
-       to be performed. Either 'annual' or 'season' are allowed. 
+       to be performed. Either 'annual' or 'season' are allowed.
 
    * In class _linear:
      - Uncomment the listed datatag_calib and datafile_calib that correspond
@@ -95,20 +127,20 @@ You must read and understand the version 1 instructions (README) before proceedi
 
      - Uncomment the listed datatag_calib_P and datafile_calib_P that correspond
        to precipitation/moisture dataset you want to use to calibrate the PSMs.
-   
+
    Command:
    -------
    To calibrate linear PSMs, type
    python LMR_PSMbuild.py
 
 
-3) Pre-calculating Ye values (this will compute and store the observation estimates for a given set of PSMs and a prior dataset):
+4) Pre-calculating Ye values (this will compute and store the observation estimates for a given set of PSMs and a prior dataset):
 
    Module: misc/build_ye_file.py
    ------
-   
+
    This module uses the current LMR_config.py (experiment configuration file) to
-   determine the Ye values to generate. 
+   determine the Ye values to generate.
    Key experiment parameters for this stage are:
    - proxy database ('pages' or 'NCDC')
    - PSM types associated to proxy types ("proxy_psm_type" dictionary
@@ -130,6 +162,5 @@ You must read and understand the version 1 instructions (README) before proceedi
    directory in your <<lmr_path>> directory.
 
 
-4) Run the experiment:
-python LMR_wrapper.py
-
+5) Run the experiment:
+python LMR_wrapper.py  #update this with LMR_lite?
