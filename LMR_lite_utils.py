@@ -30,6 +30,7 @@ from time import time
 import LMR_prior
 import LMR_proxy_pandas_rework
 import LMR_utils
+import pandas as pd
 
 def make_gmt_figure(analysis_data,analysis_time,fsave=None):
 
@@ -442,7 +443,7 @@ def load_prior(cfg,verbose=False):
     return X, Xb_one
 
 
-def load_proxies(cfg,verbose=False):
+def load_proxies(cfg,verbose=True):
 
     core = cfg.core
 
@@ -468,10 +469,10 @@ def load_proxies(cfg,verbose=False):
     return prox_manager
 
 
-def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,verbose=False):
+def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox_inds=None,verbose=False):
  
     begin_time = time()
-
+    print(len(prox_inds))
     core = cfg.core
     recon_timescale = core.recon_timescale
 
@@ -494,7 +495,16 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,verb
             # exclude lower bound to not include same obs in adjacent time intervals
             Yvals = Y.values[(Y.values.index > start_yr) & (Y.values.index <= end_yr)]
         else:
-            Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+            # use all available proxies from config.yml
+            if prox_inds is None:
+                Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+            # use only the selected proxies (e.g., randomly filtered post-config)
+            else:
+                if proxy_idx in prox_inds: 
+                    Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+                else:
+                    Yvals = pd.DataFrame()
+                    
         if Yvals.empty: 
             if verbose: print('no obs for this year')
             pass
@@ -607,7 +617,9 @@ def Kalman_optimal(Y,vR,Ye,Xb,verbose=False):
     lam = np.sqrt(1. - (1./(1. + s**2)))        
     T = np.dot(V.T,np.diag(lam))
     Xap = np.dot(Xbp,T)    
-
+    # perturbations must have zero mean
+    Xap = Xap - Xap.mean(axis=1,keepdims=True)
+    
     elapsed_time = time() - begin_time
     if verbose:
         print('-----------------------------------------------------')
@@ -630,7 +642,8 @@ def Kalman_optimal_sklearn(Y,vR,Ye,Xb,mindim=None,transform_only=False,verbose=F
     Y: observation vector (p x 1)
     vR: observation error variance vector (p x 1)
     Ye: prior-estimated observation vector (p x n)
-    Xbp: prior ensemble perturbation matrix (m x n) 
+    Xb: prior ensemble matrix (m x n) 
+    mindim: number of singular values to use
     """    
 
     from sklearn.utils.extmath import randomized_svd
@@ -679,6 +692,8 @@ def Kalman_optimal_sklearn(Y,vR,Ye,Xb,mindim=None,transform_only=False,verbose=F
         # ensemble mean analysis in the original space
         xam = xbm + xinc
         Xap = np.dot(Xbp,T)    
+        # perturbations must have zero mean
+        Xap = Xap - Xap.mean(axis=1,keepdims=True)
 
     elapsed_time = time() - begin_time
     if verbose:
@@ -857,6 +872,7 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
             [gis_gm,_,_] = LMR_utils.global_hemispheric_means(GIS_anomaly,GIS_lat)
             [cru_gm,_,_] = LMR_utils.global_hemispheric_means(CRU_anomaly,CRU_lat)
             [be_gm,_,_]  = LMR_utils.global_hemispheric_means(BE_anomaly,BE_lat)
+            [mlost_gm,_,_]  = LMR_utils.global_hemispheric_means(MLOST_anomaly,MLOST_lat)
 
             # set common reference period to define anomalies
             smatch, ematch = LMR_utils.find_date_indices(GIS_time,satime,eatime)
@@ -929,6 +945,9 @@ def make_obs(ob_lat,ob_lon,dat_lat,dat_lon,dat,verbose=False):
 
     # initialize
     obs = np.zeros([nobs,nyears])
+    obs_ind_lat = np.zeros(nobs)
+    obs_ind_lon = np.zeros(nobs)
+  
     k = -1
     # make the obs
     for lon in ob_lon:
@@ -937,6 +956,31 @@ def make_obs(ob_lat,ob_lon,dat_lat,dat_lon,dat,verbose=False):
             dist = LMR_utils.get_distance(lon,lat,dat_lon,dat_lat)
             jind, kind = np.unravel_index(dist.argmin(),dist.shape)
             obs[k,:] = dat[:,jind,kind]
+            obs_ind_lat[k] = jind
+            obs_ind_lon[k] = kind
+
             #print(lat,jind,kind,ob[100,k])
             
-    return obs
+    return obs,obs_ind_lat,obs_ind_lon
+
+# started from: stackoverflow.com/201618804
+def smooth(y,box_pts):
+    box = np.ones(box_pts)/box_pts
+    y_smooth = np.convolve(y,box,mode='same')
+    # remove endpoints with artifacts
+    ii = np.int(box_pts/2.)
+    y_smooth[0:ii] = np.nan
+    y_smooth[-ii:] = np.nan
+
+    return y_smooth
+
+def smooth_121(y):
+    # 1-2-1 smoother by convolution. leaves last 3 points biased
+    box = np.array([1.,2.,1.])/4.
+    y_smooth = np.convolve(y,box,mode='same')
+    y_smooth[-2:-1] = np.nan
+    # remove endpoints with artifacts
+    y_smooth[0:1] = np.nan
+    y_smooth[-1:] = np.nan
+
+    return y_smooth
