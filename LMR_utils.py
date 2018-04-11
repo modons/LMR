@@ -782,6 +782,7 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
         cyclic_idx_start, = np.where(lon_diff_negative)
         lon_shift = -(cyclic_idx_start+1)
         X_lon2D = np.roll(X_lon2D, lon_shift, axis=1)
+        X_lat2D = np.roll(X_lat2D, lon_shift, axis=1)
     else:
         lon_shift = None
 
