@@ -12,7 +12,9 @@ Revisions:
   [R. Tardif, U. of Washington, December 2016]
 - Added parameter explicitely defining a reference period in the calculation
   of anomalies in functions tasked with uploading instrumental-era calibration 
-  datasets. [R. Tardif, U. of Washington, February 2018]
+  datasets. 
+  Parameter now defined in configuration. 
+  [R. Tardif, U. of Washington, February 2018]
 
 """
 # -------------------------------------------------------------------------------
@@ -56,16 +58,13 @@ class calibration_master(object):
 # -------------------------------------------------------------------------------
 class calibration_GISTEMP(calibration_master):
 
-    source = 'GISTEMP'
-    datafile_calib   = 'gistemp1200_ERSSTv4.nc'
+    source = 'GISTEMP'    
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
-    # reference period used to define anomalies (None: stick with product's definition)
-    anom_reference_period = None
     
     # read the data
-    def read_calibration(self):
+    def read_calibration(self):        
         from load_gridded_data import read_gridded_data_GISTEMP
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GISTEMP(self.datadir_calib,
                                                                                     self.datafile_calib,
@@ -80,12 +79,9 @@ class calibration_GISTEMP(calibration_master):
 class calibration_HadCRUT(calibration_master):
 
     source = 'HadCRUT'
-    datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
-    # reference period used to define anomalies (None: stick with product's definition)
-    anom_reference_period = None
 
     # read the data
     def read_calibration(self):
@@ -103,17 +99,13 @@ class calibration_HadCRUT(calibration_master):
 class calibration_BerkeleyEarth(calibration_master):
 
     source = 'BerkeleyEarth'
-    datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
-    # reference period used to define anomalies (None: stick with product's definition)
-    anom_reference_period = None
     
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_BerkeleyEarth
-
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_BerkeleyEarth(self.datadir_calib,
                                                                                           self.datafile_calib,
                                                                                           self.calib_vars,
@@ -126,17 +118,13 @@ class calibration_BerkeleyEarth(calibration_master):
 class calibration_MLOST(calibration_master):
 
     source = 'MLOST'
-    datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['Tsfc']
     outfreq = 'monthly'
-    # reference period used to define anomalies (None: stick with product's definition)
-    anom_reference_period = None
     
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_MLOST
-
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_MLOST(self.datadir_calib,
                                                                                   self.datafile_calib,
                                                                                   self.calib_vars,
@@ -150,19 +138,15 @@ class calibration_MLOST(calibration_master):
 class calibration_precip_GPCC(calibration_master):
 
     source = 'GPCC'
-    datafile_calib   = 'GPCC_precip.mon.flux.1x1.v6.nc'
     dataformat_calib = 'NCD'
     calib_vars = ['precip']
     outfreq = 'monthly'
     # read_calibration() to return anomalies w.r.t. a reference period (True or False)
     out_anomalies = True
-    # reference period used to define anomalies, ex. [1951,1980]
-    anom_reference_period = [1951,1980] # same as GISTEMP temperature anomalies
 
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_GPCC
-
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_GPCC(self.datadir_calib,
                                                                                  self.datafile_calib,
                                                                                  self.calib_vars,
@@ -177,20 +161,15 @@ class calibration_precip_GPCC(calibration_master):
 class calibration_precip_DaiPDSI(calibration_master):
 
     source = 'DaiPDSI'
-    datafile_calib   = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
-
     dataformat_calib = 'NCD'
     calib_vars = ['pdsi']
+    outfreq = 'monthly'
     # read_calibration() to return anomalies w.r.t. a reference period (True or False)
     out_anomalies = True
-    # reference period used to define anomalies, ex. [1951,1980]
-    anom_reference_period = [1951,1980] # same as GISTEMP temperature anomalies
-    outfreq = 'monthly'
-    
+
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_DaiPDSI
-
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_DaiPDSI(self.datadir_calib,
                                                                                     self.datafile_calib,
                                                                                     self.calib_vars,
@@ -205,20 +184,15 @@ class calibration_precip_DaiPDSI(calibration_master):
 class calibration_precip_SPEI(calibration_master):
 
     source = 'SPEI'
-    datafile_calib   = 'spei_monthly_v2.4_190001-201412.nc'
-
     dataformat_calib = 'NCD'
     calib_vars = ['spei']
+    outfreq = 'monthly'
     # read_calibration() to return anomalies w.r.t. a reference period (True or False)
     out_anomalies = True
-    # reference period used to define anomalies, ex. [1951,1980]
-    anom_reference_period = [1951,1980] # same as GISTEMP temperature anomalies
-    outfreq = 'monthly'
     
     # read the data
     def read_calibration(self):
         from load_gridded_data import read_gridded_data_SPEI
-
         [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_SPEI(self.datadir_calib,
                                                                                  self.datafile_calib,
                                                                                  self.calib_vars,

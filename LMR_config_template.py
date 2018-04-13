@@ -69,6 +69,9 @@ Revisions:
    [ A. Perkins & R. Tardif, Univ. of Washington, April 2017 ]
  - Added a boolean flag to activate/deactivate output to analysis_Ye.pckl file.
    [G. Hakim, Univ. of Washington, August 2017] 
+ - Added parameter allowing a user to define the reference period w.r.t. which
+   anomalies in climate variable are calculated. 
+   [ R. Tardif, Univ. of Washington, March 2018 ]
 """
 
 from os.path import join
@@ -269,6 +272,9 @@ class core(ConfigGroup):
     loc_rad = None
 
     inflation_fact = None
+
+    # Reference period w.r.t. which anomalies are to be defined.
+    anom_reference_period = (1951,1980)
     
     #datadir_output = '/home/disk/ice4/hakim/svnwork/lmr/trunk/data'
     #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
@@ -284,6 +290,13 @@ class core(ConfigGroup):
     write_posterior_Ye = False
     # Whether or not to write the full ensemble
     save_full_field = False
+
+    # Possibly regrid the generated reanalysis fields to archive files.
+    # Options: None (no regridding) or 'esmpy'
+    archive_regrid_method = None
+    archive_esmpy_interp_method = 'bilinear'
+    archive_esmpy_regrid_to = 't42'
+
     
     ##** END User Parameters **##
 
@@ -306,6 +319,15 @@ class core(ConfigGroup):
         self.datadir_output = self.datadir_output
         self.archive_dir = self.archive_dir
         self.write_posterior_Ye = self.write_posterior_Ye
+        self.anom_reference_period = self.anom_reference_period
+
+        if self.archive_regrid_method is not None:
+            if self.archive_regrid_method == 'esmpy':
+                self.archive_esmpy_interp_method = self.archive_esmpy_interp_method
+                self.archive_esmpy_grid_def = _GridDef.get_info(self.archive_esmpy_regrid_to)
+            else:
+                raise ValueError('Unrecognized option for regridding to archive files!'
+                                 ' Only None or esmpy are allowed.')
 
         if curr_iter is None:
             self.curr_iter = wrapper.iter_range[0]
@@ -922,6 +944,10 @@ class psm(ConfigGroup):
 
     ##** BEGIN User Parameters **##
 
+    # Period over which data is used to establish a statistical relationship
+    # between proxy and instrumental data (statistical PSMs only)
+    calib_period = (1850,2015)
+    
     # Averaging period for the PSM: 'annual' or 'season'
     avgPeriod = 'annual'
     #avgPeriod = 'season'
@@ -1022,10 +1048,16 @@ class psm(ConfigGroup):
                     filename = ('PSMs_' + '-'.join(proxies.use_from) +
                                 '_' + dbversion +
                                 '_' + self.avgPeriod +
-                                '_' + self.datatag_calib+'.pckl')
+                                '_' + self.datatag_calib +
+                                '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                '.pckl')
                 else:
                     filename = ('PSMs_' + '-'.join(proxies.use_from) +
-                                '_' + self.datatag_calib+'.pckl')
+                                '_' + self.datatag_calib +
+                                '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                '.pckl')
                 self.pre_calib_datafile = join(lmr_path,
                                                'PSM',
                                                filename)
@@ -1158,10 +1190,16 @@ class psm(ConfigGroup):
                     filename_t = ('PSMs_' + '-'.join(proxies.use_from) +
                                   '_' + dbversion +
                                   '_' + self.avgPeriod +
-                                  '_' + self.datatag_calib_T + '.pckl')
+                                  '_' + self.datatag_calib_T +
+                                  '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                  '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                  '.pckl')
                 else:
                     filename_t = ('PSMs_' + '-'.join(proxies.use_from) +
-                                  '_' + self.datatag_calib_T + '.pckl')
+                                  '_' + self.datatag_calib_T +
+                                  '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                  '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                  '.pckl')
                 self.pre_calib_datafile_T = join(lmr_path,
                                                  'PSM',
                                                  filename_t)
@@ -1176,10 +1214,16 @@ class psm(ConfigGroup):
                     filename_p = ('PSMs_' + '-'.join(proxies.use_from) +
                                   '_' + dbversion +
                                   '_' + self.avgPeriod +
-                                  '_' + self.datatag_calib_P + '.pckl')
+                                  '_' + self.datatag_calib_P +
+                                  '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                  '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                  '.pckl')
                 else:
                     filename_p = ('PSMs_' + '-'.join(proxies.use_from) +
-                              '_' + self.datatag_calib_P + '.pckl')
+                                  '_' + self.datatag_calib_P +
+                                  '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                  '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                  '.pckl')
                 self.pre_calib_datafile_P = join(lmr_path,
                                                  'PSM',
                                                  filename_p)
@@ -1302,11 +1346,17 @@ class psm(ConfigGroup):
                                 '_' + dbversion +
                                 '_' + self.avgPeriod +
                                 '_' + self.datatag_calib_T +
-                                '_' + self.datatag_calib_P + '.pckl')
+                                '_' + self.datatag_calib_P +
+                                '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                '.pckl')
                 else:
                     filename = ('PSMs_'+'-'.join(proxies.use_from) +
                                 '_' + self.datatag_calib_T +
-                                '_' + self.datatag_calib_P + '.pckl')
+                                '_' + self.datatag_calib_P +
+                                '_ref' + str(core.anom_reference_period[0]) + '-' + str(core.anom_reference_period[1]) +
+                                '_cal' + str(psm.calib_period[0]) + '-' + str(psm.calib_period[1]) +
+                                '.pckl')
                 self.pre_calib_datafile = join(lmr_path,
                                                  'PSM',
                                                  filename)
@@ -1565,10 +1615,16 @@ class prior(ConfigGroup):
     #    'sos_sfc_Odec'              : 'full',
         }
 
-    # The reference period (in year CE) for calculation of anomalies
-    # ** Valid for prior ccsm3_trace21ka only for now. Use None for all others **
-    # Options: None or tuple indicating the reference period
-    anom_reference = None
+
+    
+    
+    ## The reference period (in year CE) for calculation of anomalies
+    ## ** Valid for prior ccsm3_trace21ka only for now. Use None for all others **
+    ## Options: None or tuple indicating the reference period
+    #anom_reference = None
+
+
+
     
     # boolean : detrend prior?
     # by default, considers the entire length of the simulation
@@ -1585,7 +1641,9 @@ class prior(ConfigGroup):
     #    and higher order patch interpolation
     regrid_method = 'simple'
     # resolution of truncated grid, based on triangular truncation (e.g., use 42 for T42))
+    # note: this option applies only to 'simple' or 'spherical_harmonics' options
     regrid_resolution = 42
+    # for 'esmpy' option
     esmpy_interp_method = 'bilinear'
     esmpy_regrid_to = 't42'
     
@@ -1613,8 +1671,13 @@ class prior(ConfigGroup):
         self.state_variables_info = deepcopy(self.state_variables_info)
         self.detrend = self.detrend
         self.regrid_method = self.regrid_method
-        self.anom_reference = self.anom_reference
 
+        # check if "anom" has been selected for any state variable
+        # and set the anom_reference attribute accordingly
+        if any(self.state_variables[item] for item in self.state_variables.keys()):
+            self.anom_reference = core.anom_reference_period
+        else:
+            self.anom_reference = None
         
         if seed is None:
             seed = core.seed
@@ -1630,7 +1693,7 @@ class prior(ConfigGroup):
         if core.recon_timescale == 1:
             self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
-            # new format for CCSM3 TraCE21ka:
+            # new format for multiyear DTDA reconstructions:
             self.avgInterval = {'multiyear': [core.recon_timescale]}
         else:
             print('ERROR in config.: unrecognized core.recon_timescale!')

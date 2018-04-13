@@ -104,7 +104,7 @@ def LMR_driver_callable(cfg=None):
     state_variables_info = prior.state_variables_info
     regrid_method = prior.regrid_method
     regrid_resolution = prior.regrid_resolution
-
+    
     
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -254,7 +254,7 @@ def LMR_driver_callable(cfg=None):
                         LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, regrid_resolution)
                 elif regrid_method == 'esmpy':
                     target_grid = prior.esmpy_grid_def
-
+                    
                     lat_2d = coords_array_full[:, ind_lat].reshape(nlat, nlon)
                     lon_2d = coords_array_full[:, ind_lon].reshape(nlat, nlon)
 
@@ -268,6 +268,7 @@ def LMR_driver_callable(cfg=None):
                                                        lon_2d,
                                                        nlat,
                                                        nlon,
+                                                       include_poles=target_grid['include_poles'],
                                                        method=prior.esmpy_interp_method)
                 else:
                     print('Exiting! Unrecognized regridding method.')

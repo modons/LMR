@@ -374,9 +374,6 @@ class LinearPSM(BasePSM):
             Diagnostic output flags for calibration method
         """
 
-        # reference period (years) over which calibration anomalies are referenced
-        ref_period = (1900,2000)
-
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
 
@@ -446,14 +443,6 @@ class LinearPSM(BasePSM):
             else:
                 tmp = np.nan
             reg_x[i] = tmp
-            
-        
-        # making sure calibration anomalies are referenced to ref_period
-        # --------------------------------------------------------------
-        # indices of elements in calibration set within ref_period
-        inds, = np.where((cyears>=ref_period[0]) & (cyears<=ref_period[1]))
-        # remove mean over reference period
-        reg_x = reg_x - np.nanmean(reg_x[inds])
         
         
         # ------------------------
@@ -727,11 +716,9 @@ class LinearPSM_TorP(LinearPSM):
                 psm_data_T = self._load_psm_data(config,'temperature')
             psm_site_data_T = psm_data_T[(proxy, site)]
         except (KeyError, IOError) as e:
-            # No precalibration found, have to do it for this proxy
-            # print 'PSM (temperature) not calibrated for:' + str((proxy, site))
-            print(e)
-            print('PSM (temperature) not calibrated for:' +
-                   str((proxy, site)))
+            # No precalibration found for temperature
+            print(' PSM(temperature) not calibrated for:' +
+                  str((proxy, site)))
 
         # Try using pre-calibrated psm_data for **precipitation/moisture**
         try:
@@ -740,9 +727,8 @@ class LinearPSM_TorP(LinearPSM):
             psm_site_data_P = psm_data_P[(proxy, site)]
 
         except (KeyError, IOError) as e:
-            # No precalibration found, have to do it for this proxy
-            print(e)
-            print('PSM (moisture) not calibrated for:' +
+            # No precalibration found for moisture
+            print(' PSM(moisture) not calibrated for:' +
                   str((proxy, site)))
 
         # Check if PSM is calibrated w.r.t. temperature and/or w.r.t.
@@ -764,13 +750,10 @@ class LinearPSM_TorP(LinearPSM):
         # Now check about temperature vs. moisture ...
         if (proxy, site) in psm_data_T.keys() and (proxy, site) in psm_data_P.keys():
             # calibrated for temperature AND for precipitation, check relative goodness of fit 
-            # and assign "sensitivity" & corresponding PSM parameters according to best fit.
-
-            # ... based on PSMmse (variance of residuals)
-            #if psm_site_data_T['PSMmse'] < psm_site_data_P['PSMmse']:
-            # ... based on PSMcorrel
+            # and assign "sensitivity" & corresponding PSM parameters according to best fit.x
+            # ... based on PSM R^2
             if abs(psm_site_data_T['PSMcorrel']) >= abs(psm_site_data_P['PSMcorrel']):
-                # smaller residual errors / or stronger correlation w.r.t. temperature
+                # better fit w.r.t. temperature
                 self.sensitivity = 'temperature'
                 self.corr = psm_site_data_T['PSMcorrel']
                 self.slope = psm_site_data_T['PSMslope']
@@ -778,7 +761,7 @@ class LinearPSM_TorP(LinearPSM):
                 self.R = psm_site_data_T['PSMmse']
                 self.seasonality = psm_site_data_T['Seasonality']
             else:
-                # smaller residual errors / or stronger correlation  w.r.t. precipitation/moisture
+                # better fit w.r.t. precipitation/moisture
                 self.sensitivity = 'moisture'
                 self.corr = psm_site_data_P['PSMcorrel']
                 self.slope = psm_site_data_P['PSMslope']
@@ -803,7 +786,7 @@ class LinearPSM_TorP(LinearPSM):
             self.R = psm_site_data_P['PSMmse']
             self.seasonality = psm_site_data_P['Seasonality']            
         else:
-            raise ValueError('Proxy in database but not found in pre-calibration file... '
+            raise ValueError('Proxy in database but not found in pre-calibration files... '
                              'Skipping: {}'.format(proxy_obj.id))
 
         
@@ -1144,9 +1127,6 @@ class BilinearPSM(BasePSM):
         diag_output, diag_output_figs: bool, optional
             Diagnostic output flags for calibration method
         """
-
-         # reference period (years) over which calibration anomalies are referenced
-        ref_period = (1900,2000)
         
         calib_spatial_avg = False
         Npts = 9  # nb of neighboring pts used in smoothing
@@ -1276,16 +1256,6 @@ class BilinearPSM(BasePSM):
             reg_x_P[i] = tmp
 
 
-        # making sure calibration anomalies are referenced to ref_period
-        # --------------------------------------------------------------
-        # indices of elements in calibration set within ref_period
-        indsT, = np.where((cyears_T>=ref_period[0]) & (cyears_T<=ref_period[1]))
-        indsP, = np.where((cyears_P>=ref_period[0]) & (cyears_P<=ref_period[1]))
-        # remove mean over reference period
-        reg_x_T = reg_x_T - np.nanmean(reg_x_T[indsT])
-        reg_x_P = reg_x_P - np.nanmean(reg_x_P[indsP])
-                
-            
         # ---------------------------
         # Perform bilinear regression
         # ---------------------------
