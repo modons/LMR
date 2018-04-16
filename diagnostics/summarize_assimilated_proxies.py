@@ -157,17 +157,16 @@ for iter in iters:
     ax  = fig.add_axes([0.1,0.1,0.8,0.8])
     m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.
 
-    #water = '#9DD4F0'
-    #continents = '#888888'
     water = '#D3ECF8'
     continents = '#F2F2F2'
+    coasts_countries = 'gray'
 
     m.drawmapboundary(fill_color=water)
-    m.drawcoastlines(linewidth=0.5); m.drawcountries()
+    m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
     m.fillcontinents(color=continents,lake_color=water)
-    m.drawparallels(np.arange(-80.,81.,latres))
-    m.drawmeridians(np.arange(-180.,181.,lonres))
-
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+    
     l = []
     ptype_legend = []
     for k in range(len(sites_assim_type_set)):
@@ -246,9 +245,11 @@ for iter in iters:
     plt.title(runname,fontweight='bold')
     plt.xlabel('Year CE',fontsize=14, fontweight='bold')
     plt.ylabel('Cumulative number of proxies',fontsize=14,fontweight='bold')
-    plt.legend(loc='upper left',bbox_to_anchor=(1., 1.),ncol=1,numpoints=1,fontsize=8)
+    plt.legend(loc='upper left',bbox_to_anchor=(1., 1.),ncol=1,numpoints=1,fontsize=8,frameon=False)
     plt.tight_layout(rect=[0.01, 0.01, 0.99, 0.85])
-
+    major_xticks = np.arange(xmin,xmax+1,200)
+    plt.xticks(major_xticks)
+    
     plt.savefig('%s/ts_assim_proxies_%s.png' % (figdir,runname),bbox_inches='tight')
     plt.close()
     #plt.show()
@@ -295,7 +296,7 @@ for p in p_ordered_reverse:
 
 plt.xlabel('Year CE',fontsize=14, fontweight='bold')
 plt.ylabel('Cumulative number of proxies',fontsize=14, fontweight='bold')
-plt.legend(loc='upper left',bbox_to_anchor=(1., 1.),ncol=1,numpoints=1,fontsize=8)
+plt.legend(loc='upper left',bbox_to_anchor=(1., 1.),ncol=1,numpoints=1,fontsize=8,frameon=False)
 plt.tight_layout(rect=[0.01, 0.01, 0.99, 0.85])
 
 plt.savefig('%s/ts_assim_proxies_meanMCiters.png' % (figdir),bbox_inches='tight')

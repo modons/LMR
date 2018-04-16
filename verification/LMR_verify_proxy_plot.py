@@ -543,10 +543,10 @@ def main():
                 m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.   # GLOBAL
 
                 m.drawmapboundary(fill_color=water)
-                m.drawcoastlines(); m.drawcountries()
+                m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
                 m.fillcontinents(color=continents,lake_color=water)
-                m.drawparallels(np.arange(-80.,81.,latres))
-                m.drawmeridians(np.arange(-180.,181.,lonres))
+                m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+                m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
 
                 # loop over proxy sites
                 for sitetag in sites:
@@ -601,10 +601,10 @@ def main():
                     ax = fig.add_subplot(2,1,irow)   
                     m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.  # GLOBAL            
                     m.drawmapboundary(fill_color=water)
-                    m.drawcoastlines(); m.drawcountries()
+                    m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
                     m.fillcontinents(color=continents,lake_color=water)
-                    m.drawparallels(np.arange(-80.,81.,latres))
-                    m.drawmeridians(np.arange(-180.,181.,lonres))
+                    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+                    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
 
                     # loop over proxy sites
                     for sitetag in sites:
@@ -650,10 +650,10 @@ def main():
 
                 m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.   # GLOBAL            
                 m.drawmapboundary(fill_color=water)
-                m.drawcoastlines(); m.drawcountries()
+                m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
                 m.fillcontinents(color=continents,lake_color=water)
-                m.drawparallels(np.arange(-80.,81.,latres))
-                m.drawmeridians(np.arange(-180.,181.,lonres))
+                m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+                m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
 
                 # loop over proxy sites
                 for sitetag in sites:
@@ -709,10 +709,10 @@ def main():
                     ax = fig.add_subplot(2,1,irow)   
                     m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=40.  # GLOBAL            
                     m.drawmapboundary(fill_color=water)
-                    m.drawcoastlines(); m.drawcountries()
+                    m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
                     m.fillcontinents(color=continents,lake_color=water)
-                    m.drawparallels(np.arange(-80.,81.,latres))
-                    m.drawmeridians(np.arange(-180.,181.,lonres))
+                    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+                    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
 
                     # loop over proxy sites
                     for sitetag in sites:

@@ -62,7 +62,7 @@ make_gmt_plot  = True   # time series of gmt, nhmt and shmt
 make_map_plots = False  # maps for every recon output within year_range
 
 # for maps:
-show_assimilated_proxies = True
+show_assimilated_proxies = False
 make_movie = False
 
 
@@ -78,31 +78,22 @@ infile = 'gmt_ensemble'
 
 
 # ==== for map plots:
-var_to_plot = 'tas_sfc_Amon'
-#var_to_plot = 'psl_sfc_Amon'
-#var_to_plot = 'wap_850hPa_Amon'
-#var_to_plot = 'wap_700hPa_Amon'
-#var_to_plot = 'tos_sfc_Omon'
-#var_to_plot = 'ohc_0-700m_Omon'
-#var_to_plot = 'sos_sfc_Omon'
-#var_to_plot = 'hfy_depthavg_Omon'
-# --
-#var_to_plot = 'tas_sfc_Adec'
-#var_to_plot = 'psl_sfc_Adec'
-#var_to_plot = 'tos_sfc_Odec'
-#var_to_plot = 'sos_sfc_Odec'
-
-
-mapmin = -2.; mapmax = +2.; mapint = 0.5; cmap = plt.cm.bwr; cbarfmt = '%4.1f'          # T anomalies
-#mapmin = -6.; mapmax = +6.; mapint = 2.; cmap = plt.cm.bwr; cbarfmt = '%4.0f'           # T anomalies(2)
-#mapmin = -.04; mapmax = +.04; mapint = .01; cmap = plt.cm.bwr; cbarfmt = '%4.2f'        # wap anomalies
-#mapmin = -2.e9; mapmax = +2.e9; mapint = 1.e9; cmap = plt.cm.bwr; cbarfmt = '%4.0e'     # OHC anomalies 
-#mapmin = -.5; mapmax = +.5; mapint = 0.1; cmap = plt.cm.bwr; cbarfmt = '%4.1f'          # S anomalies
-#mapmin = -1.e14; mapmax = +1.e14; mapint = 0.5e15; cmap = plt.cm.bwr; cbarfmt = '%4.0e' # hfy test
-# --
-#mapmin = 270.; mapmax = 300.; mapint = 2.; cmap = mapcolor; cbarfmt = '%4.0f'         # T full field
-#mapmin = 20.; mapmax = 40.; mapint = 5.; cmap = mapcolor; cbarfmt = '%4.0f'           # S full field
-#mapmin = 98000.; mapmax = 103000.; mapint = 1000.; cmap = mapcolor; cbarfmt = '%4.0f' # MSLP full field
+# (more concise) dict format
+#                         mapmin    mapmax  mapint     cmap     cbarfmt
+map_plots = {
+    'tas_sfc_Amon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # temp. anomalies
+#    'tas_sfc_Amon'       : (-6.,        +6.,   2.0, plt.cm.bwr, '%4.0f'), # temp. anomalies(2)
+#    'tas_sfc_Adec'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # temp. full field    
+#    'psl_sfc_Amon'       : (98000., 103000., 1000.,   mapcolor, '%4.0f'), # MSLP full field
+#    'wap_850hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies
+#    'wap_700hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies
+#    'tos_sfc_Omon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # SST anomalies
+#    'tos_sfc_Omon'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # SST full field
+#    'sos_sfc_Omon'       : (-.5,        +.5,   0.1, plt.cm.bwr, '%4.1f'), # salinity anomalies
+#    'sos_sfc_Omon'       : (20.,        40.,    5.,   mapcolor, '%4.0f'), # salinity ful field
+#    'ohc_0-700m_Omon'    : (-2.e9,    +2.e9,  1.e9, plt.cm.bwr, '%4.0e'), # OHC anomalies
+#    'hfy_depthavg_Omon'  : (-1.e14, +1.e14, 0.5e15, plt.cm.bwr, '%4.0e'), # hfy test
+}
 
 
 # ---- End section of user-defined parameters ----
@@ -727,13 +718,11 @@ if make_map_plots:
     # Plots of reconstructed spatial fields
     # ======================================================
 
+    
+
+    
     # get a listing of the iteration directories
     # and restrict to those selected in iter_range
-
-    #dirs = glob.glob(expdir+"/r*")
-    #mcdir = [item.split('/')[-1] for item in dirs]
-    #niters = len(mcdir)
-
 
     dirs = [item.split('/')[-1] for item in glob.glob(expdir_test+"/r*")]
     mcdir_test = dirs[iter_range[0]:iter_range[1]+1]
@@ -749,451 +738,459 @@ if make_map_plots:
     print('mcdir (refe):' + str(mcdir_refe))
     print('niters (refe) = ' + str(niters_refe))
 
-    
-    # for info on assimilated proxies
-    assimprox_test = {}
-    assimprox_refe = {}
 
-    # read ensemble mean data (test recon)
-    print('\n reading LMR ensemble-mean data (test recon)...\n')
+    # loop over chosen variables
+    vars_to_plot = map_plots.keys()
+    for var_to_plot in vars_to_plot:
 
-    first = True
-    k = -1
-    for dir in mcdir_test:
-        k = k + 1
-        # Posterior (reconstruction)
-        ensfiln = expdir_test + '/' + dir + '/ensemble_mean_'+var_to_plot+'.npz'
-        npzfile = np.load(ensfiln)
-        print(npzfile.files)
-        tmp = npzfile['xam']
-        print('shape of tmp: ' + str(np.shape(tmp)))
-
-        # load prior data
-        file_prior = expdir_test + '/' + dir + '/Xb_one.npz'
-        Xprior_statevector = np.load(file_prior)
-        Xb_one = Xprior_statevector['Xb_one']
-        # extract variable (sfc temperature) from state vector
-        state_info = Xprior_statevector['state_info'].item()
-        posbeg = state_info[var_to_plot]['pos'][0]
-        posend = state_info[var_to_plot]['pos'][1]
-        tas_prior = Xb_one[posbeg:posend+1,:]
-
-        if first:
-            first = False
-
-            years = npzfile['years']
-            nyrs =  len(years)
-
-            lat = npzfile['lat']
-            lon = npzfile['lon']
-            # 1D arrays or already in 2D arrays?
-            if len(lat.shape) == 1: 
-                nlat = npzfile['nlat']
-                nlon = npzfile['nlon']
-                lat2 = np.reshape(lat,(nlat,nlon))
-                lon2 = np.reshape(lon,(nlat,nlon))
-            else:
-                lat2 = lat
-                lon2 = lon
-
-            xam_test = np.zeros([nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
-            xam_all_test = np.zeros([niters_test,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
-            # prior
-            [_,Nens] = tas_prior.shape
-            nlatp = state_info[var_to_plot]['spacedims'][0]
-            nlonp = state_info[var_to_plot]['spacedims'][1]
-            xbm_all_test = np.zeros([niters_test,nyrs,nlatp,nlonp])
-
-        xam_test = xam_test + tmp
-        xam_all_test[k,:,:,:] = tmp
-
-        # prior ensemble mean of MC iteration "k"
-        tmpp = np.mean(tas_prior,axis=1)
-        xbm_all_test[k,:,:,:] = tmpp.reshape(nlatp,nlonp)
+        mapmin, mapmax, mapint, cmap, cbarfmt = map_plots[var_to_plot][:]
 
 
-        # info on assimilated proxies ---
-        assimproxfiln = expdir_test + '/' + dir + '/assimilated_proxies.npy'
 
-        # check existence of file
-        if show_assimilated_proxies and os.path.exists(assimproxfiln):    
-            assimproxiter = np.load(assimproxfiln)
-            nbassimprox, = assimproxiter.shape
-            for i in range(nbassimprox):
-                ptype = list(assimproxiter[i].keys())[0]
-                psite = assimproxiter[i][ptype][0]
-                plat  = assimproxiter[i][ptype][1]
-                plon  = assimproxiter[i][ptype][2]
-                yrs  = assimproxiter[i][ptype][3]
 
-                ptag = (ptype,psite)
+        # for info on assimilated proxies
+        assimprox_test = {}
+        assimprox_refe = {}
 
-                if ptag not in assimprox_test.keys():
-                    assimprox_test[ptag] = {}
-                    assimprox_test[ptag]['lat']   = plat
-                    assimprox_test[ptag]['lon']   = plon
-                    assimprox_test[ptag]['years'] = yrs.astype('int')
-                    assimprox_test[ptag]['iters'] = [k]
+        # read ensemble mean data (test recon)
+        print('\n reading LMR ensemble-mean data (test recon)...\n')
+
+        first = True
+        k = -1
+        for dir in mcdir_test:
+            k = k + 1
+            # Posterior (reconstruction)
+            ensfiln = expdir_test + '/' + dir + '/ensemble_mean_'+var_to_plot+'.npz'
+            npzfile = np.load(ensfiln)
+            print(npzfile.files)
+            tmp = npzfile['xam']
+            print('shape of tmp: ' + str(np.shape(tmp)))
+
+            # load prior data
+            file_prior = expdir_test + '/' + dir + '/Xb_one.npz'
+            Xprior_statevector = np.load(file_prior)
+            Xb_one = Xprior_statevector['Xb_one']
+            # extract variable (sfc temperature) from state vector
+            state_info = Xprior_statevector['state_info'].item()
+            posbeg = state_info[var_to_plot]['pos'][0]
+            posend = state_info[var_to_plot]['pos'][1]
+            tas_prior = Xb_one[posbeg:posend+1,:]
+
+            if first:
+                first = False
+
+                years = npzfile['years']
+                nyrs =  len(years)
+
+                lat = npzfile['lat']
+                lon = npzfile['lon']
+                # 1D arrays or already in 2D arrays?
+                if len(lat.shape) == 1: 
+                    nlat = npzfile['nlat']
+                    nlon = npzfile['nlon']
+                    lat2 = np.reshape(lat,(nlat,nlon))
+                    lon2 = np.reshape(lon,(nlat,nlon))
                 else:
-                    assimprox_test[ptag]['iters'].append(k)
+                    lat2 = lat
+                    lon2 = lon
+
+                xam_test = np.zeros([nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
+                xam_all_test = np.zeros([niters_test,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
+                # prior
+                [_,Nens] = tas_prior.shape
+                nlatp = state_info[var_to_plot]['spacedims'][0]
+                nlonp = state_info[var_to_plot]['spacedims'][1]
+                xbm_all_test = np.zeros([niters_test,nyrs,nlatp,nlonp])
+
+            xam_test = xam_test + tmp
+            xam_all_test[k,:,:,:] = tmp
+
+            # prior ensemble mean of MC iteration "k"
+            tmpp = np.mean(tas_prior,axis=1)
+            xbm_all_test[k,:,:,:] = tmpp.reshape(nlatp,nlonp)
 
 
-    # Prior sample mean over all MC iterations
-    xbm_test = xbm_all_test.mean(0)
-    xbm_var_test = xbm_all_test.var(0)
+            # info on assimilated proxies ---
+            assimproxfiln = expdir_test + '/' + dir + '/assimilated_proxies.npy'
 
-    # Posterior
-    #  this is the sample mean computed with low-memory accumulation
-    xam_test = xam_test/len(mcdir_test)
-    #  this is the sample mean computed with numpy on all data
-    xam_check_test = xam_all_test.mean(0)
-    #  check..
-    max_err = np.max(np.max(np.max(xam_check_test - xam_test)))
-    if max_err > 1e-4:
-        print('max error = ' + str(max_err))
-        raise Exception('sample mean does not match what is in the ensemble files!')
+            # check existence of file
+            if show_assimilated_proxies and os.path.exists(assimproxfiln):    
+                assimproxiter = np.load(assimproxfiln)
+                nbassimprox, = assimproxiter.shape
+                for i in range(nbassimprox):
+                    ptype = list(assimproxiter[i].keys())[0]
+                    psite = assimproxiter[i][ptype][0]
+                    plat  = assimproxiter[i][ptype][1]
+                    plon  = assimproxiter[i][ptype][2]
+                    yrs  = assimproxiter[i][ptype][3]
 
-    # sample variance
-    xam_test_var = xam_all_test.var(0)
-    print(np.shape(xam_test_var))
+                    ptag = (ptype,psite)
 
-    print(' shape of the ensemble array: ' + str(np.shape(xam_all_test)) +'\n')
-    print(' shape of the ensemble-mean array: ' + str(np.shape(xam_test)) +'\n')
-    print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_test)) +'\n')
-
-    lmr_lat_range = (lat2[0,0],lat2[-1,0])
-    lmr_lon_range = (lon2[0,0],lon2[0,-1])
-    print('LMR grid info:')
-    print(' lats=', lmr_lat_range)
-    print(' lons=', lmr_lon_range)
-
-    recon_times = years.astype(np.float)
-
-    
-
-    # ...
+                    if ptag not in assimprox_test.keys():
+                        assimprox_test[ptag] = {}
+                        assimprox_test[ptag]['lat']   = plat
+                        assimprox_test[ptag]['lon']   = plon
+                        assimprox_test[ptag]['years'] = yrs.astype('int')
+                        assimprox_test[ptag]['iters'] = [k]
+                    else:
+                        assimprox_test[ptag]['iters'].append(k)
 
 
+        # Prior sample mean over all MC iterations
+        xbm_test = xbm_all_test.mean(0)
+        xbm_var_test = xbm_all_test.var(0)
 
-    # read ensemble mean data (refe recon)
-    print('\n reading LMR ensemble-mean data (refe recon)...\n')
+        # Posterior
+        #  this is the sample mean computed with low-memory accumulation
+        xam_test = xam_test/len(mcdir_test)
+        #  this is the sample mean computed with numpy on all data
+        xam_check_test = xam_all_test.mean(0)
+        #  check..
+        max_err = np.max(np.max(np.max(xam_check_test - xam_test)))
+        if max_err > 1e-4:
+            print('max error = ' + str(max_err))
+            raise Exception('sample mean does not match what is in the ensemble files!')
 
-    first = True
-    k = -1
-    for dir in mcdir_refe:
-        k = k + 1
-        # Posterior (reconstruction)
-        ensfiln = expdir_refe + '/' + dir + '/ensemble_mean_'+var_to_plot+'.npz'
-        npzfile = np.load(ensfiln)
-        print(npzfile.files)
-        tmp = npzfile['xam']
-        print('shape of tmp: ' + str(np.shape(tmp)))
+        # sample variance
+        xam_test_var = xam_all_test.var(0)
+        print(np.shape(xam_test_var))
 
-        # load prior data
-        file_prior = expdir_refe + '/' + dir + '/Xb_one.npz'
-        Xprior_statevector = np.load(file_prior)
-        Xb_one = Xprior_statevector['Xb_one']
-        # extract variable (sfc temperature) from state vector
-        state_info = Xprior_statevector['state_info'].item()
-        posbeg = state_info[var_to_plot]['pos'][0]
-        posend = state_info[var_to_plot]['pos'][1]
-        tas_prior = Xb_one[posbeg:posend+1,:]
+        print(' shape of the ensemble array: ' + str(np.shape(xam_all_test)) +'\n')
+        print(' shape of the ensemble-mean array: ' + str(np.shape(xam_test)) +'\n')
+        print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_test)) +'\n')
 
-        if first:
-            first = False
+        lmr_lat_range = (lat2[0,0],lat2[-1,0])
+        lmr_lon_range = (lon2[0,0],lon2[0,-1])
+        print('LMR grid info:')
+        print(' lats=', lmr_lat_range)
+        print(' lons=', lmr_lon_range)
 
-            years = npzfile['years']
-            nyrs =  len(years)
-
-            lat = npzfile['lat']
-            lon = npzfile['lon']
-            # 1D arrays or already in 2D arrays?
-            if len(lat.shape) == 1: 
-                nlat = npzfile['nlat']
-                nlon = npzfile['nlon']
-                lat2 = np.reshape(lat,(nlat,nlon))
-                lon2 = np.reshape(lon,(nlat,nlon))
-            else:
-                lat2 = lat
-                lon2 = lon
-
-            xam_refe = np.zeros([nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
-            xam_all_refe = np.zeros([niters_refe,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
-            # prior
-            [_,Nens] = tas_prior.shape
-            nlatp = state_info[var_to_plot]['spacedims'][0]
-            nlonp = state_info[var_to_plot]['spacedims'][1]
-            xbm_all_refe = np.zeros([niters_refe,nyrs,nlatp,nlonp])
-
-        xam_refe = xam_refe + tmp
-        xam_all_refe[k,:,:,:] = tmp
-
-        # prior ensemble mean of MC iteration "k"
-        tmpp = np.mean(tas_prior,axis=1)
-        xbm_all_refe[k,:,:,:] = tmpp.reshape(nlatp,nlonp)
+        recon_times = years.astype(np.float)
 
 
-        # info on assimilated proxies ---
-        assimproxfiln = expdir_refe + '/' + dir + '/assimilated_proxies.npy'
 
-        # check existence of file
-        if show_assimilated_proxies and os.path.exists(assimproxfiln):    
-            assimproxiter = np.load(assimproxfiln)
-            nbassimprox, = assimproxiter.shape
-            for i in range(nbassimprox):
-                ptype = list(assimproxiter[i].keys())[0]
-                psite = assimproxiter[i][ptype][0]
-                plat  = assimproxiter[i][ptype][1]
-                plon  = assimproxiter[i][ptype][2]
-                yrs  = assimproxiter[i][ptype][3]
+        # ...
 
-                ptag = (ptype,psite)
 
-                if ptag not in assimprox_refe.keys():
-                    assimprox_refe[ptag] = {}
-                    assimprox_refe[ptag]['lat']   = plat
-                    assimprox_refe[ptag]['lon']   = plon
-                    assimprox_refe[ptag]['years'] = yrs.astype('int')
-                    assimprox_refe[ptag]['iters'] = [k]
+
+        # read ensemble mean data (refe recon)
+        print('\n reading LMR ensemble-mean data (refe recon)...\n')
+
+        first = True
+        k = -1
+        for dir in mcdir_refe:
+            k = k + 1
+            # Posterior (reconstruction)
+            ensfiln = expdir_refe + '/' + dir + '/ensemble_mean_'+var_to_plot+'.npz'
+            npzfile = np.load(ensfiln)
+            print(npzfile.files)
+            tmp = npzfile['xam']
+            print('shape of tmp: ' + str(np.shape(tmp)))
+
+            # load prior data
+            file_prior = expdir_refe + '/' + dir + '/Xb_one.npz'
+            Xprior_statevector = np.load(file_prior)
+            Xb_one = Xprior_statevector['Xb_one']
+            # extract variable (sfc temperature) from state vector
+            state_info = Xprior_statevector['state_info'].item()
+            posbeg = state_info[var_to_plot]['pos'][0]
+            posend = state_info[var_to_plot]['pos'][1]
+            tas_prior = Xb_one[posbeg:posend+1,:]
+
+            if first:
+                first = False
+
+                years = npzfile['years']
+                nyrs =  len(years)
+
+                lat = npzfile['lat']
+                lon = npzfile['lon']
+                # 1D arrays or already in 2D arrays?
+                if len(lat.shape) == 1: 
+                    nlat = npzfile['nlat']
+                    nlon = npzfile['nlon']
+                    lat2 = np.reshape(lat,(nlat,nlon))
+                    lon2 = np.reshape(lon,(nlat,nlon))
                 else:
-                    assimprox_refe[ptag]['iters'].append(k)
+                    lat2 = lat
+                    lon2 = lon
+
+                xam_refe = np.zeros([nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
+                xam_all_refe = np.zeros([niters_refe,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
+                # prior
+                [_,Nens] = tas_prior.shape
+                nlatp = state_info[var_to_plot]['spacedims'][0]
+                nlonp = state_info[var_to_plot]['spacedims'][1]
+                xbm_all_refe = np.zeros([niters_refe,nyrs,nlatp,nlonp])
+
+            xam_refe = xam_refe + tmp
+            xam_all_refe[k,:,:,:] = tmp
+
+            # prior ensemble mean of MC iteration "k"
+            tmpp = np.mean(tas_prior,axis=1)
+            xbm_all_refe[k,:,:,:] = tmpp.reshape(nlatp,nlonp)
 
 
-    # Prior sample mean over all MC iterations
-    xbm_refe = xbm_all_refe.mean(0)
-    xbm_var_refe = xbm_all_refe.var(0)
+            # info on assimilated proxies ---
+            assimproxfiln = expdir_refe + '/' + dir + '/assimilated_proxies.npy'
 
-    # Posterior
-    #  this is the sample mean computed with low-memory accumulation
-    xam_refe = xam_refe/len(mcdir_refe)
-    #  this is the sample mean computed with numpy on all data
-    xam_check_refe = xam_all_refe.mean(0)
-    #  check..
-    max_err = np.max(np.max(np.max(xam_check_refe - xam_refe)))
-    if max_err > 1e-4:
-        print('max error = ' + str(max_err))
-        raise Exception('sample mean does not match what is in the ensemble files!')
+            # check existence of file
+            if show_assimilated_proxies and os.path.exists(assimproxfiln):    
+                assimproxiter = np.load(assimproxfiln)
+                nbassimprox, = assimproxiter.shape
+                for i in range(nbassimprox):
+                    ptype = list(assimproxiter[i].keys())[0]
+                    psite = assimproxiter[i][ptype][0]
+                    plat  = assimproxiter[i][ptype][1]
+                    plon  = assimproxiter[i][ptype][2]
+                    yrs  = assimproxiter[i][ptype][3]
 
-    # sample variance
-    xam_refe_var = xam_all_refe.var(0)
-    print(np.shape(xam_refe_var))
+                    ptag = (ptype,psite)
 
-    print(' shape of the ensemble array: ' + str(np.shape(xam_all_refe)) +'\n')
-    print(' shape of the ensemble-mean array: ' + str(np.shape(xam_refe)) +'\n')
-    print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_refe)) +'\n')
-
-    lmr_lat_range = (lat2[0,0],lat2[-1,0])
-    lmr_lon_range = (lon2[0,0],lon2[0,-1])
-    print('LMR grid info:')
-    print(' lats=', lmr_lat_range)
-    print(' lons=', lmr_lon_range)
-
-    recon_times = years.astype(np.float)
-
-    
-
-    # ----------------------------------
-    # Plotting -------------------------
-    # ----------------------------------
-
-    recon_interval = np.diff(recon_times)[0]
-    proxsites_test = list(assimprox_test.keys())
-    proxsites_refe = list(assimprox_refe.keys())
-    
-    # loop over recon_times within user specified "year_range"
-    ntimes, = recon_times.shape
-    inds = np.where((recon_times>=year_range[0]) & (recon_times<=year_range[1]))
-    inds_in_range = [it for i, it in np.ndenumerate(inds)]
-
-    countit = 1
-    for it in inds_in_range:
-
-        year = int(recon_times[it])    
-        print(' plotting:', year)
+                    if ptag not in assimprox_refe.keys():
+                        assimprox_refe[ptag] = {}
+                        assimprox_refe[ptag]['lat']   = plat
+                        assimprox_refe[ptag]['lon']   = plon
+                        assimprox_refe[ptag]['years'] = yrs.astype('int')
+                        assimprox_refe[ptag]['iters'] = [k]
+                    else:
+                        assimprox_refe[ptag]['iters'].append(k)
 
 
-        # assimilated proxies
-        ndots_test = 0
-        if proxsites_test:
-            time_range = (year-recon_interval/2., year+recon_interval/2.)
-            lats = []
-            lons = []
-            for s in proxsites_test:
-                inds, = np.where((assimprox_test[s]['years']>=time_range[0]) & (assimprox_test[s]['years']<=time_range[1]))
-                if len(inds) > 0:
-                    lats.append(assimprox_test[s]['lat'])
-                    lons.append(assimprox_test[s]['lon'])
-            plats_test = np.asarray(lats)
-            plons_test = np.asarray(lons)
-            ndots_test, = plats_test.shape
+        # Prior sample mean over all MC iterations
+        xbm_refe = xbm_all_refe.mean(0)
+        xbm_var_refe = xbm_all_refe.var(0)
+
+        # Posterior
+        #  this is the sample mean computed with low-memory accumulation
+        xam_refe = xam_refe/len(mcdir_refe)
+        #  this is the sample mean computed with numpy on all data
+        xam_check_refe = xam_all_refe.mean(0)
+        #  check..
+        max_err = np.max(np.max(np.max(xam_check_refe - xam_refe)))
+        if max_err > 1e-4:
+            print('max error = ' + str(max_err))
+            raise Exception('sample mean does not match what is in the ensemble files!')
+
+        # sample variance
+        xam_refe_var = xam_all_refe.var(0)
+        print(np.shape(xam_refe_var))
+
+        print(' shape of the ensemble array: ' + str(np.shape(xam_all_refe)) +'\n')
+        print(' shape of the ensemble-mean array: ' + str(np.shape(xam_refe)) +'\n')
+        print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm_refe)) +'\n')
+
+        lmr_lat_range = (lat2[0,0],lat2[-1,0])
+        lmr_lon_range = (lon2[0,0],lon2[0,-1])
+        print('LMR grid info:')
+        print(' lats=', lmr_lat_range)
+        print(' lons=', lmr_lon_range)
+
+        recon_times = years.astype(np.float)
 
 
-        ndots_refe = 0
-        if proxsites_refe:
-            time_range = (year-recon_interval/2., year+recon_interval/2.)
-            lats = []
-            lons = []
-            for s in proxsites_refe:
-                inds, = np.where((assimprox_refe[s]['years']>=time_range[0]) & (assimprox_refe[s]['years']<=time_range[1]))
-                if len(inds) > 0:
-                    lats.append(assimprox_refe[s]['lat'])
-                    lons.append(assimprox_refe[s]['lon'])
-            plats_refe = np.asarray(lats)
-            plons_refe = np.asarray(lons)
-            ndots_refe, = plats_refe.shape
+
+        # ----------------------------------
+        # Plotting -------------------------
+        # ----------------------------------
+
+        recon_interval = np.diff(recon_times)[0]
+        proxsites_test = list(assimprox_test.keys())
+        proxsites_refe = list(assimprox_refe.keys())
+
+        # loop over recon_times within user specified "year_range"
+        ntimes, = recon_times.shape
+        inds = np.where((recon_times>=year_range[0]) & (recon_times<=year_range[1]))
+        inds_in_range = [it for i, it in np.ndenumerate(inds)]
+
+        countit = 1
+        for it in inds_in_range:
+
+            year = int(recon_times[it])    
+            print(' plotting:', var_to_plot, year)
+
+            # assimilated proxies
+            ndots_test = 0
+            if proxsites_test:
+                time_range = (year-recon_interval/2., year+recon_interval/2.)
+                lats = []
+                lons = []
+                for s in proxsites_test:
+                    inds, = np.where((assimprox_test[s]['years']>=time_range[0]) & (assimprox_test[s]['years']<=time_range[1]))
+                    if len(inds) > 0:
+                        lats.append(assimprox_test[s]['lat'])
+                        lons.append(assimprox_test[s]['lon'])
+                plats_test = np.asarray(lats)
+                plons_test = np.asarray(lons)
+                ndots_test, = plats_test.shape
 
 
-            
-        Xam2D_test = xam_test[it,:,:]
-        Xam2D_test = np.ma.masked_invalid(Xam2D_test)
-        nlat,nlon = Xam2D_test.shape
-
-        Xam2D_refe = xam_refe[it,:,:]
-        Xam2D_refe = np.ma.masked_invalid(Xam2D_refe)
-        #nlat,nlon = Xam2D_refe.shape
-
-        
-        if np.unique(lat2).shape[0] == nlat and np.unique(lon2).shape[0] == nlon :
-            # Regular lat/lon grid
-            plotlat = lat2
-            plotlon = lon2
-            plotdata_test = Xam2D_test
-            plotdata_refe = Xam2D_refe            
-        else:
-            # Irregular grid: simple regrid to regular lat-lon grid for plotting        
-            longrid = np.linspace(0.,360.,nlon)
-            latgrid = np.linspace(-90.,90.,nlat)
-            datagrid = np.zeros((nlat,nlon))
-            datagrid[:] = np.nan
-            plotlon, plotlat = np.meshgrid(longrid, latgrid)
-
-            inpoints = np.zeros(shape=[nlat*nlon, 2])
-            inpoints[:,0] = lon2.flatten()
-            inpoints[:,1] = lat2.flatten()
-
-            values_rg_test = Xam2D_test.reshape((nlat*nlon))
-            datagrid_test = griddata(inpoints,values_rg_test,(plotlon,plotlat),method='nearest',fill_value=np.nan) # nearest or linear
-            plotdata_test = np.ma.masked_invalid(datagrid_test)
-
-            values_rg_refe = Xam2D_refe.reshape((nlat*nlon))
-            datagrid_refe = griddata(inpoints,values_rg_refe,(plotlon,plotlat),method='nearest',fill_value=np.nan) # nearest or linear
-            plotdata_refe = np.ma.masked_invalid(datagrid_refe)
-
-            
-        # Generating the map...
-        fig = plt.figure(figsize=[7,9])
-
-        # test recon
-        # ----------        
-        ax = fig.add_subplot(3,1,1)
-
-        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
-        cbnds = [mapmin,mapint,mapmax];
-        nlevs = 101
-        cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
-        cs = m.contourf(plotlon,plotlat,plotdata_test,cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,extend='both',latlon=True)
-        cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
-        cbar = m.colorbar(cs,location='right',pad="5%",ticks=cbarticks, extend='both',format=cbarfmt)
-        m.drawmapboundary(fill_color = bckgcolor)
-        m.drawcoastlines(); m.drawcountries()
-        m.drawparallels(np.arange(-80.,81.,latres))
-        m.drawmeridians(np.arange(-180.,181.,lonres))
-        # Make sure continents appear filled-in for ocean fields
-        if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
-            m.fillcontinents(color=bckgcolor)
-
-        plt.title(exp_test,fontsize=10)
-        
-        # dots marking sites of assimilated proxies
-        if ndots_test > 0:
-            x, y = m(plons_test,plats_test)
-            #dotcolor = '#e6e9ef'
-            dotcolor = '#42f4b3'
-            m.scatter(x,y,10,marker='o',color=dotcolor,edgecolor='black',linewidth='.5',zorder=4)
+            ndots_refe = 0
+            if proxsites_refe:
+                time_range = (year-recon_interval/2., year+recon_interval/2.)
+                lats = []
+                lons = []
+                for s in proxsites_refe:
+                    inds, = np.where((assimprox_refe[s]['years']>=time_range[0]) & (assimprox_refe[s]['years']<=time_range[1]))
+                    if len(inds) > 0:
+                        lats.append(assimprox_refe[s]['lat'])
+                        lons.append(assimprox_refe[s]['lon'])
+                plats_refe = np.asarray(lats)
+                plons_refe = np.asarray(lons)
+                ndots_refe, = plats_refe.shape
 
 
-        # refe recon
-        # ----------
-        ax = fig.add_subplot(3,1,2)
 
-        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
-        cbnds = [mapmin,mapint,mapmax];
-        nlevs = 101
-        cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
-        cs = m.contourf(plotlon,plotlat,plotdata_refe,cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,extend='both',latlon=True)
-        cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
-        cbar = m.colorbar(cs,location='right',pad="5%",ticks=cbarticks, extend='both',format=cbarfmt)
-        m.drawmapboundary(fill_color = bckgcolor)
-        m.drawcoastlines(); m.drawcountries()
-        m.drawparallels(np.arange(-80.,81.,latres))
-        m.drawmeridians(np.arange(-180.,181.,lonres))
-        # Make sure continents appear filled-in for ocean fields
-        if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
-            m.fillcontinents(color=bckgcolor)
+            Xam2D_test = xam_test[it,:,:]
+            Xam2D_test = np.ma.masked_invalid(Xam2D_test)
+            nlat,nlon = Xam2D_test.shape
 
-        plt.title(exp_refe,fontsize=10)
-            
-        # dots marking sites of assimilated proxies
-        if ndots_refe > 0:
-            x, y = m(plons_refe,plats_refe)
-            #dotcolor = '#e6e9ef'
-            dotcolor = '#42f4b3'
-            m.scatter(x,y,10,marker='o',color=dotcolor,edgecolor='black',linewidth='.5',zorder=4)
+            Xam2D_refe = xam_refe[it,:,:]
+            Xam2D_refe = np.ma.masked_invalid(Xam2D_refe)
+            #nlat,nlon = Xam2D_refe.shape
 
 
-        # difference
-        # ----------
-        ax = fig.add_subplot(3,1,3)
+            if np.unique(lat2).shape[0] == nlat and np.unique(lon2).shape[0] == nlon :
+                # Regular lat/lon grid
+                plotlat = lat2
+                plotlon = lon2
+                plotdata_test = Xam2D_test
+                plotdata_refe = Xam2D_refe            
+            else:
+                # Irregular grid: simple regrid to regular lat-lon grid for plotting        
+                longrid = np.linspace(0.,360.,nlon)
+                latgrid = np.linspace(-90.,90.,nlat)
+                datagrid = np.zeros((nlat,nlon))
+                datagrid[:] = np.nan
+                plotlon, plotlat = np.meshgrid(longrid, latgrid)
 
-        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
-        cbnds = [mapmin,mapint,mapmax];
-        nlevs = 101
-        cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
-        cs = m.contourf(plotlon,plotlat,(plotdata_test-plotdata_refe),cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,extend='both',latlon=True)
-        cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
-        cbar = m.colorbar(cs,location='right',pad="5%",ticks=cbarticks, extend='both',format=cbarfmt)
-        m.drawmapboundary(fill_color = bckgcolor)
-        m.drawcoastlines(); m.drawcountries()
-        m.drawparallels(np.arange(-80.,81.,latres))
-        m.drawmeridians(np.arange(-180.,181.,lonres))
+                inpoints = np.zeros(shape=[nlat*nlon, 2])
+                inpoints[:,0] = lon2.flatten()
+                inpoints[:,1] = lat2.flatten()
 
-        # Make sure continents appear filled-in for ocean fields
-        if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
-            m.fillcontinents(color=bckgcolor)
+                values_rg_test = Xam2D_test.reshape((nlat*nlon))
+                datagrid_test = griddata(inpoints,values_rg_test,(plotlon,plotlat),method='nearest',fill_value=np.nan) # nearest or linear
+                plotdata_test = np.ma.masked_invalid(datagrid_test)
 
-        plt.title('Difference between reconstructions',fontsize=10)
-        
+                values_rg_refe = Xam2D_refe.reshape((nlat*nlon))
+                datagrid_refe = griddata(inpoints,values_rg_refe,(plotlon,plotlat),method='nearest',fill_value=np.nan) # nearest or linear
+                plotdata_refe = np.ma.masked_invalid(datagrid_refe)
 
-        fig.tight_layout()
-        plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.15)
-        plt.suptitle(var_to_plot+', Year:'+str(year),fontsize=12,fontweight='bold')        
 
-        plt.savefig('%s/%s_vs_%s_%s_%syr.png' % (figdir,exp_test,exp_refe,var_to_plot,year),bbox_inches='tight')
+            # Generating the map...
+            fig = plt.figure(figsize=[7,9])
+
+            # test recon
+            # ----------        
+            ax = fig.add_subplot(3,1,1)
+
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
+            cbnds = [mapmin,mapint,mapmax];
+            nlevs = 101
+            cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
+            cs = m.contourf(plotlon,plotlat,plotdata_test,cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,extend='both',latlon=True)
+            cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
+            cbar = m.colorbar(cs,location='right',pad="2%",size="2%",ticks=cbarticks, extend='both',format=cbarfmt)
+            m.drawmapboundary(fill_color = bckgcolor)
+            m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
+            m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+            m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
+            # Make sure continents appear filled-in for ocean fields
+            if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
+                m.fillcontinents(color=bckgcolor)
+
+            plt.title(exp_test,fontsize=10)
+
+            # dots marking sites of assimilated proxies
+            if ndots_test > 0:
+                x, y = m(plons_test,plats_test)
+                #dotcolor = '#e6e9ef'
+                dotcolor = '#42f4b3'
+                m.scatter(x,y,10,marker='o',color=dotcolor,edgecolor='black',linewidth='.5',zorder=4)
+
+
+            # refe recon
+            # ----------
+            ax = fig.add_subplot(3,1,2)
+
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
+            cbnds = [mapmin,mapint,mapmax];
+            nlevs = 101
+            cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
+            cs = m.contourf(plotlon,plotlat,plotdata_refe,cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,extend='both',latlon=True)
+            cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
+            cbar = m.colorbar(cs,location='right',pad="2%",size="2%",ticks=cbarticks, extend='both',format=cbarfmt)
+            m.drawmapboundary(fill_color = bckgcolor)
+            m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
+            m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+            m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
+            # Make sure continents appear filled-in for ocean fields
+            if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
+                m.fillcontinents(color=bckgcolor)
+
+            plt.title(exp_refe,fontsize=10)
+
+            # dots marking sites of assimilated proxies
+            if ndots_refe > 0:
+                x, y = m(plons_refe,plats_refe)
+                #dotcolor = '#e6e9ef'
+                dotcolor = '#42f4b3'
+                m.scatter(x,y,10,marker='o',color=dotcolor,edgecolor='black',linewidth='.5',zorder=4)
+
+
+            # difference
+            # ----------
+            ax = fig.add_subplot(3,1,3)
+
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
+            cbnds = [mapmin,mapint,mapmax];
+            nlevs = 101
+            cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
+            cs = m.contourf(plotlon,plotlat,(plotdata_test-plotdata_refe),cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,extend='both',latlon=True)
+            cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
+            cbar = m.colorbar(cs,location='right',pad="2%",size="2%",ticks=cbarticks, extend='both',format=cbarfmt)
+            m.drawmapboundary(fill_color = bckgcolor)
+            m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
+            m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+            m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
+
+            # Make sure continents appear filled-in for ocean fields
+            if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
+                m.fillcontinents(color=bckgcolor)
+
+            plt.title('Difference between reconstructions',fontsize=10)
+
+
+            fig.tight_layout()
+            plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.15)
+            plt.suptitle(var_to_plot+', Year:'+str(year),fontsize=12,fontweight='bold')        
+
+            plt.savefig('%s/%s_vs_%s_%s_%syr.png' % (figdir,exp_test,exp_refe,var_to_plot,year),bbox_inches='tight')
+            if make_movie:
+                    plt.savefig('%s/fig_%s.png' % (figdir,str("{:06d}".format(countit))),bbox_inches='tight')
+                    # to make it look like a pause at end of animation
+                    if it == inds_in_range[-1]:
+                        nbextraframes = 5
+                        for i in range(nbextraframes):
+                            plt.savefig('%s/fig_%s.png' % (figdir,str("{:06d}".format(countit+i+1))),bbox_inches='tight')
+            plt.close()
+
+            countit += 1
+
+
+
         if make_movie:
-                plt.savefig('%s/fig_%s.png' % (figdir,str("{:06d}".format(countit))),bbox_inches='tight')
-                # to make it look like a pause at end of animation
-                if it == inds_in_range[-1]:
-                    nbextraframes = 5
-                    for i in range(nbextraframes):
-                        plt.savefig('%s/fig_%s.png' % (figdir,str("{:06d}".format(countit+i+1))),bbox_inches='tight')
-        plt.close()
-        
-        countit += 1
+            # create the animation
+            # check if old files are there, if yes, remove
+            fname = '%s/%s_%s_anim_%sto%s' %(figdir,exp,var_to_plot,str(year_range[0]),str(year_range[1]))    
+            if os.path.exists(fname+'.gif'):
+                os.system('rm -f %s.gif' %fname)
+            if os.path.exists(fname+'.mp4'):
+                os.system('rm -f %s.mp4' %fname)
 
+            os.system('convert -delay 50 -loop 100 %s/fig_*.png %s.gif' %(figdir,fname))
+            os.system('ffmpeg -r 3 -i %s/fig_%s.png %s.mp4' %(figdir,'%06d', fname))
 
-    
-    if make_movie:
-        # create the animation
-        # check if old files are there, if yes, remove
-        fname = '%s/%s_%s_anim_%sto%s' %(figdir,exp,var_to_plot,str(year_range[0]),str(year_range[1]))    
-        if os.path.exists(fname+'.gif'):
-            os.system('rm -f %s.gif' %fname)
-        if os.path.exists(fname+'.mp4'):
-            os.system('rm -f %s.mp4' %fname)
-
-        os.system('convert -delay 50 -loop 100 %s/fig_*.png %s.gif' %(figdir,fname))
-        os.system('ffmpeg -r 3 -i %s/fig_%s.png %s.mp4' %(figdir,'%06d', fname))
-
-        # clean up temporary files
-        os.system('rm -f %s/fig_*.png' %(figdir))
+            # clean up temporary files
+            os.system('rm -f %s/fig_*.png' %(figdir))
 

@@ -48,19 +48,11 @@ datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #exp = 'production_mlost_era20cm_pagesall_0.75'
 #exp = 'production_gis_ccsm4_pagesall_0.75'
 # --
-#exp = 'test'
+exp = 'test'
 # --
-#exp = 'test_py3_fullresfullfield'
-#exp = 'test_py3_T42spherefullfield'
-#exp = 'test_py3_T42esmpyfullfield_ekman'
-#exp = 'test_py3_T42esmpyfullfield_enkf'
-#exp = 'test_py3_T62spherefullfield'
-#exp = 'test_py3_20CRv2gridesmpyfullfield'
-exp = 'test_py3_tmp'
 
-
-#year_range = [0,2000]
-year_range = [1850,2000]
+year_range = [0,2000]
+#year_range = [1850,2000]
 #year_range = [-25000,2000]
 #year_range = [-115000,2000]
 
@@ -77,7 +69,7 @@ MCset = None
 
 # options of which figures to produce
 make_gmt_plot  = True
-make_map_plots = True
+make_map_plots = False
 
 # for maps (if make_map_plots is set to True):
 show_assimilated_proxies = False
@@ -619,7 +611,7 @@ if make_map_plots:
         for it in inds_in_range:
 
             year = int(recon_times[it])    
-            print(' plotting:', year)
+            print(' plotting:', var, year)
 
 
             # assimilated proxies
@@ -678,9 +670,9 @@ if make_map_plots:
             cbar = m.colorbar(cs,location='bottom',pad="5%",ticks=cbarticks, extend='both',format=cbarfmt)
 
             m.drawmapboundary(fill_color = bckgcolor)
-            m.drawcoastlines(); m.drawcountries()
-            m.drawparallels(np.arange(-80.,81.,latres))
-            m.drawmeridians(np.arange(-180.,181.,lonres))
+            m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
+            m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+            m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
             plt.title(var+', Year:'+str(year),fontsize=14,fontweight='bold')
             # Make sure continents appear filled-in for ocean fields
             if 'Omon' in var or 'Odec' in var: 
