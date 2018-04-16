@@ -195,7 +195,7 @@ def make_random_ensemble(Xb_one,max_ens,nens,ranseed=None):
     return Xb_one_new, ens_inds
 
 
-def make_random_proxies(prox_manager,Ye,Ye_coords,ens_inds,max_proxies,nproxies,ranseed=None):
+def make_random_proxies(prox_manager,Ye,Ye_coords,ens_inds,max_proxies,nproxies,ranseed=None,verbose=False):
 
     """
     Purpose: provide random column draws from an existing ensemble matrix
@@ -243,9 +243,10 @@ def make_random_proxies(prox_manager,Ye,Ye_coords,ens_inds,max_proxies,nproxies,
     vYe_coords = Ye_coords[vP,:]
     
     elapsed_time = time() - begin_time
-    print('-----------------------------------------------------')
-    print('completed in ' + str(elapsed_time) + ' seconds')
-    print('-----------------------------------------------------')
+    if verbose:
+        print('-----------------------------------------------------')
+        print('completed in ' + str(elapsed_time) + ' seconds')
+        print('-----------------------------------------------------')
 
     return vR, vP, vT, vYe, vYe_coords
 
@@ -472,7 +473,6 @@ def load_proxies(cfg,verbose=True):
 def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox_inds=None,verbose=False):
  
     begin_time = time()
-    print(len(prox_inds))
     core = cfg.core
     recon_timescale = core.recon_timescale
 
@@ -482,8 +482,8 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
 
     tas_var = [item for item in list(cfg.prior.state_variables.keys()) if 'tas_sfc_' in item]
 
-    start_yr = int(target_year-recon_timescale/2)
-    end_yr = int(target_year+recon_timescale/2)
+    start_yr = int(target_year-recon_timescale//2)
+    end_yr = int(target_year+recon_timescale//2)
 
     vY = []
     vR = []
@@ -497,11 +497,13 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
         else:
             # use all available proxies from config.yml
             if prox_inds is None:
-                Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
-            # use only the selected proxies (e.g., randomly filtered post-config)
+                #Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+                Yvals = Y.values[(Y.time == target_year)]
+                # use only the selected proxies (e.g., randomly filtered post-config)
             else:
                 if proxy_idx in prox_inds: 
-                    Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+                    #Yvals = Y.values[(Y.values.index >= start_yr) & (Y.values.index <= end_yr)]
+                    Yvals = Y.values[(Y.time == target_year)]
                 else:
                     Yvals = pd.DataFrame()
                     
@@ -512,11 +514,11 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
             nYobs = len(Yvals)
             Yobs =  Yvals.mean()
             ob_err = Y.psm_obj.R/nYobs
-            if (target_year >=start_yr) & (target_year <= end_yr):
-                vY.append(Yobs)
-                vR.append(ob_err)
-                vP.append(proxy_idx)
-                vT.append(Y.type)
+ #           if (target_year >=start_yr) & (target_year <= end_yr):
+            vY.append(Yobs)
+            vR.append(ob_err)
+            vP.append(proxy_idx)
+            vT.append(Y.type)
     vYe = Ye_assim[vP,:]
     vYe_coords = Ye_assim_coords[vP,:]
    
@@ -564,13 +566,21 @@ def Kalman_update(vY,vYe,vR,Xb_one,verbose=False):
     
     return xam
 
-
-def Kalman_optimal(Y,vR,Ye,Xb,verbose=False):
+def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
     """
     Y: observation vector (p x 1)
     vR: observation error variance vector (p x 1)
     Ye: prior-estimated observation vector (p x n)
     Xbp: prior ensemble perturbation matrix (m x n) 
+
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+
+    Modifications:
+    11 April 2018: Fixed bug in handling singular value matrix (rectangular, not square)
     """    
     if verbose:
         print('\n all-at-once solve...\n')
@@ -579,66 +589,87 @@ def Kalman_optimal(Y,vR,Ye,Xb,verbose=False):
 
     nobs = Ye.shape[0]
     nens = Ye.shape[1]
-
+    ndof = np.min([nobs,nens])
+    
+    if verbose:
+        print('number of obs: '+str(nobs))
+        print('number of ensemble members: '+str(nens))
+        
     # ensemble prior mean and perturbations
     xbm = Xb.mean(axis=1)
     Xbp = Xb - Xb.mean(axis=1,keepdims=True)
 
     R = np.diag(vR)
     Risr = np.diag(1./np.sqrt(vR))
-    # ensemble-mean Hx (suffix key: m=ensemble mean, p=perturbation from ensemble mean; f=full value)
-    # keepdims = True needed for broadcasting to work; (p,1) shape rather than (p,)
+    # (suffix key: m=ensemble mean, p=perturbation from ensemble mean; f=full value)
+    # keepdims=True needed for broadcasting to work; (p,1) shape rather than (p,)
     Yem = Ye.mean(axis=1,keepdims=True)
     Yep = Ye - Yem
     Htp = np.dot(Risr,Yep)/np.sqrt(nens-1)
     Htm = np.dot(Risr,Yem)
     Yt = np.dot(Risr,Y)
-    # numpy svd quirks: 
-    # - full_matrices returns max-sized matrices (A=USV^T will not work for rectangular A)
-    # - V is actually V^T
-    #U,s,V = np.linalg.svd(Htp,full_matrices=False)
-    # full matrices when nens > nobs: ensemble null space
-    #U,s,V_full = np.linalg.svd(Htp,full_matrices=True)
-    #V = V_full[0:nobs,:]
-    U,s,V = np.linalg.svd(Htp,full_matrices=False)
+    # numpy svd quirk: V is actually V^T!
+    U,s,V = np.linalg.svd(Htp,full_matrices=True)
+    if not nsvs:
+        nsvs = len(s)
+    if verbose:
+        print('ndof :'+str(ndof))
+        print('U :'+str(U.shape))
+        print('s :'+str(s.shape))
+        print('V :'+str(V.shape))
+        print('recontructing using '+ str(nsvs) + ' singular values')
+        
     innov = np.dot(U.T,Yt-np.squeeze(Htm))
     # Kalman gain
-    K = np.diag(s/(s*s + 1))
-    # this is the analysis increment in smallest space (obs or nens, depending on which is smaller)
+    Kpre = s[0:nsvs]/(s[0:nsvs]*s[0:nsvs] + 1)
+    K = np.zeros([nens,nobs])
+    np.fill_diagonal(K,Kpre)
+    # ensemble-mean analysis increment in transformed space 
     xhatinc = np.dot(K,innov)
-    # this is the analysis increment in the transformed ensemble space
+    # ensemble-mean analysis increment in the transformed ensemble space
     xtinc = np.dot(V.T,xhatinc)/np.sqrt(nens-1)
-    # this is the ensemble-mean analysis increment in the original space
-    xinc = np.dot(Xbp,xtinc)
-    # ensemble mean analysis in the original space
-    xam = xbm + xinc
+    if transform_only:
+        xam = []
+        Xap = []
+    else:
+        # ensemble-mean analysis increment in the original space
+        xinc = np.dot(Xbp,xtinc)
+        # ensemble mean analysis in the original space
+        xam = xbm + xinc
 
-    # transform the ensemble perturbations
-    lam = np.sqrt(1. - (1./(1. + s**2)))        
-    T = np.dot(V.T,np.diag(lam))
-    Xap = np.dot(Xbp,T)    
-    # perturbations must have zero mean
-    Xap = Xap - Xap.mean(axis=1,keepdims=True)
+        # transform the ensemble perturbations
+        lam = np.zeros([nobs,nens])
+        np.fill_diagonal(lam,s[0:nsvs])
+        tmp = np.linalg.inv(np.dot(lam,lam.T) + np.identity(nobs))
+        sigsq = np.identity(nens) - np.dot(np.dot(lam.T,tmp),lam)
+        sig = np.sqrt(sigsq)
+        T = np.dot(V.T,sig)
+        Xap = np.dot(Xbp,T)    
+        # perturbations must have zero mean
+        Xap = Xap - Xap.mean(axis=1,keepdims=True)
     
     elapsed_time = time() - begin_time
     if verbose:
+        print('shape of U: ' + str(U.shape))
+        print('shape of s: ' + str(s.shape))
+        print('shape of V: ' + str(V.shape))
         print('-----------------------------------------------------')
         print('completed in ' + str(elapsed_time) + ' seconds')
         print('-----------------------------------------------------')
 
     readme = '''
     The SVD dictionary contains the SVD matrices U,s,V where V 
-    is the transpose of what numpy returns. xinc is the ensemble-mean
+    is the transpose of what numpy returns. xtinc is the ensemble-mean
     analysis increment in the intermediate space; *any* state variable 
-    can be reconstructed from this matrix. T is the matrix that transforms
-    the ensemble from the background to the analysis in the orginal space.
+    can be reconstructed from this matrix.
     '''
-    SVD = {'U':U,'s':s,'V':np.transpose(V),'xtinc':xtinc,'T':T,'readme':readme}
+    SVD = {'U':U,'s':s,'V':np.transpose(V),'xtinc':xtinc,'readme':readme}
     return xam,Xap,SVD
-
 
 def Kalman_optimal_sklearn(Y,vR,Ye,Xb,mindim=None,transform_only=False,verbose=False):
     """
+    THIS ROUTINE IS DEPRECATED. While it produces the right ensemble mean, it cannot produce the ensemble variance because the sklearn svd routine doesn't return null-space vectors.
+
     Y: observation vector (p x 1)
     vR: observation error variance vector (p x 1)
     Ye: prior-estimated observation vector (p x n)
