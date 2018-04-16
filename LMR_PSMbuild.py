@@ -58,8 +58,6 @@ from copy import deepcopy
 import LMR_proxy_pandas_rework
 import LMR_calibrate
 
-import matplotlib.pyplot as plt
-
 
 psm_info = \
 """
@@ -79,6 +77,8 @@ class v_core(object):
     lmr_path: str
         Absolute path to central directory where the data (analyses (GISTEMP, HadCRUT...) and proxies) 
         are located
+    anom_reference_period: tuple(int)
+        Reference time period w.r.t. which calibration data anomalies are defined
     calib_period: tuple(int)
         Time period considered for the calibration
     psm_type: str
@@ -92,19 +92,29 @@ class v_core(object):
     # lmr_path = '/home/disk/kalman3/rtardif/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMRpy3'    
 
-    calib_period = (1850, 2015)
-
     # PSM type to calibrate: 'linear' or 'bilinear'
-    psm_type = 'linear'
-    #psm_type = 'bilinear'
+    #psm_type = 'linear'
+    psm_type = 'bilinear'
 
-    # Boolean to indicate whether upload of existing PSM data is to be performed. Keep False here. 
+    # Reference period (years) w.r.t. which the anomalies in calibration data
+    # are to be defined.
+    # Use None to default to calibration dataset definition
+    # note: default is (1951,1980) for GISTEMP and BerkeleyEarth, (1961-1990) for MLOST and HadCRUT
+    anom_reference_period = (1951,1980)
+
+    # Period (years) over which proxy and instrumental data are to be used to
+    # calibrate statistical PSMs (determine regression parameters)
+    calib_period = (1850, 2015)
+    
+    # Boolean to indicate whether upload of existing PSM data is to be performed.
+    # Keep False here. 
     load_psmobj = False 
     
     ##** END User Parameters **##
         
     def __init__(self):
         self.lmr_path = self.lmr_path
+        self.anom_reference_period = self.anom_reference_period
         self.calib_period = self.calib_period
         self.psm_type = self.psm_type
         try:
@@ -607,8 +617,8 @@ class v_psm(object):
     load_precalib = False
     
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
-    avgPeriod = 'annual'
-    # avgPeriod = 'season'
+    #avgPeriod = 'annual'
+    avgPeriod = 'season'
 
     # Boolean flag indicating whether PSMs are to be calibrated using objectively-derived
     # proxy seasonality instead of using the "seasonality" metadata included in the data
@@ -617,7 +627,7 @@ class v_psm(object):
     # If set to True, refer back to the appropriate proxy class above
     # (proxy_psm_seasonality dict.) to set which proxy type(s) and associated seasons
     # will be considered. 
-    test_proxy_seasonality = False
+    test_proxy_seasonality = True
     
     ##** END User Parameters **##
 
@@ -657,8 +667,8 @@ class v_psm(object):
         #datatag_calib = 'MLOST'
         #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
         # or
-        datatag_calib = 'GISTEMP'
-        datafile_calib = 'gistemp1200_ERSSTv4.nc'
+        #datatag_calib = 'GISTEMP'
+        #datafile_calib = 'gistemp1200_ERSSTv4.nc'
         # or
         #datatag_calib = 'HadCRUT'
         #datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
@@ -666,8 +676,8 @@ class v_psm(object):
         #datatag_calib = 'BerkeleyEarth'
         #datafile_calib = 'Land_and_Ocean_LatLong1.nc'
         # or 
-        #datatag_calib = 'GPCC'
-        #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
+        datatag_calib = 'GPCC'
+        datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
         # or
         #datatag_calib = 'DaiPDSI'
         #datafile_calib = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
@@ -703,10 +713,16 @@ class v_psm(object):
                     filename = ('PSMs_'+'-'.join(v_proxies.use_from) +
                                 '_' + dbversion +
                                 '_' + self.avgPeriod +
-                                '_' + self.datatag_calib+'.pckl')
+                                '_' + self.datatag_calib +
+                                '_ref' + str(v_core.anom_reference_period[0]) + '-' + str(v_core.anom_reference_period[1]) +
+                                '_cal' + str(v_core.calib_period[0]) + '-' + str(v_core.calib_period[1]) +
+                                '.pckl')
                 else:
                     filename = ('PSMs_' + '-'.join(v_proxies.use_from) +
-                            '_' + self.datatag_calib+'.pckl')
+                                '_' + self.datatag_calib +
+                                '_ref' + str(v_core.anom_reference_period[0]) + '-' + str(v_core.anom_reference_period[1]) +
+                                '_cal' + str(v_core.calib_period[0]) + '-' + str(v_core.calib_period[1]) +
+                                '.pckl')
                 
                 self.pre_calib_datafile = join(v_core.lmr_path,
                                                'PSM',
@@ -807,11 +823,17 @@ class v_psm(object):
                                 '_' + dbversion +
                                 '_' + self.avgPeriod +
                                 '_'+self.datatag_calib_T +
-                                '_'+self.datatag_calib_P +'.pckl')
+                                '_'+self.datatag_calib_P +
+                                '_ref' + str(v_core.anom_reference_period[0]) + '-' + str(v_core.anom_reference_period[1]) +
+                                '_cal' + str(v_core.calib_period[0]) + '-' + str(v_core.calib_period[1]) +
+                                '.pckl')
                 else:
                     filename = ('PSMs_' + '-'.join(v_proxies.use_from) +
                                 '_'+self.datatag_calib_T +
-                                '_'+self.datatag_calib_P +'.pckl')
+                                '_'+self.datatag_calib_P +
+                                '_ref' + str(v_core.anom_reference_period[0]) + '-' + str(v_core.anom_reference_period[1]) +
+                                '_cal' + str(v_core.calib_period[0]) + '-' + str(v_core.calib_period[1]) +
+                                '.pckl')
 
                 self.pre_calib_datafile = join(v_core.lmr_path,
                                                'PSM',
@@ -852,6 +874,8 @@ def main():
     print('Proxies             :', proxy_database)
     print('PSM type            :', psm_type)
     print('Calib. period       :', Cfg.core.calib_period)
+    print('Anom. ref. period   :', Cfg.core.anom_reference_period)
+
     
     if proxy_database == 'PAGES2kv1':
         print('Proxy data location :', Cfg.proxies.PAGES2kv1.datadir_proxy)
@@ -872,8 +896,10 @@ def main():
         # load calibration data
         C = LMR_calibrate.calibration_assignment(datatag_calib)
         C.datadir_calib = Cfg.psm.linear.datadir_calib
+        C.datafile_calib = Cfg.psm.linear.datafile_calib
+        C.anom_reference_period = Cfg.core.anom_reference_period
         C.read_calibration()
-
+        
     elif psm_type == 'bilinear':
         datatag_calib_T = Cfg.psm.bilinear.datatag_calib_T
         datatag_calib_P = Cfg.psm.bilinear.datatag_calib_P
@@ -884,9 +910,13 @@ def main():
         # load calibration data: two calibration objects, temperature and precipitation/moisture
         C_T = LMR_calibrate.calibration_assignment(datatag_calib_T)
         C_T.datadir_calib = Cfg.psm.bilinear.datadir_calib
+        C_T.datafile_calib = Cfg.psm.bilinear.datafile_calib_T
+        C_T.anom_reference_period = Cfg.core.anom_reference_period
         C_T.read_calibration()
         C_P = LMR_calibrate.calibration_assignment(datatag_calib_P)
         C_P.datadir_calib = Cfg.psm.bilinear.datadir_calib
+        C_P.datafile_calib = Cfg.psm.bilinear.datafile_calib_P
+        C_P.anom_reference_period = Cfg.core.anom_reference_period
         C_P.read_calibration()
 
     else:

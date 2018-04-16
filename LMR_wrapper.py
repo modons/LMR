@@ -86,11 +86,16 @@ for iter_and_params in itertools.product(*param_iterables):
     cfg_dict = Utils.param_cfg_update('core.curr_iter', iter_num)
 
     if LMR_config.wrapper.multi_seed is not None:
-        curr_seed = LMR_config.wrapper.multi_seed[iter_num]
-        cfg_dict = Utils.param_cfg_update('core.seed', curr_seed,
-                                          cfg_dict=cfg_dict)
-        print('Setting current iteration seed: {}'.format(curr_seed))
-
+        try:
+            curr_seed = LMR_config.wrapper.multi_seed[iter_num]
+            cfg_dict = Utils.param_cfg_update('core.seed', curr_seed,
+                                              cfg_dict=cfg_dict)
+            print('Setting current iteration seed: {}'.format(curr_seed))
+        except IndexError:
+            print('ERROR: multi_seed activated but current MC iteration out of'
+                  ' range for list of seed values provided in config.')
+            raise SystemExit(1)
+        
     itr_str = 'r{:d}'.format(iter_num)
     # If parameter space search is being performed then set the current
     # search space values and create a special sub-directory
@@ -129,11 +134,11 @@ for iter_and_params in itertools.product(*param_iterables):
     # Call the driver
     assim_proxy_objs, eval_proxy_objs = LMR.LMR_driver_callable(cfg)
 
-    # write the analysis ensemble mean and variance to separate files (per
-    # state variable)
-    ensemble_stats(core.datadir_output, assim_proxy_objs, eval_proxy_objs,
-                   core.write_posterior_Ye,core.save_full_field)
-
+    # write the analysis ensemble mean, variance or full ensemble to
+    # separate files (per state variable)
+    ensemble_stats(core, assim_proxy_objs, eval_proxy_objs)
+    
+    
     # start: DO NOT DELETE
     # move files from local disk to an archive location
 
@@ -167,7 +172,12 @@ for iter_and_params in itertools.product(*param_iterables):
     cmd = 'mv -f ' + working_dir + '/nonassim*' + ' ' + mc_arc_dir + '/'
     print(cmd)
     os.system(cmd)
-
+    # copy file containing info on samples defining the prior ensemble 
+    cmd = 'mv -f ' + working_dir + '/prior_sampling_info.txt' + ' ' + mc_arc_dir + '/'
+    print(cmd)
+    os.system(cmd)
+    
+    
     # removing the work output directory once selected files have been moved
     cmd = 'rm -f -r ' + working_dir
     print(cmd)

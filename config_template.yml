@@ -36,16 +36,21 @@ core:
 #  recon_period: !!python/tuple [-120000, 2000]
   recon_timescale: 1
 #  recon_timescale: 250
+  anom_reference_period: !!python/tuple [1951, 1980]
   nens: 100
   seed: null
   loc_rad: null
   inflation_fact: null
 
+  archive_regrid_method: null
+  archive_esmpy_interp_method: bilinear
+  archive_esmpy_regrid_to: t42
+
 proxies:
 #  use_from: [PAGES2kv1]
   use_from: [LMRdb]
 #  use_from: [NCDCdtda]  
-  proxy_frac: 1.0
+  proxy_frac: 0.75
   proxy_timeseries_kind: asis
   proxy_availability_filter: False
   proxy_availability_fraction: 1.0
@@ -120,7 +125,7 @@ proxies:
       Speleothem_All: [ 'Lamina thickness' ]
 
   LMRdb:
-    dbversion: 'v0.2.0'
+    dbversion: 'v0.3.0'
     datadir_proxy: null
     datafile_proxy: 'LMRdb_{}_Proxies.df.pckl'
     metafile_proxy: 'LMRdb_{}_Metadata.df.pckl'
@@ -298,6 +303,7 @@ psm:
     temperature: [GISTEMP, MLOST, HadCRUT, BerkeleyEarth]
     moisture: [GPCC, DaiPDSI]
 
+  calib_period: !!python/tuple [1850, 2015]
 #  avgPeriod: annual
   avgPeriod: season
   season_source: proxy_metadata
@@ -368,11 +374,15 @@ prior:
 #    sos_sfc_Odec: full
 
   detrend: False
+
   # regridding options: null, simple, esmpy or spherical_harmonics
-  regrid_method: spherical_harmonics
+  regrid_method: esmpy
+  # next parameter applies only to *simple* and *spherical_harmonics* options
   regrid_resolution: 42
+  # specific to *esmpy*
   esmpy_interp_method: bilinear
-  esmpy_regrid_to: t42
+  esmpy_regrid_to: 20CRv2grid
+
   state_variables_info:
     temperature: [
       'tas_sfc_Amon'

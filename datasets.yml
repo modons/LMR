@@ -72,6 +72,16 @@ DaiPDSI:
   datafile: Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc
   dataformat: NCD
 
+SPEI:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [spei]
+
+  datadir: null
+  datafile: spei_monthly_v2.4_190001-201412.nc
+  dataformat: NCD
+
 
 icesm_last_millennium:
   info:

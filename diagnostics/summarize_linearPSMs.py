@@ -363,10 +363,10 @@ for t in proxy_types:
         raise SystemExit('Unrecognized region for mapping!')
 
     m.drawmapboundary(fill_color=water)
-    m.drawcoastlines(linewidth=0.5); m.drawcountries()
+    m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
     m.fillcontinents(color=continents,lake_color=water)
-    m.drawparallels(np.arange(-80.,81.,latres))
-    m.drawmeridians(np.arange(-180.,181.,lonres))
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
 
     ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
     for ts in [proxy_types_sites[k] for k in ind]:        

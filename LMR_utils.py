@@ -260,7 +260,8 @@ def smooth2D(im, n=15):
     improc = signal.convolve2d(im, g, mode='same', boundary=bndy)
     return(improc)
 
-def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save_full_field=False):
+#def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save_full_field=False):
+def ensemble_stats(cfg_core, y_assim, y_eval=None):
     """
     Compute the ensemble mean and variance for files in the input directory
 
@@ -291,12 +292,20 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
                 either from assimilated or withheld proxy sets
       Revised February 2018 (R. Tardif, UW)
               : More streamlined handling of full-ensemble saving facility
-                to prevent occurrences of MemoryError even though full-ensemble
+                as attempt to prevent occurrences of MemoryError even though full-ensemble
                 save was not activated
+      Revised April 2018 (R. Tardif, UW)
+              : ...
 
       TODO: Look into how to prevent occurences of MemoryError when 
             full-ensemble saving is activated.
     """
+
+    workdir = cfg_core.datadir_output
+    write_posterior_Ye =  cfg_core.write_posterior_Ye
+    save_full_field = cfg_core.save_full_field
+
+    # ---
     
     prior_filn = workdir + '/Xb_one.npz'
     
@@ -330,35 +339,99 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
         # Possibilities are: '2D:horizontal', '2D:meridional_vertical', '0D:time series'
         if state_info[var]['vartype'] == '2D:horizontal': 
             # 2D:horizontal variable
+            # ----------------------
+            # Extracting info on reanalysis grid
             ndim1 = state_info[var]['spacedims'][0]
             ndim2 = state_info[var]['spacedims'][1]
+            
+            nlat = state_info[var]['spacedims'][state_info[var]['spacecoords'].index('lat')]
+            nlon = state_info[var]['spacedims'][state_info[var]['spacecoords'].index('lon')]
 
-            # Prior
-            Xb = np.reshape(Xbtmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+            lats = Xb_coords[ibeg:iend+1,state_info[var]['spacecoords'].index('lat')]
+            lons = Xb_coords[ibeg:iend+1,state_info[var]['spacecoords'].index('lon')]
+
+            
+            # -- Prior --
+            if cfg_core.archive_regrid_method is not None:
+                # option to regrid the reanalysis is activated
+                target_grid = cfg_core.archive_esmpy_grid_def
+
+                lat_2d = lats.reshape(nlat, nlon)
+                lon_2d = lons.reshape(nlat, nlon)
+                
+                [priorVariabletoArchive,
+                 lat_new,
+                 lon_new] = regrid_esmpy(target_grid['nlat'],
+                                         target_grid['nlon'],
+                                         nens,
+                                         Xbtmp[ibeg:iend+1,:],
+                                         lat_2d,
+                                         lon_2d,
+                                         nlat,
+                                         nlon,
+                                         include_poles=target_grid['include_poles'],
+                                         method=cfg_core.archive_esmpy_interp_method)
+
+                ndim1_archive = lat_new.shape[0]
+                ndim2_archive = lon_new.shape[1]
+                lats_archive = lat_new.flatten()
+                lons_archive = lon_new.flatten()
+                
+            else:            
+                # no regridding
+                ndim1_archive = ndim1
+                ndim2_archive = ndim2
+                lats_archive = lats
+                lons_archive = lons
+                priorVariabletoArchive = Xbtmp[ibeg:iend+1,:]
+
+            
+            Xb = np.reshape(priorVariabletoArchive,(ndim1_archive,ndim2_archive,nens))
             xbm = np.mean(Xb,axis=2)       # ensemble mean
             xbv = np.var(Xb,axis=2,ddof=1) # ensemble variance
 
-            # Process the **analysis** (i.e. posterior) files
+
+            # -- Process the **analysis** (i.e. posterior) files --
             years = []
             if save_full_field:
-                xa_ens = np.zeros([nyears,ndim1,ndim2,nens])
-            xam = np.zeros([nyears,ndim1,ndim2])
-            xav = np.zeros([nyears,ndim1,ndim2],dtype=np.float64)
+                if 'xa_ens' in dir():
+                    del xa_ens
+                xa_ens = np.zeros([nyears,ndim1_archive,ndim2_archive,nens])
+            xam = np.zeros([nyears,ndim1_archive,ndim2_archive])
+            xav = np.zeros([nyears,ndim1_archive,ndim2_archive],dtype=np.float64)
+
             k = -1
             for f in sfiles:
-                k = k + 1
-                i = f.rfind('year')
-                fname_end = f[i+4:]
-                ii = fname_end.rfind('.')
-                year = fname_end[:ii]
-                years.append(year)
+                k += 1
+                fname_end = f.split('/')[-1]
+                year = fname_end.rstrip('.npy').lstrip('year')
+                years.append(year)                
+
                 Xatmp = np.load(f)
-                Xa = np.reshape(Xatmp[ibeg:iend+1,:],(ndim1,ndim2,nens))
+                
+                if cfg_core.archive_regrid_method is not None:
+                    # option to regrid the reanalysis is activated
+                    # nlat, nlon, lat_2d, lon_2d are same as for prior above
+                    [posteriorVariabletoArchive,
+                     lat_new,
+                     lon_new] = regrid_esmpy(target_grid['nlat'],
+                                             target_grid['nlon'],
+                                             nens,
+                                             Xatmp[ibeg:iend+1,:],
+                                             lat_2d,
+                                             lon_2d,
+                                             nlat,
+                                             nlon,
+                                             include_poles=target_grid['include_poles'],
+                                             method=cfg_core.archive_esmpy_interp_method)
+                else:
+                    posteriorVariabletoArchive = Xatmp[ibeg:iend+1,:]
+
+                Xa = np.reshape(posteriorVariabletoArchive,(ndim1_archive,ndim2_archive,nens))
                 if save_full_field:
                     xa_ens[k,:,:,:] = Xa              # total ensemble
                 xam[k,:,:] = np.mean(Xa,axis=2)       # ensemble mean
                 xav[k,:,:] = np.var(Xa,axis=2,ddof=1) # ensemble variance
-
 
             # form dictionary containing variables to save, including info on array dimensions
             coordname1 = state_info[var]['spacecoords'][0]
@@ -366,18 +439,28 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
             dimcoord1 = 'n'+coordname1
             dimcoord2 = 'n'+coordname2
 
-            coord1 = np.reshape(Xb_coords[ibeg:iend+1,0],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
-            coord2 = np.reshape(Xb_coords[ibeg:iend+1,1],(state_info[var]['spacedims'][0],state_info[var]['spacedims'][1]))
+            if coordname1 == 'lat':
+                coord1 = lats_archive.reshape(ndim1_archive, ndim2_archive)
+                coord2 = lons_archive.reshape(ndim1_archive, ndim2_archive)
+            else:
+                coord1 = lons_archive.reshape(ndim1_archive, ndim2_archive)
+                coord2 = lats_archive.reshape(ndim1_archive, ndim2_archive)
 
+            
             if save_full_field:
-                vars_to_save_ens  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], \
-                                     dimcoord2:state_info[var]['spacedims'][1], \
-                                     coordname1:coord1, coordname2:coord2, 'xb_ens':Xb, 'xa_ens':xa_ens}
+                vars_to_save_ens  = {'nens':nens, 'years':years, \
+                                     dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
+                                     coordname1:coord1, coordname2:coord2, \
+                                     'xb_ens':Xb, 'xa_ens':xa_ens}
 
-            vars_to_save_mean = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                     coordname1:coord1, coordname2:coord2, 'xbm':xbm, 'xam':xam}
-            vars_to_save_var  = {'nens':nens, 'years':years, dimcoord1:state_info[var]['spacedims'][0], dimcoord2:state_info[var]['spacedims'][1], \
-                                     coordname1:coord1, coordname2:coord2, 'xbv':xbv, 'xav':xav}
+            vars_to_save_mean = {'nens':nens, 'years':years, \
+                                 dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
+                                 coordname1:coord1, coordname2:coord2, \
+                                 'xbm':xbm, 'xam':xam}
+            vars_to_save_var  = {'nens':nens, 'years':years, \
+                                 dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
+                                 coordname1:coord1, coordname2:coord2, \
+                                 'xbv':xbv, 'xav':xav}
 
 
         elif state_info[var]['vartype'] == '2D:meridional_vertical': 
@@ -513,13 +596,13 @@ def ensemble_stats(workdir, y_assim, y_eval=None, write_posterior_Ye=False, save
             print('ERROR in ensemble_stats: Variable of unrecognized (space) dimensions! Skipping variable:', var)
             continue
 
-
+        
+        # --- Write data to files ---
         if (state_info[var]['vartype'] != '0D:time series') and save_full_field:
             filen = workdir + '/ensemble_full_' + var
             print('writing the new ensemble file' + filen)
             np.savez(filen, **vars_to_save_ens)
 
-        # --- Write data to files ---
         # ens. mean to file
         filen = workdir + '/ensemble_mean_' + var
         print('writing the new ensemble mean file...' + filen)
@@ -729,8 +812,8 @@ def regrid_simple(Nens,X,X_coords,ind_lat,ind_lon,ntrunc):
     return X_new,lat_new,lon_new
 
 
-def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
-                 X_nlon, method='bilinear'):
+def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D,
+                 X_nlat, X_nlon, include_poles=False, method='bilinear'):
     """
     Regrid field to target resolution using the ESMF package.
     
@@ -754,6 +837,8 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
         number of latitude points in the source grid
     X_nlon: int
         number of longitude points in the source grid
+    include_poles: boolean
+        consider (or not) poles in constructing the lat-lon grid
     method: str
         Regridding method to use. Valid options include 'bilinear' and 'patch'
 
@@ -782,6 +867,7 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
         cyclic_idx_start, = np.where(lon_diff_negative)
         lon_shift = -(cyclic_idx_start+1)
         X_lon2D = np.roll(X_lon2D, lon_shift, axis=1)
+        X_lat2D = np.roll(X_lat2D, lon_shift, axis=1)
     else:
         lon_shift = None
 
@@ -835,8 +921,11 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D, X_nlat,
                          coord_typekind=ESMF.TypeKind.R8,
                          staggerloc=ESMF.StaggerLoc.CENTER)
 
+    # NEW: now including explicit use of include_endpts argument (RT, April 10 2018)    
     [new_lat, new_lon,
-     new_lat_bnds, new_lon_bnds] = generate_latlon(target_nlat, target_nlon)
+     new_lat_bnds, new_lon_bnds] = generate_latlon(target_nlat, target_nlon,
+                                                   include_endpts=include_poles)
+
     new_grid_x_cen = new_grid.get_coords(x)
     new_grid_x_cen[:] = new_lon.T
     new_grid_y_cen = new_grid.get_coords(y)
@@ -961,8 +1050,8 @@ def regrid_sphere(nlat,nlon,Nens,X,ntrunc):
     return X_new,lat_new,lon_new
 
 
-def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360),
-                    include_endpts=False):
+def generate_latlon(nlats, nlons, include_endpts=False,
+                    lat_bnd=(-90,90), lon_bnd=(0, 360)):
     """
     Generate regularly spaced latitude and longitude arrays where each point 
     is the center of the respective grid cell.
@@ -994,6 +1083,7 @@ def generate_latlon(nlats, nlons, lat_bnd=(-90,90), lon_bnd=(0, 360),
         Array of longitude boundaries for all grid cells (nlon+1)   
 
     """
+    
     if len(lat_bnd) != 2 or len(lon_bnd) != 2:
         raise ValueError('Bound tuples must be of length 2')
     if np.any(np.diff(lat_bnd) < 0) or np.any(np.diff(lon_bnd) < 0):
@@ -1537,21 +1627,31 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_database = config.proxies.use_from[0]
 
     # Generate PSM calibration string
+    calib_str_ext = ''
+    if config.core.anom_reference_period:
+        calib_str_ext = calib_str_ext+'_ref{}-{}'.format(str(config.core.anom_reference_period[0]),
+                                                         str(config.core.anom_reference_period[1]))
+    if config.psm.calib_period:
+        calib_str_ext = calib_str_ext+'_cal{}-{}'.format(str(config.psm.calib_period[0]),
+                                                         str(config.psm.calib_period[1]))
+    
     if psm_key == 'linear':
         calib_avgPeriod = config.psm.linear.avgPeriod
-        calib_str = config.psm.linear.datatag_calib
+        calib_str = config.psm.linear.datatag_calib+calib_str_ext
         state_vars_for_ye = config.psm.linear.psm_required_variables
         
     elif psm_key == 'linear_TorP':
         calib_avgPeriod = config.psm.linear_TorP.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.linear_TorP.datatag_calib_T,
                                         config.psm.linear_TorP.datatag_calib_P)
+        calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.linear_TorP.psm_required_variables
 
     elif psm_key == 'bilinear':
         calib_avgPeriod = config.psm.bilinear.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.bilinear.datatag_calib_T,
                                         config.psm.bilinear.datatag_calib_P)
+        calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.bilinear.psm_required_variables
         
     elif psm_key == 'h_interp':
@@ -1566,6 +1666,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         
     else:
         raise ValueError('Unrecognized PSM key.')
+
     
     if calib_avgPeriod:
         psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str

@@ -104,7 +104,7 @@ def LMR_driver_callable(cfg=None):
     state_variables_info = prior.state_variables_info
     regrid_method = prior.regrid_method
     regrid_resolution = prior.regrid_resolution
-
+    
     
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -254,7 +254,7 @@ def LMR_driver_callable(cfg=None):
                         LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, regrid_resolution)
                 elif regrid_method == 'esmpy':
                     target_grid = prior.esmpy_grid_def
-
+                    
                     lat_2d = coords_array_full[:, ind_lat].reshape(nlat, nlon)
                     lon_2d = coords_array_full[:, ind_lon].reshape(nlat, nlon)
 
@@ -268,6 +268,7 @@ def LMR_driver_callable(cfg=None):
                                                        lon_2d,
                                                        nlat,
                                                        nlon,
+                                                       include_poles=target_grid['include_poles'],
                                                        method=prior.esmpy_interp_method)
                 else:
                     print('Exiting! Unrecognized regridding method.')
@@ -425,6 +426,22 @@ def LMR_driver_callable(cfg=None):
              stateDim=state_dim,
              Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
 
+    # NEW: write out (to prior_sampling_info.txt file) the info on prior sampling
+    # i.e. the list of indices (i.e. years for annual recons) randomly chosen
+    # from available model states
+    prior_samples = open(workdir+'/prior_sampling_info.txt', 'w')
+    # include a header
+    prior_samples.write('# List of indices (i.e. years if annual recon) randomly'
+                        ' sampled from model output to form the prior(ensemble):\n')
+    if core.seed is not None:
+        prior_samples.write('# with seed=%d \n' %(core.seed))
+    else:
+        prior_samples.write('# with seed=None \n')        
+    # write out the list
+    prior_samples.write(str(X.prior_sample_indices)+'\n')
+    prior_samples.close()
+    
+    
     # NEW: Dump prior state vector (Xb_one) to file, one file per state variable
     print('\n ---------- saving Xb_one for each variable to separate file -----------\n')
     for var in list(X.trunc_state_info.keys()):

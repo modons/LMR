@@ -872,10 +872,11 @@ def read_gridded_data_SPEI(data_dir,data_file,data_vars,out_anomalies,ref_period
 
     return dates_ret, lat, lon, value_ret
 
-
+anom_ref=None
 #==========================================================================================
 
-def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detrend=None,var_info=None):
+def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,
+                                  detrend=None,anom_ref=None,var_info=None):
 #==========================================================================================
 #
 # Reads the monthly data from a CMIP5 model and return yearly averaged values
@@ -908,6 +909,8 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
 #                       months over which to average the data.
 #
 #      - detrend      : Boolean to indicate if detrending is to be applied to the prior
+#
+#      - anom_ref     : Reference period (in years CE) used in calculating anomalies (tuple)
 #
 #      - var_info     : Dict. containing information about whether some state variables
 #                       represent temperature or moisture (used to extract proper 
@@ -1311,13 +1314,29 @@ def read_gridded_data_CMIP5_model(data_dir,data_file,data_vars,outtimeavg,detren
         
         if not kind or kind == 'anom':
             print('Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...')
+            
+            # prior data overlap with anomaly reference period?
+            # if not, take anomalies w.r.t. to mean over entire length of the data
+            overlap = False
+            if anom_ref:
+                indsmref = [j for j,v in enumerate(dates) if ((v.year >= anom_ref[0])
+                                                              and (v.year <= anom_ref[1]))]
+                if len(indsmref) > 0: # overlap exists
+                    overlap = True
             # loop over months
             for i in range(12):
                 m = i+1
                 indsm = [j for j,v in enumerate(dates) if v.month == m]
-                climo_month[i] = np.nanmean(data_var[indsm], axis=0)
-                data_var[indsm] = (data_var[indsm] - climo_month[i])
+                if overlap:
+                    indsmref = [j for j,v in enumerate(dates) if ((v.year >= anom_ref[0])
+                                                                  and (v.year <= anom_ref[1])
+                                                                  and (v.month == m))]
+                else:
+                    indsmref = indsm
 
+                climo_month[i] = np.nanmean(data_var[indsmref], axis=0)
+                data_var[indsm] = (data_var[indsm] - climo_month[i])
+                
         elif kind == 'full':
             print('Full field provided as the prior')
             # do nothing else...
@@ -2118,7 +2137,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 #
 #      - detrend      : Boolean to indicate if detrending is to be applied to the prior
 #
-#      - anom_ref     : Reference period (in year CE) used in calculating anomaliesx
+#      - anom_ref     : Reference period (in year CE) used in calculating anomalies
 #
 #
 # Output: 
@@ -2214,18 +2233,16 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         years     = list(set(years_all)) # 'set' is used to retain unique values in list
         years.sort() # sort the list
         time_yrs  = np.zeros(len(years), dtype=int)
-
         
-        
-        # Query info on spatial coordinates ...
-        # get rid of time in list        
+                
+        # Query info on spatial coordinates
+        # get rid of time in list of coordinates
         varspacecoordnames = [item for item in vardimnames if item != 'time'] 
         nbspacecoords = len(varspacecoordnames)
-        #print vardimnames, nbspacecoords, dictdims
 
         if nbspacecoords == 0: # data => simple time series
             vartype = '0D:time series'
-            value = np.empty([len(years)], dtype=float)
+            value = np.zeros([len(years)], dtype=float)
             spacecoords = None
         elif nbspacecoords == 1: # data => 1D data
             if 'lat' in varspacecoordnames:
@@ -2246,13 +2263,15 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 vartype = '2D:meridional_vertical'
             else:
                 print('Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!')
-                exit(1)
+                raise SystemExit(1)
         else:
             print('Cannot handle this variable yet! Too many dimensions... Exiting!')
-            exit(1)
+            raise SystemExit(1)
 
-        # data array
+        
+        # load data array
         data_var = data.variables[var_to_extract][:]
+        #data_var = data.variables[var_to_extract]
         print(data_var.shape)
         
         # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
@@ -2453,46 +2472,64 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 
             # monthly data?
             if time_resolution == monthly:
-                # monthly climatology
+                # monthly climatology: declaring the array depending on data type
                 if vartype == '0D:time series':
                     climo_month = np.zeros((12))
                 elif  vartype == '1D:meridional':
                     climo_month = np.zeros([12, vardims[1]], dtype=float)
                 elif '2D' in vartype:
                     climo_month = np.zeros([12, vardims[1], vardims[2]], dtype=float)
-                
-                dates_years = np.array([math.modf(item)[1] for item in dates])
-                tmp = np.array([abs(math.modf(item)[0]) for item in dates])
-                dates_months = np.rint((tmp/monthly)+1.)
 
+                # dates array not datetime objects here (not handling negative years)
+                # defining different arrays of years and months
+                dates_years = np.array([math.modf(item)[1] for item in dates])
+                fracyr = np.array([abs(math.modf(item)[0]) for item in dates])
+                dates_months = np.rint((fracyr/monthly)+1.)
+                # flip months for "negative" years
+                indyrneg = np.where(dates_years < 0.)
+                indyrpos = np.where(dates_years >= 0.)
+                fracyr[indyrneg] = 1.-fracyr[indyrneg]
+                dates_months[indyrneg] = np.rint((fracyr[indyrneg]/monthly))
+
+                # clearing temporary arrays
+                del fracyr, indyrneg, indyrpos
+                
                 # indices corresponding to reference period   
-                if anom_ref:                    
-                    indsyr = [j for j,v in enumerate(dates_years) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
+                if anom_ref is not None:
+                    indsyrref = [j for j,v in enumerate(dates_years) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
                     # overlap?
-                    if len(indsyr) == 0:
-                        raise SystemExit('ERROR in anomaly calculation: No overlap between prior simulation and specified reference period. Exiting!')
+                    if len(indsyrref) == 0:
+                        raise SystemExit('ERROR in anomaly calculation: '
+                                         ' No overlap between prior simulation'
+                                         ' and specified reference period. Exiting!')
+                    
                 else:
-                    # indices over entire length of the simulation
-                    indsyr = [j for j,v in enumerate(dates_years)]
+                    # no reference period specified: indices over entire length of the simulation
+                    indsyrref = [j for j,v in enumerate(dates_years)]
 
                 # loop over months
                 for i in range(12):
                     m = i+1.
-                    indsm_ref = [j for j,v in enumerate(dates_months[indsyr]) if v == m]
-                    climo_month[i] = np.nanmean(data_var[indsm_ref], axis=0)
-                    indsm_all = [j for j,v in enumerate(dates_months) if v == m]
-                    data_var[indsm_all] = (data_var[indsm_all] - climo_month[i])
+                    indsm = [j for j,v in enumerate(dates_months) if v == m]
+                    indsmref = [j for j,v in enumerate(dates_months) if ((v == m) and (j in indsyrref))]
+                    climo_month[i] = np.nanmean(data_var[indsmref], axis=0)
+                    data_var[indsm] = (data_var[indsm] - climo_month[i])
+
                 climo = climo_month
+
+                
             else:
                 # other than monthly data
                 # indices corresponding to reference period                
-                if anom_ref:
-                    indsyr = [j for j,v in enumerate(dates) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
+                if anom_ref is not None:
+                    indsyrref = [j for j,v in enumerate(dates) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
                     # overlap?
-                    if len(indsyr) > 0:
-                        climo = np.nanmean(data_var[indsyr],axis=0)
+                    if len(indsyrref) > 0:
+                        climo = np.nanmean(data_var[indsyrref],axis=0)
                     else:
-                        raise SystemExit('ERROR in anomaly calculation: No overlap between prior simulation and specified reference period. Exiting!')
+                        raise SystemExit('ERROR in anomaly calculation: No overlap between prior'
+                                         ' simulation and specified reference period. Exiting!')
+
                 else:
                     # anomalies w.r.t. mean over entire length of the simulation
                     climo = np.nanmean(data_var,axis=0)
@@ -2500,13 +2537,21 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 # calculate anomalies
                 data_var = (data_var - climo)
                 
+
+
+                
+            exit(1) # RT ... ... ... 
+
+                
+
         elif kind == 'full':
             print('Full field provided as the prior')
             # Calculating climo nevertheless. Needed as output.
             climo = np.nanmean(data_var,axis=0)
             # do nothing else...
         else:
-            raise SystemExit('ERROR in the specification of type of prior. Should be "full" or "anom"! Exiting...')
+            raise SystemExit('ERROR in the specification of type of prior.'
+                             ' Should be "full" or "anom"! Exiting...')
 
         print(var_to_extract, ': Global: mean=', np.nanmean(data_var), ' , std-dev=', np.nanstd(data_var))        
 
@@ -2646,7 +2691,6 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             elif vartype == '1D:meridional':
                 value = np.zeros([nbintervals, vardims[1]], dtype=float)
             elif '2D' in vartype: 
-                #value = np.zeros([nbintervals, vardims[1], vardims[2]], dtype=float)
                 value = np.zeros([nbintervals, vardims[1], vardims[2]])
             # really initialize with missing values (NaNs)
             value[:] = np.nan
@@ -2713,7 +2757,7 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
 #
 #      - detrend      : Boolean to indicate if detrending is to be applied to the prior
 #
-#      - anom_ref     : Reference period (in year CE) used in calculating anomaliesx
+#      - anom_ref     : Reference period (in year CE) used in calculating anomalies
 #
 #
 # Output: 

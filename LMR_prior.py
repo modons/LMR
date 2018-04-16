@@ -359,6 +359,7 @@ class prior_ccsm4_last_millenium(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -372,6 +373,7 @@ class prior_ccsm4_preindustrial_control(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -385,6 +387,7 @@ class prior_ccsm4_isotope_controlrun(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
     
@@ -398,6 +401,7 @@ class prior_mpi_esm_p_last_millenium(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -411,6 +415,7 @@ class prior_gfdl_cm3_preindustrial_control(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -424,6 +429,7 @@ class prior_20cr(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -437,6 +443,7 @@ class prior_era20c(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -461,6 +468,7 @@ class prior_loveclim_goosse2005(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -475,6 +483,7 @@ class prior_icesm_last_millennium(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -489,6 +498,7 @@ class prior_icesm_last_millennium_historical(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -504,6 +514,7 @@ class prior_ihadcm3_preindustrial_control(prior_master):
                                                         self.statevars,
                                                         self.avgInterval,
                                                         self.detrend,
+                                                        self.anom_reference,
                                                         self.statevars_info)
         return
 
@@ -517,7 +528,7 @@ class prior_ccsm3_trace21ka(prior_master):
                                                       self.statevars,
                                                       self.avgInterval,
                                                       self.detrend,
-                                                      self.anom_reference)        
+                                                      self.anom_reference)
         return
 
     

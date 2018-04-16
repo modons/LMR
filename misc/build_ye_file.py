@@ -339,7 +339,7 @@ for psm_key in unique_psm_keys:
 
 
     elapsed = timeit.default_timer() - masterstarttime
-    print(' Elapsed time:', elapsed, ' secs')
+    print('\nElapsed time:', elapsed, ' secs')
 
     # Create a mapping for each proxy id to an index of the array
     pid_map = {pobj.id: idx for idx, pobj in enumerate(proxy_objects)} 
