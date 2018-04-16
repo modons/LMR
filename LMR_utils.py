@@ -1100,32 +1100,6 @@ def assimilated_proxies(workdir):
             
     return ptypes,nrecords
 
-def coefficient_efficiency_old(ref,test):
-    """
-    Compute the coefficient of efficiency for a test time series, with respect to a reference time series.
-
-    Inputs:
-    test: one-dimensional test array
-    ref: one-dimensional reference array, of same size as test
-
-    Outputs:
-    CE: scalar CE score
-    """
-
-    # error
-    error = test - ref
-
-    # error variance
-    evar = np.var(error,ddof=1)
-
-    # variance in the reference 
-    rvar = np.var(ref,ddof=1)
-
-    # CE
-    CE = 1. - (evar/rvar)
-
-    return CE
-
 def coefficient_efficiency(ref,test,valid=None):
     """
     Compute the coefficient of efficiency for a test time series, with respect to a reference time series.
