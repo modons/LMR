@@ -69,7 +69,7 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
 
     # Option to localize the gain
     if loc is not None:
-        kcov = np.multiply(kcov,loc)
+    #    kcov = np.multiply(kcov,loc) # This implementation is not correct. To be revised later.
    
     # Kalman gain
     kmat = np.divide(kcov, kdenom)

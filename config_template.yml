@@ -39,7 +39,6 @@ core:
   nens: 100
   seed: null
   loc_rad: null
-  inflation_fact: null
 
   # Ensemble archiving options: ens_full, ens_variance, ens_percentiles, ens_subsample
   save_archive: ens_variance
