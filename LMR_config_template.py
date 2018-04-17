@@ -72,6 +72,11 @@ Revisions:
  - Added parameter allowing a user to define the reference period w.r.t. which
    anomalies in climate variable are calculated. 
    [ R. Tardif, Univ. of Washington, March 2018 ]
+ - Added option to regrid the reanalysis at the archiving stage.
+   [ R. Tardif, Univ. of Washington, April 2018 ]
+ - Clearer more flexible options to save ensemble information other than the mean
+   (i.e. full ensemble, ensemble variance, percentiles or subset of members)
+   [ R. Tardif, Univ. of Washington, April 2018 ]
 """
 
 from os.path import join
@@ -238,8 +243,7 @@ class core(ConfigGroup):
         Flag to indicate whether the analysis_Ye.pckl is to be generated 
         or not (large file containing full information on the posterior 
         proxy estimates (assimilated proxy records).
-    save_full_field: bool
-        Flag to indicate whether fields for the full ensemble should be saved
+
     """
 
     ##** BEGIN User Parameters **##
@@ -288,9 +292,14 @@ class core(ConfigGroup):
 
     # Whether or not to produce the analysis_Ye.pckl file
     write_posterior_Ye = False
-    # Whether or not to write the full ensemble
-    save_full_field = False
 
+    # Ensemble archiving options: ens_full, ens_variance, ens_percentiles, ens_subsample
+    save_archive = 'ens_variance'
+    # if save_archive = 'ens_percentiles', which percentiles to caclulate and save
+    save_archive_percentiles = (5,95)
+    # if save_archive = 'ens_subsample', number of members to archive
+    save_archive_ens_subsample = 10
+    
     # Possibly regrid the generated reanalysis fields to archive files.
     # Options: None (no regridding) or 'esmpy'
     archive_regrid_method = None
@@ -321,6 +330,12 @@ class core(ConfigGroup):
         self.write_posterior_Ye = self.write_posterior_Ye
         self.anom_reference_period = self.anom_reference_period
 
+        
+        self.save_archive = self.save_archive
+        self.save_archive_percentiles = self.save_archive_percentiles
+        self.save_archive_ens_subsample = self.save_archive_ens_subsample
+
+        
         if self.archive_regrid_method is not None:
             if self.archive_regrid_method == 'esmpy':
                 self.archive_esmpy_interp_method = self.archive_esmpy_interp_method
