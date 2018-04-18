@@ -125,8 +125,9 @@ ccsm4_last_millenium:
     template: '[vardef_template]'
     available_vars: [tas_sfc_Amon, psl_sfc_Amon, zg_500hPa_Amon,
                      wap_500hPa_Amon, wap_700hPa_Amon, wap_850hPa_Amon,
+                     gmt_sfc_Amon, nhmt_sfc_Amon, shmt_sfc_Amon,
                      pr_sfc_Amon, prw_int_Amon, scpdsi_sfc_Amon,
-                     ai_sfc_Aann, pet_sfc_Amon,
+                     scpdsipm_sfc_Amon, ai_sfc_Aann, pet_sfc_Amon,
                      tos_sfc_Omon, sos_sfc_Omon, ohc_0-700m_Omon,
                      ohcArctic_0-700m_Omon, ohcAtlanticNH_0-700m_Omon,
                      ohcAtlanticSH_0-700m_Omon, ohcAtlantic_0-700m_Omon,
