@@ -22,6 +22,16 @@ MLOST:
   datafile: MLOST_air.mon.anom_V3.5.4.nc
   dataformat: NCD
 
+NOAAGlobalTemp:
+  info:
+    multiple_vars: False
+    template: null
+    available_vars: [air]
+
+  datadir: null
+  datafile: NOAAGlobalTemp_air.mon.anom_V4.0.1.nc
+  dataformat: NCD
+
 HadCRUT:
   info:
     multiple_vars: False

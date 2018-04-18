@@ -973,7 +973,7 @@ class psm(ConfigGroup):
     
     # Mapping of calibration sources w/ climate variable
     # To be modified only if a new calibration source is added. 
-    all_calib_sources = {'temperature': ['GISTEMP', 'MLOST', 'HadCRUT', 'BerkeleyEarth'], 'moisture': ['GPCC','DaiPDSI']}
+    all_calib_sources = {'temperature': ['GISTEMP', 'MLOST', 'NOAAGlobalTemp', 'HadCRUT', 'BerkeleyEarth'], 'moisture': ['GPCC','DaiPDSI']}
     
     ##** END User Parameters **##
 

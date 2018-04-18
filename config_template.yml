@@ -303,7 +303,7 @@ proxies:
 
 psm:
   all_calib_sources:
-    temperature: [GISTEMP, MLOST, HadCRUT, BerkeleyEarth]
+    temperature: [GISTEMP, MLOST, NOAAGlobalTemp, HadCRUT, BerkeleyEarth]
     moisture: [GPCC, DaiPDSI]
 
   calib_period: !!python/tuple [1850, 2015]

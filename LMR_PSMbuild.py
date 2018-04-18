@@ -99,7 +99,8 @@ class v_core(object):
     # Reference period (years) w.r.t. which the anomalies in calibration data
     # are to be defined.
     # Use None to default to calibration dataset definition
-    # note: default is (1951,1980) for GISTEMP and BerkeleyEarth, (1961-1990) for MLOST and HadCRUT
+    # note: default is (1951,1980) for GISTEMP and BerkeleyEarth,
+    #       (1961-1990) for MLOST/NOAAGlobalTemp and HadCRUT
     anom_reference_period = (1951,1980)
 
     # Period (years) over which proxy and instrumental data are to be used to
@@ -664,11 +665,14 @@ class v_psm(object):
         pre_calib_datafile = None
         
         # Choice between:
+        datatag_calib = 'GISTEMP'
+        datafile_calib = 'gistemp1200_ERSSTv4.nc'
+        # or
+        #datatag_calib = 'NOAAGlobalTemp'
+        #datafile_calib = 'NOAAGlobalTemp_air.mon.anom_V4.0.1.nc'
+        # or
         #datatag_calib = 'MLOST'
         #datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
-        # or
-        #datatag_calib = 'GISTEMP'
-        #datafile_calib = 'gistemp1200_ERSSTv4.nc'
         # or
         #datatag_calib = 'HadCRUT'
         #datafile_calib = 'HadCRUT.4.4.0.0.median.nc'
@@ -676,8 +680,8 @@ class v_psm(object):
         #datatag_calib = 'BerkeleyEarth'
         #datafile_calib = 'Land_and_Ocean_LatLong1.nc'
         # or 
-        datatag_calib = 'GPCC'
-        datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
+        #datatag_calib = 'GPCC'
+        #datafile_calib = 'GPCC_precip.mon.flux.1x1.v6.nc'  # Precipitation flux (kg m2 s-1)
         # or
         #datatag_calib = 'DaiPDSI'
         #datafile_calib = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
@@ -770,6 +774,9 @@ class v_psm(object):
         #
         datatag_calib_T = 'GISTEMP'
         datafile_calib_T = 'gistemp1200_ERSSTv4.nc'
+        # or
+        #datatag_calib_T = 'NOAAGlobalTemp'
+        #datafile_calib_T = 'NOAAGlobalTemp_air.mon.anom_V4.0.1.nc'
         # or
         #datatag_calib_T = 'MLOST'
         #datafile_calib_T = 'MLOST_air.mon.anom_V3.5.4.nc'
@@ -1050,7 +1057,7 @@ def main():
                 
                 except ValueError as e:
                     print(e)
-                    print('Test on seasonnality %s could not be completed.' %
+                    print('Test on seasonality %s could not be completed.' %
                           str(s))
 
 
@@ -1101,7 +1108,7 @@ def main():
                         test_psm_obj_dict[str((sT,sM))] =  test_psm_obj
                                                 
                     except:
-                        print('Test on seasonnality pair %s could not be completed.' %(str(sT)+':'+str(sM)))
+                        print('Test on seasonality pair %s could not be completed.' %(str(sT)+':'+str(sM)))
 
                     
                     i += 1
@@ -1119,8 +1126,10 @@ def main():
         # -------------------------------------------------------------
         # Select the "seasonal" model (psm)
         # criterion: min of metric if BIC, max if adjusted R-squared
-        indmin = np.argmin(metric)
-        indmax = np.argmax(metric)        
+        # first, make sure default values are unaccounted for
+        metric[metric==defaultnb] = np.nan
+        indmin = np.nanargmin(metric)
+        indmax = np.nanargmax(metric)        
         #select_psm_obj = test_psm_obj_dict[str(seasons[indmin])]
         #Y.seasonality = seasons[indmin] # a list if linear psm, a tuple of lists if bilinear
         select_psm_obj = test_psm_obj_dict[str(seasons[indmax])]

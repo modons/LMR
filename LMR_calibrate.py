@@ -31,6 +31,8 @@ def calibration_assignment(icalib):
         calib_object = calibration_BerkeleyEarth()
     elif icalib == 'MLOST':
         calib_object = calibration_MLOST()
+    elif icalib == 'NOAAGlobalTemp':
+        calib_object = calibration_NOAAGlobalTemp()
     elif icalib == 'GPCC':
         calib_object = calibration_precip_GPCC()
     elif icalib == 'DaiPDSI':
@@ -119,7 +121,27 @@ class calibration_MLOST(calibration_master):
 
     source = 'MLOST'
     dataformat_calib = 'NCD'
-    calib_vars = ['Tsfc']
+    calib_vars = ['air']
+    outfreq = 'monthly'
+    
+    # read the data
+    def read_calibration(self):
+        from load_gridded_data import read_gridded_data_MLOST
+        [self.time,self.lat,self.lon,self.temp_anomaly] = read_gridded_data_MLOST(self.datadir_calib,
+                                                                                  self.datafile_calib,
+                                                                                  self.calib_vars,
+                                                                                  self.outfreq,
+                                                                                  self.anom_reference_period)
+
+
+# -------------------------------------------------------------------------------
+# *** NOAAGlobalTemp class ----------------------------------------
+# -------------------------------------------------------------------------------
+class calibration_NOAAGlobalTemp(calibration_master):
+
+    source = 'NOAAGlobalTemp'
+    dataformat_calib = 'NCD'
+    calib_vars = ['air']
     outfreq = 'monthly'
     
     # read the data

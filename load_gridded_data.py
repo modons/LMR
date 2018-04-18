@@ -431,7 +431,15 @@ def read_gridded_data_MLOST(data_dir,data_file,data_vars,outfreq,ref_period):
     nbmaxnan = 0 # max nb of nan's allowed in calculation of annual average
 
     # Check if file exists
-    infile = data_dir+'/MLOST/'+data_file
+    if 'MLOST' in data_file:
+        infile = data_dir+'/MLOST/'+data_file
+    elif 'NOAAGlobalTemp' in data_file:
+        infile = data_dir+'/NOAAGlobalTemp/'+data_file
+    else:
+        print('In read_gridded_data_MLOST: error in specification of',
+              ' datadirectory for this calibration dataset.')
+        raise SystemExit()
+
     if not os.path.isfile(infile):
         raise SystemExit(('Error in specification of gridded dataset. '
                           'File {} does not exist. Exiting.').format(infile))
