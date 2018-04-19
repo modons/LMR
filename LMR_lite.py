@@ -22,13 +22,23 @@ Modifications:
 """
 import LMR_lite_utils as LMRlite
 import LMR_utils
+import LMR_config
 import numpy as np
+import os,sys
+
+# check for user-specified config file; otherwise, use the one in the SRC directory
+if len(sys.argv) > 1:
+    yaml_file = sys.argv[1]
+else:
+    yaml_file = os.path.join(LMR_config.SRC_DIR,'config_lite.yml')
+
+print('using this configuration file: '+yaml_file)
 
 #-----------------------------------------------------------------
 # load components
 #-----------------------------------------------------------------
 print('loading configuration in your config_lite.yml file...')
-cfg = LMRlite.load_config()
+cfg = LMRlite.load_config(yaml_file)
 print('loading proxies...')
 prox_manager = LMRlite.load_proxies(cfg)
 print('loading prior...')

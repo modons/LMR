@@ -292,14 +292,10 @@ def make_proxy_group(prox_manager,pgroup,Ye,Ye_coords,ens_inds,verbose=False):
     return vR, vP, vT, vYe, vYe_coords
  
 
-def load_config(verbose=False):
+def load_config(yaml_file,verbose=False):
     begin_time = time()
 
     if not LMR_config.LEGACY_CONFIG:
-        if len(sys.argv) > 3:
-            yaml_file = sys.argv[1]
-        else:
-            yaml_file = os.path.join(LMR_config.SRC_DIR, 'config_lite.yml')
 
         try:
             if verbose: print('Loading configuration: {}'.format(yaml_file))
