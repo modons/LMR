@@ -31,7 +31,6 @@ core:
   clean_start: True
   use_precalc_ye: True
   write_posterior_Ye: False
-  save_full_field: False
   recon_period: !!python/tuple [1800, 2000]
 #  recon_period: !!python/tuple [-120000, 2000]
   recon_timescale: 1
@@ -40,8 +39,12 @@ core:
   nens: 100
   seed: null
   loc_rad: null
-  inflation_fact: null
 
+  # Ensemble archiving options: ens_full, ens_variance, ens_percentiles, ens_subsample
+  save_archive: ens_variance
+  save_archive_percentiles: !!python/tuple [5, 95]
+  save_archive_ens_subsample: 10
+  # Possible regridding reanalysis 2D fields
   archive_regrid_method: null
   archive_esmpy_interp_method: bilinear
   archive_esmpy_regrid_to: t42
@@ -300,7 +303,7 @@ proxies:
 
 psm:
   all_calib_sources:
-    temperature: [GISTEMP, MLOST, HadCRUT, BerkeleyEarth]
+    temperature: [GISTEMP, MLOST, NOAAGlobalTemp, HadCRUT, BerkeleyEarth]
     moisture: [GPCC, DaiPDSI]
 
   calib_period: !!python/tuple [1850, 2015]
