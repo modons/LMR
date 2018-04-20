@@ -8,6 +8,11 @@ University of Washington
 26 February 2018
 
 Modifications:
+20 April 2018: new routine prior_regrid for regridding prior (GJH)
+21 March 2018: mod get_valid_proxes to accept proxy indices for filtering (rather than use all) (GJH)
+6 March 2018: fix for the Grid object; new routine make_obs for making "observations" from a gridded dataset (GJH)
+28 February 2018: port to Python3 (GJH)
+
 """
 
 import os
@@ -438,7 +443,6 @@ def load_prior(cfg,verbose=False):
         print('-----------------------------------------------------')
 
     return X, Xb_one
-
 
 def load_proxies(cfg,verbose=True):
 
@@ -1011,3 +1015,141 @@ def smooth_121(y):
     y_smooth[-1:] = np.nan
 
     return y_smooth
+
+def prior_regrid(cfg,X,Xb_one,verbose=False):
+
+    # scraped from LMR_utils.py on 20 April 2018 and modified for local use
+
+    # this block sets variables for compatability with original code
+    regrid_method = cfg.prior.regrid_method
+    prior = cfg.prior
+    nens = cfg.core.nens
+    Xb_one_full = X.ens
+
+    # Declare dictionary w/ info on content of truncated state vector
+    new_state_info = {}
+
+    # Transform every 2D state variable, one at a time
+    Nx = 0
+    for var in list(X.full_state_info.keys()):
+        dct = {}
+
+        dct['vartype'] = X.full_state_info[var]['vartype']
+
+        # variable indices in full state vector
+        ibeg_full = X.full_state_info[var]['pos'][0]
+        iend_full = X.full_state_info[var]['pos'][1]
+        # extract array corresponding to state variable "var"
+        var_array_full = Xb_one_full[ibeg_full:iend_full+1, :]
+        # corresponding spatial coordinates
+        coords_array_full = X.coords[ibeg_full:iend_full+1, :]
+
+        # Are we truncating this variable? (i.e. is it a 2D lat/lon variable?)
+
+        if X.full_state_info[var]['vartype'] == '2D:horizontal':
+            print(var, ' : 2D lat/lon variable, truncating this variable')
+            # lat/lon column indices in X.coords
+            ind_lon = X.full_state_info[var]['spacecoords'].index('lon')
+            ind_lat = X.full_state_info[var]['spacecoords'].index('lat')
+            nlat = X.full_state_info[var]['spacedims'][ind_lat]
+            nlon = X.full_state_info[var]['spacedims'][ind_lon]
+
+            # calculate the truncated fieldNtimes
+            if regrid_method == 'simple':
+                [var_array_new, lat_new, lon_new] = \
+                    LMR_utils.regrid_simple(nens, var_array_full, coords_array_full, \
+                                            ind_lat, ind_lon, regrid_resolution)
+            elif regrid_method == 'spherical_harmonics':
+                [var_array_new, lat_new, lon_new] = \
+                    LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, regrid_resolution)
+            elif regrid_method == 'esmpy':
+                target_grid = prior.esmpy_grid_def
+
+                lat_2d = coords_array_full[:, ind_lat].reshape(nlat, nlon)
+                lon_2d = coords_array_full[:, ind_lon].reshape(nlat, nlon)
+
+                [var_array_new,
+                 lat_new,
+                 lon_new] = LMR_utils.regrid_esmpy(target_grid['nlat'],
+                                                   target_grid['nlon'],
+                                                   nens,
+                                                   var_array_full,
+                                                   lat_2d,
+                                                   lon_2d,
+                                                   nlat,
+                                                   nlon,
+                                                   method=prior.esmpy_interp_method)
+            else:
+                print('Exiting! Unrecognized regridding method.')
+                raise SystemExit
+
+            nlat_new = np.shape(lat_new)[0]
+            nlon_new = np.shape(lat_new)[1]
+
+            print(('=> Full array:      ' + str(np.min(var_array_full)) + ' ' +
+                   str(np.max(var_array_full)) + ' ' + str(np.mean(var_array_full)) +
+                   ' ' + str(np.std(var_array_full))))
+            print(('=> Truncated array: ' + str(np.min(var_array_new)) + ' ' +
+                   str(np.max(var_array_new)) + ' ' + str(np.mean(var_array_new)) +
+                   ' ' + str(np.std(var_array_new))))
+
+            # corresponding indices in truncated state vector
+            ibeg_new = Nx
+            iend_new = Nx+(nlat_new*nlon_new)-1
+            # for new state info dictionary
+            dct['pos'] = (ibeg_new, iend_new)
+            dct['spacecoords'] = X.full_state_info[var]['spacecoords']
+            dct['spacedims'] = (nlat_new, nlon_new)
+            # updated dimension
+            new_dims = (nlat_new*nlon_new)
+
+            # array with new spatial coords
+            coords_array_new = np.zeros(shape=[new_dims, 2])
+            coords_array_new[:, 0] = lat_new.flatten()
+            coords_array_new[:, 1] = lon_new.flatten()
+
+        else:
+            print(var,\
+                ' : not truncating this variable: no changes from full state')
+
+            var_array_new = var_array_full
+            coords_array_new = coords_array_full
+            # updated dimension
+            new_dims = var_array_new.shape[0]
+            ibeg_new = Nx
+            iend_new = Nx + new_dims - 1
+            dct['pos'] = (ibeg_new, iend_new)
+            dct['spacecoords'] = X.full_state_info[var]['spacecoords']
+            dct['spacedims'] = X.full_state_info[var]['spacedims']
+
+
+        # fill in new state info dictionary
+        new_state_info[var] = dct
+
+        # if 1st time in loop over state variables, create Xb_one array as copy
+        # of var_array_new
+        if Nx == 0:
+            Xb_one = np.copy(var_array_new)
+            Xb_one_coords = np.copy(coords_array_new)
+        else:  # if not 1st time, append to existing array
+            Xb_one = np.append(Xb_one, var_array_new, axis=0)
+            Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
+
+        # making sure Xb_one has proper mask, if it contains
+        # at least one invalid value
+        if np.isnan(Xb_one).any():        
+            Xb_one = np.ma.masked_invalid(Xb_one)
+            np.ma.set_fill_value(Xb_one, np.nan)
+
+        # updating dimension of new state vector
+        Nx = Nx + new_dims
+
+        # LMR_lite specific mod: update lat,lon information in X for later use
+        X.prior_dict[var]['lat'] = lat_new
+        X.prior_dict[var]['lon'] = lon_new
+        
+        # end loop over vars
+        
+    X.trunc_state_info = new_state_info
+    
+    return X, Xb_one

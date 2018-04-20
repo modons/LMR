@@ -17,6 +17,8 @@ University of Washington
 26 February 2018
 
 Modifications:
+20 April 2018: added option for regridding of the prior (uses config settings) (GJH)
+19 April 2018: added functionality for user-specified config file as a runtime option (GJH)
 27 February 2018: added second example; bug fix in Ye call (GJH)
 
 """
@@ -43,6 +45,14 @@ print('loading proxies...')
 prox_manager = LMRlite.load_proxies(cfg)
 print('loading prior...')
 X, Xb_one = LMRlite.load_prior(cfg)
+# check if config was set to regrid the prior 
+if cfg.prior.regrid_method:
+    print('regridding prior...')
+    # this function over-writes X, even if return is given a different name
+    [X,Xb_one] = LMRlite.prior_regrid(cfg,X,Xb_one,verbose=True)
+else:
+    X.trunc_state_info = X.full_state_info
+
 print('loading Ye...')
 Ye_assim, Ye_assim_coords = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg, prox_manager,'assim',X.prior_sample_indices)
 
