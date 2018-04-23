@@ -2488,7 +2488,13 @@ if stat_save:
                  'xbm_be_rmean_global','xbm_be_rmean_nh','xbm_be_rmean_sh','xbm_be_cemean_global','xbm_be_cemean_nh','xbm_be_cemean_sh',
                  'xbm_cru_rmean_global','xbm_cru_rmean_nh','xbm_cru_rmean_sh','xbm_cru_cemean_global','xbm_cru_cemean_nh','xbm_cru_cemean_sh',
                  'xbm_mlost_rmean_global','xbm_mlost_rmean_nh','xbm_mlost_rmean_sh','xbm_mlost_cemean_global','xbm_mlost_cemean_nh','xbm_mlost_cemean_sh',
-                 'lmr_tcr_mac','lmr_era_mac','lmr_gis_mac','lmr_be_mac','lmr_cru_mac','lmr_mlost_mac']
+                 'lmr_tcr_mac','lmr_era_mac','lmr_gis_mac','lmr_be_mac','lmr_cru_mac','lmr_mlost_mac',
+                 'r_lmr_tcr_zm','ce_lmr_tcr_zm', 'lat_TCR',
+                 'r_lmr_era_zm','ce_lmr_era_zm', 'lat_ERA20C',
+                 'r_lmr_gis_zm','ce_lmr_gis_zm', 'lat_GIS',
+                 'r_lmr_be_zm','ce_lmr_be_zm', 'lat_BE',
+                 'r_lmr_cru_zm','ce_lmr_cru_zm', 'lat_CRU',
+                 'r_lmr_mlost_zm','ce_lmr_mlost_zm', 'lat_MLOST']
 
     stat_metadata = {'trange':"starting and ending year of verification time period",
                      'ref_period':"starting and ending year of reference time period (mean removed)",
@@ -2570,6 +2576,24 @@ if stat_save:
                      'lmr_be_mac':"LMR_BE time-mean spatial anomaly correlation",
                      'lmr_cru_mac':"LMR_CRU time-mean spatial anomaly correlation",
                      'lmr_mlost_mac':"LMR_MLOST time-mean spatial anomaly correlation",
+                     'r_lmr_tcr_zm' :"LMR_TCR zonal-mean correlation",
+                     'ce_lmr_tcr_zm' :"LMR_TCR zonal-mean coefficient of efficiency",
+                     'lat_TCR':"TCR latitudes",
+                     'r_lmr_era_zm' :"LMR_ERA zonal-mean correlation",
+                     'ce_lmr_era_zm' :"LMR_ERA zonal-mean coefficient of efficiency",
+                     'lat_ERA20C':"ERA20C latitudes",
+                     'r_lmr_gis_zm' :"LMR_GIS zonal-mean correlation",
+                     'ce_lmr_gis_zm' :"LMR_GIS zonal-mean coefficient of efficiency",
+                     'lat_GIS':"GIS latitudes",
+                     'r_lmr_be_zm' :"LMR_BE zonal-mean correlation",
+                     'ce_lmr_be_zm' :"LMR_BE zonal-mean coefficient of efficiency",
+                     'lat_BE':"BE latitudes",
+                     'r_lmr_cru_zm' :"LMR_CRU zonal-mean correlation",
+                     'ce_lmr_cru_zm' :"LMR_CRU zonal-mean coefficient of efficiency",
+                     'lat_CRU':"CRU latitudes",
+                     'r_lmr_mlost_zm' :"LMR_MLOST zonal-mean correlation",
+                     'ce_lmr_mlost_zm' :"LMR_MLOST zonal-mean coefficient of efficiency",
+                     'lat_MLOST':"MLOST latitudes",
                      'stat_metadata':'metadata'
                      }
 
