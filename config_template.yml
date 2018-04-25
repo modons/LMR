@@ -128,7 +128,7 @@ proxies:
       Speleothem_All: [ 'Lamina thickness' ]
 
   LMRdb:
-    dbversion: 'v0.3.0'
+    dbversion: 'v0.4.0'
     datadir_proxy: null
     datafile_proxy: 'LMRdb_{}_Proxies.df.pckl'
     metafile_proxy: 'LMRdb_{}_Metadata.df.pckl'

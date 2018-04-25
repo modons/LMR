@@ -622,10 +622,7 @@ class proxies(ConfigGroup):
 
         ##** BEGIN User Parameters **##
 
-        #dbversion = 'v0.0.0'
-        #dbversion = 'v0.1.0'
-        dbversion = 'v0.2.0'
-
+        dbversion = 'v0.4.0'
         
         datadir_proxy = None
         datafile_proxy = 'LMRdb_{}_Proxies.df.pckl'

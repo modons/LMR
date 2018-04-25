@@ -14,7 +14,9 @@ Module: summarize_linearPSMs.py
  author: Robert Tardif - Univ. of Washington
  date  : 5/17/2017
 
- Revisions:  
+ Revisions: 
+           - ... 
+             [ R. Tardif, UW, April 2018 ] 
 
 """
 import sys
@@ -23,12 +25,14 @@ import pickle
 import numpy as np
 import pandas as pd
 import math
+import scipy.stats
 from collections import Counter
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.colors import from_levels_and_colors
 from mpl_toolkits.basemap import Basemap
+from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.append('../')
 from LMR_utils import coefficient_efficiency
@@ -36,10 +40,15 @@ from LMR_utils import coefficient_efficiency
 # ------------------------------------------------------------ #
 # -------------- Begin: user-defined parameters -------------- #
 
-LMRdbversion = 'v0.2.0'
-psm_type     = 'linear'        # linear or bilinear (only linear for now!)
-calib_source = 'GISTEMP'       # linear: GISTEMP, MLOST, HadCRUT, BerkeleyEarth, GPCC or DaiPDSI
-calib_season = 'annual'        # annual, seasonMETA, seasonPSM
+LMRdbversion = 'v0.4.0'
+psm_type     = 'linear'        # linear, linear_TorP or bilinear
+calib_source = 'GISTEMP'       # linear: GISTEMP, MLOST, NOAAGlobalTemp, HadCRUT, BerkeleyEarth, GPCC or DaiPDSI
+                               # bilinear: GISTEMP_GPCC, etc.
+calib_season = 'annual'      # annual, seasonMETA, seasonPSM
+
+anom_ref_period = (1951,1980)
+calib_period = (1850,2015)
+
 inputdir     = '/home/disk/kalman3/rtardif/LMRpy3/PSM'
 dbdir        = '/home/disk/kalman3/rtardif/LMRpy3/data/proxies'
 
@@ -52,6 +61,40 @@ make_proxy_individual_plots = True
 #  'Arctic', 'Antarctica', 'Greenland', 'TropicalPacific'
 map_region = 'GLOBAL' 
 
+# ...
+database_filter = []
+#database_filter = ['PAGES2kv2']          # PAGES2k proxies only
+#database_filter = ['PAGES2kv2','Breits'] # PAGES2k & Breitenmoser TRW proxies only
+#database_filter = ['Breits']             # Breitenmoser TRW proxies only
+#database_filter = ['LMR']                # LMR-specific proxies (includes Breitenmoser TRW)
+
+# Proxy types to plot and associated symbols
+# ** LMRdb **
+proxy_filter_symbols = {
+    'Bivalve_d18O'                     : 'h',
+    'Corals and Sclerosponges_Rates'   : 'o',
+    'Corals and Sclerosponges_SrCa'    : 'o',
+    'Corals and Sclerosponges_d18O'    : 'o',
+    'Ice Cores_Accumulation'           : 'd',
+    'Ice Cores_MeltFeature'            : 'd',
+    'Ice Cores_d18O'                   : 'd',
+    'Ice Cores_dD'                     : 'd',
+    'Lake Cores_Misc'                  : 's',
+    'Lake Cores_Varve'                 : 's',
+    'Marine Cores_d18O'                : '<',
+#    'Speleothems_d18O'                 : 'p',
+    'Tree Rings_WidthBreit'            : '^',
+    'Tree Rings_WidthPages2'           : 'v',
+    'Tree Rings_WoodDensity'           : '<',
+    'Tree Rings_Isotopes'              : '>',    
+}
+
+markersize = 20
+
+water = '#D3ECF8'
+continents = '#F2F2F2'
+coasts_countries = 'gray'
+
 
 # --------------  End: user-defined parameters  -------------- #
 # ------------------------------------------------------------ #
@@ -60,246 +103,219 @@ plt.style.use('ggplot')
 
 calib_source_var = {'GISTEMP': 'temperature',
                     'MLOST': 'temperature',
+                    'NOAAGlobalTemp': 'temperature',
                     'HadCRUT': 'temperature',
                     'BerkeleyEarth': 'temperature',
                     'GPCC': 'moisture',
                     'DaiPDSI': 'moisture'
                     }
 
-calib_tag = LMRdbversion+'_'+calib_season+'_'+calib_source
-dirfig = inputdir+'/Figs_LMRdb_'+calib_tag
+
+calib_dir = 'LMRdb_'+LMRdbversion+'_'+psm_type+'_'+calib_season+'_'+calib_source+ \
+            '_ref'+str(anom_ref_period[0])+'-'+str(anom_ref_period[1])+ \
+            '_cal'+str(calib_period[0])+'-'+str(calib_period[1])
+dirfig = inputdir+'/Figs_'+calib_dir
+
+
+# upload metadata of proxies in the database
+fname_meta = dbdir+'/LMRdb_'+LMRdbversion+'_Metadata.df.pckl'
+metadata = pd.read_pickle(fname_meta)
+
+
+# upload appropriate PSM data
+calib_tag = 'LMRdb_'+LMRdbversion+'_'+calib_season+'_'+calib_source+ \
+            '_ref'+str(anom_ref_period[0])+'-'+str(anom_ref_period[1])+ \
+            '_cal'+str(calib_period[0])+'-'+str(calib_period[1])
+
+if psm_type == 'linear' or psm_type == 'bilinear':
+    fname = inputdir+'/PSMs_'+calib_tag+'_diag.pckl'
+
+    try:
+        infile = open(fname,'rb')
+        psm_data = pickle.load(infile)
+        infile.close()
+    except IOError:
+        raise SystemExit(('Could not open/read file: {}. Exiting.'
+                      '\nPlease check that you have run LMR_PSMbuild.py'
+                      ' for the desired PSM configuration.').format(fname))
+
+    proxy_sites = sorted(psm_data.keys())
+    for site in proxy_sites:
+        if psm_type == 'linear':
+            psm_data[site]['sensitivity'] = 'Temperature'
+        elif psm_type == 'bilinear':
+            psm_data[site]['sensitivity'] = 'Temperature_Moisture'
+    
+elif psm_type == 'linear_TorP':
+    # need to upload PSMs calibrated against temperature and moisture
+    # assume temperature dataset is specified first in calib_source: calibTemperature_calibMoisture
+    calib_tag_T = 'LMRdb_'+LMRdbversion+'_'+calib_season+'_'+calib_source.split('_')[0]+ \
+                  '_ref'+str(anom_ref_period[0])+'-'+str(anom_ref_period[1])+ \
+                  '_cal'+str(calib_period[0])+'-'+str(calib_period[1])
+    
+    calib_tag_P = 'LMRdb_'+LMRdbversion+'_'+calib_season+'_'+calib_source.split('_')[1]+ \
+                  '_ref'+str(anom_ref_period[0])+'-'+str(anom_ref_period[1])+ \
+                  '_cal'+str(calib_period[0])+'-'+str(calib_period[1])
+
+    fname_T = inputdir+'/PSMs_'+calib_tag_T+'_diag.pckl'
+    fname_P = inputdir+'/PSMs_'+calib_tag_P+'_diag.pckl'
+    try:
+        infile_T = open(fname_T,'rb')
+        psm_data_T = pickle.load(infile_T)
+        infile_T.close()
+
+        infile_P = open(fname_P,'rb')
+        psm_data_P = pickle.load(infile_P)
+        infile_P.close()
+    except IOError:
+        raise SystemExit(('Could not open/read file(s): \n{},\n{}.'
+                      '\nExiting! Please check that you have run LMR_PSMbuild.py'
+                      ' for the desired PSM configuration.').format(fname_T,fname_P))
+    
+    
+    # Loop over proxies and determine which should be used
+    # Reproduce selection as performed in LinearPSM_TorP class in LMR_psms.py
+    psm_data = {}
+    
+    # key-off of temperature-calibrated records
+    proxy_sites = sorted(psm_data_T.keys())
+    for site in proxy_sites:
+        if site in psm_data_T.keys() and site in psm_data_P.keys():
+            #print(site, psm_data_T[site]['PSMcorrel'],  psm_data_P[site]['PSMcorrel'])
+            if abs(psm_data_T[site]['PSMcorrel']) >= abs(psm_data_P[site]['PSMcorrel']):
+                psm_data[site] = psm_data_T[site]
+                psm_data[site]['sensitivity'] = 'Temperature'
+            else:
+                psm_data[site] = psm_data_P[site]
+                psm_data[site]['sensitivity'] = 'Moisture'                
+        elif site in psm_data_T.keys() and site not in psm_data_P.keys():
+            # calibrated for temperature and NOT for precipitation
+            psm_data[site] = psm_data_T[site]
+            psm_data[site]['sensitivity'] = 'Temperature'
+        elif site not in psm_data_T.keys() and site in psm_data_P.keys():
+            # calibrated for precipitation/moisture and NOT for temperature
+            psm_data[site] = psm_data_P[site]
+            psm_data[site]['sensitivity'] = 'Moisture'
+        else:
+            pass
+    
+else:
+    print('ERROR in psm type specification')
+    raise SystemExit(1)
+
+
+proxy_types_sites = sorted(psm_data.keys())
+proxy_types = list(set([proxy_types_sites[k][0] for k in range(len(proxy_types_sites)) if proxy_types_sites[k][0] in proxy_filter_symbols]))
+
 
 # create dirfig if it does not exist
 if not os.path.isdir(dirfig):
     os.system('mkdir {}'.format(dirfig))
 
-# upload the calibrated PSM data
-fname = inputdir+'/PSMs_LMRdb_'+calib_tag+'_diag.pckl'
-try:
-    print('Reading file:', fname)
-    infile = open(fname,'rb')
-    psm_data = pickle.load(infile)
-    infile.close()
-except IOError:
-    raise SystemExit(('Could not open/read file: {}. Exiting.'
-                      '\nPlease check that you have run LMR_PSMbuild.py'
-                      ' for the desired PSM configuration.').format(fname))
 
-proxy_types_sites = sorted(psm_data.keys())
-proxy_types = list(set([proxy_types_sites[k][0] for k in range(len(proxy_types_sites))]))
-
-# metadata of proxies in the database
-fname_meta = dbdir+'/LMRdb_'+LMRdbversion+'_Metadata.df.pckl'
-metadata = pd.read_pickle(fname_meta)
-
-
-# --------------------------------------------
-# ======== Summary of PSM fit errors  ========
+# --------------------------------------------------------------
+# ======== Summary of PSM characteristics & fit errors  ========
 
 outfilename = dirfig+'/PSM_summary_stats.txt'
 outfile = open(outfilename,'w')
 
+print('-----------------------------------')
 for t in sorted(proxy_types):
 
     mean_error_ratio = []
     var_error_ratio = []
     SNR_vals = []
     CE_vals = [] 
+
+    msenst = []
+    msensm = []
     
     ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
-    for ts in [proxy_types_sites[k] for k in ind]:        
+    for ts in [proxy_types_sites[k] for k in ind]:
+
+        # access record metadata
+        site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+        proxyDB = site_meta['Databases'].iloc[0]
+        meta_sensitivity = site_meta['climateVariable'].iloc[0]
+
+        if meta_sensitivity == 'temperature':
+            msenst.append(meta_sensitivity)
+        elif meta_sensitivity == 'moisture':
+            msensm.append(meta_sensitivity)
+        
         ts_errors = psm_data[ts]['calib_proxy_values'] -  psm_data[ts]['calib_fit_values']
         ts_relative_mean_errors = np.mean(ts_errors)/np.mean(psm_data[ts]['calib_proxy_values'])
         ts_relative_var_errors = np.var(ts_errors)/np.var(psm_data[ts]['calib_proxy_values'])
         
         mean_error_ratio.append(ts_relative_mean_errors)
         var_error_ratio.append(ts_relative_var_errors)
-        
-        R2 = psm_data[ts]['PSMcorrel']*psm_data[ts]['PSMcorrel']
-        k = 1 # linear...
+
+        if psm_type == 'linear' or psm_type == 'linear_TorP':
+            k = 1
+        elif psm_type == 'bilinear':
+            k = 2
+        else:
+            print('ERROR')
+            raise SystemExit(1)
+
         n = psm_data[ts]['NbCalPts']
-        SNR_vals.append((R2/k)/((1-R2)/(n-k-1)))
+        R2 = psm_data[ts]['PSMcorrel']*psm_data[ts]['PSMcorrel']
+        #SNR = (R2/k)/((1-R2)/(n-k-1))
+        # sum of squares explained
+        SSreg = np.sum((psm_data[ts]['calib_fit_values']-np.mean(psm_data[ts]['calib_proxy_values']))**2.)
+        # sum of square residuals
+        SSE = np.sum((psm_data[ts]['calib_proxy_values'] - psm_data[ts]['calib_fit_values'])**2.)
+        MSreg = (SSreg/np.float(k))
+        MSE = SSE/(np.float(n-k-1))
+        SNR = MSreg/MSE
+
+        dfn = k+1
+        dfd = n-k
+        Fcrit = scipy.stats.f.ppf(q=0.95,dfn=dfn,dfd=dfd)
+        if SNR > Fcrit:
+            psm_data[ts]['Fsig95'] = True
+        else:
+             psm_data[ts]['Fsig95'] = False       
+        psm_data[ts]['SNR'] = 10.*np.log10(SNR) # SNR in dB
+        SNR_vals.append(SNR)
 
         CE = coefficient_efficiency(psm_data[ts]['calib_proxy_values'],psm_data[ts]['calib_fit_values'])
         CE_vals.append(CE)
 
-    outfile.write('%-30s : SNR(min,mean,max)=%7.2f %7.2f %7.2f CE(min,mean,max)=%7.4f %7.4f %7.4f \n'
+        # for linear_TorP: check agreement for proxy "sensitivity"
+        # between metadata and derived from PSM calibration
+        if psm_type == 'linear_TorP':
+            #print('==>', ts, psm_data[ts]['sensitivity'], meta_sensitivity)
+            psm_data[ts]['sensitivity_agreement'] = False
+            if psm_data[ts]['sensitivity'].lower() == meta_sensitivity:
+                psm_data[ts]['sensitivity_agreement'] = True
+
+
+    print('%-35s -> metadata: temperature= %5d moisture = %5d' %(t, len(msenst), len(msensm)))
+    
+        
+    outfile.write('%-35s : SNR(min,mean,max)=%7.2f %7.2f %7.2f CE(min,mean,max)=%7.4f %7.4f %7.4f \n'
                   %(t,np.min(SNR_vals), np.mean(SNR_vals), np.max(SNR_vals),
                     np.min(CE_vals), np.mean(CE_vals), np.max(CE_vals)))
     
     
 outfile.close()
-        
-# --------------------------------------------
-# === Histogram of calibration correlation === 
-
-# file for diagnostic output (sensitivity)
-fname = 'linearPSM_calibError_'+calib_tag+'.txt'
-outfilename = os.path.join(dirfig, fname)
-if os.path.exists(outfilename):
-    os.system('rm -f {}'.format(outfilename))
-
-# file for diagnostic output (seasonality)
-if calib_season == 'seasonPSM':
-    fname2 = 'linearPSM_calibSeasonality_'+calib_tag+'.txt'
-    outfilename2 = os.path.join(dirfig, fname2)
-    if os.path.exists(outfilename2):
-        os.system('rm -f {}'.format(outfilename2))
-
-    
-for t in sorted(proxy_types):
-
-    sites_goodPSM      = []
-    sites_goodPSM_corr = []
-    sites_allPSM_corr  = []
-    sites_PSMagreeMetadata = []
-    
-    ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
-    for ts in [proxy_types_sites[k] for k in ind]:
-        sites_allPSM_corr.append(psm_data[ts]['PSMcorrel'])
-        if abs(psm_data[ts]['PSMcorrel']) >= PSM_Rcrit:
-            sites_goodPSM.append(ts)
-            sites_goodPSM_corr.append(psm_data[ts]['PSMcorrel'])
-
-
-
-
-
-            
-        # -- checking sensitivity inferred from PSM vs metadata (if available) --
-
-        site_meta = metadata[metadata['Proxy ID'] == ts[1]]
-        climVar = site_meta['climateVariable'].iloc[0]
-        sensi = site_meta['Relation_to_climateVariable'].iloc[0]
-        # check seasonality
-        meta_seasonality = site_meta['Seasonality'].iloc[0]
-        calib_seasonality = psm_data[ts]['Seasonality']
-        
-        if climVar and sensi:
-            if calib_source_var[calib_source] == 'temperature' and climVar == 'temperature':
-                if psm_data[ts]['PSMslope'] > 0. and sensi == 'positive' or \
-                   psm_data[ts]['PSMslope'] < 0. and sensi == 'negative':
-                    sites_PSMagreeMetadata.append('agree')
-                else:
-                    sites_PSMagreeMetadata.append('disagree')
-            elif calib_source_var[calib_source] == 'moisture' and climVar == 'moisture':
-                if psm_data[ts]['PSMslope'] > 0. and sensi == 'positive' or \
-                   psm_data[ts]['PSMslope'] < 0. and sensi == 'negative':
-                    sites_PSMagreeMetadata.append('agree')
-                else:
-                    sites_PSMagreeMetadata.append('disagree')
-            # conditions below assume warm-dry/cold-wet for agreement ...
-            elif calib_source_var[calib_source] == 'temperature' and climVar == 'moisture':
-                if psm_data[ts]['PSMslope'] > 0. and sensi == 'negative' or \
-                   psm_data[ts]['PSMslope'] < 0. and sensi == 'positive':
-                    sites_PSMagreeMetadata.append('agree')
-                else:
-                    sites_PSMagreeMetadata.append('disagree')
-            elif calib_source_var[calib_source] == 'moisture' and climVar == 'temperature':
-                if psm_data[ts]['PSMslope'] < 0. and sensi == 'positive' or \
-                   psm_data[ts]['PSMslope'] > 0. and sensi == 'negative':
-                    sites_PSMagreeMetadata.append('agree')
-                else:
-                    sites_PSMagreeMetadata.append('disagree')
-            else:
-                sites_PSMagreeMetadata.append('unknown')
-        else:
-            sites_PSMagreeMetadata.append('unknown')
-
-        # print out if 'disagree' has been identified
-        # last element of list corresponds to tested proxy record
-        if sites_PSMagreeMetadata[-1] == 'disagree':
-            if os.path.exists(outfilename):
-                append_write = 'a'
-            else:
-                append_write = 'w'
-            outfile = open(outfilename, append_write)
-            outfile.write('{:120}'.format(str(ts))+' : Corr= '+"{:7.4f}".format(psm_data[ts]['PSMcorrel'])+\
-                          ' Slope= '+"{:.4f}".format(psm_data[ts]['PSMslope'])+'\n')
-            outfile.close()
-
-
-        # for checking seasonality derived during PSM calibration
-        if calib_season == 'seasonPSM':
-            if os.path.exists(outfilename2):
-                append_write = 'a'
-            else:
-                append_write = 'w'
-
-            outfile2 = open(outfilename2, append_write)
-            outfile2.write('{:120}'.format(str(ts))+' : Seasonality(metadata)= '+"{:48}".format(str(meta_seasonality))+\
-                           ' Seasonality(calibration)= '+"{:48}".format(str(calib_seasonality))+'\n')
-            outfile2.close()
-
-    
-    ALLcorr = np.asarray([sites_allPSM_corr[i] for i in range(len(sites_allPSM_corr))])
-    GOODcorr = np.asarray([sites_goodPSM_corr[i] for i in range(len(sites_goodPSM_corr))])
-
-    print('Proxy type: %s' %t)
-    print('  Total nb of sites        : %4d' %len(sites_allPSM_corr))
-    print('  Nb of sites w/ good PSM  : %4d' %len(sites_goodPSM))
-    if len(sites_goodPSM) > 0:
-        print('  Stats correlation magnitude for sites w/ good PSM: min=%6.4f mean=%6.4f median=%6.4f max=%6.4f' \
-              %(np.min(abs(GOODcorr)), np.mean(abs(GOODcorr)), np.median(abs(GOODcorr)), np.max(abs(GOODcorr))))
-
-    vsMetadata_unknown  = sites_PSMagreeMetadata.count('unknown')
-    vsMetadata_agree    = sites_PSMagreeMetadata.count('agree')
-    vsMetadata_disagree = sites_PSMagreeMetadata.count('disagree')
-
-    
-    
-
-    
-    if len(sites_allPSM_corr) > 0:
-
-        fig = plt.figure()
-
-        #bins = np.linspace(-1.05,1.05,22)
-        bins = np.linspace(-1.025,1.025,42)
-        #n, bins, patches = plt.hist(abs(GOODcorr), histtype='stepfilled',normed=False)
-        n, bins, patches = plt.hist(ALLcorr, bins, histtype='stepfilled',normed=False)
-        plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
-        plt.title("%s - PSM calibration: %s" % (t, calib_source))
-        plt.xlabel("Correlation")
-        plt.ylabel("Count")
-        xmin,xmax,ymin,ymax = plt.axis()
-
-        # round up to next decade
-        countmax = int(math.ceil(np.max(n)/10.)*10.)
-        plt.axis((-1,1,0,countmax))
-
-        xmin,xmax,ymin,ymax = plt.axis()
-        plt.plot([-PSM_Rcrit,-PSM_Rcrit],[ymin,ymax],'--r')
-        plt.plot([PSM_Rcrit,PSM_Rcrit],[ymin,ymax],'--r')
-
-        # Annotate with summary stats
-        ypos = ymax-0.05*(ymax-ymin)
-        xpos = xmin+0.02*(xmax-xmin)
-        plt.text(xpos,ypos,'Total = %s' % str(len(sites_allPSM_corr)),fontsize=9,fontweight='bold')
-        ypos = ypos-0.05*(ymax-ymin)
-        plt.text(xpos,ypos,'Nb. above threshold = %s' % str(len(sites_goodPSM_corr)),fontsize=9,fontweight='bold')
-        ypos = ypos-0.05*(ymax-ymin)
-        plt.text(xpos,ypos,'Nb. unknown vs metadata  = %s' % str(vsMetadata_unknown),fontsize=9,fontweight='bold')
-        ypos = ypos-0.05*(ymax-ymin)
-        plt.text(xpos,ypos,'Nb. agree vs metadata    = %s' % str(vsMetadata_agree),fontsize=9,fontweight='bold')
-        ypos = ypos-0.05*(ymax-ymin)
-        plt.text(xpos,ypos,'Nb. disagree vs metadata = %s' % str(vsMetadata_disagree),fontsize=9,fontweight='bold')
-                
-        # Save file
-        plt.savefig('%s/hist_PSMcorr_%s_%s.png' % (dirfig,calib_tag,t.replace(" ", '_')),bbox_inches='tight')
-        plt.close()
+print('-----------------------------------')
 
 
 # --------------------------------------------
-# ------ Map of calibration correlation ------
+# ------ Summary of calibration results ------
 
-print(' ')
-print('Creating maps of PSM correlation...')
 
-#water = '#9DD4F0'
-#continents = '#888888'
-water = '#D3ECF8'
-continents = '#F2F2F2'
+# --------------------------------------------------------------------------
+# 1) PSM correlation
+# --------------------------------------------------------------------------
+
+fig = plt.figure(figsize=[7,9])
+
+# upper frame: map of PSM correlation for all proxy types
+
+ax = fig.add_subplot(2,1,1)
     
 mapcolor = plt.cm.seismic
 cbarfmt = '%4.1f'
@@ -310,14 +326,394 @@ scaled_colors = mapcolor(fvalc)
 cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
 cbarticks=np.linspace(fmin,fmax,11)
 
+
+# create the map
+if map_region == 'GLOBAL':
+    m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
+    latres = 20.; lonres=40.
+elif map_region == 'NAmerica':
+    m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=50,lat_0=50,lon_0=-107.,resolution='l', 
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'SAmerica':
+    m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=90,lat_0=-22,lon_0=-67.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Europe':
+    m = Basemap(projection='stere',width=7500000,height=5000000,lat_ts=30,lat_0=50,lon_0=20.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Asia':
+    m = Basemap(projection='stere',width=13000000,height=9000000,lat_ts=90,lat_0=40,lon_0=100.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Africa':
+    m = Basemap(projection='stere',width=12000000,height=8600000,lat_ts=90,lat_0=2,lon_0=20.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Australasia':
+    m = Basemap(projection='stere',width=13500000,height=9000000,lat_ts=82,lat_0=-15,lon_0=132.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Arctic':
+    m = Basemap(projection='npstere',boundinglat=60,lon_0=270,resolution='l', area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Antarctica':
+    m = Basemap(projection='spstere',boundinglat=-60,lon_0=180,resolution='l', area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Greenland':
+    m = Basemap(projection='stere',width=5000000,height=3000000,lat_ts=30,lat_0=72,lon_0=-40.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'TropicalPacific':
+    m = Basemap(projection='stere',width=18000000,height=9500000,lat_ts=30,lat_0=0,lon_0=-150.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+else:
+    raise SystemExit('Unrecognized region for mapping!')
+
+m.drawmapboundary(fill_color=water)
+m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
+m.fillcontinents(color=continents,lake_color=water)
+m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+
+
 # loop over proxy types & sites
+corr_data_lst_all = []
+snr_data_lst_all = []
 l = []
-ptypes = []
-for t in proxy_types:
+ptype_legend = []
+for t in sorted(proxy_types):
+    ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
 
-    ptypes.append(t)
+    corr_data_lst_ptype = []
+    snr_data_lst_ptype = []
+    for ts in [proxy_types_sites[k] for k in ind]:
 
-    fig = plt.figure(figsize=[11,9])
+        # filtering of records per database source
+        keep_ts = True
+        if len(database_filter) > 0:
+            site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+            proxyDB = site_meta['Databases'].iloc[0]
+            if set(proxyDB).isdisjoint(database_filter):
+                keep_ts = False
+        if keep_ts:
+            sitemarker = proxy_filter_symbols[t]
+            lat = psm_data[ts]['lat']
+            lon = psm_data[ts]['lon']
+            x, y = m(lon,lat)
+            Gplt = m.scatter(x,y,markersize,c=psm_data[ts]['PSMcorrel'],marker=sitemarker,
+                             edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+            corr_data_lst_ptype.append(psm_data[ts]['PSMcorrel'])
+            corr_data_lst_all.append(psm_data[ts]['PSMcorrel'])
+            snr_data_lst_ptype.append(psm_data[ts]['SNR'])
+            snr_data_lst_all.append(psm_data[ts]['SNR'])
+
+
+    if len(corr_data_lst_ptype) > 0:
+
+        corr_data_ptype = np.asarray(corr_data_lst_ptype)
+        nbtotsites, = corr_data_ptype.shape
+        nbabovePSMrcrit = len(np.where(abs(corr_data_ptype) >= PSM_Rcrit)[0])
+        fraction_abovePSMrcrit = (np.float(nbabovePSMrcrit)/np.float(nbtotsites))*100.
+        rMean = np.mean(corr_data_ptype)
+        
+        ptype_legend.append('%s (%5.1f)' %(t,rMean))
+        ts = proxy_types_sites[ind[0]]
+        sitemarker = proxy_filter_symbols[t]
+        lat = psm_data[ts]['lat']
+        lon = psm_data[ts]['lon']
+        x, y = m(lon,lat)
+        l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
+
+
+        
+cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='neither')
+cbar.outline.set_linewidth(1.0)
+cbar.set_label('%s' % 'Correlation',size=11,weight='bold')
+cbar.ax.tick_params(labelsize=10)
+plt.title("PSM calibration: %s, %s (%s)" % (psm_type, calib_source,calib_season),fontweight='bold',fontsize=10)
+plt.legend(l,ptype_legend,
+           scatterpoints=1,
+           loc='lower center', bbox_to_anchor=(0.5, -0.34),
+           ncol=3,
+           fontsize=8)
+
+
+
+# lower frame: overall histogram of PSM correlation
+
+ax = fig.add_subplot(2,1,2)
+
+corr_data = np.asarray(corr_data_lst_all)
+snr_data = np.asarray(snr_data_lst_all)
+
+
+bins = np.linspace(-1.025,1.025,42)
+n, bins, patches = plt.hist(corr_data, bins, histtype='stepfilled',normed=False)
+
+plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
+plt.xlabel("Correlation")
+plt.ylabel("Count")
+xmin,xmax,ymin,ymax = plt.axis()
+
+# round up to next decade
+countmax = int(math.ceil(np.max(n)/10.)*10.)
+plt.axis((-1,1,0,countmax))
+
+xmin,xmax,ymin,ymax = plt.axis()
+plt.plot([-PSM_Rcrit,-PSM_Rcrit],[ymin,ymax],'--r')
+plt.plot([PSM_Rcrit,PSM_Rcrit],[ymin,ymax],'--r')
+
+# Annotate with summary stats
+nbtotsites, = corr_data.shape
+nbabovePSMrcrit = len(np.where(abs(corr_data) >= PSM_Rcrit)[0])
+fraction_abovePSMrcrit = (np.float(nbabovePSMrcrit)/np.float(nbtotsites))*100.
+
+ypos = ymax-0.075*(ymax-ymin)
+xpos = xmin+0.02*(xmax-xmin)
+annot = 'Proxies with |r| >'+str(PSM_Rcrit)+' = '+str("{:4.1f}".format(fraction_abovePSMrcrit))+'%'
+plt.text(xpos,ypos,annot,fontsize=9,fontweight='bold')
+
+
+plt.title('All proxies',fontweight='bold',fontsize=10)
+if len(database_filter) > 0:
+    dbinfo = ''.join(database_filter)
+else:
+    dbinfo = 'All'
+plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, hspace=0.25)
+plt.savefig('%s/map_hist_%s_%s_PSMcorr_%s_%sProxies.png'
+            % (dirfig,map_region,psm_type,calib_tag,dbinfo),bbox_inches='tight')
+plt.close()
+
+
+# --------------------------------------------------------------------------
+# 2) PSM SNR (dB)
+# --------------------------------------------------------------------------
+
+fig = plt.figure(figsize=[7,9])
+
+# upper frame: map of PSM SNR for all proxy types
+
+ax = fig.add_subplot(2,1,1)
+    
+mapcolor = plt.cm.seismic
+cbarfmt = '%3d'
+
+fmin = -20.0; fmax = 20.0
+fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, 1, 101);
+scaled_colors = mapcolor(fvalc)
+cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
+cbarticks=np.linspace(fmin,fmax,11)
+
+
+# create the map
+
+if map_region == 'GLOBAL':
+    m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
+    latres = 20.; lonres=40.
+elif map_region == 'NAmerica':
+    m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=50,lat_0=50,lon_0=-107.,resolution='l', 
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'SAmerica':
+    m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=90,lat_0=-22,lon_0=-67.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Europe':
+    m = Basemap(projection='stere',width=7500000,height=5000000,lat_ts=30,lat_0=50,lon_0=20.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Asia':
+    m = Basemap(projection='stere',width=13000000,height=9000000,lat_ts=90,lat_0=40,lon_0=100.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Africa':
+    m = Basemap(projection='stere',width=12000000,height=8600000,lat_ts=90,lat_0=2,lon_0=20.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Australasia':
+    m = Basemap(projection='stere',width=13500000,height=9000000,lat_ts=82,lat_0=-15,lon_0=132.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Arctic':
+    m = Basemap(projection='npstere',boundinglat=60,lon_0=270,resolution='l', area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Antarctica':
+    m = Basemap(projection='spstere',boundinglat=-60,lon_0=180,resolution='l', area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'Greenland':
+    m = Basemap(projection='stere',width=5000000,height=3000000,lat_ts=30,lat_0=72,lon_0=-40.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+elif map_region == 'TropicalPacific':
+    m = Basemap(projection='stere',width=18000000,height=9500000,lat_ts=30,lat_0=0,lon_0=-150.,resolution='l',
+                area_thresh=700.0)
+    latres = 10.; lonres=20.
+else:
+    raise SystemExit('Unrecognized region for mapping!')
+
+m.drawmapboundary(fill_color=water)
+m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
+m.fillcontinents(color=continents,lake_color=water)
+m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+
+
+# loop over proxy types & sites
+corr_data_lst_all = []
+snr_data_lst_all = []
+fsig95_data_lst_all = []
+l = []
+ptype_legend = []
+for t in sorted(proxy_types):
+    ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+
+    corr_data_lst_ptype = []
+    snr_data_lst_ptype = []
+    fsig95_data_lst_ptype = []
+    for ts in [proxy_types_sites[k] for k in ind]:
+
+        # filtering of records per database source
+        keep_ts = True
+        if len(database_filter) > 0:
+            site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+            proxyDB = site_meta['Databases'].iloc[0]
+            if set(proxyDB).isdisjoint(database_filter):
+                keep_ts = False
+        if keep_ts:
+            sitemarker = proxy_filter_symbols[t]
+            lat = psm_data[ts]['lat']
+            lon = psm_data[ts]['lon']
+            x, y = m(lon,lat)
+            Gplt = m.scatter(x,y,markersize,c=psm_data[ts]['SNR'],marker=sitemarker,
+                             edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+            corr_data_lst_ptype.append(psm_data[ts]['PSMcorrel'])
+            corr_data_lst_all.append(psm_data[ts]['PSMcorrel'])
+            snr_data_lst_ptype.append(psm_data[ts]['SNR'])
+            snr_data_lst_all.append(psm_data[ts]['SNR'])
+
+            fsig95_data_lst_ptype.append(psm_data[ts]['Fsig95'])
+            fsig95_data_lst_all.append(psm_data[ts]['Fsig95'])
+
+    if len(snr_data_lst_ptype) > 0:
+
+        snr_data_ptype = np.asarray(snr_data_lst_ptype)
+        nbtotsites, = snr_data_ptype.shape
+        nbPositiveSNR = len(np.where(snr_data_ptype > 0.)[0])
+        fraction_positiveSNR = (np.float(nbPositiveSNR)/np.float(nbtotsites))*100.
+        snrMean = np.mean(snr_data_ptype)
+
+        
+        ptype_legend.append('%s (%5.1f)' %(t,snrMean))
+        ts = proxy_types_sites[ind[0]]
+        sitemarker = proxy_filter_symbols[t]
+        lat = psm_data[ts]['lat']
+        lon = psm_data[ts]['lon']
+        x, y = m(lon,lat)
+        l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
+
+
+        
+cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
+cbar.outline.set_linewidth(1.0)
+cbar.set_label('%s' % 'SNR (dB)',size=11,weight='bold')
+cbar.ax.tick_params(labelsize=10)
+plt.title("PSM calibration: %s, %s (%s)" % (psm_type,calib_source,calib_season),fontweight='bold',fontsize=10)
+plt.legend(l,ptype_legend,
+           scatterpoints=1,
+           loc='lower center', bbox_to_anchor=(0.5, -0.34),
+           ncol=3,
+           fontsize=8)
+
+
+# lower frame: overall histogram of PSM SNR
+
+ax = fig.add_subplot(2,1,2)
+
+corr_data = np.asarray(corr_data_lst_all)
+snr_data = np.asarray(snr_data_lst_all)
+
+
+bins = np.linspace(-60.,60.,60) 
+n, bins, patches = plt.hist(snr_data, bins, histtype='stepfilled',normed=False)
+
+plt.setp(patches, 'facecolor', '#5CB8E6', 'alpha', 0.75)
+plt.xlabel("SNR (dB)")
+plt.ylabel("Count")
+xmin,xmax,ymin,ymax = plt.axis()
+
+if len(database_filter) == 0 or 'Breits' in database_filter:
+    #countmax = 550
+    countmax = 600
+else:
+    countmax = 100
+    
+plt.axis((xmin,xmax,0,countmax))
+xmin,xmax,ymin,ymax = plt.axis()
+
+plt.plot([0,0],[ymin,ymax],'--k')
+
+# Annotate with summary stats
+nbtotsites, = snr_data.shape
+nbPositiveSNR = len(np.where(snr_data > 0.)[0])
+fraction_positiveSNR = (np.float(nbPositiveSNR)/np.float(nbtotsites))*100.
+nbSignificant = np.sum(fsig95_data_lst_all)
+fraction_significant =  (np.float(nbSignificant)/np.float(nbtotsites))*100.
+
+ypos = ymax-0.075*(ymax-ymin)
+xpos = xmin+0.02*(xmax-xmin)
+annot = 'PSMs with +SNR(dB) = '+str("{:4.1f}".format(fraction_positiveSNR))+'%'
+plt.text(xpos,ypos,annot,fontsize=9,fontweight='bold')
+ypos = ypos-0.05*(ymax-ymin)
+annot2 = 'PSMs with sig. predictors = '+str("{:4.1f}".format(fraction_significant))+'%'
+plt.text(xpos,ypos,annot2,fontsize=9,fontweight='bold')
+
+plt.title('All proxies',fontweight='bold',fontsize=10)
+if len(database_filter) > 0:
+    dbinfo = ''.join(database_filter)
+else:
+    dbinfo = 'All'
+plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, hspace=0.25)
+plt.savefig('%s/map_hist_%s_%s_PSMsnr_%s_%sProxies.png'
+            % (dirfig,map_region,psm_type,calib_tag,dbinfo),bbox_inches='tight')
+plt.close()
+
+
+
+# ================================================================================
+# Specific to linear_TorP PSM type
+# 
+if psm_type == 'linear_TorP':
+
+    sensitivity_info = {}
+    snr_vals = {}
+    corr_vals = {}
+    corrModelObs_vals = {}
+    
+    # --------------------------------------------------------------------------------
+    # 3) PSM sensitivity (temperature vs moisture) - for TRW proxies -----------------
+    #    Correlation of the PSM calibration
+    # --------------------------------------------------------------------------------
+
+    mapcolor = plt.cm.seismic
+    cbarfmt = '%4.1f'
+
+    fmin = -1.0; fmax = 1.0
+    fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, 1, 101);
+    scaled_colors = mapcolor(fvalc)
+    cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
+    cbarticks=np.linspace(fmin,fmax,11)
+
+    fig = plt.figure(figsize=[7,8])
+
+    # upper frame - temperature sensitive records ------------------------------
+    ax = fig.add_subplot(2,1,1)
+
+    # create the map
     if map_region == 'GLOBAL':
         m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
         latres = 20.; lonres=40.
@@ -363,34 +759,707 @@ for t in proxy_types:
         raise SystemExit('Unrecognized region for mapping!')
 
     m.drawmapboundary(fill_color=water)
-    m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
+    m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
     m.fillcontinents(color=continents,lake_color=water)
-    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
-    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
 
-    ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
-    for ts in [proxy_types_sites[k] for k in ind]:        
 
-        sitemarker = 'o'
+    ptype_legend = []
+    sensitivity_temperature = []
+    for t in sorted(proxy_types):
+
+        sensitivity_info[t] = {}
+        corr_vals[t] = {}
+        
+        ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+
+        lst_tmp = []
+        sensitivity_temperature_agreement = []
+        nbrecs = 0
+        for ts in [proxy_types_sites[k] for k in ind]:
+            nbrecs +=1
+
+            # access record metadata
+            site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+            proxyDB = site_meta['Databases'].iloc[0]
+
+            # filtering of records per database source
+            keep_ts = True
+            if (len(database_filter) > 0):
+                if set(proxyDB).isdisjoint(database_filter):
+                    keep_ts = False
+                    
+            if keep_ts and (psm_data[ts]['sensitivity'].lower() == 'temperature'):
+                sitemarker = proxy_filter_symbols[t]
+                lat = psm_data[ts]['lat']
+                lon = psm_data[ts]['lon']
+                x, y = m(lon,lat)
+
+                sensitivity_temperature.append(ts)
+                sensitivity_temperature_agreement.append(psm_data[ts]['sensitivity_agreement'])
+
+                lst_tmp.append(psm_data[ts]['PSMcorrel'])
+                
+                Gplt = m.scatter(x,y,markersize,c=psm_data[ts]['PSMcorrel'],marker=sitemarker,
+                                 edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+        # ...
+        sensitivity_info[t]['NbTagree'] = np.sum(sensitivity_temperature_agreement)
+        sensitivity_info[t]['NbTtot'] = len(sensitivity_temperature_agreement)
+        corr_vals[t]['temperature'] = lst_tmp
+        
+        
+    cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='neither')
+    cbar.outline.set_linewidth(1.0)
+    cbar.set_label('%s' % 'Correlation',size=11,weight='bold')
+    cbar.ax.tick_params(labelsize=10)
+    plt.title("PSM calibration: %s, %s (%s) \n Temperature sensitive (nb=%d)"
+              % (psm_type,calib_source,calib_season,len(sensitivity_temperature)),fontweight='bold',fontsize=10)
+
+
+    # lower frame - moisture sensitive records ---------------------------------
+    ax = fig.add_subplot(2,1,2)
+
+    # create the map
+    if map_region == 'GLOBAL':
+        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
+        latres = 20.; lonres=40.
+    elif map_region == 'NAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=50,lat_0=50,lon_0=-107.,resolution='l', 
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'SAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=90,lat_0=-22,lon_0=-67.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Europe':
+        m = Basemap(projection='stere',width=7500000,height=5000000,lat_ts=30,lat_0=50,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Asia':
+        m = Basemap(projection='stere',width=13000000,height=9000000,lat_ts=90,lat_0=40,lon_0=100.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Africa':
+        m = Basemap(projection='stere',width=12000000,height=8600000,lat_ts=90,lat_0=2,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Australasia':
+        m = Basemap(projection='stere',width=13500000,height=9000000,lat_ts=82,lat_0=-15,lon_0=132.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Arctic':
+        m = Basemap(projection='npstere',boundinglat=60,lon_0=270,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Antarctica':
+        m = Basemap(projection='spstere',boundinglat=-60,lon_0=180,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Greenland':
+        m = Basemap(projection='stere',width=5000000,height=3000000,lat_ts=30,lat_0=72,lon_0=-40.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'TropicalPacific':
+        m = Basemap(projection='stere',width=18000000,height=9500000,lat_ts=30,lat_0=0,lon_0=-150.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    else:
+        raise SystemExit('Unrecognized region for mapping!')
+
+
+    m.drawmapboundary(fill_color=water)
+    m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
+    m.fillcontinents(color=continents,lake_color=water)
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+
+
+    ptype_legend = []
+    sensitivity_moisture = []
+    for t in sorted(proxy_types):
+        ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+
+        lst_tmp = []
+        sensitivity_moisture_agreement = []
+        nbrecs = 0
+        for ts in [proxy_types_sites[k] for k in ind]:
+            nbrecs +=1
+
+            # filtering of records per database source
+            keep_ts = True
+            if len(database_filter) > 0:
+                site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+                proxyDB = site_meta['Databases'].iloc[0]
+                if set(proxyDB).isdisjoint(database_filter):
+                    keep_ts = False
+            if keep_ts and psm_data[ts]['sensitivity'].lower() == 'moisture':
+                sitemarker = proxy_filter_symbols[t]
+                lat = psm_data[ts]['lat']
+                lon = psm_data[ts]['lon']
+                x, y = m(lon,lat)
+
+                sensitivity_moisture.append(ts)
+                sensitivity_moisture_agreement.append(psm_data[ts]['sensitivity_agreement'])
+
+                lst_tmp.append(psm_data[ts]['PSMcorrel'])
+                
+                Gplt = m.scatter(x,y,markersize,c=psm_data[ts]['PSMcorrel'],marker=sitemarker,
+                                 edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+        # ...
+        sensitivity_info[t]['NbMagree'] = np.sum(sensitivity_moisture_agreement)
+        sensitivity_info[t]['NbMtot'] = len(sensitivity_moisture_agreement)
+
+        corr_vals[t]['moisture'] = lst_tmp
+        
+        # for additional info incorporated in legend
+        nb_temperature = len(sensitivity_temperature)
+        nb_moisture = len(sensitivity_moisture)
+        fraction_temperature = np.float(nb_temperature)/np.float(nbrecs)
+        fraction_moisture = np.float(nb_moisture)/np.float(nbrecs)
+        rMean_temperature = np.mean(corr_vals[t]['temperature'])
+        rMean_moisture = np.mean(corr_vals[t]['moisture'])
+        
+        ptype_legend.append('%s (%5.2f,%5.2f)' %(t,rMean_temperature,rMean_moisture))
+        ts = proxy_types_sites[ind[0]]
+        sitemarker = proxy_filter_symbols[t]
         lat = psm_data[ts]['lat']
         lon = psm_data[ts]['lon']
         x, y = m(lon,lat)
-
         l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
-        Gplt = m.scatter(x,y,35,c=psm_data[ts]['PSMcorrel'],marker=sitemarker,
-                         edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
 
     cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='neither')
     cbar.outline.set_linewidth(1.0)
     cbar.set_label('%s' % 'Correlation',size=11,weight='bold')
     cbar.ax.tick_params(labelsize=10)
-    plt.title("%s - PSM calibration: %s (%s)" % (t, calib_source,calib_season),fontweight='bold')
+    plt.title("Moisture sensitive (nb=%d)" % len(sensitivity_moisture),fontweight='bold',fontsize=10)
 
-    plt.savefig('%s/map_%s_proxy_PSMcorr_%s_%s.png'
-                % (dirfig,map_region,calib_tag,t.replace(" ", '_')),bbox_inches='tight')
+    if len(database_filter) > 0:
+        dbinfo = ''.join(database_filter)
+    else:
+        dbinfo = 'All'
+
+    plt.legend(l,ptype_legend,
+               scatterpoints=1,
+               loc='lower center', bbox_to_anchor=(0.5, -0.35),
+               ncol=3,
+               fontsize=8)
+
+
+    plt.subplots_adjust(left=0.1, bottom=0.1, right=0.95, top=0.90, wspace=0.15, hspace=0.15)
+    plt.savefig('%s/map_%s_%s_SensiPSMcorr_%s_%sProxies.png'
+                % (dirfig,map_region,psm_type,calib_tag,dbinfo),bbox_inches='tight')
     plt.close()
 
+
+    # --------------------------------------------------------------------------------
+    # 4) PSM sensitivity (temperature vs moisture) - for TRW proxies -----------------
+    #    SNR of the PSM calibration
+    # --------------------------------------------------------------------------------
+
+    mapcolor = plt.cm.seismic
+    cbarfmt = '%4.1f'
+
+    fmin = -20.0; fmax = 20.0
+    fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, 1, 101);
+    scaled_colors = mapcolor(fvalc)
+    cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
+    cbarticks=np.linspace(fmin,fmax,11)
+
+    fig = plt.figure(figsize=[7,8])
+
+    # upper frame - temperature sensitive records ------------------------------
+    ax = fig.add_subplot(2,1,1)
+
+    # create the map
+    if map_region == 'GLOBAL':
+        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
+        latres = 20.; lonres=40.
+    elif map_region == 'NAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=50,lat_0=50,lon_0=-107.,resolution='l', 
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'SAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=90,lat_0=-22,lon_0=-67.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Europe':
+        m = Basemap(projection='stere',width=7500000,height=5000000,lat_ts=30,lat_0=50,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Asia':
+        m = Basemap(projection='stere',width=13000000,height=9000000,lat_ts=90,lat_0=40,lon_0=100.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Africa':
+        m = Basemap(projection='stere',width=12000000,height=8600000,lat_ts=90,lat_0=2,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Australasia':
+        m = Basemap(projection='stere',width=13500000,height=9000000,lat_ts=82,lat_0=-15,lon_0=132.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Arctic':
+        m = Basemap(projection='npstere',boundinglat=60,lon_0=270,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Antarctica':
+        m = Basemap(projection='spstere',boundinglat=-60,lon_0=180,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Greenland':
+        m = Basemap(projection='stere',width=5000000,height=3000000,lat_ts=30,lat_0=72,lon_0=-40.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'TropicalPacific':
+        m = Basemap(projection='stere',width=18000000,height=9500000,lat_ts=30,lat_0=0,lon_0=-150.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    else:
+        raise SystemExit('Unrecognized region for mapping!')
+
+    m.drawmapboundary(fill_color=water)
+    m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
+    m.fillcontinents(color=continents,lake_color=water)
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+
+
+    ptype_legend = []
+    lst_temperature = []
+    for t in sorted(proxy_types):
+        ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+
+        snr_vals[t] = {}
+        snr_temperature = []
+        
+        nbrecs = 0
+        for ts in [proxy_types_sites[k] for k in ind]:
+            nbrecs +=1
+
+            # filtering of records per database source
+            keep_ts = True
+            if len(database_filter) > 0:
+                site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+                proxyDB = site_meta['Databases'].iloc[0]
+                if set(proxyDB).isdisjoint(database_filter):
+                    keep_ts = False
+            if keep_ts and psm_data[ts]['sensitivity'].lower() == 'temperature':
+                sitemarker = proxy_filter_symbols[t]
+                lat = psm_data[ts]['lat']
+                lon = psm_data[ts]['lon']
+                x, y = m(lon,lat)
+
+                snr_temperature.append(psm_data[ts]['SNR'])
+                lst_temperature.append('1')
+                
+                Gplt = m.scatter(x,y,markersize,c=psm_data[ts]['SNR'],marker=sitemarker,
+                                 edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+        snr_vals[t]['temperature'] = snr_temperature
+            
+    cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='neither')
+    cbar.outline.set_linewidth(1.0)
+    cbar.set_label('%s' % 'SNR (dB)',size=11,weight='bold')
+    cbar.ax.tick_params(labelsize=10)
+    plt.title("PSM calibration: %s, %s (%s) \n Temperature sensitive (nb=%d)"
+              % (psm_type,calib_source,calib_season,len(lst_temperature)),fontweight='bold',fontsize=10)
+
+
+    # lower frame - moisture sensitive records ---------------------------------
+    ax = fig.add_subplot(2,1,2)
+
+    # create the map
+    if map_region == 'GLOBAL':
+        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
+        latres = 20.; lonres=40.
+    elif map_region == 'NAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=50,lat_0=50,lon_0=-107.,resolution='l', 
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'SAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=90,lat_0=-22,lon_0=-67.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Europe':
+        m = Basemap(projection='stere',width=7500000,height=5000000,lat_ts=30,lat_0=50,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Asia':
+        m = Basemap(projection='stere',width=13000000,height=9000000,lat_ts=90,lat_0=40,lon_0=100.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Africa':
+        m = Basemap(projection='stere',width=12000000,height=8600000,lat_ts=90,lat_0=2,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Australasia':
+        m = Basemap(projection='stere',width=13500000,height=9000000,lat_ts=82,lat_0=-15,lon_0=132.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Arctic':
+        m = Basemap(projection='npstere',boundinglat=60,lon_0=270,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Antarctica':
+        m = Basemap(projection='spstere',boundinglat=-60,lon_0=180,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Greenland':
+        m = Basemap(projection='stere',width=5000000,height=3000000,lat_ts=30,lat_0=72,lon_0=-40.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'TropicalPacific':
+        m = Basemap(projection='stere',width=18000000,height=9500000,lat_ts=30,lat_0=0,lon_0=-150.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    else:
+        raise SystemExit('Unrecognized region for mapping!')
     
+    m.drawmapboundary(fill_color=water)
+    m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
+    m.fillcontinents(color=continents,lake_color=water)
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+
+
+    ptype_legend = []
+    lst_moisture = []
+    for t in sorted(proxy_types):
+        ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+
+        snr_moisture = []
+        nbrecs = 0
+        for ts in [proxy_types_sites[k] for k in ind]:
+            nbrecs +=1
+
+            # filtering of records per database source
+            keep_ts = True
+            if len(database_filter) > 0:
+                site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+                proxyDB = site_meta['Databases'].iloc[0]
+                if set(proxyDB).isdisjoint(database_filter):
+                    keep_ts = False
+            if keep_ts and psm_data[ts]['sensitivity'].lower() == 'moisture':
+                sitemarker = proxy_filter_symbols[t]
+                lat = psm_data[ts]['lat']
+                lon = psm_data[ts]['lon']
+                x, y = m(lon,lat)
+
+                snr_moisture.append(psm_data[ts]['SNR'])
+                lst_moisture.append('1')
+                
+                Gplt = m.scatter(x,y,markersize,c=psm_data[ts]['SNR'],marker=sitemarker,
+                                 edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+        snr_vals[t]['moisture'] = snr_moisture
+                
+                
+        # for additional info incorporated in legend
+        nb_temperature = len(lst_temperature)
+        nb_moisture = len(lst_moisture)
+        fraction_temperature = np.float(nb_temperature)/np.float(nbrecs)
+        fraction_moisture = np.float(nb_moisture)/np.float(nbrecs)
+
+        snrMean_temperature = np.mean(snr_vals[t]['temperature'])
+        snrMean_moisture = np.mean(snr_vals[t]['moisture'])
+        
+        ptype_legend.append('%s (%5.2f,%5.2f)' %(t,snrMean_temperature,snrMean_moisture))
+        ts = proxy_types_sites[ind[0]]
+        sitemarker = proxy_filter_symbols[t]
+        lat = psm_data[ts]['lat']
+        lon = psm_data[ts]['lon']
+        x, y = m(lon,lat)
+        l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
+
+
+    cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='neither')
+    cbar.outline.set_linewidth(1.0)
+    cbar.set_label('%s' % 'SNR (dB)',size=11,weight='bold')
+    cbar.ax.tick_params(labelsize=10)
+    plt.title("Moisture sensitive (nb=%d)" % len(lst_moisture),fontweight='bold',fontsize=10)
+
+    if len(database_filter) > 0:
+        dbinfo = ''.join(database_filter)
+    else:
+        dbinfo = 'All'
+
+    plt.legend(l,ptype_legend,
+               scatterpoints=1,
+               loc='lower center', bbox_to_anchor=(0.5, -0.35),
+               ncol=3,
+               fontsize=8)
+
+
+    plt.subplots_adjust(left=0.1, bottom=0.1, right=0.95, top=0.90, wspace=0.15, hspace=0.15)
+    plt.savefig('%s/map_%s_%s_SensiPSMsnr_%s_%sProxies.png'
+                % (dirfig,map_region,psm_type,calib_tag,dbinfo),bbox_inches='tight')
+    plt.close()
+    
+
+    # --------------------------------------------------------------------------------
+    # 5) PSM sensitivity (temperature vs moisture) - for TRW proxies -----------------
+    #    Correlation between simulated vs observed proxies
+    # --------------------------------------------------------------------------------
+
+    mapcolor = plt.cm.seismic
+    cbarfmt = '%4.1f'
+
+    fmin = -1.0; fmax = 1.0
+    fval = np.linspace(fmin, fmax, 100);  fvalc = np.linspace(0, 1, 101);
+    scaled_colors = mapcolor(fvalc)
+    cmap, norm = from_levels_and_colors(levels=fval, colors=scaled_colors, extend='both')
+    cbarticks=np.linspace(fmin,fmax,11)
+
+
+    fig = plt.figure(figsize=[7,8])
+
+    # upper frame - temperature sensitive records ------------------------------
+    ax = fig.add_subplot(2,1,1)
+
+    # create the map
+    if map_region == 'GLOBAL':
+        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
+        latres = 20.; lonres=40.
+    elif map_region == 'NAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=50,lat_0=50,lon_0=-107.,resolution='l', 
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'SAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=90,lat_0=-22,lon_0=-67.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Europe':
+        m = Basemap(projection='stere',width=7500000,height=5000000,lat_ts=30,lat_0=50,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Asia':
+        m = Basemap(projection='stere',width=13000000,height=9000000,lat_ts=90,lat_0=40,lon_0=100.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Africa':
+        m = Basemap(projection='stere',width=12000000,height=8600000,lat_ts=90,lat_0=2,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Australasia':
+        m = Basemap(projection='stere',width=13500000,height=9000000,lat_ts=82,lat_0=-15,lon_0=132.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Arctic':
+        m = Basemap(projection='npstere',boundinglat=60,lon_0=270,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Antarctica':
+        m = Basemap(projection='spstere',boundinglat=-60,lon_0=180,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Greenland':
+        m = Basemap(projection='stere',width=5000000,height=3000000,lat_ts=30,lat_0=72,lon_0=-40.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'TropicalPacific':
+        m = Basemap(projection='stere',width=18000000,height=9500000,lat_ts=30,lat_0=0,lon_0=-150.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    else:
+        raise SystemExit('Unrecognized region for mapping!')
+    
+    m.drawmapboundary(fill_color=water)
+    m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
+    m.fillcontinents(color=continents,lake_color=water)
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+
+
+    ptype_legend = []
+    sensitivity_temperature = []
+    for t in sorted(proxy_types):
+        ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+
+        corrModelObs_vals[t] = {}
+        
+        rModelvsObs_temperature = []
+        nbrecs = 0
+        for ts in [proxy_types_sites[k] for k in ind]:
+            nbrecs +=1
+
+            # filtering of records per database source
+            keep_ts = True
+            if len(database_filter) > 0:
+                site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+                proxyDB = site_meta['Databases'].iloc[0]
+                if set(proxyDB).isdisjoint(database_filter):
+                    keep_ts = False
+            if keep_ts and psm_data[ts]['sensitivity'].lower() == 'temperature':
+                sitemarker = proxy_filter_symbols[t]
+                lat = psm_data[ts]['lat']
+                lon = psm_data[ts]['lon']
+                x, y = m(lon,lat)
+
+                sensitivity_temperature.append(ts)
+
+                rModelvsObs = np.corrcoef(psm_data[ts]['calib_fit_values'],psm_data[ts]['calib_proxy_values'])[0,1]
+                rModelvsObs_temperature.append(rModelvsObs)
+
+                Gplt = m.scatter(x,y,markersize,c=rModelvsObs,marker=sitemarker,
+                                 edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+        corrModelObs_vals[t]['temperature'] = rModelvsObs_temperature
+
+
+    cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='neither')
+    cbar.outline.set_linewidth(1.0)
+    cbar.set_label('%s' % 'Correlation',size=11,weight='bold')
+    cbar.ax.tick_params(labelsize=10)
+    plt.title("PSM calibration: %s, %s (%s) \n Temperature sensitive (nb=%d)"
+              % (psm_type,calib_source,calib_season,len(sensitivity_temperature)),fontweight='bold',fontsize=10)
+
+
+    # lower frame - moisture sensitive records ---------------------------------
+    ax = fig.add_subplot(2,1,2)
+
+    # create the map
+    if map_region == 'GLOBAL':
+        m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0)
+        latres = 20.; lonres=40.
+    elif map_region == 'NAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=50,lat_0=50,lon_0=-107.,resolution='l', 
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'SAmerica':
+        m = Basemap(projection='stere',width=12000000,height=8000000,lat_ts=90,lat_0=-22,lon_0=-67.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Europe':
+        m = Basemap(projection='stere',width=7500000,height=5000000,lat_ts=30,lat_0=50,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Asia':
+        m = Basemap(projection='stere',width=13000000,height=9000000,lat_ts=90,lat_0=40,lon_0=100.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Africa':
+        m = Basemap(projection='stere',width=12000000,height=8600000,lat_ts=90,lat_0=2,lon_0=20.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Australasia':
+        m = Basemap(projection='stere',width=13500000,height=9000000,lat_ts=82,lat_0=-15,lon_0=132.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Arctic':
+        m = Basemap(projection='npstere',boundinglat=60,lon_0=270,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Antarctica':
+        m = Basemap(projection='spstere',boundinglat=-60,lon_0=180,resolution='l', area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'Greenland':
+        m = Basemap(projection='stere',width=5000000,height=3000000,lat_ts=30,lat_0=72,lon_0=-40.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    elif map_region == 'TropicalPacific':
+        m = Basemap(projection='stere',width=18000000,height=9500000,lat_ts=30,lat_0=0,lon_0=-150.,resolution='l',
+                    area_thresh=700.0)
+        latres = 10.; lonres=20.
+    else:
+        raise SystemExit('Unrecognized region for mapping!')
+
+    m.drawmapboundary(fill_color=water)
+    m.drawcoastlines(linewidth=0.25,color=coasts_countries); m.drawcountries(linewidth=0.25,color=coasts_countries)
+    m.fillcontinents(color=continents,lake_color=water)
+    m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5,color=coasts_countries)
+    m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5,color=coasts_countries)
+
+
+    ptype_legend = []
+    sensitivity_moisture = []    
+    for t in sorted(proxy_types):
+        ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+
+        rModelvsObs_moisture = []
+        nbrecs = 0
+        for ts in [proxy_types_sites[k] for k in ind]:
+            nbrecs +=1
+
+            # filtering of records per database source
+            keep_ts = True
+            if len(database_filter) > 0:
+                site_meta = metadata[metadata['Proxy ID'] == ts[1]]
+                proxyDB = site_meta['Databases'].iloc[0]
+                if set(proxyDB).isdisjoint(database_filter):
+                    keep_ts = False
+            if keep_ts and psm_data[ts]['sensitivity'].lower() == 'moisture':
+                sitemarker = proxy_filter_symbols[t]
+                lat = psm_data[ts]['lat']
+                lon = psm_data[ts]['lon']
+                x, y = m(lon,lat)
+
+                sensitivity_moisture.append(ts)
+
+                rModelvsObs = np.corrcoef(psm_data[ts]['calib_fit_values'],psm_data[ts]['calib_proxy_values'])[0,1]
+                rModelvsObs_moisture.append(rModelvsObs)
+
+                Gplt = m.scatter(x,y,markersize,c=rModelvsObs,marker=sitemarker,
+                                 edgecolor='black',linewidth='.5',zorder=4,cmap=cmap,norm=norm)
+
+        corrModelObs_vals[t]['moisture'] = rModelvsObs_moisture
+                
+        # for additional info incorporated in legend
+        nb_temperature = len(sensitivity_temperature)
+        nb_moisture = len(sensitivity_moisture)
+        fraction_temperature = np.float(nb_temperature)/np.float(nbrecs)
+        fraction_moisture = np.float(nb_moisture)/np.float(nbrecs)
+        rmean_temperature = np.mean(corrModelObs_vals[t]['temperature'])
+        rmean_moisture = np.mean(corrModelObs_vals[t]['moisture'])
+
+        ptype_legend.append('%s (%5.2f,%5.2f)' %(t,rmean_temperature,rmean_moisture))
+        ts = proxy_types_sites[ind[0]]
+        sitemarker = proxy_filter_symbols[t]
+        lat = psm_data[ts]['lat']
+        lon = psm_data[ts]['lon']
+        x, y = m(lon,lat)
+        l.append(m.scatter(x,y,35,c='white',marker=sitemarker,edgecolor='black',linewidth='1'))
+
+
+    cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='neither')
+    cbar.outline.set_linewidth(1.0)
+    cbar.set_label('%s' % 'Correlation',size=11,weight='bold')
+    cbar.ax.tick_params(labelsize=10)
+    plt.title("Moisture sensitive (nb=%d)" % len(sensitivity_moisture),fontweight='bold',fontsize=10)
+
+    if len(database_filter) > 0:
+        dbinfo = ''.join(database_filter)
+    else:
+        dbinfo = 'All'
+
+    plt.legend(l,ptype_legend,
+               scatterpoints=1,
+               loc='lower center', bbox_to_anchor=(0.5, -0.35),
+               ncol=3,
+               fontsize=8)
+
+
+    plt.subplots_adjust(left=0.1, bottom=0.1, right=0.95, top=0.90, wspace=0.15, hspace=0.15)
+    plt.savefig('%s/map_%s_%s_SensiModelVsObsCorr_%s_%sProxies.png'
+                % (dirfig,map_region,psm_type,calib_tag,dbinfo),bbox_inches='tight')
+    plt.close()
+
+
+
+    # -----------------------
+    
+    ptypes = sorted(sensitivity_info.keys())
+    print('-----------------------------------')
+    print('Agreement between psm calibration vs metadata (nb. in agreement/total nb. in category)')
+    for p in ptypes:
+        print('%-35s -> psm calibration: temperature= %5d / %5d moisture = %5d / %5d' \
+              %(p, sensitivity_info[p]['NbTagree'], sensitivity_info[p]['NbTtot'], \
+                sensitivity_info[p]['NbMagree'], sensitivity_info[p]['NbMtot']))
+    print('-----------------------------------')
+
+    # -----------------------
+
+
+
+# --------------------------------------------------------------------------
+#                       -------------------------
+# --------------------------------------------------------------------------
+
+
 
 if make_proxy_individual_plots:
     # -----------------------------------------------
@@ -399,92 +1468,204 @@ if make_proxy_individual_plots:
     print(' ')
     print('Creating scatter plots showing PSM calibration characteristics, for each calibrated proxy record...')
 
-    for t in sorted(proxy_types):
+    
+    if psm_type == 'linear' or psm_type == 'linear_TorP':
 
-        ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
-        for ts in [proxy_types_sites[k] for k in ind]:        
+        for t in sorted(proxy_types):
 
-            proxy_type = ts[0]
-            proxy_id   = ts[1]
+            ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+            for ts in [proxy_types_sites[k] for k in ind]:        
 
-            fig = plt.figure(figsize=[6,9])
+                proxy_type = ts[0]
+                proxy_id   = ts[1]
 
-            # --- scatter plots of calibration data ---
-            ax = fig.add_subplot(2,1,1)
+                fig = plt.figure(figsize=[7,9])
 
-            plt.plot(psm_data[ts]['calib_refer_values'], psm_data[ts]['calib_proxy_values'],\
-                               'o',markersize=8, markerfacecolor='#5CB8E6',
-                               markeredgecolor='black', markeredgewidth=1,alpha=0.5)
-            xmin, xmax, ymin, ymax = plt.axis()
-            # the fit
-            reg_x = psm_data[ts]['calib_refer_values']
-            reg_x = np.insert(reg_x,0,xmin)
-            reg_x = np.append(reg_x,xmax)
-            line = psm_data[ts]['PSMslope'] * reg_x + psm_data[ts]['PSMintercept']
-            plt.plot(reg_x,line, 'r-', linewidth=5, alpha=0.25)
+                # --- scatter plots of calibration data ---
+                ax = fig.add_subplot(2,1,1)
 
-            #plt.suptitle('%s' %(proxy_type),fontsize=14,fontweight='bold')
-            plt.title('%s\n%s' % (proxy_type,proxy_id),fontsize=9,fontweight='bold')
-            plt.xlabel('Calibration data : %s (%s)' %(calib_source, calib_season),fontweight='bold')
-            plt.ylabel('Proxy data',fontweight='bold')
-            xmin, xmax, ymin, ymax = plt.axis()
+                plt.plot(psm_data[ts]['calib_refer_values'], psm_data[ts]['calib_proxy_values'],\
+                                   'o',markersize=8, markerfacecolor='#5CB8E6',
+                                   markeredgecolor='black', markeredgewidth=1,alpha=0.5)
+                xmin, xmax, ymin, ymax = plt.axis()
+                # the fit
+                reg_x = psm_data[ts]['calib_refer_values']
+                reg_x = np.insert(reg_x,0,xmin)
+                reg_x = np.append(reg_x,xmax)
+                line = psm_data[ts]['PSMslope'] * reg_x + psm_data[ts]['PSMintercept']
+                plt.plot(reg_x,line, 'r-', linewidth=5, alpha=0.25)
 
-            ax.tick_params(axis='both', which='major',labelsize=10)
+                #plt.suptitle('%s' %(proxy_type),fontsize=14,fontweight='bold')
+                plt.title('%s\n%s' % (proxy_type,proxy_id),fontsize=9,fontweight='bold')
+                plt.xlabel('%s\nCalibration data : %s (%s)' %(psm_data[ts]['sensitivity'], calib_source, calib_season),fontweight='bold')
+                plt.ylabel('Proxy data',fontweight='bold')
+                xmin, xmax, ymin, ymax = plt.axis()
 
-            # Annotate with summary stats
-            ypos = ymax - 0.05 * (ymax - ymin)
-            xpos = xmin + 0.025 * (xmax - xmin)
-            plt.text(xpos, ypos, 'Nobs = %s' % str(psm_data[ts]['NbCalPts']), fontsize=10,
-                     fontweight='bold')
-            ypos = ypos - 0.05 * (ymax - ymin)
-            plt.text(xpos, ypos,
-                     'Slope = %s' % "{:.4f}".format(psm_data[ts]['PSMslope']),
-                     fontsize=10, fontweight='bold')
-            ypos = ypos - 0.05 * (ymax - ymin)
-            plt.text(xpos, ypos,
-                     'Intcpt = %s' % "{:.4f}".format(psm_data[ts]['PSMintercept']),
-                     fontsize=10, fontweight='bold')
-            ypos = ypos - 0.05 * (ymax - ymin)
-            plt.text(xpos, ypos, 'Corr = %s' % "{:.4f}".format(psm_data[ts]['PSMcorrel']),
-                     fontsize=10, fontweight='bold')
-            ypos = ypos - 0.05 * (ymax - ymin)
-            plt.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(psm_data[ts]['PSMmse']),
-                     fontsize=10, fontweight='bold')
+                ax.tick_params(axis='both', which='major',labelsize=10)
 
-
-            # --- proxy vs fit time series ---
-            ax = fig.add_subplot(2,1,2)
-
-            reg_x = psm_data[ts]['calib_refer_values']
-            model = psm_data[ts]['PSMslope'] * reg_x + psm_data[ts]['PSMintercept']
-
-            plot_time = np.arange(1850,2016,1)
-            proxy_data = np.zeros(plot_time.shape); proxy_data[:] = np.nan
-            model_data = np.zeros(plot_time.shape); model_data[:] = np.nan
-
-            # indices of elements of psm_data[ts]['calib_time'] present in plot_time
-            mask = np.in1d(plot_time,psm_data[ts]['calib_time'])
-            proxy_data[mask] = psm_data[ts]['calib_proxy_values']
-            model_data[mask] = model
-
-            # plot with masking the missing data, if any
-            ax.plot(plot_time, proxy_data, color='#5CB8E6',linewidth=2,alpha=.6)
-            ax.plot(plot_time, model_data, 'r-', linewidth=2, alpha=.6)
-            # plot dots to show isolated data points
-            prx, = ax.plot(plot_time, proxy_data, '.', color='#5CB8E6', label='Proxy values')
-            fit, = ax.plot(plot_time, model_data, '.', color='red', label='Forward model')
-
-            plt.xlabel('Year',fontweight='bold')
-            plt.ylabel('Proxy',fontweight='bold')
-
-            ax.tick_params(axis='both', which='major',labelsize=10)        
-            legend_properties = {'size':10, 'weight':'bold'}
-            ax.legend(handles=[prx,fit],handlelength=0.5,ncol=1,loc='lower left',frameon=False,prop=legend_properties)
-
-            fig.tight_layout()
-            plt.savefig('%s/psmCalib_%s_%s%s_%s_%s.png' % (dirfig,psm_type,calib_source,calib_season,
-                proxy_type.replace(" ", "_"), proxy_id.replace("/", "_")),bbox_inches='tight')
-            plt.close()
+                # Annotate with summary stats
+                ypos = ymax - 0.05 * (ymax - ymin)
+                xpos = xmin + 0.025 * (xmax - xmin)
+                plt.text(xpos, ypos, 'Nobs = %s' % str(psm_data[ts]['NbCalPts']), fontsize=10,
+                         fontweight='bold')
+                ypos = ypos - 0.05 * (ymax - ymin)
+                plt.text(xpos, ypos,
+                         'Slope = %s' % "{:.4f}".format(psm_data[ts]['PSMslope']),
+                         fontsize=10, fontweight='bold')
+                ypos = ypos - 0.05 * (ymax - ymin)
+                plt.text(xpos, ypos,
+                         'Intcpt = %s' % "{:.4f}".format(psm_data[ts]['PSMintercept']),
+                         fontsize=10, fontweight='bold')
+                ypos = ypos - 0.05 * (ymax - ymin)
+                plt.text(xpos, ypos, 'Corr = %s' % "{:.4f}".format(psm_data[ts]['PSMcorrel']),
+                         fontsize=10, fontweight='bold')
+                ypos = ypos - 0.05 * (ymax - ymin)
+                plt.text(xpos, ypos, 'Res.MSE = %s' % "{:.4f}".format(psm_data[ts]['PSMmse']),
+                         fontsize=10, fontweight='bold')
 
 
+                # --- proxy vs fit time series ---
+                ax = fig.add_subplot(2,1,2)
 
+                reg_x = psm_data[ts]['calib_refer_values']
+                model = psm_data[ts]['PSMslope'] * reg_x + psm_data[ts]['PSMintercept']
+
+                plot_time = np.arange(1850,2016,1)
+                proxy_data = np.zeros(plot_time.shape); proxy_data[:] = np.nan
+                model_data = np.zeros(plot_time.shape); model_data[:] = np.nan
+
+                # indices of elements of psm_data[ts]['calib_time'] present in plot_time
+                mask = np.in1d(plot_time,psm_data[ts]['calib_time'])
+                proxy_data[mask] = psm_data[ts]['calib_proxy_values']
+                model_data[mask] = model
+
+                # plot with masking the missing data, if any
+                ax.plot(plot_time, proxy_data, color='#5CB8E6',linewidth=2,alpha=.6)
+                ax.plot(plot_time, model_data, 'r-', linewidth=2, alpha=.6)
+                # plot dots to show isolated data points
+                prx, = ax.plot(plot_time, proxy_data, '.', color='#5CB8E6', label='Proxy values')
+                fit, = ax.plot(plot_time, model_data, '.', color='red', label='Forward model')
+
+                plt.xlabel('Year',fontweight='bold')
+                plt.ylabel('Proxy',fontweight='bold')
+
+                ax.tick_params(axis='both', which='major',labelsize=10)     
+                legend_properties = {'size':10, 'weight':'bold'}
+                ax.legend(handles=[prx,fit],handlelength=0.5,ncol=1,loc='lower left',frameon=False,prop=legend_properties)
+
+                fig.tight_layout()
+                plt.savefig('%s/psmCalib_%s_%s%s_%s_%s.png' % (dirfig,psm_type,calib_source,calib_season,
+                    proxy_type.replace(" ", "_"), proxy_id.replace("/", "_")),bbox_inches='tight')
+                plt.close()
+
+
+
+    elif psm_type == 'bilinear':
+        
+        for t in sorted(proxy_types):
+
+            ind = [j for j, item in enumerate(proxy_types_sites) if item[0] == t]
+            for ts in [proxy_types_sites[k] for k in ind]:        
+
+                proxy_type = ts[0]
+                proxy_id   = ts[1]
+
+                Y = psm_data[ts]['calib_proxy_values']
+                Xtemp  = psm_data[ts]['calib_temperature_refer_values']
+                Xmoist = psm_data[ts]['calib_moisture_refer_values']
+
+                xx1, xx2 = np.meshgrid(np.linspace(Xtemp.min(),Xtemp.max(),200),
+                                       np.linspace(Xmoist.min(), Xmoist.max(),200))
+                Model = psm_data[ts]['PSMintercept'] + psm_data[ts]['PSMslope_temperature']*xx1 \
+                        + psm_data[ts]['PSMslope_moisture']*xx2
+
+                
+                fig = plt.figure(figsize=[7,9])
+
+                # --- scatter plots of calibration data ---
+                ax = fig.add_subplot(2,1,1, projection='3d')
+
+                # plot hyperplane
+                surf = ax.plot_surface(xx1,xx2,Model,cmap=plt.cm.RdBu_r,alpha=0.6,linewidth=0)
+
+                # plot data points
+                resid = Y - (psm_data[ts]['PSMintercept'] + psm_data[ts]['PSMslope_temperature']*Xtemp +
+                             psm_data[ts]['PSMslope_moisture']*Xmoist)
+                ax.scatter(Xtemp[resid>=0.],Xmoist[resid>=0.],Y[resid>=0.], color='black', alpha=1.0,facecolor='white')
+                ax.scatter(Xtemp[resid<0.],Xmoist[resid<0.],Y[resid<0.], color='black', alpha=1.0)
+                
+                # axis labels
+                calib_source_T = calib_source.split('_')[0]
+                calib_source_M = calib_source.split('_')[1]
+                
+                plt.suptitle('%s\n%s'% (proxy_type, proxy_id),fontsize=9,fontweight='bold')
+                plt.title('Calibration datasets: %s, %s (%s)' %(calib_source_T, calib_source_M, calib_season), fontsize=9,fontweight='bold')
+                
+                ax.set_xlabel('   Calibration temperature', fontsize=9, fontweight='bold', labelpad=3.)
+                ax.set_ylabel('Calibration moisture   ', fontsize=9, fontweight='bold', labelpad=3.)
+                ax.zaxis.set_rotate_label(False)
+                ax.set_zlabel('Proxy data',fontsize=9, rotation=90, fontweight='bold', labelpad=0.)
+
+                ax.xaxis.set_tick_params(pad=0.,labelsize=8)
+                ax.yaxis.set_tick_params(pad=0.,labelsize=8)
+                ax.zaxis.set_tick_params(pad=0.,labelsize=8)
+                
+                # set color of background box
+                ax.w_xaxis.set_pane_color((.7,.7,.7,.7))
+                ax.w_yaxis.set_pane_color((.7,.7,.7,.7))
+                ax.w_zaxis.set_pane_color((.7,.7,.7,.7))
+
+                # set the view perspective
+                ax.view_init(azim=-135,elev=25)
+                
+                xmin, xmax = ax.get_xlim()
+                ymin, ymax = ax.get_ylim()
+                zmin, zmax = ax.get_zlim()
+                
+                
+                # --- proxy vs fit time series ---
+                ax = fig.add_subplot(2,1,2)
+
+                Xtemp  = psm_data[ts]['calib_temperature_refer_values']
+                Xmoist = psm_data[ts]['calib_moisture_refer_values']
+                model = psm_data[ts]['PSMintercept'] + psm_data[ts]['PSMslope_temperature']*Xtemp \
+                        + psm_data[ts]['PSMslope_moisture']*Xmoist                
+                                
+                plot_time = np.arange(1850,2016,1)
+                proxy_data = np.zeros(plot_time.shape); proxy_data[:] = np.nan
+                model_data = np.zeros(plot_time.shape); model_data[:] = np.nan
+                
+                # indices of elements of psm_data[ts]['calib_time'] present in plot_time
+                mask = np.in1d(plot_time,psm_data[ts]['calib_time'])
+                proxy_data[mask] = psm_data[ts]['calib_proxy_values']
+                model_data[mask] = model
+
+                # plot with masking the missing data, if any
+                ax.plot(plot_time, proxy_data, color='#5CB8E6',linewidth=2,alpha=.6)
+                ax.plot(plot_time, model_data, 'r-', linewidth=2, alpha=.6)
+
+                # plot dots to show isolated data points
+                prx, = ax.plot(plot_time, proxy_data, '.', color='#5CB8E6', label='Proxy values')
+                fit, = ax.plot(plot_time, model_data, '.', color='red', label='Forward model')
+
+                plt.xlabel('Year',fontweight='bold')
+                plt.ylabel('Proxy',fontweight='bold')
+
+                plt.title('Nobs = %s, Corr = %s, Res.MSE =  %s\n proxy = %s + (%s x Temperature) + (%s x Moisture)\n\n'
+                          %("{:3d}".format(psm_data[ts]['NbCalPts']), 
+                            "{:.4f}".format(psm_data[ts]['PSMcorrel']),
+                            "{:.4f}".format(psm_data[ts]['PSMmse']),
+                            "{:.4f}".format(psm_data[ts]['PSMintercept']),
+                            "{:.4f}".format(psm_data[ts]['PSMslope_temperature']),
+                            "{:.4f}".format(psm_data[ts]['PSMslope_moisture'])),
+                          fontsize=9, fontweight='bold')
+                
+                ax.tick_params(axis='both', which='major',labelsize=10)        
+                legend_properties = {'size':10, 'weight':'bold'}
+                ax.legend(handles=[prx,fit],handlelength=0.5,ncol=1,loc='lower left',frameon=False,prop=legend_properties)
+
+                plt.subplots_adjust(left=0.1, bottom=0.1, right=0.95, top=0.94, wspace=0.15, hspace=0.25)
+
+                plt.savefig('%s/psmCalib_%s_%s%s_%s_%s.png' % (dirfig,psm_type,calib_source,calib_season,
+                    proxy_type.replace(" ", "_"), proxy_id.replace("/", "_")),bbox_inches='tight')
+                plt.close()

@@ -1084,7 +1084,7 @@ if make_map_plots:
             # ----------        
             ax = fig.add_subplot(3,1,1)
 
-            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=30. 
             cbnds = [mapmin,mapint,mapmax];
             nlevs = 101
             cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
@@ -1113,7 +1113,7 @@ if make_map_plots:
             # ----------
             ax = fig.add_subplot(3,1,2)
 
-            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=30. 
             cbnds = [mapmin,mapint,mapmax];
             nlevs = 101
             cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
@@ -1142,7 +1142,7 @@ if make_map_plots:
             # ----------
             ax = fig.add_subplot(3,1,3)
 
-            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 30.; lonres=30. 
+            m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=30. 
             cbnds = [mapmin,mapint,mapmax];
             nlevs = 101
             cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
