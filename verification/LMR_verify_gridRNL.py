@@ -101,6 +101,7 @@ verif_dict = \
     #'va_600hPa_Amon'  : ('anom','V600', '600hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
     #'ua_500hPa_Amon'  : ('anom','U500', '500hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
     #'ua_250hPa_Amon'  : ('anom','U250', '250Pa zonal wind',-2.0,2.0,'(m/s)',1.0), \
+    #'prw_int_Amon'    : ('anom','PRW', 'Precipitable water',-10.0,10.0,'(kg/m^2)',1.0), \
     }
 
 # time range for verification (in years CE)
