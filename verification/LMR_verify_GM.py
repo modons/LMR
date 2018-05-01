@@ -107,12 +107,18 @@ nexp = 'test'
 MCset = None
 #MCset = (0,10)
 
+# reference period over which mean is calculated & subtracted 
+# from all other datasets (in years CE)
+#ref_period = (1951,1980) # ref. period for GIS & BE
+#ref_period = (1961,1990) # ref. period for CRU & MLOST
+ref_period = (1900, 1999) # 20th century
+
+
 # specify directories for LMR data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
 datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/katabatic3/wperkins/LMR_output/testing'
-
 
 # Directory where historical griddded data products can be found
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
@@ -196,7 +202,16 @@ calib_vars = ['Tsfc']
                                                                    outfreq='annual',ref_period=[1951,1980])
 BE_time = np.array([d.year for d in btime])
 
+
 # load NOAA MLOST
+#datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+datafile_calib = 'NOAAGlobalTemp_air.mon.anom_V4.0.1.nc'
+calib_vars = ['air']
+[btime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,
+                                                                    outfreq='annual',ref_period=ref_period)
+MLOST_time = np.array([d.year for d in btime])
+
+"""
 path = datadir_calib + '/NOAA/'
 #fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v3.5.4.201504.asc'
 fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v4.0.0.201506.asc'
@@ -209,11 +224,10 @@ for row in dat:
     mlost_time.append(int(row[0].split()[0]))
     # this is the GMT temperature anomaly
     mlost.append(float(row[0].split()[1]))
-
 # convert to numpy arrays
 mlost_gm = np.array(mlost)
 MLOST_time = np.array(mlost_time)
-
+"""
 
 # ===================
 # Reanalysis products
@@ -229,21 +243,16 @@ datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
 vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
 lat_ERA20C = dd[vardef]['lat'][:,0]
 lon_ERA20C = dd[vardef]['lon'][0,:]
 nlat_ERA20C = len(lat_ERA20C)
 nlon_ERA20C = len(lon_ERA20C)
-ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#ERA20C = dd[vardef]['value']                      # Anomalies
-
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
-ref_mean_era = np.mean(ERA20C[smatch:ematch,:,:],axis=0)
-ERA20C = ERA20C - ref_mean_era
+#ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+ERA20C = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
 
 era_gm = np.zeros([len(ERA20C_time)])
 era_nhm = np.zeros([len(ERA20C_time)])
@@ -261,21 +270,16 @@ datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
 vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])
 lat_TCR = dd[vardef]['lat'][:,0]
 lon_TCR = dd[vardef]['lon'][0,:]
 nlat_TCR = len(lat_TCR)
 nlon_TCR = len(lon_TCR)
-TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#TCR = dd[vardef]['value']                      # Anomalies
-
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(TCR_time,1951,1980)
-ref_mean_tcr = np.mean(TCR[smatch:ematch,:,:],axis=0)
-TCR = TCR - ref_mean_tcr
+#TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+TCR = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
 
 tcr_gm = np.zeros([len(TCR_time)])
 tcr_nhm = np.zeros([len(TCR_time)])
@@ -287,9 +291,9 @@ for i in range(0,len(TCR_time)):
                                                                  lat_TCR)
 
 
-#
+# ------------------------------------
 # read LMR GMT data computed during DA
-#
+# ------------------------------------
 
 print('--------------------------------------------------')
 print('reading LMR GMT data...')
@@ -361,21 +365,17 @@ shmt_max = np.percentile(shse,95,axis=1)
 lmr_gm = sagmt
 LMR_time = recon_times
 
-
-# 
-# compute GIS, CRU  & BE global mean 
-#
-
+ 
+# compute GIS, CRU, MLOST & BE global mean 
 [gis_gm,_,_] = global_hemispheric_means(GIS_anomaly,GIS_lat)
 [cru_gm,_,_] = global_hemispheric_means(CRU_anomaly,CRU_lat)
 [be_gm,_,_]  = global_hemispheric_means(BE_anomaly,BE_lat)
+[mlost_gm,_,_]  = global_hemispheric_means(MLOST_anomaly,MLOST_lat)
 
 
-# adjust so that all time series pertain to 20th century mean
-
-# compute and remove the 20th century mean
-satime = 1900
-eatime = 1999
+# adjust so that all time series pertain to mean over reference period
+satime = ref_period[0]
+eatime = ref_period[1]
 
 # LMR
 smatch, ematch = find_date_indices(LMR_time,satime,eatime)

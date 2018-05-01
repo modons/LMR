@@ -97,6 +97,7 @@ trange = [1880,2000] #works for nya = 0
 
 # reference period over which mean is calculated & subtracted 
 # from all datasets (in years CE)
+# NOTE: GPCP and CMAP data cover the 1979-2015 period
 ref_period = [1979, 1999]
 
 valid_frac = 0.0
@@ -252,7 +253,7 @@ for var in verif_vars:
             accum = accum + verif_precip_monthly[inds[k],:,:]*days_in_month
 
         GPCP[i,:,:] = accum # precip in mm
-        #GPCP[i,:,:] = np.mean(verif_precip_monthly[inds,:,:], axis=0) # not mean !? sum ????
+
         i = i + 1
 
 
@@ -297,7 +298,7 @@ for var in verif_vars:
             accum = accum + verif_precip_monthly[inds[k],:,:]*days_in_month
 
         CMAP[i,:,:] = accum # precip in mm
-        #GPCP[i,:,:] = np.mean(verif_precip_monthly[inds,:,:], axis=0) # not mean !? sum ????
+
         i = i + 1
 
     # ----------
@@ -314,7 +315,8 @@ for var in verif_vars:
     datadir  = datadir_reanl +'/20cr'
     datafile = vardef +'_20CR_185101-201112.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                       anom_ref=ref_period)
     rtime = dd[vardef]['years']
     TCR_time = np.array([d.year for d in rtime])
     lats = dd[vardef]['lat']
@@ -357,7 +359,8 @@ for var in verif_vars:
     datadir  = datadir_reanl +'/era20c'
     datafile = vardef +'_ERA20C_190001-201012.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                       anom_ref=ref_period)
     rtime = dd[vardef]['years']
     ERA_time = np.array([d.year for d in rtime])
     lats = dd[vardef]['lat']
@@ -431,20 +434,6 @@ for var in verif_vars:
     fig.tight_layout()
     plt.savefig('GPCP_CMAP_20CR_ERA_climo.png')
     plt.close()
-    
-
-    # Precip accum. anomalies ---
-    print('Removing the temporal mean (for every gridpoint) from the prior...')
-    climo = np.nanmean(GPCP,axis=0)
-    GPCP = (GPCP - climo)
-    climo = np.nanmean(CMAP,axis=0)
-    CMAP = (CMAP - climo)
-
-    print('GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP))
-    print('CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP))
-    print('TCR  : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR))
-    print('ERA  : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA))
-    print('LMR  : Global: mean=', np.nanmean(xam), ' , std-dev=', np.nanstd(xam))
 
 
     ###############################################################
@@ -453,7 +442,7 @@ for var in verif_vars:
 
     # ----------------------------------------------------------
     # Adjust so that all anomaly data pertain to the mean over a 
-    # user-defined reference period (e.g. 20th century)
+    # common user-defined reference period (e.g. 20th century)
     # ----------------------------------------------------------
     
     print('Re-center on %s-%s period' % (str(ref_period[0]), str(ref_period[1])))
@@ -482,15 +471,15 @@ for var in verif_vars:
 
     print('GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP))
     print('CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP))
-    print('TCR : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR))
-    print('ERA : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA))
+    print('TCR  : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR))
+    print('ERA  : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA))
     print('LMR  : Global: mean=', np.nanmean(LMR), ' , std-dev=', np.nanstd(LMR))
 
 
     # -----------------------------------
     # Regridding the data for comparisons
     # -----------------------------------
-    print('\n regridding data to a common T42 grid...\n')
+    print('\n regridding data to a common grid...\n')
 
     iplot_loc= False
     #iplot_loc= True

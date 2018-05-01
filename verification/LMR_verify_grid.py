@@ -107,16 +107,16 @@ nlevs = 21
 alpha = 0.5
 
 # time range for verification (in years CE)
-trange = [1880,2000] #works for nya = 0
-#trange = [1885,1995] #works for nya = 5
-#trange = [1890,1990] #works for nya = 10
-#trange = [1900,2000]
+trange = (1880,2000) #works for nya = 0
+#trange = (1885,1995) #works for nya = 5
+#trange = (1890,1990) #works for nya = 10
+#trange = (1900,2000)
 
 # reference period over which mean is calculated & subtracted 
 # from all other datasets (in years CE)
-#ref_period = [1951,1980] # ref. period for GIS & BE
-#ref_period = [1961,1990] # ref. period for CRU & MLOST
-ref_period = [1900, 1999] # 20th century
+#ref_period = (1951,1980) # ref. period for GIS & BE
+#ref_period = (1961,1990) # ref. period for CRU & MLOST
+ref_period = (1900, 1999) # 20th century
 
 # set the default size of the figure in inches. ['figure.figsize'] = width, height;  
 # aspect ratio appears preserved on smallest of the two
@@ -258,7 +258,8 @@ datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
 vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
 lats = dd[vardef]['lat']
@@ -279,13 +280,13 @@ else:
     nlon_ERA20C = len(lon_ERA20C)
 lon2d_ERA20C, lat2d_ERA20C = np.meshgrid(lon_ERA20C, lat_ERA20C)
 
-ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#ERA20C = dd[vardef]['value']                      # Anomalies
+#ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+ERA20C = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
 
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
-ref_mean_era = np.mean(ERA20C[smatch:ematch,:,:],axis=0)
-ERA20C = ERA20C - ref_mean_era
+## compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
+#smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
+#ref_mean_era = np.mean(ERA20C[smatch:ematch,:,:],axis=0)
+#ERA20C = ERA20C - ref_mean_era
 
 # load 20th century reanalysis (TCR) reanalysis --------------------------------
 datadir = datadir_reanl+'/20cr'
@@ -293,7 +294,8 @@ datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
 vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])
 lats = dd[vardef]['lat']
@@ -314,13 +316,13 @@ else:
     nlon_TCR = len(lon_TCR)
 lon2d_TCR, lat2d_TCR = np.meshgrid(lon_TCR, lat_TCR)
 
-TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#TCR = dd[vardef]['value']                      # Anomalies
+#TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+TCR = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
 
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(TCR_time,1951,1980)
-ref_mean_tcr = np.mean(TCR[smatch:ematch,:,:],axis=0)
-TCR = TCR - ref_mean_tcr
+## compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
+#smatch, ematch = find_date_indices(TCR_time,1951,1980)
+#ref_mean_tcr = np.mean(TCR[smatch:ematch,:,:],axis=0)
+#TCR = TCR - ref_mean_tcr
 
 # ==================
 # Obs-based products
@@ -334,7 +336,7 @@ datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
 [gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,
-                                                                outfreq='annual',ref_period=[1951,1980])
+                                                                outfreq='annual',ref_period=ref_period)
 GIS_time = np.array([d.year for d in gtime])
 nlat_GIS = len(GIS_lat)
 nlon_GIS = len(GIS_lon)
@@ -355,7 +357,7 @@ GIS_anomaly = np.roll(GIS_anomaly,shift=nlon_GIS//2,axis=2)
 datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
 calib_vars = ['Tsfc']
 [ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,
-                                                                outfreq='annual',ref_period=[1951,1980])
+                                                                outfreq='annual',ref_period=ref_period)
 CRU_time = np.array([d.year for d in ctime])
 nlat_CRU = len(CRU_lat)
 nlon_CRU = len(CRU_lon)
@@ -376,7 +378,7 @@ CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU//2,axis=2)
 datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
 calib_vars = ['Tsfc']
 [btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,
-                                                                   outfreq='annual',ref_period=[1951,1980])
+                                                                   outfreq='annual',ref_period=ref_period)
 BE_time = np.array([d.year for d in btime])
 nlat_BE = len(BE_lat)
 nlon_BE = len(BE_lon)
@@ -397,7 +399,7 @@ BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE//2,axis=2)
 datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
 calib_vars = ['Tsfc']
 [mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,
-                                                                    outfreq='annual',ref_period=[1951,1980])
+                                                                    outfreq='annual',ref_period=ref_period)
 MLOST_time = np.array([d.year for d in mtime])
 nlat_MLOST = len(MLOST_lat)
 nlon_MLOST = len(MLOST_lon)

@@ -113,6 +113,7 @@ trange = [1850,2000] #works for nya = 0
 
 # reference period over which mean is calculated & subtracted 
 # from all datasets (in years CE)
+#ref_period = [1951, 1980] # as in instrumental-era products (e.g. GISTEMP)
 ref_period = [1900, 1999] # 20th century
 
 valid_frac = 0.0
@@ -160,7 +161,23 @@ niters = len(mcdir)
 print('mcdir: %s' % str(mcdir))
 print('niters = %s' % str(niters))
 
-# Loop over verif. variables
+# check availability of target variables
+vars_to_remove = []
+for var in verif_vars:
+    available = True
+    for dir in mcdir:
+        ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
+        if not os.path.exists(ensfiln):
+            available = False
+            continue
+    if not available:
+        print('WARNING: Variable %s not found in reconstruction output...' %var)
+        vars_to_remove.append(var)
+if len(vars_to_remove) > 0:
+    for var in vars_to_remove:
+        verif_vars.remove(var)
+
+# Finally, loop over available verif. variables
 for var in verif_vars:
 
     # read ensemble mean data
@@ -227,7 +244,8 @@ for var in verif_vars:
     datadir  = datadir_reanl +'20cr'
     datafile = vardef +'_20CR_185101-201112.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                       anom_ref=ref_period)
     rtime = dd[vardef]['years']
     TCR_time = np.array([d.year for d in rtime])
     lats = dd[vardef]['lat']
@@ -258,7 +276,8 @@ for var in verif_vars:
     datadir  = datadir_reanl+'era20c'
     datafile = var+'_ERA20C_190001-201012.nc'
 
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                       anom_ref=ref_period)
     rtime = dd[vardef]['years']
     ERA20C_time = np.array([d.year for d in rtime])
     lats = dd[vardef]['lat']
