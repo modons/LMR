@@ -2,66 +2,153 @@
 Module: LMR_convertNPZtoNETCDF.py
 
 Purpose: Converts LMR output from .npz files to netcdf files. 
-         Now restricted to ensemble-mean reconstruction variables, for every
-         Monte-Carlo realization included in the experiment.
+         Collects data of specified variable from .npz LMR output files 
+         in the various MC directories (r*) and writes out the data
+         in netcdf file(s) located in the experiment main directory.  
 
 Originator: Robert Tardif | Univ. of Washington, Dept. of Atmospheric Sciences
                           | April 2016
 
-Revisions: None
+Revisions: 
+         - Output to netcdf using of 20CRv2 variable names and conventions 
+           whenever possible.
+         - Added capabilities and streamlined processing by enabling output 
+           of full ensemble, or subsample of ensemble members or ensemble mean 
+           and spread, or ensemble mean only.
+           Processing of global mean temperature output (gmt) is also 
+           incorporated here. 
+           *** This script therefore is meant to replace the 
+               LMR_convertNPZtoNETCDF_fullfield.py and 
+               LMR_convertNPZtoNETCDF_gmt.py scripts. ***
+           [R. Tardif, U. of Washington - May 2018]
 
 """
 import os, glob
 import numpy as np
 from netCDF4 import Dataset, num2date
+import time as clock
 
 # LMR-specific import
 from LMR_utils import natural_sort
 
+Nsample = None
+
+# ------------------------------------------------
 # --- Begin section of user-defined parameters ---
 
-# name of directory where the output of LMR experiments are located
-#datadir = '/home/disk/ekman4/rtardif/LMR/output'
+# -- root name of directory where the output of LMR experiments are located --
 datadir = '/home/disk/kalman3/rtardif/LMR/output'
 
-# name of the experiment
+# -- name of the experiment --
 nexp = 'test'
 
-# Dictionary containing definitions of variables that can be handled by this code
+# -- Which type of output to netcdf file(s) --
+#    uncomment one of the lines below to choose
+#archive_type = 'ensemble_mean'
+archive_type = 'ensemble_mean_spread'
+#archive_type = 'ensemble_subsample'; Nsample = 10
+#archive_type = 'ensemble_full'
+
+
+# Dictionary containing definitions of variables that handled by this code
+# ------------------------------------------------------------------------
+#      LMR variable names             Variable names/attributes in netcdf
 var_desc = \
     {
-        'd18O_sfc_Amon'             : ('d18O', 'delta18 oxygen isotope','permil SMOW'),        \
-        'tas_sfc_Amon'              : ('Tsfc', 'Near surface air temperature anomaly', 'K'),   \
-        'psl_sfc_Amon'              : ('MSLP', 'Mean sea level pressure anomaly', 'Pa'),       \
-        'pr_sfc_Amon'               : ('PRCP', 'Precipitation rate anomaly', 'kg/m2/s1'),      \
-        'scpdsi_sfc_Amon'           : ('scpdsi','self-calibrated Palmer Drought Severity Index', ''), \
-        'scpdsipm_sfc_Amon'         : ('scpdsi','self-calibrated Palmer Drought Severity Index (Penman-Monteith)', ''), \
-        'uas_sfc_Amon'              : ('Usfc', 'Near surface zonal wind anomaly', 'm/s'),      \
-        'vas_sfc_Amon'              : ('Vsfc', 'Near surface meridional wind anomaly', 'm/s'), \
-        'zg_500hPa_Amon'            : ('H500', '500hPa geopotential height anomaly', 'm'),     \
-        'wap_500hPa_Amon'           : ('W500', '500hPa vertical motion anomaly', 'Ps/s'),      \
-        'wap_700hPa_Amon'           : ('W700', '700hPa vertical motion anomaly', 'Ps/s'),      \
-        'ua_500hPa_Amon'            : ('U500', '500hPa zonal wind anomaly', 'm/s'),            \
-        'va_500hPa_Amon'            : ('V500', '500hPa meridional wind anomaly', 'm/s'),       \
-        'tos_sfc_Omon'              : ('tos',  'Sea surface temperature', 'K'),                \
-        'ohcArctic_0-700m_Omon'     : ('ohcArctic_0to700m','Basin-averaged Ocean Heat Content of Arctic Ocean in 0-700m layer','J'),          \
-        'ohcAtlanticNH_0-700m_Omon' : ('ohcAtlanticNH_0to700m','Basin-averaged Ocean Heat Content of N. Atlantic Ocean in 0-700m layer','J'), \
-        'ohcAtlanticSH_0-700m_Omon' : ('ohcAtlanticNH_0to700m','Basin-averaged Ocean Heat Content of S. Atlantic Ocean in 0-700m layer','J'), \
-        'ohcPacificNH_0-700m_Omon'  : ('ohcPacificNH_0to700m','Basin-averaged Ocean Heat Content of N. Pacific Ocean in 0-700m layer','J'),   \
-        'ohcPacificSH_0-700m_Omon'  : ('ohcPacificSH_0to700m','Basin-averaged Ocean Heat Content of S. Pacific Ocean in 0-700m layer','J'),   \
-        'ohcSouthern_0-700m_Omon'   : ('ohcSouthern_0to700m','Basin-averaged Ocean Heat Content of Southern Ocean in 0-700m layer','J'),      \
-        'ohcIndian_0-700m_Omon'     : ('ohcIndian_0to700m','Basin-averaged Ocean Heat Content of Indian Ocean in 0-700m layer','J'),          \
-        'AMOCindex_Omon'            : ('AMOCindex','AMOC index (max. overturning in region between 30N-70N and 500m-2km depth in N Atl.)','kg s-1'),  \
-        'AMOC45N1000m_Omon'         : ('AMOC45N1000m','Meridional overturning streamfunction at 45N and 1000m depth','kg s-1'),               \
-        'AMOC26N1000m_Omon'         : ('AMOC26N1000m','Meridional overturning streamfunction at 26N and 1000m depth','kg s-1'),               \
-        'AMOC26Nmax_Omon'           : ('AMOC26Nmax','Maximum meridional overturning streamfunction in ocean column at 26N','kg s-1'),         \
+        'tas_sfc_Amon'              : {'variable_name': 'air',
+                                       'long_name': 'Air Temperature at Surface',
+                                       'standard_name': 'air_temperature',
+                                       'var_desc': 'Air temperature',
+                                       'level_desc': '2m',
+                                       'units': 'degK',
+                                       'GRIB_id': '11',
+                                       'GRIB_name': 'TMP',
+                                       'valid_range': (-20.,20.),
+                                      },
+        'psl_sfc_Amon'              : {'variable_name': 'prmsl',
+                                       'long_name': 'Pressure at Mean Sea Level',
+                                       'standard_name': 'air_pressure',
+                                       'var_desc': 'Mean Sea Level Pressure',
+                                       'level_desc': 'Mean Sea Level',
+                                       'units': 'Pa',
+                                       'GRIB_id': '2',
+                                       'GRIB_name': 'PRMSL',
+                                       'valid_range': (-2000.,2000.),
+                                      },
+        'pr_sfc_Amon'               : {'variable_name': 'prate',
+                                       'long_name': 'Precipitation Rate at Surface',
+                                       'standard_name': 'precipitation_flux',
+                                       'var_desc': 'Precipitation rate at surface',
+                                       'level_desc': 'Surface',
+                                       'units': 'kg/m^2/s',
+                                       'GRIB_id': '59',
+                                       'GRIB_name': 'PRATEsfcAvg',
+                                       'valid_range': (-0.0002,0.0002),
+                                      },
+        'prw_int_Amon'              : {'variable_name': 'pr_wtr',
+                                       'long_name': 'Precipitable Water for Entire Atmosphere',
+                                       'standard_name': 'atmosphere_water_vapor_content',
+                                       'var_desc': 'Precipitable water',
+                                       'level_desc': 'Surface',
+                                       'units': 'kg/m^2',
+                                       'GRIB_id': '54',
+                                       'GRIB_name': 'PWATeatm',
+                                       'valid_range': (-20.,20.), 
+                                      },
+        'scpdsipm_sfc_Amon'         : {'variable_name': 'pdsi',
+                                       'long_name': 'Self-Calibrated Palmer Drought Severity Index (Penman-Monteith evapotranspiration)',
+                                       'standard_name': 'self_calibrated_palmer_drought_severity_index',
+                                       'var_desc': 'Self-Calibrated Palmer Drought Severity Index',
+                                       'level_desc': 'Surface',
+                                       'units': '',
+                                       'GRIB_id': '',
+                                       'GRIB_name': '',
+                                       'valid_range': (-40.,40.),
+                                      },
+        'zg_500hPa_Amon'            : {'variable_name': 'hgt500',
+                                       'long_name': 'Geopotential Height on 500hPa pressure level',
+                                       'standard_name': 'geopotential_height_500hPa',
+                                       'var_desc': 'Geopotential height at 500hPa',
+                                       'level_desc': '500hPa',
+                                       'units': 'm',
+                                       'GRIB_id': '7',
+                                       'GRIB_name': 'HGT',
+                                       'valid_range': (-200.,200.),
+                                      },
+        'tos_sfc_Omon'              : {'variable_name': 'sst',
+                                       'long_name': 'Sea Surface Water Temperature',
+                                       'standard_name': 'sea_surface_water_temperature',
+                                       'var_desc': 'Sea surface water temperature',
+                                       'level_desc': 'surface',
+                                       'units': 'degK',
+                                       'GRIB_id': '',
+                                       'GRIB_name': 'WTMP',
+                                       'valid_range': (-20.,20.),
+                                      },
+        'gmt_ensemble'              : {'variable_name': 'gmt',
+                                       'long_name': 'Global-Mean Air Temperature at Surface',
+                                       'standard_name': 'global_mean_air_temperature',
+                                       'var_desc': 'Air temperature',
+                                       'level_desc': '2m',
+                                       'units': 'degK',
+                                       'GRIB_id': '',
+                                       'GRIB_name': '',
+                                       'valid_range': (-2.,2.),
+                                      },
     }
 
+
+
+dataset_tag = 'NOAA Last Millennium Reanalysis version 1 Annual Averages'
+
 # --- End section of user-defined parameters ---
+# ----------------------------------------------
+
+begin_time = clock.time()
 
 expdir = datadir + '/'+nexp
 
-# where the netcdf files are created 
+# where the netcdf files are to be generated
 outdir = expdir
 
 print('\n Getting information on Monte-Carlo realizations...\n')
@@ -77,73 +164,170 @@ niters = len(mcdirs)
 print('mcdirs:' + str(mcdirs))
 print('niters = ' + str(niters))
 
-print('\n Getting information on reconstructed variables...\n')
+print('\n Getting information on files and reconstructed variables...\n')
 
 # look in first "mcdirs" only. It should be the same for all. 
 workdir = expdir+'/'+mcdirs[0]
-# look for "ensemble_mean" files
-listdirfiles = glob.glob(workdir+"/ensemble_mean_*")
 
+# Assess data files present in directory and determine available input
+# --------------------------------------------------------------------
+allfiles = glob.glob(workdir+'/ensemble_*.npz')
+# strip directory name, keep file names only
+listfiles = [item.split('/')[-1] for item in allfiles]
+
+# Assume file name structure as: ensemble_<<type>>_<<variable name>>.npz
+# where <<type>> can be "full", "subsample", "mean" or "variance"
+availtypes = list(set([item.split('_')[0]+'_'+item.split('_')[1] for item in listfiles]))
+
+# Check available input vs. desired output
+if archive_type == 'ensemble_full':
+
+    if 'ensemble_full' in availtypes:
+        input_type = 'ensemble_full'
+        statistic = ('Ensemble Members', )
+    else:
+        print('Full ensemble archiving selected, but full ensemble not available in input!'
+              'Cannot proceed.')
+        raise SystemExit(1)
+
+elif archive_type == 'ensemble_subsample':
+    if 'ensemble_subsample' in availtypes:
+        input_type = 'ensemble_subsample'
+    elif 'ensemble_full' in availtypes:
+        input_type = 'ensemble_full'
+    else:
+        print('Archiving of subset of ensemble members selected, but needed full ensemble'
+              ' not available! Cannot proceed.')
+        raise SystemExit(1)
+    statistic = ('Ensemble Members (subset)', )
+    
+elif archive_type == 'ensemble_mean_spread':
+    if ('ensemble_mean' in availtypes) and \
+       ('ensemble_variance' in availtypes):
+        input_type = ('ensemble_mean', 'ensemble_variance')
+    elif 'ensemble_full' in availtypes:
+        input_type = 'ensemble_full'
+    else:
+        print('Archiving of ensemble mean & spread selected, but necessary input'
+              ' (full ensemble, or ensemble-mean and variance) not avilable.'
+              ' Cannot proceed.')
+        raise SystemExit(1)
+    statistic = ('Ensemble Mean', 'Ensemble Spread')
+    
+elif archive_type == 'ensemble_mean':
+    if 'ensemble_mean' in availtypes:
+        input_type = 'ensemble_mean'
+    elif 'ensemble_full' in availtypes:
+        input_type = 'ensemble_full'
+    else:
+        print('Archiving of ensemble mean selected, but necessary input'
+              ' (ensemble-mean itself or full ensemble) not available.'
+              ' Cannot proceed.')
+        raise SystemExit(1)
+    statistic = ('Ensemble Mean', )
+
+else:
+    print('Unrecognized archiving selection. Allowed options are:  ensemble_full,'
+          ' ensemble_subsample, ensemble_mean_spread or ensemble_mean')
+    raise SystemExit(1)
+
+# determine which array(s) to extract from npz files
+if input_type == 'ensemble_full':
+    npfile_to_extract = ('xa_ens',)
+elif input_type == 'ensemble_subsample':
+    npfile_to_extract = ('xa_subsample',)
+elif input_type == ('ensemble_mean', 'ensemble_variance'):
+    npfile_to_extract = ('xam', 'xav')
+elif input_type == 'ensemble_mean':
+    npfile_to_extract = ('xam',)
+else:
+    print('ERROR: Non-valid option specified for input data type: %s' %input_type)
+    raise SystemExit(1)
+
+
+# look for files corresponding to desired input_type
+listdirfiles = glob.glob(workdir+'/'+input_type+'_*')
+# including gmt_ensemble
+listdirfiles.extend(glob.glob(workdir+'/gmt_ensemble.npz'))
 # strip directory name, keep file name only
 listfiles = [item.split('/')[-1] for item in listdirfiles]
-
 # strip everything but variable name
-listvars = [(item.replace('ensemble_mean_','')).replace('.npz','') for item in listfiles]
+listvars = [(item.replace(input_type+'_','')).replace('.npz','') for item in listfiles]
 
 print('Variables:', listvars, '\n')
 
-# Loop over variables
+# Loop over variables to process
 for var in listvars:
     print('\n Variable:', var)
 
+    if var == 'gmt_ensemble': npfile_to_extract = (var,)
+    
     if var not in list(var_desc.keys()):
         print(' ***WARNING: Variable %s does not have a corresponding entry in variable definitions'
-              ' (var_desc) at the top of this program. Please make necessary edits to have this variable'
-              ' included in the format conversion output' %var)
+              ' (var_desc) at the top of this program. Please make necessary edits to have this'
+              ' variable included in the format conversion output' %var)
         continue
-
-    # Loop over realizations
+    
+    # Loop over Monte Carlo realizations
     r = 0
     for dir in mcdirs:
-        fname = expdir+'/'+dir+'/ensemble_mean_'+var+'.npz'
+        print('  MCdir:', dir)
+        
+        if var == 'gmt_ensemble':
+            fname = expdir+'/'+dir+'/'+var+'.npz'
+            time_name = 'recon_times'
+            # reset archive and input types appropriate for this variable
+            archive_type_var = 'ensemble_full'
+            input_type = 'ensemble_full'
+        else:
+            fname = expdir+'/'+dir+'/'+input_type+'_'+var+'.npz'
+            time_name = 'years'
+            archive_type_var = archive_type
+        
+        # load file
         npzfile = np.load(fname)
 
-        # Get the reconstructed field
-        field_values = npzfile['xam']
+        # extract reconstructed field
+        field_values = npzfile[npfile_to_extract[0]]
         
         if r == 0: # first realization
-
             npzcontent = npzfile.files
             print('  file contents:', npzcontent)
             
             # get the years in the reconstruction ... for some reason stored in an array of strings ...
-            years_str =  npzfile['years']
+            years_str =  npzfile[time_name]
+            
             # convert to array of floats
             years = np.asarray([float(item) for item in years_str])
 
-            # Determine type of variation, get spatial coordinates if present
+            # Determine ensemble size
+            Nens = None
+            if 'nens' in npzcontent:
+                Nens = npzfile['nens']
+            
+            # Determine type of variable, get spatial coordinates if present
             if 'lat' in npzcontent and 'lon' in npzcontent:
                 field_type = '2D:horizontal'
                 print('  field type:', field_type)
                 # get lat/lon data
                 lat2d = npzfile['lat']
                 lon2d = npzfile['lon']
-                #print '  ', lat2d.shape, lon2d.shape
                 lat1d = lat2d[:,0]
                 lon1d = lon2d[0,:]
                 print('  nlat/nlon=', lat1d.shape, lon1d.shape)
-
+                nlat, = lat1d.shape
+                nlon, = lon1d.shape
             elif 'lat' in npzcontent and 'lev' in npzcontent:
                 field_type = '2D:meridional_vertical'
                 print('  field type:', field_type)
                 # get lat/lev data
                 lat2d = npzfile['lat']
                 lev2d = npzfile['lev']
-                #print '  ', lat2d.shape, lev2d.shape
                 lat1d = lat2d[:,0]
                 lev1d = lev2d[0,:]
                 print('  nlat/nlev=', lat1d.shape, lev1d.shape)
-                 
+                nlat, = lat1d.shape
+                nlev, = lev1d.shape
             elif 'lat' not in npzcontent and 'lon' not in npzcontent and 'lev' not in npzcontent:
                 # no spatial coordinate, must be a scalar (time series)
                 field_type='1D:time_series'
@@ -151,132 +335,325 @@ for var in listvars:
             else:
                 print('Cannot handle this variable yet! Variable of unrecognized dimensions... Exiting!')
                 raise SystemExit(1)
+            
+            # declare master array(s) that will contain output data from
+            # all the Monte-Carlo realizations, depending on archive_type
+            ntime = years.shape[0]
+            if archive_type_var == 'ensemble_full':
+                if  field_type == '2D:horizontal':
+                    mc_ens = np.zeros(shape=[1, niters, ntime, nlat, nlon, Nens])
+                    axis_ens = 3
+                elif field_type == '2D:meridional_vertical':
+                    mc_ens = np.zeros(shape=[1, niters, ntime, nlat, nlev, Nens])
+                    axis_ens = 3
+                elif field_type == '1D:time_series':
+                    if not Nens:
+                        print(field_values.shape)
+                        _, Nens = field_values.shape                        
+                    mc_ens = np.zeros(shape=[1, niters, ntime, Nens])
+                    axis_ens = 1
+            elif archive_type_var == 'ensemble_subsample':
+                if  field_type == '2D:horizontal':
+                    mc_ens = np.zeros(shape=[1, niters, ntime, nlat, nlon, Nsample])
+                    axis_ens = 3
+                elif field_type == '2D:meridional_vertical':
+                    mc_ens = np.zeros(shape=[1, niters, ntime, nlat, nlev, Nsample])
+                    axis_ens = 3
+                elif field_type == '1D:time_series':
+                    if not Nens:
+                        print(field_values.shape)
+                        _, Nens = field_values.shape                        
+                    mc_ens = np.zeros(shape=[1, niters, ntime, Nsample])
+                    axis_ens = 1
+
+            elif archive_type_var == 'ensemble_mean_spread':
+                if  field_type == '2D:horizontal':
+                    mc_ens   = np.zeros(shape=[2, niters, ntime, nlat, nlon])
+                    axis_ens = 3
+                elif field_type == '2D:meridional_vertical':
+                    mc_ens   = np.zeros(shape=[2, niters, ntime, nlat, nlev])
+                    axis_ens = 3
+                elif field_type == '1D:time_series':
+                    mc_ens   = np.zeros(shape=[2, niters, ntime])
+                    axis_ens = 1
+
+            elif archive_type_var == 'ensemble_mean':
+                if  field_type == '2D:horizontal':
+                    mc_ens   = np.zeros(shape=[1, niters, ntime, nlat, nlon])
+                    axis_ens = 3
+                elif field_type == '2D:meridional_vertical':
+                    mc_ens   = np.zeros(shape=[1, niters, ntime, nlat, nlev])
+                    axis_ens = 3
+                elif field_type == '1D:time_series':
+                    mc_ens   = np.zeros(shape=[1, niters, ntime])
+                    axis_ens = 1
+
+        
+        # if we need to extact another field from input (e.g. ensemble variance)
+        if len(npfile_to_extract) > 1:
+            field_values2 = npzfile[npfile_to_extract[1]]
+
+        
+        # Any data processing required ?
+        if archive_type_var != input_type: # some processing required
+
+            if archive_type_var == 'ensemble_subsample':
+                if input_type == 'ensemble_full':
+                    # extract first Nsample members from full ensemble                    
+                    indices = range(0,Nsample)
+                    mc_ens[0,r,:] = np.take(field_values,indices,axis=axis_ens)
+                                
+            elif archive_type_var == 'ensemble_mean_spread':
+                if input_type == 'ensemble_full':
+                    # calculate ensemble mean and standard-deviation from full ensemble
+                    mc_ens[0,r,:] = np.mean(field_values, axis=axis_ens)
+                    mc_ens[1,r,:] = np.std(field_values, axis=axis_ens)
+
+                elif input_type == ('ensemble_mean', 'ensemble_variance'):
+                    # extract ensemble mean
+                    mc_ens[0,r,:] = field_values
+                    # calculate spread (standard-deviation) from variance
+                    # (stored in field_values2)
+                    mc_ens[1,r,:] = np.sqrt(field_values2)
+                    
+            elif archive_type_var == 'ensemble_mean':
+                if input_type == 'ensemble_full':
+                    # calculate ensemble mean from full ensemble members
+                    mc_ens[0,r,:] = np.mean(field_values, axis=axis_ens)
+                
+        else: # no further processing needed
+            mc_ens[0,r,:] = field_values
 
             
-            # declare master array that will contain data from all the M-C realizations 
-            # (i.e. the "Monte-Carlo ensemble")
-            dims = field_values.shape
-            print('  xam field dimensions', dims)
-            tmp = np.expand_dims(field_values, axis=0)
-            # Form the array with the right total dimensions
-            mc_ens = np.repeat(tmp,niters,axis=0)
-            
-        else:
-            mc_ens[r,:] = field_values
-            
+        # next MC realization
         r = r + 1
 
+        # end of loop on MC runs
 
-    # Roll array to get dims as [time, niters, nlat, nlon]
-    mc_ens_outarr = np.swapaxes(mc_ens,0,1)
+        
+    # Roll array to get dims as [...,time, niters, ...]
+    mc_ens_outarr = np.swapaxes(mc_ens,1,2)
+
     
-    # Create the netcdf file for the current variable
-    outfile_nc = outdir+'/'+var+'_MCiters_ensemble_mean.nc'
-    outfile = Dataset(outfile_nc, 'w', format='NETCDF4')
-    outfile.description = 'LMR climate field reconstruction for variable: %s' % var
-    outfile.experiment = nexp
-    outfile.comment = 'File contains ensemble-mean values for each Monte-Carlo realization (member)'
+    # ----------------------------------------------------------------
+    # Now writing the data out in netcdf file(s)
+    # ----------------------------------------------------------------
     
-    # define dimensions
-    ntime = years.shape[0]
-    nens  = niters
-
-    outfile.createDimension('time', ntime)
-    outfile.createDimension('member', nens)
-
-    if field_type == '2D:horizontal':
-        nlat  = lat1d.shape[0]
-        nlon  = lon1d.shape[0]
-        outfile.createDimension('lat', nlat)
-        outfile.createDimension('lon', nlon)
-    elif  field_type == '2D:meridional_vertical':
-        nlat  = lat1d.shape[0]
-        nlev  = lev1d.shape[0]
-        outfile.createDimension('lat', nlat)
-        outfile.createDimension('lev', nlev)
+    # number of files to write-out for current variable ...
+    if archive_type_var == 'ensemble_mean_spread':
+        nboutfiles = 2
+        filename_suffix = ('ensemble_mean', 'ensemble_spread')
     else:
-        pass
+        nboutfiles = 1
+        filename_suffix = (archive_type_var, )
+
+
+    # loop over the files to generate
+    for k in range(nboutfiles):
+
+        # Create the netcdf file for the current variable
+        varname = var_desc[var]['variable_name']
+        outfile_nc = outdir+'/'+varname+'_MCruns_'+filename_suffix[k]+'.nc'
+        outfile = Dataset(outfile_nc, 'w', format='NETCDF4')
+        outfile.description = 'Last Millennium Reanalysis climate field reconstruction for variable: %s' % varname
+        outfile.experiment = nexp
+
+        # define dimensions
+        ntime = years.shape[0]
+        outfile.createDimension('time', ntime)
+        outfile.createDimension('MCrun', niters)
+        if archive_type_var == 'ensemble_full':
+            if not Nens:
+                Nens = mc_ens_outarr.shape[-1]
+            outfile.createDimension('members', Nens)
+            outfile.comment = 'File contains full ensemble values for each Monte-Carlo reconstruction (MCrun)'
+
+        elif archive_type_var == 'ensemble_subsample':
+            outfile.createDimension('members', Nsample)
+            outfile.comment = 'File contains values for a subsample of ensemble members for each Monte-Carlo reconstruction (MCrun)'
+
+        elif archive_type_var == 'ensemble_mean_spread':
+            if k == 0:
+                outfile.comment = 'File contains ensemble-mean values for each Monte-Carlo reconstruction (MCrun)'
+            elif k == 1:
+                outfile.comment = 'File contains ensemble spread values for each Monte-Carlo reconstruction (MCrun)'
+
+        elif archive_type_var == 'ensemble_mean':
+            outfile.comment = 'File contains ensemble-mean values for each Monte-Carlo reconstruction (MCrun)'
+
+        # 
+        if field_type == '2D:horizontal':
+            nlat  = lat1d.shape[0]
+            nlon  = lon1d.shape[0]
+            outfile.createDimension('lat', nlat)
+            outfile.createDimension('lon', nlon)
+        elif  field_type == '2D:meridional_vertical':
+            nlat  = lat1d.shape[0]
+            nlev  = lev1d.shape[0]
+            outfile.createDimension('lat', nlat)
+            outfile.createDimension('lev', nlev)
+        else:
+            # '1D:time_series': no need to pull in info on spatial coords.
+            pass
+
+        # define variables & upload the data to file
+        # ------------------------------------------
+
+        missing_val = np.nan
+
+        # -- time --
+        time_output = years*365. # time in nb of days (no leap years)
+        time = outfile.createVariable('time', 'f8', ('time',))
+        time.description = 'time'
+        time.long_name = 'Time'
+        time.standard_name = 'time'
+        time.units = 'days since 0000-01-01 00:00:00'
+        time.calendar = 'noleap'
+        time.actual_range = np.array((np.min(time_output), np.max(time_output)))
+
+
+        if field_type == '2D:horizontal':
+            # lat
+            lat = outfile.createVariable('lat', 'f', ('lat',))
+            lat.description = 'latitude'
+            lat.units = 'degrees_north'
+            lat.long_name = 'Latitude'
+            lat.standard_name = 'latitude'
+            lat.axis = 'Y'
+            lat.coordinate_defines = 'point'
+            lat.actual_range = np.array((np.min(lat1d), np.max(lat1d)),dtype=np.float)
+
+            # lon
+            lon = outfile.createVariable('lon', 'f', ('lon',))
+            lon.description = 'longitude'
+            lon.units = 'degrees_east'
+            lon.long_name = 'Longitude'
+            lon.standard_name = 'longitude'
+            lon.axis = 'X'
+            lon.coordinate_defines = 'point'
+            lon.actual_range = np.array((np.min(lon1d), np.max(lon1d)),dtype=np.float)
+
+            # reconstructed field itself
+            if (archive_type_var == 'ensemble_full') or (archive_type_var == 'ensemble_subsample'):
+                varout = outfile.createVariable(varname, 'f', ('time','MCrun','lat','lon','members'),
+                                                fill_value=missing_val,
+                                                zlib=True,complevel=4,fletcher32=True)
+            else:
+                varout = outfile.createVariable(varname, 'f', ('time','MCrun','lat','lon'),
+                                                fill_value=missing_val,
+                                                zlib=True,complevel=4,fletcher32=True)
+            varout.var_desc      = var_desc[var]['var_desc']
+            varout.long_name     = var_desc[var]['long_name']
+            varout.standard_name = var_desc[var]['standard_name']
+            varout.units         = var_desc[var]['units']
+            varout.level_desc    = var_desc[var]['level_desc']
+            varout.statistic     = statistic[k]
+            varout.GRIB_id       = var_desc[var]['GRIB_id']
+            varout.GRIB_name     = var_desc[var]['GRIB_name']        
+            varout.valid_range   = np.array(var_desc[var]['valid_range'])
+            varout.dataset       = dataset_tag
+            varout.missing_value = missing_val
+            varout.actual_range = np.array((np.nanmin(mc_ens_outarr[k,:]), np.nanmax(mc_ens_outarr[k,:])),dtype=np.float)
+
+            # upload this data to file
+            lat[:]    = lat1d
+            lon[:]    = lon1d
+            time[:]   = time_output
+            varout[:] = mc_ens_outarr[k,:]
+
+                
+        elif field_type == '2D:meridional_vertical':
+            # lat
+            lat = outfile.createVariable('lat', 'f', ('lat',))
+            lat.description = 'latitude'
+            lat.units = 'degrees_north'
+            lat.long_name = 'Latitude'
+            lat.standard_name = 'latitude'
+            lat.axis = 'Y'
+            lat.coordinate_defines = 'point'
+            lat.actual_range = np.array((np.min(lat1d), np.max(lat1d)),dtype=np.float)
+
+            # lev
+            lev = outfile.createVariable('lev', 'f', ('lev',))
+            lev.description = 'depth'
+            lev.units = 'm'
+            lev.long_name = 'Depth'
+            lev.standard_name = 'depth'
+            lev.axis = 'Z'
+            lev.coordinate_defines = 'level'
+            lev.actual_range = np.array((np.min(lev1d), np.max(lev1d)),dtype=np.float)
+
+            # reconstructed field itself
+            if (archive_type_var == 'ensemble_full') or (archive_type_var == 'ensemble_subsample'):
+                varout = outfile.createVariable(varname, 'f', ('time','MCrun','lat','lev','members'),
+                                                fill_value=missing_val,
+                                                zlib=True,complevel=4,fletcher32=True)
+            else:
+                varout = outfile.createVariable(varname, 'f', ('time','MCrun','lat','lev'),
+                                                fill_value=missing_val,
+                                                zlib=True,complevel=4,fletcher32=True)
+            varout.var_desc      = var_desc[var]['var_desc']
+            varout.long_name     = var_desc[var]['long_name']
+            varout.standard_name = var_desc[var]['standard_name']
+            varout.units         = var_desc[var]['units']
+            varout.level_desc    = var_desc[var]['level_desc']
+            varout.statistic     = statistic[k]
+            varout.GRIB_id       = var_desc[var]['GRIB_id']
+            varout.GRIB_name     = var_desc[var]['GRIB_name']        
+            varout.valid_range   = np.array(var_desc[var]['valid_range'])
+            varout.dataset       = dataset_tag
+            varout.missing_value = missing_val
+            varout.actual_range = np.array((np.nanmin(mc_ens_outarr[k,:]), np.nanmax(mc_ens_outarr[k,:])),dtype=np.float)
+            
+            # upload the data to file
+            lat[:]    = lat1d
+            lev[:]    = lev1d
+            time[:]   = time_output
+            varout[:] = mc_ens_outarr[k,:]
+
+
+        elif field_type == '1D:time_series':
+
+            if archive_type_var == 'ensemble_full':
+                varout = outfile.createVariable(varname, 'f', ('time','MCrun','members'),fill_value=missing_val,
+                                                zlib=True,complevel=4,fletcher32=True)
+                statistic = 'Ensemble Members'
+            else:
+                varout = outfile.createVariable(varname, 'f', ('time','MCrun'),fill_value=missing_val,
+                                                zlib=True,complevel=4,fletcher32=True)
+
+            varout.var_desc      = var_desc[var]['var_desc']
+            varout.long_name     = var_desc[var]['long_name']
+            varout.standard_name = var_desc[var]['standard_name']
+            varout.units         = var_desc[var]['units']
+            varout.level_desc    = var_desc[var]['level_desc']
+            varout.statistic     = statistic[k]
+            varout.GRIB_id       = var_desc[var]['GRIB_id']
+            varout.GRIB_name     = var_desc[var]['GRIB_name']        
+            varout.valid_range   = np.array(var_desc[var]['valid_range'])
+            varout.dataset       = dataset_tag
+            varout.missing_value = missing_val
+            varout.actual_range = np.array((np.nanmin(mc_ens_outarr[k,:]), np.nanmax(mc_ens_outarr[k,:])),dtype=np.float)
+            
+            # upload the data to file
+            time[:]   = time_output
+            varout[:] = mc_ens_outarr[k,:]
+
+        else:
+            print('/n***WARNING: Variable of unrecognized dimensions... Skipping.')
+
+
+        # Finished processing: closing the file
+        outfile.close()
+
+        # TODO: add functionality to save data as short integers
+        #       through NCO's ncpdq to save more disk space
         
-    # define variables & upload the data to file
-
-    # reconstructed field
-    varinfolst = var.split('_')
-    varname  = varinfolst[0]
-    varlevel = None
-    if len(varinfolst) > 2:
-        if varinfolst[2] == 'Amon' or  varinfolst[2] == 'Omon' or varinfolst[2] == 'OImon':
-            varlevel = varinfolst[1]
         
-    # time
-    time = outfile.createVariable('time', 'i', ('time',))
-    time.description = 'time'
-    time.long_name = 'year CE'
+    # cleaning up before moving to next variable
+    del mc_ens, mc_ens_outarr
 
-    if field_type == '2D:horizontal':
-        # lat
-        lat = outfile.createVariable('lat', 'f', ('lat',))
-        lat.description = 'latitude'
-        lat.units = 'degrees_north'
-        lat.long_name = 'latitude'
 
-        # lon
-        lon = outfile.createVariable('lon', 'f', ('lon',))
-        lon.description = 'longitude'
-        lon.units = 'degrees_east'
-        lon.long_name = 'longitude'
-
-        varout = outfile.createVariable(varname, 'f', ('time','member', 'lat','lon'))        
-        varout.description = var_desc[var][0]
-        varout.long_name = var_desc[var][1]
-        varout.units = var_desc[var][2]
-        if varlevel: varout.level = varlevel
-        
-        # upload the data to file
-        lat[:]    = lat1d
-        lon[:]    = lon1d
-        time[:]   = years
-        varout[:] = mc_ens_outarr
-
-    elif field_type == '2D:meridional_vertical':
-        # lat
-        lat = outfile.createVariable('lat', 'f', ('lat',))
-        lat.description = 'latitude'
-        lat.units = 'degrees_north'
-        lat.long_name = 'latitude'
-
-        # lev
-        lev = outfile.createVariable('lev', 'f', ('lev',))
-        lev.description = 'depth'
-        lev.units = 'm'
-        lev.long_name = 'depth'
-
-        varout = outfile.createVariable(varname, 'f', ('time','member', 'lat','lev'))        
-        varout.description = var_desc[var][0]
-        varout.long_name = var_desc[var][1]
-        varout.units = var_desc[var][2]
-    
-        # upload the data to file
-        lat[:]    = lat1d
-        lev[:]    = lev1d
-        time[:]   = years
-        varout[:] = mc_ens_outarr
-
-    elif field_type == '1D:time_series':
-        varout = outfile.createVariable(varname, 'f', ('time','member'))        
-        varout.description = var_desc[var][0]
-        varout.long_name = var_desc[var][1]
-        varout.units = var_desc[var][2]
-        if varlevel: varout.level = varlevel
-        
-        # upload the data to file
-        time[:]   = years
-        varout[:] = mc_ens_outarr        
-        
-    else:
-        print('Variable of unrecognized dimensions... Exiting!')
-        raise SystemExit(1)
-        
-    
-    # Closing the file
-    outfile.close()
-
+# -----------------------------------------------------------------------
+elapsed_time = clock.time() - begin_time
+print('\nLMR output conversion completed in %s mins' %str(elapsed_time/60.0))
