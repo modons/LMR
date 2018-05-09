@@ -28,6 +28,8 @@ import LMR_config
 import numpy as np
 import os,sys
 
+import time as clock
+
 # check for user-specified config file; otherwise, use the one in the SRC directory
 if len(sys.argv) > 1:
     yaml_file = sys.argv[1]
@@ -36,11 +38,14 @@ else:
 
 print('using this configuration file: '+yaml_file)
 
+begin_time = clock.time()
+
 #-----------------------------------------------------------------
 # load components
 #-----------------------------------------------------------------
 print('loading configuration in your config_lite.yml file...')
 cfg = LMRlite.load_config(yaml_file)
+
 print('loading proxies...')
 prox_manager = LMRlite.load_proxies(cfg)
 print('loading prior...')
@@ -59,19 +64,19 @@ Ye_assim, Ye_assim_coords = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(c
 #-----------------------------------------------------------------
 # example reconstruction for one year
 #-----------------------------------------------------------------
-target_year=1950
-print('performing a reconstruction for year:' + str(target_year))
+target_year=cfg.core.recon_period[0]
+print('performing a test reconstruction for year:' + str(target_year))
 vY,vR,vP,vYe,vT,vYe_coords = LMRlite.get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords)
 xam,Xap,_ = LMRlite.Kalman_optimal(vY,vR,vYe,Xb_one,verbose=False)
 xam2,Xap2 = LMRlite.Kalman_ESRF(cfg,vY,vR,vYe,Xb_one,verbose=False)
 print('ens mean max difference from different solvers...', str(np.max(np.abs((xam2-xam)/xam))))
 
 #-----------------------------------------------------------------
-# example reconstruction over 1800-2000, computing GMT on the way
+# reconstruction over recon_period, computing GMT on the way
 #-----------------------------------------------------------------
 
 # set years to reconstruct
-years = list(range(1800,2000))
+years = list(range(cfg.core.recon_period[0],cfg.core.recon_period[1]))
 
 # make a grid object based on grid info in prior object
 grid = LMRlite.make_grid(X)
@@ -86,7 +91,8 @@ for target_year in years:
     xam_lalo = np.reshape(xam,[grid.nlat,grid.nlon])
     # GMT for the ensemble mean
     gmt, nhmt, shmt = LMR_utils.global_hemispheric_means(xam_lalo,grid.lat[:, 0])
-    print(str(target_year)+': '+str(gmt)+', '+str(nhmt)+', '+str(shmt))
+    print('%s: gmt=%s nhmt=%s shmt=%s' %(str("{:4d}".format(target_year)), str("{:12.6f}".format(gmt[0])),
+                                         str("{:12.6f}".format(nhmt[0])), str("{:12.6f}".format(shmt[0]))))
     gmt_save[yk] = gmt
     # GMT for all ensemble members
     for k in range(grid.Nens):
@@ -97,7 +103,14 @@ for target_year in years:
 lmr_years = np.array(years)
 
 # load GMT fields into dictionaries, add LMR ensemble mean, with specified reference and verification time periods
-analysis_data,analysis_time,_,_ = LMRlite.load_analyses(cfg,full_field=False,lmr_gm=gmt_save,lmr_time=lmr_years,satime=1900,eatime=2000,svtime=1880,evtime=2000)
+analysis_data,analysis_time,_,_ = LMRlite.load_analyses(cfg,full_field=False,lmr_gm=gmt_save,lmr_time=lmr_years,
+                                                        satime=1900,eatime=2000,svtime=1880,evtime=2000)
 
 # make a plot and save a figure
 LMRlite.make_gmt_figure(analysis_data,analysis_time,fsave='lite_testing')
+
+end_time = clock.time() - begin_time
+print('')
+print('-----------------------------------------------------')
+print('Reconstruction completed in ' + str(end_time/60.0)+' mins')
+print('-----------------------------------------------------')

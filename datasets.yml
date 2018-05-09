@@ -217,7 +217,7 @@ mpi-esm-p_last_millenium:
     available_vars: ['tas_sfc_Amon', 'zg_1000hPa_Amon', 'zg_500hPa_Amon',
                      'psl_sfc_Amon', 'wap_1000hPa_Amon', 'wap_250hPa_Amon',
                      'wap_500hPa_Amon', 'wap_700hPa_Amon', 'wap_850hPa_Amon',
-                     'pr_sfc_Amon', 'uas_sfc_Amon', 'vas_sfc_Amon',
+                     'pr_sfc_Amon', 'prw_int_Amon', 'uas_sfc_Amon', 'vas_sfc_Amon',
                      'ua_1000hPa_Amon', 'ua_250hPa_Amon', 'ua_500hPa_Amon',
                      'ua_700hPa_Amon', 'ua_850hPa_Amon', 'ua_950hPa_Amon',
                      'va_1000hPa_Amon', 'va_250hPa_Amon', 'va_500hPa_Amon',
@@ -232,7 +232,8 @@ era20c:
   info:
     multiple_vars: True
     template: '[vardef_template]'
-    available_vars: ['pr_sfc_Amon', 'psl_sfc_Amon', 'tas_sfc_Amon',
+    available_vars: ['psl_sfc_Amon', 'tas_sfc_Amon',
+                     'pr_sfc_Amon', 'prw_int_Amin',
                      'uas_sfc_Amon', 'vas_sfc_Amon', 'wap_1000hPa_Amon',
                      'wap_250hPa_Amon', 'wap_500hPa_Amon', 'wap_700hPa_Amon',
                      'wap_850hPa_Amon', 'zg_500hPa_Amon', 'ua_1000hPa_Amon',

@@ -83,10 +83,6 @@ def main():
     #PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pklz' # compressed version of the file
     PAGES2kphase2file = 'PAGES2k_v2.0.0_tempOnly.pckl'
 
-    # File containing info on duplicates in proxy records
-    #infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.2.0.xlsx'
-    infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMRv0.3.0.xlsx'
-
     # version of the LMRdb proxy db to process
     # - first set put together, including PAGES2k2013 trees
     #LMRdb_dbversion = 'v0.0.0'
@@ -94,7 +90,11 @@ def main():
     #LMRdb_dbversion = 'v0.1.0'
     # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0). stored in .pklz file
     #LMRdb_dbversion = 'v0.2.0'
-    LMRdb_dbversion = 'v0.3.0'
+    #LMRdb_dbversion = 'v0.3.0'
+    LMRdb_dbversion = 'v0.4.0'
+
+    # File containing info on duplicates in proxy records
+    infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMR'+LMRdb_dbversion+'.xlsx'
 
     # This option transforms all data to a Gaussian distribution.  It should only be used for
     # linear regressions, not physically-based PSMs.

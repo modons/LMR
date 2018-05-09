@@ -384,10 +384,16 @@ class v_proxies(object):
         #  v0.3.0: second version of merged proxy db: published version (2.0.0) of the 
         #          PAGES2k2017 proxies and additional records collected as part of LMR project.
         #          Lingering duplicate records in v0.2.0 were eliminated. 
+        #  v0.4.0: third version of merged proxy db: published version (2.0.0) of the 
+        #          PAGES2k2017 proxies and additional records collected as part of LMR project.
+        #          Nearly identical to v0.3.0, tho only exception is the most recent version of
+        #          the Palmyra d18O record (2013) replaces the older record included in the
+        #          PAGES2k phase 2 proxies.
         #dbversion = 'v0.0.0'
         #dbversion = 'v0.1.0'
         #dbversion = 'v0.2.0'
-        dbversion = 'v0.3.0'
+        #dbversion = 'v0.3.0'
+        dbversion = 'v0.4.0'
         
         datadir_proxy = None
         datafile_proxy = 'LMRdb_%s_Proxies.df.pckl' %(dbversion)

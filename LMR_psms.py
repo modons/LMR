@@ -252,7 +252,7 @@ class LinearPSM(BasePSM):
 
         # Associate state variable with PSM calibration dataset
         # TODO: possible calibration sources hard coded for now... should define associations at config level
-        if self.datatag_calib in ['GISTEMP', 'MLOST', 'HadCRUT', 'BerkeleyEarth']:
+        if self.datatag_calib in ['GISTEMP', 'MLOST', 'NOAAGlobalTemp', 'HadCRUT', 'BerkeleyEarth']:
             # temperature
             state_var = 'tas_sfc_Amon'
         elif self.datatag_calib in ['GPCC','DaiPDSI']:

@@ -37,6 +37,7 @@ sys.path.append('../')
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
 from load_gridded_data import read_gridded_data_DaiPDSI
 from load_gridded_data import read_gridded_data_GPCC
+from load_gridded_data import read_gridded_data_CMIP5_model
 from LMR_plot_support import *
 
 # change default value of latlon kwarg to True.
@@ -87,18 +88,17 @@ nexp = 'test'
 MCset = None
 #MCset = (0,10)
 
-# override datadir
-#datadir_output = './data/'
+# Directory where LMR output is located
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/katabatic2/wperkins/LMR_output/testing'
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-#datadir_output = '/home/disk/kalman3/hakim/LMR'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 
 # Directory where verification data can be found
 datadir_verif = '/home/disk/kalman3/rtardif/LMR/data/analyses'
+datadir_reanl  = '/home/disk/kalman3/rtardif/LMR/data/model'
 
-# Verification datafiles
+# Verification datafiles (files have to be located in datadir_verif)
 datafile_verif_PDSI   = 'Dai_pdsi.mon.mean.selfcalibrated_185001-201412.nc'
 datafile_verif_GPCC   = 'GPCC_precip.mon.flux.1x1.v6.nc'
 
@@ -115,10 +115,11 @@ trange = [1880,2000] #works for nya = 0
 # from all other datasets (in years CE)
 #ref_period = [1951,1980] # ref. period for GIS & BE
 #ref_period = [1961,1990] # ref. period for CRU & MLOST
-ref_period = [1900, 1999] # 20th century
+ref_period = [1900,1999] # 20th century
 
-# set the default size of the figure in inches. ['figure.figsize'] = width, height;  
-# aspect ratio appears preserved on smallest of the two
+# For plotting:
+#  set the default size of the figure in inches. ['figure.figsize'] = width, height;  
+#  aspect ratio appears preserved on smallest of the two
 plt.rcParams['figure.figsize'] = 10, 10 # that's default image size for this interactive session
 plt.rcParams['axes.linewidth'] = 2.0    # set the value globally
 plt.rcParams['font.weight'] = 'bold'    # set the font weight globally
@@ -136,8 +137,8 @@ alpha = 0.5
 ##################################
 
 # variables---this script is scpdsi and precip. only!
-#varPDSI = 'scpdsi_sfc_Amon'; varPDSI_label = 'PDSI'
-varPDSI = 'scpdsipm_sfc_Amon'; varPDSI_label = 'PDSI'
+#varPDSI = 'scpdsi_sfc_Amon'; varPDSI_label = 'PDSI'   # Thorntwaite PDSI
+varPDSI = 'scpdsipm_sfc_Amon'; varPDSI_label = 'PDSI' # Penman-Monteith PDSI
 varPRCP = 'pr_sfc_Amon'; varPRCP_label = 'PRCP'
 
 
@@ -341,7 +342,9 @@ annual = list(range(1,13))
 # ---------------
 calib_vars = ['pdsi']
 
-[dtime,Dai_lat,Dai_lon,DaiPDSI] = read_gridded_data_DaiPDSI(datadir_verif,datafile_verif_PDSI,calib_vars,out_anomalies=True,outfreq='annual')
+[dtime,Dai_lat,Dai_lon,DaiPDSI] = read_gridded_data_DaiPDSI(datadir_verif,datafile_verif_PDSI,calib_vars,
+                                                            out_anomalies=True,ref_period=ref_period,
+                                                            outfreq='annual')
 Dai_time = np.array([d.year for d in dtime])
 nlat_Dai = len(Dai_lat)
 nlon_Dai = len(Dai_lon)
@@ -372,7 +375,9 @@ valid_frac1 = valid_frac*fracpts
 
 calib_vars = ['precip']
 
-[dtime,gpcc_lat,gpcc_lon,GPCC] = read_gridded_data_GPCC(datadir_verif,datafile_verif_GPCC,calib_vars,out_anomalies=True,outfreq='annual')
+[dtime,gpcc_lat,gpcc_lon,GPCC] = read_gridded_data_GPCC(datadir_verif,datafile_verif_GPCC,calib_vars,
+                                                        out_anomalies=True,ref_period=ref_period,
+                                                        outfreq='annual')
 GPCC_time = np.array([d.year for d in dtime])
 nlat_GPCC = len(gpcc_lat)
 nlon_GPCC = len(gpcc_lon)
@@ -395,6 +400,72 @@ nbtotpts = nlat_GPCC*nlon_GPCC
 fracpts = nbokpts/nbtotpts
 # adjust valid_frac
 valid_frac2 = valid_frac*fracpts
+
+
+# reanalyses (precip only):
+# ----------
+vardef  = 'pr_sfc_Amon'
+vardict = {vardef: 'anom'}
+    
+# 20th Century reanalysis (TCR) ---------------------------------
+
+datadir  = datadir_reanl +'/20cr'
+datafile = vardef +'_20CR_185101-201112.nc'
+
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
+rtime = dd[vardef]['years']
+TCR_time = np.array([d.year for d in rtime])
+lats = dd[vardef]['lat']
+lons = dd[vardef]['lon']
+latshape = lats.shape
+lonshape = lons.shape
+if len(latshape) == 2 & len(lonshape) == 2:
+    # stored in 2D arrays
+    lat_TCR = np.unique(lats)
+    lon_TCR = np.unique(lons)
+    nlat_TCR, = lat_TCR.shape
+    nlon_TCR, = lon_TCR.shape
+else:
+    # stored in 1D arrays
+    lon_TCR = lons
+    lat_TCR = lats
+    nlat_TCR = len(lat_TCR)
+    nlon_TCR = len(lon_TCR)
+lon2d_TCR, lat2d_TCR = np.meshgrid(lon_TCR, lat_TCR)
+
+#TCRfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+TCR = dd[vardef]['value']                           # Anomalies
+
+
+# ERA 20th Century reanalysis (ERA20C) ---------------------------------
+datadir  = datadir_reanl +'/era20c'
+datafile = vardef +'_ERA20C_190001-201012.nc'
+
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
+rtime = dd[vardef]['years']
+ERA_time = np.array([d.year for d in rtime])
+lats = dd[vardef]['lat']
+lons = dd[vardef]['lon']
+latshape = lats.shape
+lonshape = lons.shape
+if len(latshape) == 2 & len(lonshape) == 2:
+    # stored in 2D arrays
+    lat_ERA = np.unique(lats)
+    lon_ERA = np.unique(lons)
+    nlat_ERA, = lat_ERA.shape
+    nlon_ERA, = lon_ERA.shape
+else:
+    # stored in 1D arrays
+    lon_ERA = lons
+    lat_ERA = lats
+    nlat_ERA = len(lat_ERA)
+    nlon_ERA = len(lon_ERA)
+lon2d_ERA, lat2d_ERA = np.meshgrid(lon_ERA, lat_ERA)
+
+#ERAfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+ERA = dd[vardef]['value']                           # Anomalies
 
 
 # ===========================================================================================================
@@ -424,6 +495,14 @@ if availablePRCP:
     smatch, ematch = find_date_indices(GPCC_time,stime,etime)
     GPCC = GPCC - np.nanmean(GPCC[smatch:ematch,:,:],axis=0)
 
+    #  20CR
+    smatch, ematch = find_date_indices(TCR_time,stime,etime)
+    TCR = TCR - np.nanmean(TCR[smatch:ematch,:,:],axis=0)
+    
+    #  ERA
+    smatch, ematch = find_date_indices(ERA_time,stime,etime)
+    ERA = ERA - np.nanmean(ERA[smatch:ematch,:,:],axis=0)
+
 
 print('\n regridding LMR data to grids of verification data...\n')
 
@@ -434,6 +513,8 @@ iplot_loc= False
 specob_lmr   = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
 specob_dai   = Spharmt(nlon_Dai,nlat_Dai,gridtype='regular',legfunc='computed')
 specob_gpcc  = Spharmt(nlon_GPCC,nlat_GPCC,gridtype='regular',legfunc='computed')
+specob_tcr   = Spharmt(nlon_TCR,nlat_TCR,gridtype='regular',legfunc='computed')
+specob_era   = Spharmt(nlon_ERA,nlat_ERA,gridtype='regular',legfunc='computed')
 
 # loop over years of interest and transform...specify trange at top of file
 iw = 0
@@ -445,21 +526,38 @@ cyears = list(range(trange[0],trange[1]))
 # time series for combination of data products
 lmr_dai_csave   = np.zeros([len(cyears)])
 lmr_gpcc_csave  = np.zeros([len(cyears)])
+lmr_tcr_csave   = np.zeros([len(cyears)])
+lmr_era_csave   = np.zeros([len(cyears)])
+# reference
+tcr_gpcc_csave  = np.zeros([len(cyears)])
+era_gpcc_csave  = np.zeros([len(cyears)])
+tcr_era_csave   = np.zeros([len(cyears)])
 
 # for full 2d grids
 # -----------------
 # obs products
 dai_allyears   = np.zeros([len(cyears),nlat_Dai,nlon_Dai])
 gpcc_allyears  = np.zeros([len(cyears),nlat_GPCC,nlon_GPCC])
+# reanalyses
+tcr_allyears  = np.zeros([len(cyears),nlat_TCR,nlon_TCR])
+era_allyears  = np.zeros([len(cyears),nlat_ERA,nlon_ERA])
 
 # for lmr projected over the various grids
 lmr_on_dai_allyears   = np.zeros([len(cyears),nlat_Dai,nlon_Dai])
 lmr_on_gpcc_allyears  = np.zeros([len(cyears),nlat_GPCC,nlon_GPCC])
+lmr_on_tcr_allyears  = np.zeros([len(cyears),nlat_TCR,nlon_TCR])
+lmr_on_era_allyears  = np.zeros([len(cyears),nlat_ERA,nlon_ERA])
 
 # for prior projected over the various grids
 xbm_on_dai_allyears   = np.zeros([len(cyears),nlat_Dai,nlon_Dai])
 xbm_on_gpcc_allyears  = np.zeros([len(cyears),nlat_GPCC,nlon_GPCC])
+xbm_on_tcr_allyears   = np.zeros([len(cyears),nlat_TCR,nlon_TCR])
+xbm_on_era_allyears   = np.zeros([len(cyears),nlat_ERA,nlon_ERA])
 
+# reanalyses projected on instrumental product(s) (precip only)
+tcr_on_gpcc_allyears  = np.zeros([len(cyears),nlat_GPCC,nlon_GPCC])
+era_on_gpcc_allyears  = np.zeros([len(cyears),nlat_GPCC,nlon_GPCC])
+tcr_on_era_allyears  = np.zeros([len(cyears),nlat_ERA,nlon_ERA])
 
 
 # for zonal means
@@ -467,14 +565,25 @@ xbm_on_gpcc_allyears  = np.zeros([len(cyears),nlat_GPCC,nlon_GPCC])
 # obs products
 dai_zm   = np.zeros([len(cyears),nlat_Dai])
 gpcc_zm  = np.zeros([len(cyears),nlat_GPCC])
+tcr_zm  = np.zeros([len(cyears),nlat_TCR])
+era_zm  = np.zeros([len(cyears),nlat_ERA])
 
 # for lmr projected over the various grids
 lmr_on_dai_zm   = np.zeros([len(cyears),nlat_Dai])
 lmr_on_gpcc_zm  = np.zeros([len(cyears),nlat_GPCC])
+lmr_on_tcr_zm   = np.zeros([len(cyears),nlat_TCR])
+lmr_on_era_zm   = np.zeros([len(cyears),nlat_ERA])
 
 # for prior projected over the various grids
 xbm_on_dai_zm   = np.zeros([len(cyears),nlat_Dai])
 xbm_on_gpcc_zm  = np.zeros([len(cyears),nlat_GPCC])
+xbm_on_tcr_zm   = np.zeros([len(cyears),nlat_TCR])
+xbm_on_era_zm   = np.zeros([len(cyears),nlat_ERA])
+
+# reference
+tcr_on_gpcc_zm  = np.zeros([len(cyears),nlat_GPCC])
+era_on_gpcc_zm  = np.zeros([len(cyears),nlat_GPCC])
+tcr_on_era_zm  = np.zeros([len(cyears),nlat_ERA])
 
 
 # Loop over years defining the verification set
@@ -484,7 +593,9 @@ for yr in cyears:
     LMR_smatch, LMR_ematch     = find_date_indices(LMR_time,yr-iw,yr+iw+1)
     Dai_smatch, Dai_ematch     = find_date_indices(Dai_time,yr-iw,yr+iw+1)
     GPCC_smatch, GPCC_ematch   = find_date_indices(GPCC_time,yr-iw,yr+iw+1)
-    
+    TCR_smatch, TCR_ematch     = find_date_indices(TCR_time,yr-iw,yr+iw+1)
+    ERA_smatch, ERA_ematch     = find_date_indices(ERA_time,yr-iw,yr+iw+1)
+
     print('------------------------------------------------------------------------')
     print('working on year... %s' % str(yr))
     print('working on year... %5s LMR index = %5s : LMR year = %5s' % (str(yr),str(LMR_smatch),str(LMR_time[LMR_smatch])))
@@ -502,6 +613,20 @@ for yr in cyears:
     else:
         gpcc_verif = np.zeros(shape=[nlat_GPCC,nlon_GPCC])
         gpcc_verif.fill(np.nan)
+
+    # TCR
+    if TCR_smatch and TCR_ematch:
+        tcr_verif = np.mean(TCR[TCR_smatch:TCR_ematch,:,:],0)
+    else:
+        tcr_verif = np.zeros(shape=[nlat_TCR,nlon_TCR])
+        tcr_verif.fill(np.nan)
+
+    # ERA
+    if ERA_smatch and ERA_ematch:
+        era_verif = np.mean(ERA[ERA_smatch:ERA_ematch,:,:],0)
+    else:
+        era_verif = np.zeros(shape=[nlat_ERA,nlon_ERA])
+        era_verif.fill(np.nan)
         
     
     if iplot_loc:
@@ -578,11 +703,6 @@ for yr in cyears:
         else:
             lmr_dai_csave[k] = np.nan
         print('  lmr-dai correlation     : %s' % str(lmr_dai_csave[k]))
-
-
-
-
-
         
         
     if availablePRCP:
@@ -593,15 +713,40 @@ for yr in cyears:
 
         # regrid LMR on the various verification grids
         lmr_on_gpcc   = regrid(specob_lmr, specob_gpcc,   pdata_prcp_lmr, ntrunc=None, smooth=None)
+        lmr_on_tcr    = regrid(specob_lmr, specob_tcr,   pdata_prcp_lmr, ntrunc=None, smooth=None)
+        lmr_on_era    = regrid(specob_lmr, specob_era,   pdata_prcp_lmr, ntrunc=None, smooth=None)
         # prior
         xbm_on_gpcc   = regrid(specob_lmr, specob_gpcc,   pdata_prcp_xbm, ntrunc=None, smooth=None)
+        xbm_on_tcr    = regrid(specob_lmr, specob_tcr,   pdata_prcp_xbm, ntrunc=None, smooth=None)
+        xbm_on_era    = regrid(specob_lmr, specob_era,   pdata_prcp_xbm, ntrunc=None, smooth=None)
 
+        # regrid reanalyses on other products
+        tcr_on_gpcc    = regrid(specob_tcr, specob_gpcc,  tcr_verif, ntrunc=None, smooth=None)
+        era_on_gpcc    = regrid(specob_era, specob_gpcc,  era_verif, ntrunc=None, smooth=None)
+        tcr_on_era     = regrid(specob_tcr, specob_era,  tcr_verif, ntrunc=None, smooth=None)
+
+        
         # save the full grids
         gpcc_allyears[k,:,:]         = gpcc_verif
         lmr_on_gpcc_allyears[k,:,:]  = lmr_on_gpcc
+
+        tcr_allyears[k,:,:]          = tcr_verif
+        lmr_on_tcr_allyears[k,:,:]   = lmr_on_tcr
+
+        era_allyears[k,:,:]          = era_verif
+        lmr_on_era_allyears[k,:,:]   = lmr_on_era
+
         # prior
         xbm_on_gpcc_allyears[k,:,:]  = xbm_on_gpcc
+        xbm_on_tcr_allyears[k,:,:]   = xbm_on_tcr
+        xbm_on_era_allyears[k,:,:]   = xbm_on_era
 
+        # for reference
+        tcr_on_gpcc_allyears[k,:,:] = tcr_on_gpcc
+        era_on_gpcc_allyears[k,:,:] = era_on_gpcc
+        tcr_on_era_allyears[k,:,:]  = tcr_on_era
+
+        
         # compute zonal-mean values    
         # GPCC
         fracok    = np.sum(np.isfinite(gpcc_verif),axis=1,dtype=np.float16)/float(nlon_GPCC)
@@ -612,11 +757,52 @@ for yr in cyears:
         gpcc_zm[k,boolnotok]  = np.NAN
         lmr_on_gpcc_zm[k,:]   = np.mean(lmr_on_gpcc,1)
         xbm_on_gpcc_zm[k,:]   = np.mean(xbm_on_gpcc,1)
-    
+
+        # TCR
+        fracok    = np.sum(np.isfinite(tcr_verif),axis=1,dtype=np.float16)/float(nlon_TCR)
+        boolok    = np.where(fracok >= valid_frac2)
+        boolnotok = np.where(fracok < valid_frac2)
+        for i in boolok:
+            tcr_zm[k,i] = np.nanmean(tcr_verif[i,:],axis=1)
+        tcr_zm[k,boolnotok]  = np.NAN
+        lmr_on_tcr_zm[k,:]   = np.mean(lmr_on_tcr,1)
+        xbm_on_tcr_zm[k,:]   = np.mean(xbm_on_tcr,1)
+
+        # ERA
+        fracok    = np.sum(np.isfinite(era_verif),axis=1,dtype=np.float16)/float(nlon_ERA)
+        boolok    = np.where(fracok >= valid_frac2)
+        boolnotok = np.where(fracok < valid_frac2)
+        for i in boolok:
+            era_zm[k,i] = np.nanmean(era_verif[i,:],axis=1)
+        era_zm[k,boolnotok]  = np.NAN
+        lmr_on_era_zm[k,:]   = np.mean(lmr_on_era,1)
+        xbm_on_era_zm[k,:]   = np.mean(xbm_on_era,1)
+
+        # reference
+        tcr_on_gpcc_zm[k,:]   = np.mean(tcr_on_gpcc,1)
+        era_on_gpcc_zm[k,:]   = np.mean(era_on_gpcc,1)
+        tcr_on_era_zm[k,:]   = np.mean(tcr_on_era,1)
+ 
+        
         # anomaly correlation
+        # GPCC
         gpcc_vec         = np.reshape(gpcc_verif,(1,nlat_GPCC*nlon_GPCC))
         lmr_on_gpcc_vec  = np.reshape(lmr_on_gpcc,(1,nlat_GPCC*nlon_GPCC))
 
+        # TCR
+        tcr_vec         = np.reshape(tcr_verif,(1,nlat_TCR*nlon_TCR))
+        lmr_on_tcr_vec  = np.reshape(lmr_on_tcr,(1,nlat_TCR*nlon_TCR))
+
+        # ERA
+        era_vec         = np.reshape(era_verif,(1,nlat_ERA*nlon_ERA))
+        lmr_on_era_vec  = np.reshape(lmr_on_era,(1,nlat_ERA*nlon_ERA))
+        
+        # reference
+        tcr_on_gpcc_vec  = np.reshape(tcr_on_gpcc,(1,nlat_GPCC*nlon_GPCC))
+        era_on_gpcc_vec  = np.reshape(era_on_gpcc,(1,nlat_GPCC*nlon_GPCC))
+        tcr_on_era_vec   = np.reshape(tcr_on_era,(1,nlat_ERA*nlon_ERA))
+
+        
         # compute correlations, taking into account the missing data in obs. products
         # ---------------------------------------------------------------------------    
         # lmr <-> gpcc
@@ -628,6 +814,52 @@ for yr in cyears:
             lmr_gpcc_csave[k] = np.nan
         print('  lmr-gpcc correlation    : %s' % str(lmr_gpcc_csave[k]))
 
+        # lmr <-> tcr
+        indok = np.isfinite(tcr_vec); nbok = np.sum(indok); nball = tcr_vec.shape[1]
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            lmr_tcr_csave[k] = np.corrcoef(lmr_on_tcr_vec[indok],tcr_vec[indok])[0,1]
+        else:
+            lmr_tcr_csave[k] = np.nan
+        print('  lmr-tcr correlation    : %s' % str(lmr_tcr_csave[k]))
+
+        # lmr <-> era
+        indok = np.isfinite(era_vec); nbok = np.sum(indok); nball = era_vec.shape[1]
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            lmr_era_csave[k] = np.corrcoef(lmr_on_era_vec[indok],era_vec[indok])[0,1]
+        else:
+            lmr_era_csave[k] = np.nan
+        print('  lmr-era correlation    : %s' % str(lmr_era_csave[k]))
+        
+        # reference
+        # tcr <-> gpcc
+        indok = np.isfinite(gpcc_vec); nbok = np.sum(indok); nball = gpcc_vec.shape[1]
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            tcr_gpcc_csave[k] = np.corrcoef(tcr_on_gpcc_vec[indok],gpcc_vec[indok])[0,1]
+        else:
+            tcr_gpcc_csave[k] = np.nan
+        print('  tcr-gpcc correlation    : %s' % str(tcr_gpcc_csave[k]))
+
+        # era <-> gpcc
+        indok = np.isfinite(gpcc_vec); nbok = np.sum(indok); nball = gpcc_vec.shape[1]
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            era_gpcc_csave[k] = np.corrcoef(era_on_gpcc_vec[indok],gpcc_vec[indok])[0,1]
+        else:
+            era_gpcc_csave[k] = np.nan
+        print('  era-gpcc correlation    : %s' % str(era_gpcc_csave[k]))
+
+        # tcr <-> era
+        indok = np.isfinite(era_vec); nbok = np.sum(indok); nball = era_vec.shape[1]
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            tcr_era_csave[k] = np.corrcoef(tcr_on_era_vec[indok],era_vec[indok])[0,1]
+        else:
+            tcr_era_csave[k] = np.nan
+        print('  era-tcr correlation    : %s' % str(tcr_era_csave[k]))
+        
 
 # ===================================================================================
 # plots for anomaly correlation statistics
@@ -641,16 +873,43 @@ fig = plt.figure()
 
 
 k = 0
+if availablePDSI:
+    # LMR compared to DaiPDSI
+    ax = fig.add_subplot(4,2,k+1)
+    ax.plot(cyears,lmr_dai_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR - DaiPDSI')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(4,2,k+2)
+    ax.hist(lmr_dai_csave[~np.isnan(lmr_dai_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR - DaiPDSI')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_dai_csave)),fontsize=11,fontweight='bold')
+
+    k = k + 2
+
 if availablePRCP:
     # LMR compared to GPCC
-    ax = fig.add_subplot(3,2,k+1)
+    ax = fig.add_subplot(4,2,k+1)
     ax.plot(cyears,lmr_gpcc_csave,lw=2)
     ax.plot([trange[0],trange[-1]],[0,0],'k:')
     ax.set_title('LMR - GPCC')
     ax.set_xlim(trange[0],trange[-1])
     ax.set_ylim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Correlation',fontweight='bold')
-    ax = fig.add_subplot(3,2,k+2)
+    ax = fig.add_subplot(4,2,k+2)
     ax.hist(lmr_gpcc_csave[~np.isnan(lmr_gpcc_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('LMR - GPCC')
     ax.set_xlim(corr_range[0],corr_range[-1])
@@ -668,18 +927,17 @@ if availablePRCP:
 
     k = k + 2
 
-if availablePDSI:
-    # LMR compared to DaiPDSI
-    ax = fig.add_subplot(3,2,k+1)
-    ax.plot(cyears,lmr_dai_csave,lw=2)
+    # LMR compared to TCR
+    ax = fig.add_subplot(4,2,k+1)
+    ax.plot(cyears,lmr_tcr_csave,lw=2)
     ax.plot([trange[0],trange[-1]],[0,0],'k:')
-    ax.set_title('LMR - DaiPDSI')
+    ax.set_title('LMR - 20CRv2')
     ax.set_xlim(trange[0],trange[-1])
     ax.set_ylim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Correlation',fontweight='bold')
-    ax = fig.add_subplot(3,2,k+2)
-    ax.hist(lmr_dai_csave[~np.isnan(lmr_dai_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
-    ax.set_title('LMR - DaiPDSI')
+    ax = fig.add_subplot(4,2,k+2)
+    ax.hist(lmr_tcr_csave[~np.isnan(lmr_tcr_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR - 20CRv2')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
     xmin,xmax = ax.get_xlim()
@@ -691,8 +949,33 @@ if availablePDSI:
     ax.set_ylim(ymin,ymax)
     ypos = ymax-0.15*(ymax-ymin)
     xpos = xmin+0.025*(xmax-xmin)
-    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_dai_csave)),fontsize=11,fontweight='bold')
-    
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_tcr_csave)),fontsize=11,fontweight='bold')
+
+    k = k + 2
+
+    # LMR compared to ERA
+    ax = fig.add_subplot(4,2,k+1)
+    ax.plot(cyears,lmr_era_csave,lw=2)
+    ax.plot([trange[0],trange[-1]],[0,0],'k:')
+    ax.set_title('LMR - ERA20C')
+    ax.set_xlim(trange[0],trange[-1])
+    ax.set_ylim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Correlation',fontweight='bold')
+    ax = fig.add_subplot(4,2,k+2)
+    ax.hist(lmr_era_csave[~np.isnan(lmr_era_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.set_title('LMR - 20CRv2')
+    ax.set_xlim(corr_range[0],corr_range[-1])
+    ax.set_ylabel('Counts',fontweight='bold')
+    xmin,xmax = ax.get_xlim()
+    ymin,ymax = ax.get_ylim()
+    if ymax < 10:
+        ymax = 10
+    elif ymax >= 10 and ymax < 20:
+        ymax = 20
+    ax.set_ylim(ymin,ymax)
+    ypos = ymax-0.15*(ymax-ymin)
+    xpos = xmin+0.025*(xmax-xmin)
+    ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_era_csave)),fontsize=11,fontweight='bold')    
 
 fig.tight_layout()
 plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
@@ -823,7 +1106,9 @@ if availablePDSI:
 
     
 if availablePRCP:
+    # --------
     # LMR-GPCC
+    # --------
     lmr_on_gpcc_err  = lmr_on_gpcc_allyears - gpcc_allyears
     # prior
     xbm_on_gpcc_err  = xbm_on_gpcc_allyears - gpcc_allyears
@@ -929,8 +1214,450 @@ if availablePRCP:
             r_xbm_gpcc_zm[la]  = np.nan
             bias_xbm_gpcc_zm[la] = np.nan
         
+    # --------
+    # LMR-TCR
+    # --------
+    lmr_on_tcr_err  = lmr_on_tcr_allyears - tcr_allyears
+    # prior
+    xbm_on_tcr_err  = xbm_on_tcr_allyears - tcr_allyears
+    bias_lmr_tcr    = np.zeros([nlat_TCR,nlon_TCR])
+    # prior
+    bias_xbm_tcr    = np.zeros([nlat_TCR,nlon_TCR])
+    r_lmr_tcr       = np.zeros([nlat_TCR,nlon_TCR])
+    ce_lmr_tcr      = np.zeros([nlat_TCR,nlon_TCR])
+    # prior
+    r_xbm_tcr       = np.zeros([nlat_TCR,nlon_TCR])
+    ce_xbm_tcr      = np.zeros([nlat_TCR,nlon_TCR])
+    ce_lmr_tcr_unbiased  = np.zeros([nlat_TCR,nlon_TCR])
 
+    ce_lmr_tcr = coefficient_efficiency(tcr_allyears,lmr_on_tcr_allyears,valid_frac2)
+    ce_xbm_tcr = coefficient_efficiency(tcr_allyears,xbm_on_tcr_allyears,valid_frac2)
+    for la in range(nlat_TCR):
+        for lo in range(nlon_TCR):
+            indok = np.isfinite(tcr_allyears[:,la,lo])
+            nbok = np.sum(indok)
+            nball = lmr_on_tcr_allyears[:,la,lo].shape[0]
+            ratio = float(nbok)/float(nball)
+            if ratio > valid_frac2:
+                r_lmr_tcr[la,lo] = np.corrcoef(lmr_on_tcr_allyears[indok,la,lo],tcr_allyears[indok,la,lo])[0,1]
+                bias_lmr_tcr[la,lo] = np.mean(lmr_on_tcr_err[indok,la,lo],axis=0)
+                numer_unbiased = np.sum(np.power(lmr_on_tcr_err[indok,la,lo]-bias_lmr_tcr[la,lo],2),axis=0)
+                denom = np.sum(np.power(tcr_allyears[indok,la,lo]-np.mean(tcr_allyears[indok,la,lo],axis=0),2),axis=0)
+                ce_lmr_tcr_unbiased[la,lo] = 1. - (numer_unbiased/denom)
+                bias_xbm_tcr[la,lo] = np.mean(xbm_on_tcr_err[indok,la,lo],axis=0)
+            else:
+                r_lmr_tcr[la,lo]  = np.nan
+                bias_lmr_tcr[la,lo] = np.nan
+                ce_lmr_tcr_unbiased[la,lo] = np.nan
+                r_xbm_tcr[la,lo]  = np.nan
+                bias_xbm_tcr[la,lo] = np.nan
+
+    # median
+    print('')
+    lat_TCR = np.squeeze(lat2d_TCR[:,0])
+    indlat = np.where((lat_TCR[:] > -60.0) & (lat_TCR[:] < 60.0))
+    lmr_tcr_rmedian = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_tcr)) ))
+    print('lmr-tcr all-grid median r    : %s' % str(lmr_tcr_rmedian))
+    lmr_tcr_rmedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_tcr[indlat,:])) ))
+    print('lmr-tcr 60S-60N median r     : %s' % str(lmr_tcr_rmedian60))
+    lmr_tcr_cemedian = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr)) ))
+    print('lmr-tcr all-grid median ce   : %s' % str(lmr_tcr_cemedian))
+    lmr_tcr_cemedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr[indlat,:])) ))
+    print('lmr-tcr 60S-60N median ce    : %s' % str(lmr_tcr_cemedian60))
+    lmr_tcr_biasmedian = str(float('%.2f' % np.nanmedian(bias_lmr_tcr) ))
+    # mean
+    [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_tcr,lat_TCR)
+    [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_tcr,lat_TCR)
+    [biasmean_global,biasmean_nh,biasmean_sh] = global_hemispheric_means(bias_lmr_tcr,lat_TCR)
+    lmr_tcr_rmean_global    = str(float('%.2f' %rmean_global[0]))
+    lmr_tcr_rmean_nh        = str(float('%.2f' %rmean_nh[0]))
+    lmr_tcr_rmean_sh        = str(float('%.2f' %rmean_sh[0]))
+    lmr_tcr_cemean_global   = str(float('%.2f' %cemean_global[0]))
+    lmr_tcr_cemean_nh       = str(float('%.2f' %cemean_nh[0]))
+    lmr_tcr_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
+    lmr_tcr_biasmean_global = str(float('%.2f' %biasmean_global[0]))
+    lmr_tcr_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
+    lmr_tcr_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+    # prior
+    [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_xbm_tcr,lat_TCR)
+    [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_xbm_tcr,lat_TCR)
+    [biasmean_global,biasmean_nh,biasmean_sh] = global_hemispheric_means(bias_xbm_tcr,lat_TCR)
+    xbm_tcr_rmean_global    = str(float('%.2f' %rmean_global[0]))
+    xbm_tcr_rmean_nh        = str(float('%.2f' %rmean_nh[0]))
+    xbm_tcr_rmean_sh        = str(float('%.2f' %rmean_sh[0]))
+    xbm_tcr_cemean_global   = str(float('%.2f' %cemean_global[0]))
+    xbm_tcr_cemean_nh       = str(float('%.2f' %cemean_nh[0]))
+    xbm_tcr_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
+    xbm_tcr_biasmean_global = str(float('%.2f' %biasmean_global[0]))
+    xbm_tcr_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
+    xbm_tcr_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+
+    # zonal mean verification statistics
+    # ----------------------------------
+    # LMR-TCR
+    r_lmr_tcr_zm    = np.zeros([nlat_TCR])
+    ce_lmr_tcr_zm   = np.zeros([nlat_TCR])
+    bias_lmr_tcr_zm = np.zeros([nlat_TCR])
+    lmr_tcr_err_zm  = lmr_on_tcr_zm - tcr_zm
+    ce_lmr_tcr_zm   = coefficient_efficiency(tcr_zm,lmr_on_tcr_zm,valid_frac2)
+    # prior
+    r_xbm_tcr_zm    = np.zeros([nlat_TCR])
+    ce_xbm_tcr_zm   = np.zeros([nlat_TCR])
+    bias_xbm_tcr_zm = np.zeros([nlat_TCR])
+    xbm_tcr_err_zm  = xbm_on_tcr_zm - tcr_zm
+    ce_xbm_tcr_zm   = coefficient_efficiency(tcr_zm,xbm_on_tcr_zm,valid_frac2)
+    for la in range(nlat_TCR):
+        indok = np.isfinite(tcr_zm[:,la])
+        nbok = np.sum(indok)
+        nball = len(cyears)
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            r_lmr_tcr_zm[la] = np.corrcoef(lmr_on_tcr_zm[indok,la],tcr_zm[indok,la])[0,1]
+            bias_lmr_tcr_zm[la] = np.mean(lmr_tcr_err_zm[indok,la],axis=0)
+            r_xbm_tcr_zm[la] = np.corrcoef(xbm_on_tcr_zm[indok,la],tcr_zm[indok,la])[0,1]
+            bias_xbm_tcr_zm[la] = np.mean(xbm_tcr_err_zm[indok,la],axis=0)
+        else:
+            r_lmr_tcr_zm[la]  = np.nan
+            bias_lmr_tcr_zm[la] = np.nan
+            r_xbm_tcr_zm[la]  = np.nan
+            bias_xbm_tcr_zm[la] = np.nan
         
+
+    # --------
+    # LMR-ERA
+    # --------
+    lmr_on_era_err  = lmr_on_era_allyears - era_allyears
+    # prior
+    xbm_on_era_err  = xbm_on_era_allyears - era_allyears
+    bias_lmr_era    = np.zeros([nlat_ERA,nlon_ERA])
+    # prior
+    bias_xbm_era    = np.zeros([nlat_ERA,nlon_ERA])
+    r_lmr_era       = np.zeros([nlat_ERA,nlon_ERA])
+    ce_lmr_era      = np.zeros([nlat_ERA,nlon_ERA])
+    # prior
+    r_xbm_era       = np.zeros([nlat_ERA,nlon_ERA])
+    ce_xbm_era      = np.zeros([nlat_ERA,nlon_ERA])
+    ce_lmr_era_unbiased  = np.zeros([nlat_ERA,nlon_ERA])
+
+    ce_lmr_era = coefficient_efficiency(era_allyears,lmr_on_era_allyears,valid_frac2)
+    ce_xbm_era = coefficient_efficiency(era_allyears,xbm_on_era_allyears,valid_frac2)
+    for la in range(nlat_ERA):
+        for lo in range(nlon_ERA):
+            indok = np.isfinite(era_allyears[:,la,lo])
+            nbok = np.sum(indok)
+            nball = lmr_on_era_allyears[:,la,lo].shape[0]
+            ratio = float(nbok)/float(nball)
+            if ratio > valid_frac2:
+                r_lmr_era[la,lo] = np.corrcoef(lmr_on_era_allyears[indok,la,lo],era_allyears[indok,la,lo])[0,1]
+                bias_lmr_era[la,lo] = np.mean(lmr_on_era_err[indok,la,lo],axis=0)
+                numer_unbiased = np.sum(np.power(lmr_on_era_err[indok,la,lo]-bias_lmr_era[la,lo],2),axis=0)
+                denom = np.sum(np.power(era_allyears[indok,la,lo]-np.mean(era_allyears[indok,la,lo],axis=0),2),axis=0)
+                ce_lmr_era_unbiased[la,lo] = 1. - (numer_unbiased/denom)
+                bias_xbm_era[la,lo] = np.mean(xbm_on_era_err[indok,la,lo],axis=0)
+            else:
+                r_lmr_era[la,lo]  = np.nan
+                bias_lmr_era[la,lo] = np.nan
+                ce_lmr_era_unbiased[la,lo] = np.nan
+                r_xbm_era[la,lo]  = np.nan
+                bias_xbm_era[la,lo] = np.nan
+
+    # median
+    print('')
+    lat_ERA = np.squeeze(lat2d_ERA[:,0])
+    indlat = np.where((lat_ERA[:] > -60.0) & (lat_ERA[:] < 60.0))
+    lmr_era_rmedian = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_era)) ))
+    print('lmr-era all-grid median r    : %s' % str(lmr_era_rmedian))
+    lmr_era_rmedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_era[indlat,:])) ))
+    print('lmr-era 60S-60N median r     : %s' % str(lmr_era_rmedian60))
+    lmr_era_cemedian = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_era)) ))
+    print('lmr-era all-grid median ce   : %s' % str(lmr_era_cemedian))
+    lmr_era_cemedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_era[indlat,:])) ))
+    print('lmr-era 60S-60N median ce    : %s' % str(lmr_era_cemedian60))
+    lmr_era_biasmedian = str(float('%.2f' % np.nanmedian(bias_lmr_era) ))
+    # mean
+    [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_era,lat_ERA)
+    [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_era,lat_ERA)
+    [biasmean_global,biasmean_nh,biasmean_sh] = global_hemispheric_means(bias_lmr_era,lat_ERA)
+    lmr_era_rmean_global    = str(float('%.2f' %rmean_global[0]))
+    lmr_era_rmean_nh        = str(float('%.2f' %rmean_nh[0]))
+    lmr_era_rmean_sh        = str(float('%.2f' %rmean_sh[0]))
+    lmr_era_cemean_global   = str(float('%.2f' %cemean_global[0]))
+    lmr_era_cemean_nh       = str(float('%.2f' %cemean_nh[0]))
+    lmr_era_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
+    lmr_era_biasmean_global = str(float('%.2f' %biasmean_global[0]))
+    lmr_era_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
+    lmr_era_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+    # prior
+    [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_xbm_era,lat_ERA)
+    [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_xbm_era,lat_ERA)
+    [biasmean_global,biasmean_nh,biasmean_sh] = global_hemispheric_means(bias_xbm_era,lat_ERA)
+    xbm_era_rmean_global    = str(float('%.2f' %rmean_global[0]))
+    xbm_era_rmean_nh        = str(float('%.2f' %rmean_nh[0]))
+    xbm_era_rmean_sh        = str(float('%.2f' %rmean_sh[0]))
+    xbm_era_cemean_global   = str(float('%.2f' %cemean_global[0]))
+    xbm_era_cemean_nh       = str(float('%.2f' %cemean_nh[0]))
+    xbm_era_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
+    xbm_era_biasmean_global = str(float('%.2f' %biasmean_global[0]))
+    xbm_era_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
+    xbm_era_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+
+    # zonal mean verification statistics
+    # ----------------------------------
+    # LMR-ERA
+    r_lmr_era_zm    = np.zeros([nlat_ERA])
+    ce_lmr_era_zm   = np.zeros([nlat_ERA])
+    bias_lmr_era_zm = np.zeros([nlat_ERA])
+    lmr_era_err_zm  = lmr_on_era_zm - era_zm
+    ce_lmr_era_zm   = coefficient_efficiency(era_zm,lmr_on_era_zm,valid_frac2)
+    # prior
+    r_xbm_era_zm    = np.zeros([nlat_ERA])
+    ce_xbm_era_zm   = np.zeros([nlat_ERA])
+    bias_xbm_era_zm = np.zeros([nlat_ERA])
+    xbm_era_err_zm  = xbm_on_era_zm - era_zm
+    ce_xbm_era_zm   = coefficient_efficiency(era_zm,xbm_on_era_zm,valid_frac2)
+    for la in range(nlat_ERA):
+        indok = np.isfinite(era_zm[:,la])
+        nbok = np.sum(indok)
+        nball = len(cyears)
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            r_lmr_era_zm[la] = np.corrcoef(lmr_on_era_zm[indok,la],era_zm[indok,la])[0,1]
+            bias_lmr_era_zm[la] = np.mean(lmr_era_err_zm[indok,la],axis=0)
+            r_xbm_era_zm[la] = np.corrcoef(xbm_on_era_zm[indok,la],era_zm[indok,la])[0,1]
+            bias_xbm_era_zm[la] = np.mean(xbm_era_err_zm[indok,la],axis=0)
+        else:
+            r_lmr_era_zm[la]  = np.nan
+            bias_lmr_era_zm[la] = np.nan
+            r_xbm_era_zm[la]  = np.nan
+            bias_xbm_era_zm[la] = np.nan
+
+
+    # --------
+    # TCR-GPCC
+    # --------
+    tcr_on_gpcc_err  = tcr_on_gpcc_allyears - gpcc_allyears
+    bias_tcr_gpcc    = np.zeros([nlat_GPCC,nlon_GPCC])
+    r_tcr_gpcc       = np.zeros([nlat_GPCC,nlon_GPCC])
+    ce_tcr_gpcc      = np.zeros([nlat_GPCC,nlon_GPCC])
+    ce_tcr_gpcc_unbiased  = np.zeros([nlat_GPCC,nlon_GPCC])
+
+    ce_tcr_gpcc = coefficient_efficiency(gpcc_allyears,tcr_on_gpcc_allyears,valid_frac2)
+    for la in range(nlat_GPCC):
+        for lo in range(nlon_GPCC):
+            indok = np.isfinite(gpcc_allyears[:,la,lo])
+            nbok = np.sum(indok)
+            nball = tcr_on_gpcc_allyears[:,la,lo].shape[0]
+            ratio = float(nbok)/float(nball)
+            if ratio > valid_frac2:
+                r_tcr_gpcc[la,lo] = np.corrcoef(tcr_on_gpcc_allyears[indok,la,lo],gpcc_allyears[indok,la,lo])[0,1]
+                bias_tcr_gpcc[la,lo] = np.mean(tcr_on_gpcc_err[indok,la,lo],axis=0)
+                numer_unbiased = np.sum(np.power(tcr_on_gpcc_err[indok,la,lo]-bias_tcr_gpcc[la,lo],2),axis=0)
+                denom = np.sum(np.power(gpcc_allyears[indok,la,lo]-np.mean(gpcc_allyears[indok,la,lo],axis=0),2),axis=0)
+                ce_tcr_gpcc_unbiased[la,lo] = 1. - (numer_unbiased/denom)
+            else:
+                r_tcr_gpcc[la,lo]  = np.nan
+                bias_tcr_gpcc[la,lo] = np.nan
+                ce_tcr_gpcc_unbiased[la,lo] = np.nan
+
+    # median
+    print('')
+    lat_GPCC = np.squeeze(lat2d_GPCC[:,0])
+    indlat = np.where((lat_GPCC[:] > -60.0) & (lat_GPCC[:] < 60.0))
+    tcr_gpcc_rmedian = str(float('%.2f' % np.nanmedian(np.nanmedian(r_tcr_gpcc)) ))
+    print('tcr_gpcc all-grid median r    : %s' % str(tcr_gpcc_rmedian))
+    tcr_gpcc_rmedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_tcr_gpcc[indlat,:])) ))
+    print('tcr_gpcc 60S-60N median r     : %s' % str(tcr_gpcc_rmedian60))
+    tcr_gpcc_cemedian = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_gpcc)) ))
+    print('tcr_gpcc all-grid median ce   : %s' % str(tcr_gpcc_cemedian))
+    tcr_gpcc_cemedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_gpcc[indlat,:])) ))
+    print('tcr_gpcc 60S-60N median ce    : %s' % str(tcr_gpcc_cemedian60))
+    tcr_gpcc_biasmedian = str(float('%.2f' % np.nanmedian(bias_tcr_gpcc) ))
+    # mean
+    [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_tcr_gpcc,lat_GPCC)
+    [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_tcr_gpcc,lat_GPCC)
+    [biasmean_global,biasmean_nh,biasmean_sh] = global_hemispheric_means(bias_tcr_gpcc,lat_GPCC)
+    tcr_gpcc_rmean_global    = str(float('%.2f' %rmean_global[0]))
+    tcr_gpcc_rmean_nh        = str(float('%.2f' %rmean_nh[0]))
+    tcr_gpcc_rmean_sh        = str(float('%.2f' %rmean_sh[0]))
+    tcr_gpcc_cemean_global   = str(float('%.2f' %cemean_global[0]))
+    tcr_gpcc_cemean_nh       = str(float('%.2f' %cemean_nh[0]))
+    tcr_gpcc_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
+    tcr_gpcc_biasmean_global = str(float('%.2f' %biasmean_global[0]))
+    tcr_gpcc_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
+    tcr_gpcc_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+    
+    # zonal mean verification statistics
+    # ----------------------------------
+    # TCR_GPCC
+    r_tcr_gpcc_zm    = np.zeros([nlat_GPCC])
+    ce_tcr_gpcc_zm   = np.zeros([nlat_GPCC])
+    bias_tcr_gpcc_zm = np.zeros([nlat_GPCC])
+    tcr_gpcc_err_zm  = tcr_on_gpcc_zm - gpcc_zm
+    ce_tcr_gpcc_zm   = coefficient_efficiency(gpcc_zm,tcr_on_gpcc_zm,valid_frac2)
+    for la in range(nlat_GPCC):
+        indok = np.isfinite(gpcc_zm[:,la])
+        nbok = np.sum(indok)
+        nball = len(cyears)
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            r_tcr_gpcc_zm[la] = np.corrcoef(tcr_on_gpcc_zm[indok,la],gpcc_zm[indok,la])[0,1]
+            bias_tcr_gpcc_zm[la] = np.mean(tcr_gpcc_err_zm[indok,la],axis=0)
+        else:
+            r_tcr_gpcc_zm[la]  = np.nan
+            bias_tcr_gpcc_zm[la] = np.nan
+
+
+    # --------
+    # ERA-GPCC
+    # --------
+    era_on_gpcc_err  = era_on_gpcc_allyears - gpcc_allyears
+    bias_era_gpcc    = np.zeros([nlat_GPCC,nlon_GPCC])
+    r_era_gpcc       = np.zeros([nlat_GPCC,nlon_GPCC])
+    ce_era_gpcc      = np.zeros([nlat_GPCC,nlon_GPCC])
+    ce_era_gpcc_unbiased  = np.zeros([nlat_GPCC,nlon_GPCC])
+
+    ce_era_gpcc = coefficient_efficiency(gpcc_allyears,era_on_gpcc_allyears,valid_frac2)
+    for la in range(nlat_GPCC):
+        for lo in range(nlon_GPCC):
+            indok = np.isfinite(gpcc_allyears[:,la,lo])
+            nbok = np.sum(indok)
+            nball = era_on_gpcc_allyears[:,la,lo].shape[0]
+            ratio = float(nbok)/float(nball)
+            if ratio > valid_frac2:
+                r_era_gpcc[la,lo] = np.corrcoef(era_on_gpcc_allyears[indok,la,lo],gpcc_allyears[indok,la,lo])[0,1]
+                bias_era_gpcc[la,lo] = np.mean(era_on_gpcc_err[indok,la,lo],axis=0)
+                numer_unbiased = np.sum(np.power(era_on_gpcc_err[indok,la,lo]-bias_era_gpcc[la,lo],2),axis=0)
+                denom = np.sum(np.power(gpcc_allyears[indok,la,lo]-np.mean(gpcc_allyears[indok,la,lo],axis=0),2),axis=0)
+                ce_era_gpcc_unbiased[la,lo] = 1. - (numer_unbiased/denom)
+            else:
+                r_era_gpcc[la,lo]  = np.nan
+                bias_era_gpcc[la,lo] = np.nan
+                ce_era_gpcc_unbiased[la,lo] = np.nan
+
+    # median
+    print('')
+    lat_GPCC = np.squeeze(lat2d_GPCC[:,0])
+    indlat = np.where((lat_GPCC[:] > -60.0) & (lat_GPCC[:] < 60.0))
+    era_gpcc_rmedian = str(float('%.2f' % np.nanmedian(np.nanmedian(r_era_gpcc)) ))
+    print('era_gpcc all-grid median r    : %s' % str(era_gpcc_rmedian))
+    era_gpcc_rmedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_era_gpcc[indlat,:])) ))
+    print('era_gpcc 60S-60N median r     : %s' % str(era_gpcc_rmedian60))
+    era_gpcc_cemedian = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_era_gpcc)) ))
+    print('era_gpcc all-grid median ce   : %s' % str(era_gpcc_cemedian))
+    era_gpcc_cemedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_era_gpcc[indlat,:])) ))
+    print('era_gpcc 60S-60N median ce    : %s' % str(era_gpcc_cemedian60))
+    era_gpcc_biasmedian = str(float('%.2f' % np.nanmedian(bias_era_gpcc) ))
+    # mean
+    [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_era_gpcc,lat_GPCC)
+    [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_era_gpcc,lat_GPCC)
+    [biasmean_global,biasmean_nh,biasmean_sh] = global_hemispheric_means(bias_era_gpcc,lat_GPCC)
+    era_gpcc_rmean_global    = str(float('%.2f' %rmean_global[0]))
+    era_gpcc_rmean_nh        = str(float('%.2f' %rmean_nh[0]))
+    era_gpcc_rmean_sh        = str(float('%.2f' %rmean_sh[0]))
+    era_gpcc_cemean_global   = str(float('%.2f' %cemean_global[0]))
+    era_gpcc_cemean_nh       = str(float('%.2f' %cemean_nh[0]))
+    era_gpcc_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
+    era_gpcc_biasmean_global = str(float('%.2f' %biasmean_global[0]))
+    era_gpcc_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
+    era_gpcc_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+    
+    # zonal mean verification statistics
+    # ----------------------------------
+    # ERA_GPCC
+    r_era_gpcc_zm    = np.zeros([nlat_GPCC])
+    ce_era_gpcc_zm   = np.zeros([nlat_GPCC])
+    bias_era_gpcc_zm = np.zeros([nlat_GPCC])
+    era_gpcc_err_zm  = era_on_gpcc_zm - gpcc_zm
+    ce_era_gpcc_zm   = coefficient_efficiency(gpcc_zm,era_on_gpcc_zm,valid_frac2)
+    for la in range(nlat_GPCC):
+        indok = np.isfinite(gpcc_zm[:,la])
+        nbok = np.sum(indok)
+        nball = len(cyears)
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            r_era_gpcc_zm[la] = np.corrcoef(era_on_gpcc_zm[indok,la],gpcc_zm[indok,la])[0,1]
+            bias_era_gpcc_zm[la] = np.mean(era_gpcc_err_zm[indok,la],axis=0)
+        else:
+            r_era_gpcc_zm[la]  = np.nan
+            bias_era_gpcc_zm[la] = np.nan
+
+
+    # --------
+    # TCR_ERA
+    # --------
+    tcr_on_era_err  = tcr_on_era_allyears - era_allyears
+    bias_tcr_era    = np.zeros([nlat_ERA,nlon_ERA])
+    r_tcr_era       = np.zeros([nlat_ERA,nlon_ERA])
+    ce_tcr_era      = np.zeros([nlat_ERA,nlon_ERA])
+    ce_tcr_era_unbiased  = np.zeros([nlat_ERA,nlon_ERA])
+
+    ce_tcr_era = coefficient_efficiency(era_allyears,tcr_on_era_allyears,valid_frac2)
+    for la in range(nlat_ERA):
+        for lo in range(nlon_ERA):
+            indok = np.isfinite(era_allyears[:,la,lo])
+            nbok = np.sum(indok)
+            nball = tcr_on_era_allyears[:,la,lo].shape[0]
+            ratio = float(nbok)/float(nball)
+            if ratio > valid_frac2:
+                r_tcr_era[la,lo] = np.corrcoef(tcr_on_era_allyears[indok,la,lo],era_allyears[indok,la,lo])[0,1]
+                bias_tcr_era[la,lo] = np.mean(tcr_on_era_err[indok,la,lo],axis=0)
+                numer_unbiased = np.sum(np.power(tcr_on_era_err[indok,la,lo]-bias_tcr_era[la,lo],2),axis=0)
+                denom = np.sum(np.power(era_allyears[indok,la,lo]-np.mean(era_allyears[indok,la,lo],axis=0),2),axis=0)
+                ce_tcr_era_unbiased[la,lo] = 1. - (numer_unbiased/denom)
+            else:
+                r_tcr_era[la,lo]  = np.nan
+                bias_tcr_era[la,lo] = np.nan
+                ce_tcr_era_unbiased[la,lo] = np.nan
+
+
+    # median
+    print('')
+    lat_ERA = np.squeeze(lat2d_ERA[:,0])
+    indlat = np.where((lat_ERA[:] > -60.0) & (lat_ERA[:] < 60.0))
+    tcr_era_rmedian = str(float('%.2f' % np.nanmedian(np.nanmedian(r_tcr_era)) ))
+    print('tcr_era all-grid median r    : %s' % str(tcr_era_rmedian))
+    tcr_era_rmedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_tcr_era[indlat,:])) ))
+    print('tcr_era 60S-60N median r     : %s' % str(tcr_era_rmedian60))
+    tcr_era_cemedian = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_era)) ))
+    print('tcr_era all-grid median ce   : %s' % str(tcr_era_cemedian))
+    tcr_era_cemedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_era[indlat,:])) ))
+    print('tcr_era 60S-60N median ce    : %s' % str(tcr_era_cemedian60))
+    tcr_era_biasmedian = str(float('%.2f' % np.nanmedian(bias_tcr_era) ))
+    # mean
+    [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_tcr_era,lat_ERA)
+    [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_tcr_era,lat_ERA)
+    [biasmean_global,biasmean_nh,biasmean_sh] = global_hemispheric_means(bias_tcr_era,lat_ERA)
+    tcr_era_rmean_global    = str(float('%.2f' %rmean_global[0]))
+    tcr_era_rmean_nh        = str(float('%.2f' %rmean_nh[0]))
+    tcr_era_rmean_sh        = str(float('%.2f' %rmean_sh[0]))
+    tcr_era_cemean_global   = str(float('%.2f' %cemean_global[0]))
+    tcr_era_cemean_nh       = str(float('%.2f' %cemean_nh[0]))
+    tcr_era_cemean_sh       = str(float('%.2f' %cemean_sh[0]))
+    tcr_era_biasmean_global = str(float('%.2f' %biasmean_global[0]))
+    tcr_era_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
+    tcr_era_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
+    
+    # zonal mean verification statistics
+    # ----------------------------------
+    # TCR-ERA
+    r_tcr_era_zm    = np.zeros([nlat_ERA])
+    ce_tcr_era_zm   = np.zeros([nlat_ERA])
+    bias_tcr_era_zm = np.zeros([nlat_ERA])
+    tcr_era_err_zm  = tcr_on_era_zm - era_zm
+    ce_tcr_era_zm   = coefficient_efficiency(era_zm,tcr_on_era_zm,valid_frac2)
+    for la in range(nlat_ERA):
+        indok = np.isfinite(era_zm[:,la])
+        nbok = np.sum(indok)
+        nball = len(cyears)
+        ratio = float(nbok)/float(nball)
+        if ratio > valid_frac2:
+            r_tcr_era_zm[la] = np.corrcoef(tcr_on_era_zm[indok,la],era_zm[indok,la])[0,1]
+            bias_tcr_era_zm[la] = np.mean(tcr_era_err_zm[indok,la],axis=0)
+        else:
+            r_tcr_era_zm[la]  = np.nan
+            bias_tcr_era_zm[la] = np.nan            
+
+
 # plot zonal mean statistics
 # --------------------------
 major_ticks = np.arange(-90, 91, 30)
@@ -945,6 +1672,10 @@ if availablePDSI:
 if availablePRCP:
     gpccleg,  = ax.plot(r_lmr_gpcc_zm, lat_GPCC,  'red', linestyle='-',lw=2,label='GPCC')
     legendItems.append(gpccleg)
+    tcrleg,  = ax.plot(r_lmr_tcr_zm, lat_TCR,  'k', linestyle='-',lw=2,label='20CRv2')
+    legendItems.append(tcrleg)
+    eraleg,  = ax.plot(r_lmr_era_zm, lat_ERA,  'k', linestyle='--',lw=2,label='ERA20C')
+    legendItems.append(eraleg)
 ax.plot([0,0],[-90,90],'k:')
 ax.set_yticks(major_ticks)
 plt.ylim([-90,90])
@@ -955,7 +1686,10 @@ ax.legend(handles=legendItems,handlelength=1.5,ncol=1,fontsize=11,loc='upper lef
 # CE
 ax = fig.add_subplot(1,2,2)    
 if availablePDSI: ax.plot(ce_lmr_dai_zm,  lat_Dai,   'blue',  linestyle='-',lw=2)
-if availablePRCP: ax.plot(ce_lmr_gpcc_zm, lat_GPCC,  'red', linestyle='-',lw=2)
+if availablePRCP:
+    ax.plot(ce_lmr_gpcc_zm, lat_GPCC,'red', linestyle='-',lw=2)
+    ax.plot(ce_lmr_tcr_zm, lat_TCR,  'k',   linestyle='-',lw=2)
+    ax.plot(ce_lmr_era_zm, lat_ERA,  'k',   linestyle='--',lw=2)
 ax.plot([0,0],[-90,90],'k:')
 ax.set_yticks([])                                                       
 plt.ylim([-90,90])
@@ -969,15 +1703,6 @@ if fsave:
     plt.savefig(nexp+'_verify_grid_HYDRO_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png')
     #plt.savefig(nexp+'_verify_grid_HYDRO_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
     plt.close()
-
-
-
-
-
-
-
-
-
     
     
 # ---------
@@ -989,24 +1714,36 @@ nticks = 4 # number of ticks on the colorbar
 if iplot:
     fig = plt.figure()
 
-    if availablePRCP:
-        bmin = -1.0e-5
-        bmax = 1.0e-5
-        cbarfmt = '%7.5f'    
-        ax = fig.add_subplot(3,2,1)    
-        LMR_plotter(bias_lmr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - GPCC bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_gpcc_biasmean_global))
-        plt.clim(bmin,bmax)
-        ax.title.set_position([.5, 1.05])
-    
     if availablePDSI:
         bmin = -1.0
         bmax = 1.0
         cbarfmt = '%4.1f'
-        ax = fig.add_subplot(3,2,2)    
+        ax = fig.add_subplot(4,2,1)    
         LMR_plotter(bias_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - DaiPDSI bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_biasmean_global))
         plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+        
+    if availablePRCP:
+        bmin = -1.0e-5
+        bmax = 1.0e-5
+        cbarfmt = '%7.5f'    
+        ax = fig.add_subplot(4,2,2)    
+        LMR_plotter(bias_lmr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - GPCC bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_gpcc_biasmean_global))
+        plt.clim(bmin,bmax)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,3)
+        LMR_plotter(bias_lmr_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - 20CRv2 bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_tcr_biasmean_global))
+        plt.clim(bmin,bmax)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,4)
+        LMR_plotter(bias_lmr_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=bmin,vmax=bmax,extend='both',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - ERA20C bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_era_biasmean_global))
+        plt.clim(bmin,bmax)
         ax.title.set_position([.5, 1.05])
 
     fig.tight_layout()
@@ -1027,15 +1764,31 @@ if iplot:
 
     k = 0
 
+    if availablePDSI:
+        # LMR - DaiPDSI
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        k = k + 2
+        
     if availablePRCP:
         # LMR - GPCC
-        ax = fig.add_subplot(3,2,k+1)    
+        ax = fig.add_subplot(4,2,k+1)    
         LMR_plotter(r_lmr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - GPCC r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_gpcc_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
-        ax = fig.add_subplot(3,2,k+2)    
+        ax = fig.add_subplot(4,2,k+2)    
         LMR_plotter(ce_lmr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - GPCC CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_gpcc_cemean_global))
         plt.clim(-1,1)
@@ -1043,17 +1796,31 @@ if iplot:
     
         k = k + 2
 
-    if availablePDSI:
-        # LMR - DaiPDSI
-        ax = fig.add_subplot(3,2,k+1)    
-        LMR_plotter(r_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_rmean_global))
+        # LMR - TCR
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_lmr_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - 20CRv2 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_tcr_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
-        ax = fig.add_subplot(3,2,k+2)    
-        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_dai_cemean_global))
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_lmr_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - 20CRv2 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_tcr_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+    
+        k = k + 2
+
+        # LMR - ERA
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_lmr_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - ERA20C r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_era_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_lmr_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - ERA20C CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lmr_era_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
@@ -1069,15 +1836,31 @@ if iplot:
     fig = plt.figure()
     k = 0
 
+    if availablePDSI:
+        # LMR - DaiPDSI
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+        
+        k = k + 2
+        
     if availablePRCP:
         # LMR - GPCC
-        ax = fig.add_subplot(3,2,k+1)    
+        ax = fig.add_subplot(4,2,k+1)    
         LMR_plotter(r_xbm_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('Prior - GPCC r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_gpcc_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
-
-        ax = fig.add_subplot(3,2,k+2)    
+        
+        ax = fig.add_subplot(4,2,k+2)    
         LMR_plotter(ce_xbm_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('Prior - GPCC CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_gpcc_cemean_global))
         plt.clim(-1,1)
@@ -1085,21 +1868,33 @@ if iplot:
 
         k = k + 2
 
-
-    if availablePDSI:
-        # LMR - DaiPDSI
-        ax = fig.add_subplot(3,2,k+1)    
-        LMR_plotter(r_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('Prior - DaiPDSI r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_rmean_global))
+        # LMR - TCR
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_xbm_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - 20CRv2 r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_tcr_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
-        ax = fig.add_subplot(3,2,k+2)    
-        LMR_plotter(ce_xbm_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('Prior - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_dai_cemean_global))
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_xbm_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - 20CRv2 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_tcr_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
-        
+
+        k = k + 2
+
+        # LMR - ERA
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_xbm_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - ERA20C r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_era_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_xbm_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('Prior - ERA20C CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(xbm_era_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
     
     fig.tight_layout()
     if fsave:
@@ -1108,23 +1903,96 @@ if iplot:
         #plt.savefig(nexp+'_verify_grid_HYDRO_r_ce_Prior_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
 
+    # Reference (precip only)
+    if availablePRCP:
+        fig = plt.figure()
+        k = 0
+    
+        # TCR - GPCC
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_tcr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('20CRv2 - GPCC r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(tcr_gpcc_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_tcr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('20CRv2 - GPCC CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(tcr_gpcc_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+    
+        k = k + 2
+
+        # ERA - GPCC
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_era_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('ERA20C - GPCC r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(era_gpcc_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_era_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('ERA20C - GPCC CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(era_gpcc_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+    
+        k = k + 2
+
+        # TCR - ERA
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(r_tcr_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('20CRv2 - ERA20C r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(tcr_era_rmean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)
+        LMR_plotter(ce_tcr_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('20CRv2 - ERA20C CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(tcr_era_cemean_global))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+    fig.tight_layout()
+    if fsave:
+        print('saving to .png')
+        plt.savefig(nexp+'_verify_grid_HYDRO_r_ce_reference'+str(trange[0])+'-'+str(trange[1])+'.png')
+        #plt.savefig(nexp+'_verify_grid_HYDRO_r_ce_reference'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
+
 
     # Comparisons of CE (full) & CE (unbiased errors)    
     fig = plt.figure()
     k = 0
 
+    if availablePDSI:
+        # LMR - DaiPDSI
+        lmr_dai_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:])) ))
+        lmr_dai_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:]-ce_lmr_dai_unbiased[:,:])) ))
+    
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_lmr_dai-ce_lmr_dai_unbiased,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - DaiPDSI CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean2))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        k = k + 2
+    
     if availablePRCP:
         # LMR - GPCC
         lmr_gpcc_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_gpcc[:,:])) ))
         lmr_gpcc_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_gpcc[:,:]-ce_lmr_gpcc_unbiased[:,:])) ))
 
-        ax = fig.add_subplot(3,2,k+1)    
+        ax = fig.add_subplot(4,2,k+1)    
         LMR_plotter(ce_lmr_gpcc,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - GPCC CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_gpcc_cemean))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
-        ax = fig.add_subplot(3,2,k+2)    
+        ax = fig.add_subplot(4,2,k+2)    
         LMR_plotter(ce_lmr_gpcc-ce_lmr_gpcc_unbiased,lat2d_GPCC,lon2d_GPCC,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - GPCC CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_gpcc_cemean2))
         plt.clim(-1,1)
@@ -1132,20 +2000,37 @@ if iplot:
 
         k = k + 2
 
-    if availablePDSI:
-        # LMR - DaiPDSI
-        lmr_dai_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:])) ))
-        lmr_dai_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_dai[:,:]-ce_lmr_dai_unbiased[:,:])) ))
-    
-        ax = fig.add_subplot(3,2,k+1)    
-        LMR_plotter(ce_lmr_dai,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean))
+        # LMR - TCR
+        lmr_tcr_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr[:,:])) ))
+        lmr_tcr_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr[:,:]-ce_lmr_tcr_unbiased[:,:])) ))
+
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(ce_lmr_tcr,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - 20CRv2 CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_tcr_cemean))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
-        ax = fig.add_subplot(3,2,k+2)    
-        LMR_plotter(ce_lmr_dai-ce_lmr_dai_unbiased,lat2d_Dai,lon2d_Dai,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
-        plt.title('LMR - DaiPDSI CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_dai_cemean2))
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_lmr_tcr-ce_lmr_tcr_unbiased,lat2d_TCR,lon2d_TCR,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - 20CRv2 CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_tcr_cemean2))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        k = k + 2
+
+        # LMR - ERA
+        lmr_era_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_era[:,:])) ))
+        lmr_era_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_era[:,:]-ce_lmr_era_unbiased[:,:])) ))
+
+        ax = fig.add_subplot(4,2,k+1)    
+        LMR_plotter(ce_lmr_era,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - ERA20C CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_era_cemean))
+        plt.clim(-1,1)
+        ax.title.set_position([.5, 1.05])
+
+        ax = fig.add_subplot(4,2,k+2)    
+        LMR_plotter(ce_lmr_era-ce_lmr_era_unbiased,lat2d_ERA,lon2d_ERA,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
+        plt.title('LMR - ERA20C CE bias '+str(cyears[0])+'-'+str(cyears[-1]) + ' median='+str(lmr_era_cemean2))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
         
