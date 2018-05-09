@@ -423,15 +423,16 @@ def main():
                         mc_ens   = np.zeros(shape=[1, niters, ntime])
                         axis_ens = 1
 
+                # Initialize array
+                missing_val = np.array(missing_val, dtype=var_desc[var]['dtype'])
+                mc_ens[:] = missing_val
+
 
             # if we need to extact another field from input (e.g. ensemble variance)
             if len(npfile_to_extract) > 1:
                 field_values2 = npzfile[npfile_to_extract[1]]
 
-            # Initialize array
-            missing_val = np.array(missing_val, dtype=var_desc[var]['dtype'])
-            mc_ens[:] = missing_val
-
+            
             # Any data processing required ?
             if archive_type_var != input_type: # some processing required
 
