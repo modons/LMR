@@ -282,6 +282,8 @@ def main():
                   ' variable included in the format conversion output' %var)
             continue
 
+        missing_val = np.array(missing_val, dtype=var_desc[var]['dtype'])
+        
         # Loop over Monte Carlo realizations
         r = 0
         for dir in mcdirs:
@@ -423,10 +425,6 @@ def main():
                         mc_ens   = np.zeros(shape=[1, niters, ntime])
                         axis_ens = 1
 
-                # Initialize array
-                missing_val = np.array(missing_val, dtype=var_desc[var]['dtype'])
-                mc_ens[:] = missing_val
-
 
             # if we need to extact another field from input (e.g. ensemble variance)
             if len(npfile_to_extract) > 1:
@@ -464,8 +462,9 @@ def main():
                 mc_ens[0,r,:] = field_values
 
 
-            # expected that any missing value in field are indicated by NaNs
-            # change to specified value to be written in netcdf file
+            # expected that any missing values in field_values, and now in mc_ens,
+            # are indicated by NaNs. Change these to specified value to be written
+            # in netcdf file
             arrshape = mc_ens.shape
             for i in range(arrshape[0]):
                 indsmiss = np.isnan(mc_ens[i,r,:])
