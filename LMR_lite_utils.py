@@ -597,7 +597,8 @@ def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
         
     # ensemble prior mean and perturbations
     xbm = Xb.mean(axis=1)
-    Xbp = Xb - Xb.mean(axis=1,keepdims=True)
+    #Xbp = Xb - Xb.mean(axis=1,keepdims=True)
+    Xbp = np.subtract(Xb,xbm[:,None])  # "None" means replicate in this dimension
 
     R = np.diag(vR)
     Risr = np.diag(1./np.sqrt(vR))
@@ -611,7 +612,7 @@ def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
     # numpy svd quirk: V is actually V^T!
     U,s,V = np.linalg.svd(Htp,full_matrices=True)
     if not nsvs:
-        nsvs = len(s)
+        nsvs = len(s) - 1
     if verbose:
         print('ndof :'+str(ndof))
         print('U :'+str(U.shape))
@@ -646,8 +647,8 @@ def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
         T = np.dot(V.T,sig)
         Xap = np.dot(Xbp,T)    
         # perturbations must have zero mean
-        Xap = Xap - Xap.mean(axis=1,keepdims=True)
-    
+        #Xap = Xap - Xap.mean(axis=1,keepdims=True)
+        print('min s:',np.min(s))
     elapsed_time = time() - begin_time
     if verbose:
         print('shape of U: ' + str(U.shape))
