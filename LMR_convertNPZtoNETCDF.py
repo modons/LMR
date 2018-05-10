@@ -47,6 +47,15 @@ archive_type = 'ensemble_mean_spread'
 #archive_type = 'ensemble_subsample'; Nsample = 10
 #archive_type = 'ensemble_full'
 
+# Select MC realizations from which to extract the data
+#  All recon. MC realizations ( MCset = None )
+#  or over a custom selection ( MCset = (begin,end) )
+#  ex. MCset = (0,0)    -> only the first MC run
+#      MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#      MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,10)
+
 
 # Dictionary containing definitions of variables that handled by this code
 # ------------------------------------------------------------------------
@@ -175,13 +184,23 @@ def main():
     # number of MC realizations found
     niters = len(mcdirs) 
 
-    print('mcdirs:' + str(mcdirs))
+    print('mcdirs available:' + str(mcdirs))
     print('niters = ' + str(niters))
 
+    # user-modified selection
+    if MCset:
+        mcdirset = mcdirs[MCset[0]:MCset[1]+1]
+    else:
+        mcdirset = mcdirs
+    niters = len(mcdirset)
+
+    print('mcdirs selected:' + str(mcdirset))
+    print('niters = ' + str(niters))
+    
     print('\n Getting information on files and reconstructed variables...\n')
 
-    # look in first "mcdirs" only. It should be the same for all. 
-    workdir = expdir+'/'+mcdirs[0]
+    # look in first "mcdirset" only. It should be the same for all. 
+    workdir = expdir+'/'+mcdirset[0]
 
     # Assess data files present in directory and determine available input
     # --------------------------------------------------------------------
@@ -286,7 +305,7 @@ def main():
         
         # Loop over Monte Carlo realizations
         r = 0
-        for dir in mcdirs:
+        for dir in mcdirset:
             print('  MCdir:', dir)
 
             if var == 'gmt_ensemble':
