@@ -362,8 +362,11 @@ shmt_min = np.percentile(shse,5,axis=1)
 shmt_max = np.percentile(shse,95,axis=1)
     
 # define for later use
-lmr_gm = sagmt
 LMR_time = recon_times
+lmr_gm = sagmt # This is the *mean* of grand ensemble (MCiters+nens)
+# now keeping all members of the "grand" ensemble (MCiters+nens)
+lmr_gm_GE = gmse
+_, GEnens = lmr_gm_GE.shape
 
  
 # compute GIS, CRU, MLOST & BE global mean 
@@ -417,22 +420,30 @@ cru_smatch, cru_ematch = find_date_indices(CRU_time,stime,etime)
 be_smatch, be_ematch = find_date_indices(BE_time,stime,etime)
 mlost_smatch, mlost_ematch = find_date_indices(MLOST_time,stime,etime)
 
-# "consensus" global mean: average all non-LMR (obs-based) values
-consensus_gmt = np.array([gis_gm[gis_smatch:gis_ematch],cru_gm[cru_smatch:cru_ematch],be_gm[be_smatch:be_ematch],mlost_gm[mlost_smatch:mlost_ematch]])
+
+# "consensus" global mean: average all non-LMR (obs-based) values (excludes reanalyses)
+# -----------------------
+consensus_gmt = np.array([gis_gm[gis_smatch:gis_ematch],
+                          cru_gm[cru_smatch:cru_ematch],
+                          be_gm[be_smatch:be_ematch],
+                          mlost_gm[mlost_smatch:mlost_ematch]])
 con_gm = np.mean(consensus_gmt,axis=0)
-CON_time = np.arange(stime,etime)
-CON_time = np.asarray(CON_time) # fixed 21 July 2017 (GJH)
+CON_time = np.asarray(np.arange(stime,etime)) # fixed 21 July 2017 (GJH)
+
+# differences between individual instrumental-era products and consensus 
+diffs = np.ravel(consensus_gmt - con_gm)
+# mean squared deviations -> estimate of uncertainty in consensus
+con_mse = np.mean(np.square(diffs))
 
 # write to a file for use by other programs
 #filen = 'consensus_gmt.npz'
 #np.savez(filen,con_gm=con_gm,CON_time=CON_time)
 
-#
+# -------------------------------------------------------
 # correlation coefficients & CE over chosen time interval 
-#
+# -------------------------------------------------------
 
 verif_yrs = np.arange(stime,etime+1,1)
-
 
 # LMR-TCR
 # overlaping years within verification interval
@@ -578,13 +589,40 @@ print('BE-CRU CE   : %s' % str(bgce))
 print('GIS-CRU CE  : %s' % str(cgce))
 print('--------------------------------------------------')
 
-#
+# -------------
 # spread--error
-#
-lg_err = lmr_gm[lmr_smatch:lmr_ematch] - gis_gm[gis_smatch:gis_ematch]
-svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)
-calib = lg_err.var(0,ddof=1)/svar.mean(0)
+# -------------
 
+# THIS IS NOT RIGHT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+"""
+lg_err = lmr_gm[lmr_smatch:lmr_ematch] - gis_gm[gis_smatch:gis_ematch] # This is the error of the (grand) ensemble-mean !!
+svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)                 # this is the variance in the Nens members for each MC iteration !!
+calib = lg_err.var(0,ddof=1)/svar.mean(0)                              # So this is not the correct ratio !!!!!
+"""
+# THIS IS NOT RIGHT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# Now using consensus rather than GIS only
+#obs = gis_gm[gis_smatch:gis_ematch] # GIS
+obs_historical = con_gm[ind_con] # consensus
+
+# For "grand ensemble":
+lg_err = lmr_gm[lmr_smatch:lmr_ematch] - obs_historical
+gens = lmr_gm_GE[lmr_smatch:lmr_ematch,:]
+svar = gens.var(1,ddof=1)
+calibGE = lg_err.var(0,ddof=1)/(svar.mean(0)+con_mse)
+print('--------------------------------------------------')
+print('ensemble calibration (grand ensemble): %s' % str(calibGE))
+print('--------------------------------------------------')
+
+# For ensembles in individual Monte-Carlo realizations 
+svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)
+lg_err = np.zeros(svar.shape)
+for mc in np.arange(niters):
+    mc_ens_mean = np.mean(gmt_save[lmr_smatch:lmr_ematch,:,mc], axis=1)
+    lg_err[:,mc] = mc_ens_mean - obs_historical
+
+# variance of ensemble-mean error over mean variance in ensembles
+calib = lg_err.var(0,ddof=1)/(svar.mean(0)+con_mse)
 print('--------------------------------------------------')
 print(('ensemble calibration across MC runs: \n%s' % str(calib)))
 print('--------------------------------------------------')
@@ -602,7 +640,7 @@ if iplot:
     plt.ylabel('Ensemble calibration ratio')
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     plt.title('Globa-mean temperature ensemble calibration')
-    plt.savefig(nexp+'_MCruns_ensemble_calibration.png')
+    plt.savefig(nexp+'_GMT_ensemble_calibration.png')
 
 
 # ========================================================
