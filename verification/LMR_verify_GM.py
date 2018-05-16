@@ -582,11 +582,28 @@ print('--------------------------------------------------')
 # spread--error
 #
 lg_err = lmr_gm[lmr_smatch:lmr_ematch] - gis_gm[gis_smatch:gis_ematch]
-svar = gmt_save[:,lmr_smatch:lmr_ematch].var(0,ddof=1)
+svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)
 calib = lg_err.var(0,ddof=1)/svar.mean(0)
+
 print('--------------------------------------------------')
-print(('ensemble calibration: %s' % str(calib)))
+print(('ensemble calibration across MC runs: \n%s' % str(calib)))
 print('--------------------------------------------------')
+
+if iplot:
+    fig = plt.figure(figsize=[7,5])
+    ax = fig.gca()
+    xmax, = calib.shape
+    MCids = np.arange(xmax+1)    
+    calib = np.append(calib,calib[-1])
+    plt.step(MCids, calib, 'b', where='post', lw=3, alpha=0.75)
+    plt.plot([MCids[0],MCids[-1]], [1.,1.], '--r', lw=2)
+    plt.axis((MCids[0],MCids[-1],0.,2.))
+    plt.xlabel('Monte-Carlo reconstruction')
+    plt.ylabel('Ensemble calibration ratio')
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.title('Globa-mean temperature ensemble calibration')
+    plt.savefig(nexp+'_MCruns_ensemble_calibration.png')
+
 
 # ========================================================
 # plots
