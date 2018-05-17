@@ -388,6 +388,16 @@ lmr_gm = lmr_gm - lmr_off
 gmt_min = gmt_min - lmr_off
 gmt_max = gmt_max - lmr_off
 
+# all members (grand ensemble)
+lmr_off = np.mean(lmr_gm_GE[smatch:ematch,:], axis=0)
+lmr_gm_GE = lmr_gm_GE - lmr_off
+# all members per MC realizations
+lmr_off = np.mean(gmt_save[smatch:ematch,:], axis=0)
+for m in np.arange(niters):
+    lmr_off = np.mean(gmt_save[smatch:ematch,:,m], axis=0)    
+    gmt_save[:,:,m] = gmt_save[:,:,m] - lmr_off
+
+
 # TCR
 smatch, ematch = find_date_indices(TCR_time,satime,eatime)
 tcr_gm  = tcr_gm  - np.mean(tcr_gm[smatch:ematch])
@@ -432,8 +442,8 @@ CON_time = np.asarray(np.arange(stime,etime)) # fixed 21 July 2017 (GJH)
 
 # differences between individual instrumental-era products and consensus 
 diffs = np.ravel(consensus_gmt - con_gm)
-# mean squared deviations -> estimate of uncertainty in consensus
-con_mse = np.mean(np.square(diffs))
+# variance of deviations -> estimate of uncertainty in consensus
+con_mse = np.var(diffs, ddof=1)
 
 # write to a file for use by other programs
 #filen = 'consensus_gmt.npz'
@@ -452,6 +462,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_tcr = np.searchsorted(TCR_time, np.intersect1d(TCR_time, overlap_yrs))
 lmr_tcr_corr = np.corrcoef(lmr_gm[ind_lmr],tcr_gm[ind_tcr])
 lmr_tcr_ce = coefficient_efficiency(tcr_gm[ind_tcr],lmr_gm[ind_lmr])
+# for individual members
+lmrGE_tcr_corr = np.zeros(shape=[GEnens])
+lmrGE_tcr_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_tcr_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],tcr_gm[ind_tcr])[0,1]
+    lmrGE_tcr_ce[m] = coefficient_efficiency(tcr_gm[ind_tcr],lmr_gm_GE[ind_lmr,m])
 
 # LMR-ERA
 # overlaping years within verification interval
@@ -460,6 +476,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_era = np.searchsorted(ERA20C_time, np.intersect1d(ERA20C_time, overlap_yrs))
 lmr_era_corr = np.corrcoef(lmr_gm[ind_lmr],era_gm[ind_era])
 lmr_era_ce = coefficient_efficiency(era_gm[ind_era],lmr_gm[ind_lmr])
+# for individual members
+lmrGE_era_corr = np.zeros(shape=[GEnens])
+lmrGE_era_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_era_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],era_gm[ind_era])[0,1]
+    lmrGE_tcr_ce[m] = coefficient_efficiency(era_gm[ind_era],lmr_gm_GE[ind_lmr,m])
 
 # LMR-GIS
 # overlaping years within verification interval
@@ -468,6 +490,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_gis = np.searchsorted(GIS_time, np.intersect1d(GIS_time, overlap_yrs))
 lmr_gis_corr = np.corrcoef(lmr_gm[ind_lmr],gis_gm[ind_gis])
 lmr_gis_ce = coefficient_efficiency(gis_gm[ind_gis],lmr_gm[ind_lmr])
+# for all members
+lmrGE_gis_corr = np.zeros(shape=[GEnens])
+lmrGE_gis_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_gis_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],gis_gm[ind_gis])[0,1]
+    lmrGE_gis_ce[m] = coefficient_efficiency(gis_gm[ind_gis],lmr_gm_GE[ind_lmr,m])
 
 # LMR-CRU
 # overlaping years within verification interval
@@ -476,6 +504,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_cru = np.searchsorted(CRU_time, np.intersect1d(CRU_time, overlap_yrs))
 lmr_cru_corr = np.corrcoef(lmr_gm[ind_lmr],cru_gm[ind_cru])
 lmr_cru_ce = coefficient_efficiency(cru_gm[ind_cru],lmr_gm[ind_lmr])
+# for all members
+lmrGE_cru_corr = np.zeros(shape=[GEnens])
+lmrGE_cru_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_cru_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],cru_gm[ind_cru])[0,1]
+    lmrGE_cru_ce[m] = coefficient_efficiency(cru_gm[ind_cru],lmr_gm_GE[ind_lmr,m])
 
 # LMR-BE
 # overlaping years within verification interval
@@ -484,6 +518,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_be  = np.searchsorted(BE_time, np.intersect1d(BE_time, overlap_yrs))
 lmr_be_corr = np.corrcoef(lmr_gm[ind_lmr],be_gm[ind_be])
 lmr_be_ce = coefficient_efficiency(be_gm[ind_be],lmr_gm[ind_lmr])
+# for all members
+lmrGE_be_corr = np.zeros(shape=[GEnens])
+lmrGE_be_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_be_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],be_gm[ind_be])[0,1]
+    lmrGE_be_ce[m] = coefficient_efficiency(be_gm[ind_be],lmr_gm_GE[ind_lmr,m])
 
 # LMR-MLOST
 # overlaping years within verification interval
@@ -492,6 +532,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_mlost = np.searchsorted(MLOST_time, np.intersect1d(MLOST_time, overlap_yrs))
 lmr_mlost_corr = np.corrcoef(lmr_gm[ind_lmr],mlost_gm[ind_mlost])
 lmr_mlost_ce = coefficient_efficiency(mlost_gm[ind_mlost],lmr_gm[ind_lmr])
+# for all members
+lmrGE_mlost_corr = np.zeros(shape=[GEnens])
+lmrGE_mlost_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_mlost_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],mlost_gm[ind_mlost])[0,1]
+    lmrGE_mlost_ce[m] = coefficient_efficiency(mlost_gm[ind_mlost],lmr_gm_GE[ind_lmr,m])
 
 # LMR-consensus
 # overlaping years within verification interval
@@ -500,6 +546,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_con = np.searchsorted(CON_time, np.intersect1d(CON_time, overlap_yrs))
 lmr_con_corr = np.corrcoef(lmr_gm[ind_lmr],con_gm[ind_con])
 lmr_con_ce = coefficient_efficiency(con_gm[ind_con],lmr_gm[ind_lmr])
+# for all members
+lmrGE_con_corr = np.zeros(shape=[GEnens])
+lmrGE_con_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_con_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],con_gm[ind_con])[0,1]
+    lmrGE_con_ce[m] = coefficient_efficiency(con_gm[ind_con],lmr_gm_GE[ind_lmr,m])
 
 # GIS-TCR
 # overlaping years within verification interval
@@ -615,16 +667,17 @@ print('ensemble calibration (grand ensemble): %s' % str(calibGE))
 print('--------------------------------------------------')
 
 # For ensembles in individual Monte-Carlo realizations 
+nt, nens, nmc = gmt_save[lmr_smatch:lmr_ematch,:].shape
 svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)
-lg_err = np.zeros(svar.shape)
-for mc in np.arange(niters):
-    mc_ens_mean = np.mean(gmt_save[lmr_smatch:lmr_ematch,:,mc], axis=1)
+lg_err = np.zeros(shape=[nt,nmc])
+for mc in np.arange(nmc):
+    mc_ens_mean = np.mean(gmt_save[lmr_smatch:lmr_ematch,:,mc], axis=1) # ensemble-mean for MC run
     lg_err[:,mc] = mc_ens_mean - obs_historical
 
 # variance of ensemble-mean error over mean variance in ensembles
 calib = lg_err.var(0,ddof=1)/(svar.mean(0)+con_mse)
 print('--------------------------------------------------')
-print(('ensemble calibration across MC runs: \n%s' % str(calib)))
+print('ensemble calibration across MC runs: \n%s' % str(calib))
 print('--------------------------------------------------')
 
 if iplot:
@@ -635,11 +688,11 @@ if iplot:
     calib = np.append(calib,calib[-1])
     plt.step(MCids, calib, 'b', where='post', lw=3, alpha=0.75)
     plt.plot([MCids[0],MCids[-1]], [1.,1.], '--r', lw=2)
-    plt.axis((MCids[0],MCids[-1],0.,2.))
+    plt.axis((MCids[0],MCids[-1],0.,10.))
     plt.xlabel('Monte-Carlo reconstruction')
     plt.ylabel('Ensemble calibration ratio')
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-    plt.title('Globa-mean temperature ensemble calibration')
+    plt.title('Global-mean temperature ensemble calibration')
     plt.savefig(nexp+'_GMT_ensemble_calibration.png')
 
 
@@ -698,14 +751,21 @@ if iplot:
 # time averages
 #
 
-LMR_smoothed,LMR_smoothed_years     = moving_average(lmr_gm,recon_times,nsyrs) 
-TCR_smoothed,TCR_smoothed_years     = moving_average(tcr_gm,TCR_time,nsyrs) 
-ERA_smoothed,ERA_smoothed_years     = moving_average(era_gm,ERA20C_time,nsyrs) 
-GIS_smoothed,GIS_smoothed_years     = moving_average(gis_gm,GIS_time,nsyrs) 
-CRU_smoothed,CRU_smoothed_years     = moving_average(cru_gm,CRU_time,nsyrs) 
-BE_smoothed,BE_smoothed_years       = moving_average(be_gm,BE_time,nsyrs) 
-MLOST_smoothed,MLOST_smoothed_years = moving_average(mlost_gm,MLOST_time,nsyrs) 
-CON_smoothed,CON_smoothed_years = moving_average(con_gm,CON_time,nsyrs) 
+LMR_smoothed,LMR_smoothed_years     = moving_average(lmr_gm,recon_times,nsyrs)
+TCR_smoothed,TCR_smoothed_years     = moving_average(tcr_gm,TCR_time,nsyrs)
+ERA_smoothed,ERA_smoothed_years     = moving_average(era_gm,ERA20C_time,nsyrs)
+GIS_smoothed,GIS_smoothed_years     = moving_average(gis_gm,GIS_time,nsyrs)
+CRU_smoothed,CRU_smoothed_years     = moving_average(cru_gm,CRU_time,nsyrs)
+BE_smoothed,BE_smoothed_years       = moving_average(be_gm,BE_time,nsyrs)
+MLOST_smoothed,MLOST_smoothed_years = moving_average(mlost_gm,MLOST_time,nsyrs)
+CON_smoothed,CON_smoothed_years = moving_average(con_gm,CON_time,nsyrs)
+
+# members of LMR's grand ensemble
+tdim, = LMR_smoothed.shape
+LMR_ge_smoothed = np.zeros(shape=[tdim,GEnens])
+for m in np.arange(GEnens):
+    LMR_ge_smoothed[:,m],LMR_smoothed_years  = moving_average(lmr_gm_GE[:,m],recon_times,nsyrs)
+
 
 # index offsets to account for averaging
 toff = int(nsyrs/2)
@@ -718,6 +778,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_tcr = np.searchsorted(TCR_smoothed_years, np.intersect1d(TCR_smoothed_years, overlap_yrs))
 ls_ts_corr = np.corrcoef(LMR_smoothed[ind_lmr],TCR_smoothed[ind_tcr])
 ls_ts_ce = coefficient_efficiency(TCR_smoothed[ind_tcr],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_ts_corr = np.zeros(shape=[GEnens])
+lsGE_ts_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_ts_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],TCR_smoothed[ind_tcr])[0,1]
+    lsGE_ts_ce[m] = coefficient_efficiency(TCR_smoothed[ind_tcr],LMR_ge_smoothed[ind_lmr,m])
 
 lstsc  = str(float('%.2f' % ls_ts_corr[0,1]))
 lstsce = str(float('%.2f' % ls_ts_ce))
@@ -728,6 +794,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_era = np.searchsorted(ERA_smoothed_years, np.intersect1d(ERA_smoothed_years, overlap_yrs))
 ls_es_corr = np.corrcoef(LMR_smoothed[ind_lmr],ERA_smoothed[ind_era])
 ls_es_ce = coefficient_efficiency(ERA_smoothed[ind_era],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_es_corr = np.zeros(shape=[GEnens])
+lsGE_es_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_es_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],ERA_smoothed[ind_era])[0,1]
+    lsGE_es_ce[m] = coefficient_efficiency(ERA_smoothed[ind_era],LMR_ge_smoothed[ind_lmr,m])
 
 lsesc  = str(float('%.2f' % ls_es_corr[0,1]))
 lsesce = str(float('%.2f' % ls_es_ce))
@@ -738,6 +810,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_gis = np.searchsorted(GIS_smoothed_years, np.intersect1d(GIS_smoothed_years, overlap_yrs))
 ls_gs_corr = np.corrcoef(LMR_smoothed[ind_lmr],GIS_smoothed[ind_gis])
 ls_gs_ce = coefficient_efficiency(GIS_smoothed[ind_gis],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_gs_corr = np.zeros(shape=[GEnens])
+lsGE_gs_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_gs_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],GIS_smoothed[ind_gis])[0,1]
+    lsGE_gs_ce[m] = coefficient_efficiency(GIS_smoothed[ind_gis],LMR_ge_smoothed[ind_lmr,m])
 
 lsgsc  = str(float('%.2f' % ls_gs_corr[0,1]))
 lsgsce = str(float('%.2f' % ls_gs_ce))
@@ -748,6 +826,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_cru = np.searchsorted(CRU_smoothed_years, np.intersect1d(CRU_smoothed_years, overlap_yrs))
 ls_cs_corr = np.corrcoef(LMR_smoothed[ind_lmr],CRU_smoothed[ind_cru])
 ls_cs_ce = coefficient_efficiency(CRU_smoothed[ind_cru],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_cs_corr = np.zeros(shape=[GEnens])
+lsGE_cs_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_cs_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],CRU_smoothed[ind_cru])[0,1]
+    lsGE_cs_ce[m] = coefficient_efficiency(CRU_smoothed[ind_cru],LMR_ge_smoothed[ind_lmr,m])
 
 lscsc  = str(float('%.2f' % ls_cs_corr[0,1]))
 lscsce = str(float('%.2f' % ls_cs_ce))
@@ -758,6 +842,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_be = np.searchsorted(BE_smoothed_years, np.intersect1d(BE_smoothed_years, overlap_yrs))
 ls_bs_corr = np.corrcoef(LMR_smoothed[ind_lmr],CRU_smoothed[ind_be])
 ls_bs_ce = coefficient_efficiency(BE_smoothed[ind_be],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_bs_corr = np.zeros(shape=[GEnens])
+lsGE_bs_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_bs_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],BE_smoothed[ind_be])[0,1]
+    lsGE_bs_ce[m] = coefficient_efficiency(BE_smoothed[ind_be],LMR_ge_smoothed[ind_lmr,m])
 
 lsbsc  = str(float('%.2f' % ls_bs_corr[0,1]))
 lsbsce = str(float('%.2f' % ls_bs_ce))
@@ -768,6 +858,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_mlost = np.searchsorted(MLOST_smoothed_years, np.intersect1d(MLOST_smoothed_years, overlap_yrs))
 ls_ms_corr = np.corrcoef(LMR_smoothed[ind_lmr],MLOST_smoothed[ind_mlost])
 ls_ms_ce = coefficient_efficiency(MLOST_smoothed[ind_mlost],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_ms_corr = np.zeros(shape=[GEnens])
+lsGE_ms_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_ms_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],MLOST_smoothed[ind_mlost])[0,1]
+    lsGE_ms_ce[m] = coefficient_efficiency(MLOST_smoothed[ind_mlost],LMR_ge_smoothed[ind_lmr,m])
 
 lsmsc  = str(float('%.2f' % ls_ms_corr[0,1]))
 lsmsce = str(float('%.2f' % ls_ms_ce))
@@ -781,6 +877,12 @@ ls_con_corr = np.corrcoef(LMR_smoothed[ind_lmr],CON_smoothed[ind_con])
 ls_con_ce = coefficient_efficiency(CON_smoothed[ind_con],LMR_smoothed[ind_lmr])
 lmr_con_corr = np.corrcoef(lmr_gm[ind_lmr],con_gm[ind_con])
 lmr_con_ce = coefficient_efficiency(con_gm[ind_con],lmr_gm[ind_lmr])
+# members of the grand ensemble
+lsGE_con_corr = np.zeros(shape=[GEnens])
+lsGE_con_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_con_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],CON_smoothed[ind_con])[0,1]
+    lsGE_con_ce[m] = coefficient_efficiency(CON_smoothed[ind_con],LMR_ge_smoothed[ind_lmr,m])
 
 lsconsc  = str(float('%.2f' % ls_con_corr[0,1]))
 lsconsce = str(float('%.2f' % ls_con_ce))
@@ -884,6 +986,13 @@ xvar = list(range(len(lmr_gm_copy)))
 lmr_slope, lmr_intercept, r_value, p_value, std_err = stats.linregress(xvar,lmr_gm_copy)
 lmr_trend = lmr_slope*np.squeeze(xvar) + lmr_intercept
 lmr_gm_detrend = lmr_gm_copy - lmr_trend
+# for individual ensemble members
+lmr_GE_slope = np.zeros(shape=[GEnens])
+lmr_gm_GE_detrend = np.zeros(shape=[len(ind_lmr),GEnens])
+for m in np.arange(GEnens):
+    lmr_GE_slope[m], lmr_intercept, r_value, p_value, std_err = stats.linregress(xvar,lmr_gm_GE[ind_lmr,m])
+    lmr_trend = lmr_GE_slope[m]*np.squeeze(xvar) + lmr_intercept
+    lmr_gm_GE_detrend[:,m] = lmr_gm_GE[ind_lmr,m] - lmr_trend
 
 
 # for GIS
@@ -897,18 +1006,33 @@ xvar = list(range(len(ind_gis)))
 gis_slope, gis_intercept, r_value, p_value, std_err = stats.linregress(xvar,gis_gm_copy)
 gis_trend = gis_slope*np.squeeze(xvar) + gis_intercept
 gis_gm_detrend = gis_gm_copy - gis_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - gis_gm_copy
 lmr_gis_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],gis_gm_copy)
 lmr_gis_ce_full = coefficient_efficiency(gis_gm_copy,lmr_gm_copy[ind_lmr])
 lgrf =  str(float('%.2f' % lmr_gis_corr_full[0,1]))
 lgcf =  str(float('%.2f' % lmr_gis_ce_full))
+# for individual ensemble members
+lmrGE_gis_corr_full = np.zeros(shape=[GEnens])
+lmrGE_gis_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_gis_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],gis_gm_copy)[0,1]
+    lmrGE_gis_ce_full[m] = coefficient_efficiency(gis_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_gis_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],gis_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - gis_gm_detrend
 lmr_gis_ce_detrend = coefficient_efficiency(gis_gm_detrend,lmr_gm_detrend[ind_lmr])
 lgrd   =  str(float('%.2f' % lmr_gis_corr_detrend[0,1]))
 lgcd   =  str(float('%.2f' % lmr_gis_ce_detrend))
+# for individual ensemble members
+lmrGE_gis_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_gis_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_gis_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],gis_gm_detrend)[0,1]
+    lmrGE_gis_ce_detrend[m] = coefficient_efficiency(gis_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # check if the two pieces are correlated (if not, then they sum to the total error)
 error_trend = lmr_trend[ind_lmr] - gis_trend
@@ -921,6 +1045,7 @@ print('detrend error: %s' % str(np.var(error_detrend)))
 print('detrend error + trend error: %s' % str(np.var(error_trend)+np.var(error_detrend)))
 print('full error : %s' % str(np.var(error_trend+error_detrend)))
 
+
 # for CRU
 # overlaping years within verification interval
 overlap_yrs = np.intersect1d(np.intersect1d(LMR_time_copy, CRU_time), verif_yrs)
@@ -932,18 +1057,33 @@ xvar = list(range(len(ind_cru)))
 cru_slope, cru_intercept, r_value, p_value, std_err = stats.linregress(xvar,cru_gm_copy)
 cru_trend = cru_slope*np.squeeze(xvar) + cru_intercept
 cru_gm_detrend = cru_gm_copy - cru_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - cru_gm_copy
 lmr_cru_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],cru_gm_copy)
 lmr_cru_ce_full = coefficient_efficiency(cru_gm_copy,lmr_gm_copy[ind_lmr])
 lcrf =  str(float('%.2f' % lmr_cru_corr_full[0,1]))
 lccf =  str(float('%.2f' % lmr_cru_ce_full))
+# for individual ensemble members
+lmrGE_cru_corr_full = np.zeros(shape=[GEnens])
+lmrGE_cru_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_cru_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],cru_gm_copy)[0,1]
+    lmrGE_cru_ce_full[m] = coefficient_efficiency(cru_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_cru_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],cru_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - cru_gm_detrend
 lmr_cru_ce_detrend = coefficient_efficiency(cru_gm_detrend,lmr_gm_detrend[ind_lmr])
 lcrd   =  str(float('%.2f' % lmr_cru_corr_detrend[0,1]))
 lccd   =  str(float('%.2f' % lmr_cru_ce_detrend))
+# for individual ensemble members
+lmrGE_cru_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_cru_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_cru_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],cru_gm_detrend)[0,1]
+    lmrGE_cru_ce_detrend[m] = coefficient_efficiency(cru_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for BE
 # overlaping years within verification interval
@@ -956,18 +1096,33 @@ xvar = list(range(len(ind_be)))
 be_slope, be_intercept, r_value, p_value, std_err = stats.linregress(xvar,be_gm_copy)
 be_trend = be_slope*np.squeeze(xvar) + be_intercept
 be_gm_detrend = be_gm_copy - be_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - be_gm_copy
 lmr_be_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],be_gm_copy)
 lmr_be_ce_full = coefficient_efficiency(be_gm_copy,lmr_gm_copy[ind_lmr])
 lbrf =  str(float('%.2f' % lmr_be_corr_full[0,1]))
 lbcf =  str(float('%.2f' % lmr_be_ce_full))
+# for individual ensemble members
+lmrGE_be_corr_full = np.zeros(shape=[GEnens])
+lmrGE_be_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_be_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],be_gm_copy)[0,1]
+    lmrGE_be_ce_full[m] = coefficient_efficiency(be_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_be_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],be_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - be_gm_detrend
 lmr_be_ce_detrend = coefficient_efficiency(be_gm_detrend,lmr_gm_detrend[ind_lmr])
 lbrd   =  str(float('%.2f' % lmr_be_corr_detrend[0,1]))
 lbcd   =  str(float('%.2f' % lmr_be_ce_detrend))
+# for individual ensemble members
+lmrGE_be_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_be_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_be_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],be_gm_detrend)[0,1]
+    lmrGE_be_ce_detrend[m] = coefficient_efficiency(be_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for MLOST
 # overlaping years within verification interval
@@ -980,18 +1135,33 @@ xvar = list(range(len(ind_mlost)))
 mlost_slope, mlost_intercept, r_value, p_value, std_err = stats.linregress(xvar,mlost_gm_copy)
 mlost_trend = mlost_slope*np.squeeze(xvar) + mlost_intercept
 mlost_gm_detrend = mlost_gm_copy - mlost_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - mlost_gm_copy
 lmr_mlost_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],mlost_gm_copy)
 lmr_mlost_ce_full = coefficient_efficiency(mlost_gm_copy,lmr_gm_copy[ind_lmr])
 lmrf =  str(float('%.2f' % lmr_mlost_corr_full[0,1]))
 lmcf =  str(float('%.2f' % lmr_mlost_ce_full))
+# for individual ensemble members
+lmrGE_mlost_corr_full = np.zeros(shape=[GEnens])
+lmrGE_mlost_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_mlost_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],mlost_gm_copy)[0,1]
+    lmrGE_mlost_ce_full[m] = coefficient_efficiency(mlost_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_mlost_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],mlost_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - mlost_gm_detrend
 lmr_mlost_ce_detrend = coefficient_efficiency(mlost_gm_detrend,lmr_gm_detrend[ind_lmr])
 lmrd   =  str(float('%.2f' % lmr_mlost_corr_detrend[0,1]))
 lmcd   =  str(float('%.2f' % lmr_mlost_ce_detrend))
+# for individual ensemble members
+lmrGE_mlost_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_mlost_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_mlost_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],mlost_gm_detrend)[0,1]
+    lmrGE_mlost_ce_detrend[m] = coefficient_efficiency(mlost_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for TCR
 # overlaping years within verification interval
@@ -1004,18 +1174,33 @@ xvar = list(range(len(ind_tcr)))
 tcr_slope, tcr_intercept, r_value, p_value, std_err = stats.linregress(xvar,tcr_gm_copy)
 tcr_trend = tcr_slope*np.squeeze(xvar) + tcr_intercept
 tcr_gm_detrend = tcr_gm_copy - tcr_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - tcr_gm_copy
 lmr_tcr_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],tcr_gm_copy)
 lmr_tcr_ce_full = coefficient_efficiency(tcr_gm_copy,lmr_gm_copy[ind_lmr])
 ltrf =  str(float('%.2f' % lmr_tcr_corr_full[0,1]))
 ltcf =  str(float('%.2f' % lmr_tcr_ce_full))
+# for individual ensemble members
+lmrGE_tcr_corr_full = np.zeros(shape=[GEnens])
+lmrGE_tcr_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_tcr_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],tcr_gm_copy)[0,1]
+    lmrGE_tcr_ce_full[m] = coefficient_efficiency(tcr_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_tcr_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],tcr_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - tcr_gm_detrend
 lmr_tcr_ce_detrend = coefficient_efficiency(tcr_gm_detrend,lmr_gm_detrend[ind_lmr])
 ltrd   =  str(float('%.2f' % lmr_tcr_corr_detrend[0,1]))
 ltcd   =  str(float('%.2f' % lmr_tcr_ce_detrend))
+# for individual ensemble members
+lmrGE_tcr_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_tcr_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_tcr_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],tcr_gm_detrend)[0,1]
+    lmrGE_tcr_ce_detrend[m] = coefficient_efficiency(tcr_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for ERA
 # overlaping years within verification interval
@@ -1028,18 +1213,33 @@ xvar = list(range(len(ind_era)))
 era_slope, era_intercept, r_value, p_value, std_err = stats.linregress(xvar,era_gm_copy)
 era_trend = era_slope*np.squeeze(xvar) + era_intercept
 era_gm_detrend = era_gm_copy - era_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - era_gm_copy
 lmr_era_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],era_gm[ind_era])
 lmr_era_ce_full = coefficient_efficiency(era_gm_copy,lmr_gm_copy[ind_lmr])
 lerf =  str(float('%.2f' % lmr_era_corr_full[0,1]))
 lecf =  str(float('%.2f' % lmr_era_ce_full))
+# for individual ensemble members
+lmrGE_era_corr_full = np.zeros(shape=[GEnens])
+lmrGE_era_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_era_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],era_gm_copy)[0,1]
+    lmrGE_era_ce_full[m] = coefficient_efficiency(era_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_era_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],era_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - era_gm_detrend
 lmr_era_ce_detrend = coefficient_efficiency(era_gm_detrend,lmr_gm_detrend[ind_lmr])
 lerd   =  str(float('%.2f' % lmr_era_corr_detrend[0,1]))
 lecd   =  str(float('%.2f' % lmr_era_ce_detrend))
+# for individual ensemble members
+lmrGE_era_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_era_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_era_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],era_gm_detrend)[0,1]
+    lmrGE_era_ce_detrend[m] = coefficient_efficiency(era_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for CONsensus
 # overlaping years within verification interval
@@ -1052,18 +1252,32 @@ xvar = list(range(len(ind_con)))
 con_slope, con_intercept, r_value, p_value, std_err = stats.linregress(xvar,con_gm_copy)
 con_trend = con_slope*np.squeeze(xvar) + con_intercept
 con_gm_detrend = con_gm_copy - con_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - con_gm_copy
 lmr_con_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],con_gm[ind_con])
 lmr_con_ce_full = coefficient_efficiency(con_gm_copy,lmr_gm_copy[ind_lmr])
 lconrf =  str(float('%.2f' % lmr_con_corr_full[0,1]))
 lconcf =  str(float('%.2f' % lmr_con_ce_full))
+# for individual ensemble members
+lmrGE_con_corr_full = np.zeros(shape=[GEnens])
+lmrGE_con_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_con_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],con_gm_copy)[0,1]
+    lmrGE_con_ce_full[m] = coefficient_efficiency(con_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_con_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],con_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - con_gm_detrend
 lmr_con_ce_detrend = coefficient_efficiency(con_gm_detrend,lmr_gm_detrend[ind_lmr])
 lconrd   =  str(float('%.2f' % lmr_con_corr_detrend[0,1]))
 lconcd   =  str(float('%.2f' % lmr_con_ce_detrend))
+# for individual ensemble members
+lmrGE_con_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_con_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_con_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],con_gm_detrend)[0,1]
+    lmrGE_con_ce_detrend[m] = coefficient_efficiency(con_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
 
 # Trends
 lmrs   =  str(float('%.2f' % (lmr_slope*100.)))
@@ -1378,16 +1592,45 @@ fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_ce_table'
 plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
 
     
-#
-# NEW 9/15/16 dictionary for objective verification
-#
+# ---------------------------------------------------------
+# NEW 9/15/16 save to dictionary for objective verification
+# ---------------------------------------------------------
 if stat_save:
+
+    # if stats on individual ensemble members, infer range and save
+    # against consensus only for now
+    # - correlation
+    loc_low = str(float('%.2f' % (np.min(lmrGE_con_corr))))
+    loc_upp = str(float('%.2f' % (np.max(lmrGE_con_corr))))
+    # - CE
+    loce_low = str(float('%.2f' % (np.min(lmrGE_con_ce))))
+    loce_upp = str(float('%.2f' % (np.max(lmrGE_con_ce))))
+    # - detrended correlation
+    lconrd_low = str(float('%.2f' % (np.min(lmrGE_con_corr_detrend))))
+    lconrd_upp = str(float('%.2f' % (np.max(lmrGE_con_corr_detrend))))
+    # - detrended CE
+    lconcd_low = str(float('%.2f' % (np.min(lmrGE_con_ce_detrend))))
+    lconcd_upp = str(float('%.2f' % (np.max(lmrGE_con_ce_detrend))))
+    # - LMR trend
+    lmrs_low = str(float('%.2f' % (np.min(lmr_GE_slope*100.))))
+    lmrs_upp = str(float('%.2f' % (np.max(lmr_GE_slope*100))))
+    
+    print(' ')
+    print('full corr  ==>', loc, loc_low, loc_upp)
+    print('full CE    ==>', loce, loce_low, loce_upp)
+    print('detrend R  ==>', lconrd, lconrd_low, lconrd_upp)
+    print('detrend CE ==>', lconcd, lconcd_low, lconcd_upp)
+    print('LMR trend  ==>', lmrs, lmrs_low, lmrs_upp)
+    print(' ')
+
     gmt_verification_stats = {}
     stat_vars = ['stime','etime',
                  'ltc','lec','lgc','lcc','lbc','lmc','loc',
                  'ltce','lece','lgce','lcce','lbce','lmce','loce',
                  'lgrd','lgcd', 'lconcd','lconrd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
-                 'lmrs','gs','crus','bes','mlosts','tcrs','eras','cons',]
+                 'lmrs','gs','crus','bes','mlosts','tcrs','eras','cons',
+                 'loc_low', 'loc_upp', 'loce_low', 'loce_upp', 'lconrd_low', 'lconrd_upp', 'lconcd_low', 'lconcd_upp',
+                 'calibGE']
 
     stat_metadata = {'stime':"starting year of verification time period",
                      'etime':"ending year of verification time period",
@@ -1427,6 +1670,15 @@ if stat_save:
                      'tcrs':'TCR trend (K/100 years)',
                      'eras':'ERA trend (K/100 years)',
                      'cons':'Consensus trend (K/100 years)',
+                     'loc_low':'LMR_consensus lowerbound correlation',
+                     'loc_upp':'LMR_consensus upperbound correlation',
+                     'loce_low':'LMR_consensus lowerbound coefficient of efficiency',
+                     'loce_upp':'LMR_consensus upperbound coefficient of efficiency',
+                     'lconrd_low':'LMR_consensus lowerbound detrended correlation',
+                     'lconrd_upp':'LMR_consensus upperbound detrended correlation',
+                     'lconcd_low':'LMR_consensus lowerbound detrended coefficient of efficiency',
+                     'lconcd_upp':'LMR_consensus upperbound detrended coefficient of efficiency',
+                     'calibGE': 'LMR grand ensemble calibration ratio',
                      'stat_metadata':'metdata'
                      }
 
