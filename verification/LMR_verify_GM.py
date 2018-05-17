@@ -389,12 +389,11 @@ gmt_min = gmt_min - lmr_off
 gmt_max = gmt_max - lmr_off
 
 # all members (grand ensemble)
-lmr_off = np.mean(lmr_gm_GE[smatch:ematch,:], axis=0)
 lmr_gm_GE = lmr_gm_GE - lmr_off
 # all members per MC realizations
-lmr_off = np.mean(gmt_save[smatch:ematch,:], axis=0)
+ens_mean =  np.mean(gmt_save, axis=1)
 for m in np.arange(niters):
-    lmr_off = np.mean(gmt_save[smatch:ematch,:,m], axis=0)    
+    lmr_off = np.mean(ens_mean[smatch:ematch,m], axis=0)
     gmt_save[:,:,m] = gmt_save[:,:,m] - lmr_off
 
 
@@ -440,10 +439,10 @@ consensus_gmt = np.array([gis_gm[gis_smatch:gis_ematch],
 con_gm = np.mean(consensus_gmt,axis=0)
 CON_time = np.asarray(np.arange(stime,etime)) # fixed 21 July 2017 (GJH)
 
-# differences between individual instrumental-era products and consensus 
-diffs = np.ravel(consensus_gmt - con_gm)
-# variance of deviations -> estimate of uncertainty in consensus
-con_mse = np.var(diffs, ddof=1)
+# differences between instrumental-era products and consensus 
+diffs = consensus_gmt - con_gm
+# mean-squared deviations (time-resolved) -> estimate of "uncertainty" in consensus
+con_mse = np.mean(np.square(diffs), axis=0)
 
 # write to a file for use by other programs
 #filen = 'consensus_gmt.npz'
@@ -661,21 +660,41 @@ obs_historical = con_gm[ind_con] # consensus
 lg_err = lmr_gm[lmr_smatch:lmr_ematch] - obs_historical
 gens = lmr_gm_GE[lmr_smatch:lmr_ematch,:]
 svar = gens.var(1,ddof=1)
-calibGE = lg_err.var(0,ddof=1)/(svar.mean(0)+con_mse)
+
+# NEW calculation (May 2018):
+# calibGE = lg_err.var(0,ddof=1)/((svar+con_mse).mean(0)) # old
+# time-resolved MSE of ensemble-mean
+ens_mean_error2_term = np.square(lg_err)
+# total ensemble variance (including obs-error variance)
+ens_variance_term = svar+con_mse
+# calibration ratio (time resolved)
+calibGE_t = ens_mean_error2_term/ens_variance_term
+# time-mean as metric
+calibGE = np.mean(calibGE_t)
+
 print('--------------------------------------------------')
 print('ensemble calibration (grand ensemble): %s' % str(calibGE))
 print('--------------------------------------------------')
 
 # For ensembles in individual Monte-Carlo realizations 
 nt, nens, nmc = gmt_save[lmr_smatch:lmr_ematch,:].shape
+# ensemble variance
 svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)
 lg_err = np.zeros(shape=[nt,nmc])
+ens_mean_error2_term = np.zeros(shape=[nt,nmc])
+ens_variance_term = np.zeros(shape=[nt,nmc])
 for mc in np.arange(nmc):
     mc_ens_mean = np.mean(gmt_save[lmr_smatch:lmr_ematch,:,mc], axis=1) # ensemble-mean for MC run
     lg_err[:,mc] = mc_ens_mean - obs_historical
+    # MSE of ensemble-mean
+    ens_mean_error2_term[:,mc] = np.square(mc_ens_mean - obs_historical)
+    ens_variance_term[:,mc] = svar[:, mc] + con_mse
 
-# variance of ensemble-mean error over mean variance in ensembles
-calib = lg_err.var(0,ddof=1)/(svar.mean(0)+con_mse)
+# time-resolved calibration ratio
+calib_t = ens_mean_error2_term/ens_variance_term
+# time-mean as metric
+calib = np.mean(calib_t, axis=0)
+
 print('--------------------------------------------------')
 print('ensemble calibration across MC runs: \n%s' % str(calib))
 print('--------------------------------------------------')
@@ -688,7 +707,7 @@ if iplot:
     calib = np.append(calib,calib[-1])
     plt.step(MCids, calib, 'b', where='post', lw=3, alpha=0.75)
     plt.plot([MCids[0],MCids[-1]], [1.,1.], '--r', lw=2)
-    plt.axis((MCids[0],MCids[-1],0.,10.))
+    plt.axis((MCids[0],MCids[-1],0.,5.))
     plt.xlabel('Monte-Carlo reconstruction')
     plt.ylabel('Ensemble calibration ratio')
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
@@ -1600,20 +1619,30 @@ if stat_save:
     # if stats on individual ensemble members, infer range and save
     # against consensus only for now
     # - correlation
-    loc_low = str(float('%.2f' % (np.min(lmrGE_con_corr))))
-    loc_upp = str(float('%.2f' % (np.max(lmrGE_con_corr))))
+    loc_low = str(float('%.2f' % (np.percentile(lmrGE_con_corr, 1))))
+    loc_upp = str(float('%.2f' % (np.percentile(lmrGE_con_corr,99))))
+    #loc_low = str(float('%.2f' % (np.min(lmrGE_con_corr))))
+    #loc_upp = str(float('%.2f' % (np.max(lmrGE_con_corr))))
     # - CE
-    loce_low = str(float('%.2f' % (np.min(lmrGE_con_ce))))
-    loce_upp = str(float('%.2f' % (np.max(lmrGE_con_ce))))
+    loce_low = str(float('%.2f' % (np.percentile(lmrGE_con_ce, 1))))
+    loce_upp = str(float('%.2f' % (np.percentile(lmrGE_con_ce,99))))
+    #loce_low = str(float('%.2f' % (np.min(lmrGE_con_ce))))
+    #loce_upp = str(float('%.2f' % (np.max(lmrGE_con_ce))))
     # - detrended correlation
-    lconrd_low = str(float('%.2f' % (np.min(lmrGE_con_corr_detrend))))
-    lconrd_upp = str(float('%.2f' % (np.max(lmrGE_con_corr_detrend))))
+    lconrd_low = str(float('%.2f' % (np.percentile(lmrGE_con_corr_detrend, 1))))
+    lconrd_upp = str(float('%.2f' % (np.percentile(lmrGE_con_corr_detrend, 99))))
+    #lconrd_low = str(float('%.2f' % (np.min(lmrGE_con_corr_detrend))))
+    #lconrd_upp = str(float('%.2f' % (np.max(lmrGE_con_corr_detrend))))
     # - detrended CE
-    lconcd_low = str(float('%.2f' % (np.min(lmrGE_con_ce_detrend))))
-    lconcd_upp = str(float('%.2f' % (np.max(lmrGE_con_ce_detrend))))
+    lconcd_low = str(float('%.2f' % (np.percentile(lmrGE_con_ce_detrend, 1))))
+    lconcd_upp = str(float('%.2f' % (np.percentile(lmrGE_con_ce_detrend, 99))))
+    #lconcd_low = str(float('%.2f' % (np.min(lmrGE_con_ce_detrend))))
+    #lconcd_upp = str(float('%.2f' % (np.max(lmrGE_con_ce_detrend))))    
     # - LMR trend
-    lmrs_low = str(float('%.2f' % (np.min(lmr_GE_slope*100.))))
-    lmrs_upp = str(float('%.2f' % (np.max(lmr_GE_slope*100))))
+    lmrs_low = str(float('%.2f' % (np.percentile(lmr_GE_slope*100., 1))))
+    lmrs_upp = str(float('%.2f' % (np.percentile(lmr_GE_slope*100., 99))))
+    #lmrs_low = str(float('%.2f' % (np.min(lmr_GE_slope*100))))
+    #lmrs_upp = str(float('%.2f' % (np.max(lmr_GE_slope*100))))
     
     print(' ')
     print('full corr  ==>', loc, loc_low, loc_upp)
