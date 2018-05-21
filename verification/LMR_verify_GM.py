@@ -33,7 +33,7 @@ import pandas as pd
 
 # LMR specific imports
 sys.path.append('../')
-from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
+from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram, natural_sort
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
@@ -158,6 +158,8 @@ print('--------------------------------------------------')
 
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
+# sort
+dirs = natural_sort(dirs)
 
 # query file for assimilated proxy information (for now, ONLY IN THE r0 directory!)
 ptypes,nrecords = assimilated_proxies(workdir+'/r0/')
@@ -1371,27 +1373,98 @@ if iplot:
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
-"""
+
 # rank histograms
 # loop over all years; send ensemble and a verification value
 print(' ')
-print(np.shape(gmt_save))
-print(lmr_smatch)
-print(len(lmr_gm_copy))
-rank = []
-for yr in range(len(lmr_gm_copy)):
-    rankval = rank_histogram(gmt_save[lmr_smatch+yr:lmr_smatch+yr+1,:,:],gis_gm_copy[yr])
-    rank.append(rankval)
+# Grand ensemble (combined MCiters and Nens)
+rank_GE = []
+for yr in verif_yrs:
     
+    obs_val = con_gm[CON_time==yr]
+    nelem, = obs_val.shape
+
+    GrandEnsemble = np.squeeze(lmr_gm_GE[LMR_time==yr,:])
+    nens, =  GrandEnsemble.shape
+
+    if nens == GEnens and nelem > 0:
+        rankval = rank_histogram(GrandEnsemble,obs_val)
+        rank_GE.append(rankval)
+
+# Now the plot
 if iplot:
     fig = plt.figure()
     nbins = 10
-    plt.hist(rank,nbins)
+    bins = np.linspace(0,GEnens,nbins)
+    plt.hist(rank_GE,bins=bins,histtype='stepfilled', alpha=0.5)
+    plt.xlim([0,GEnens])
+    plt.ylabel('Counts')
+    plt.xlabel('Rank')
+    
     if fsave:
-        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_rank_histogram.png'
-        print(fname)
+        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_GRANDensemble_rank_histogram.png'
         plt.savefig(fname)
-"""
+
+    # for each Monte-Carlo reconstruction
+    if niters > 1:
+        nt,nens,niters = gmt_save[lmr_smatch:lmr_ematch,:,:].shape
+        rankarr = np.zeros(shape=[niters,nt], dtype=np.int)
+        bins = np.linspace(0,nens,nbins)
+        mvals = []
+        for mc in np.arange(niters):
+            rank = []
+            for yr in verif_yrs:
+                obs_val = con_gm[CON_time==yr]
+                nelem, = obs_val.shape
+
+                Ensemble = np.squeeze(gmt_save[LMR_time==yr,:,mc])
+
+                if nelem > 0:
+                    rankval = rank_histogram(Ensemble,obs_val)
+                    rank.append(rankval)
+
+            rankarr[mc,:] = np.asarray(rank)
+
+            # to get the max of yaxis right
+            fig = plt.figure()
+            plt.hist(rankarr[mc,:],bins=bins,histtype='stepfilled',alpha=0.5)
+            xmin,xmax,ymin,ymax = plt.axis()
+            mvals.append(ymax)
+            plt.close()
+
+        ymax = np.max(mvals)
+
+        # now create the figure
+        fig = plt.figure()
+        ncols = 5
+        if niters > 51:
+            ncols = 10
+        elif niters > 11 and niters < 21:
+            ncols = 4
+        elif niters <= 11:
+            ncols=3
+        
+        nrows = niters//ncols
+        if nrows*ncols < niters:
+            nrows = nrows + 1
+
+        for mc in np.arange(niters):
+            ax = fig.add_subplot(nrows,ncols,mc+1)
+            bins = np.linspace(0,nens,nbins)
+            ax.hist(rankarr[mc,:],bins=bins,histtype='stepfilled',alpha=0.5)
+            ax.set_xlim([0,nens])
+            ax.set_ylim([0,ymax])
+            ax.set_title('MC: %s' %str(mc),fontsize=9)
+            xlims = ax.get_xlim()
+            ylims = ax.get_ylim()
+            ax.set_xticks(xlims)
+            ax.set_yticks(ylims)
+            ax.tick_params(axis='both',labelsize=8)
+        
+        fig.tight_layout()
+        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_MCensemble_rank_histogram.png'
+        plt.savefig(fname)
+
 
 #  Summary "table" figures
 
