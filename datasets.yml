@@ -137,7 +137,7 @@ ccsm4_last_millenium:
                      nheatGlobal_Omon, nheatAtlanticArctic_Omon,
                      AMOCstreamfct_Omon,
                      AMOCindex_Omon, AMOC26Nmax_Omon, AMOC26N1000m_Omon,
-                     AMOC45N1000_Omon]
+                     AMOC45N1000m_Omon]
 
   datadir: null
   datafile: '[vardef_template]_CCSM4_past1000_085001-185012.nc'
