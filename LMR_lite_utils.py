@@ -648,7 +648,7 @@ def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
         Xap = np.dot(Xbp,T)    
         # perturbations must have zero mean
         #Xap = Xap - Xap.mean(axis=1,keepdims=True)
-        print('min s:',np.min(s))
+        if verbose: print('min s:',np.min(s))
     elapsed_time = time() - begin_time
     if verbose:
         print('shape of U: ' + str(U.shape))
