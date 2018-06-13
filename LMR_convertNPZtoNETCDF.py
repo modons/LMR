@@ -47,6 +47,15 @@ archive_type = 'ensemble_mean_spread'
 #archive_type = 'ensemble_subsample'; Nsample = 10
 #archive_type = 'ensemble_full'
 
+# Select MC realizations from which to extract the data
+#  All recon. MC realizations ( MCset = None )
+#  or over a custom selection ( MCset = (begin,end) )
+#  ex. MCset = (0,0)    -> only the first MC run
+#      MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#      MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,10)
+
 
 # Dictionary containing definitions of variables that handled by this code
 # ------------------------------------------------------------------------
@@ -175,13 +184,23 @@ def main():
     # number of MC realizations found
     niters = len(mcdirs) 
 
-    print('mcdirs:' + str(mcdirs))
+    print('mcdirs available:' + str(mcdirs))
     print('niters = ' + str(niters))
 
+    # user-modified selection
+    if MCset:
+        mcdirset = mcdirs[MCset[0]:MCset[1]+1]
+    else:
+        mcdirset = mcdirs
+    niters = len(mcdirset)
+
+    print('mcdirs selected:' + str(mcdirset))
+    print('niters = ' + str(niters))
+    
     print('\n Getting information on files and reconstructed variables...\n')
 
-    # look in first "mcdirs" only. It should be the same for all. 
-    workdir = expdir+'/'+mcdirs[0]
+    # look in first "mcdirset" only. It should be the same for all. 
+    workdir = expdir+'/'+mcdirset[0]
 
     # Assess data files present in directory and determine available input
     # --------------------------------------------------------------------
@@ -286,7 +305,7 @@ def main():
         
         # Loop over Monte Carlo realizations
         r = 0
-        for dir in mcdirs:
+        for dir in mcdirset:
             print('  MCdir:', dir)
 
             if var == 'gmt_ensemble':
@@ -380,6 +399,10 @@ def main():
                             _, Nens = field_values.shape                        
                         mc_ens = np.zeros(shape=[1, niters, ntime, Nens])
                         axis_ens = 1
+
+                    mc_min = np.zeros(shape=[1, niters])
+                    mc_max = np.zeros(shape=[1, niters])
+
                 elif archive_type_var == 'ensemble_subsample':
                     if  field_type == '2D:horizontal':
                         mc_ens = np.zeros(shape=[1, niters, ntime, nlat, nlon, Nsample])
@@ -397,6 +420,9 @@ def main():
                         mc_ens = np.zeros(shape=[1, niters, ntime, Nsample])
                         axis_ens = 1
 
+                    mc_min = np.zeros(shape=[1, niters])
+                    mc_max = np.zeros(shape=[1, niters])
+
                 elif archive_type_var == 'ensemble_mean_spread':
                     if  field_type == '2D:horizontal':
                         mc_ens   = np.zeros(shape=[2, niters, ntime, nlat, nlon])
@@ -410,6 +436,9 @@ def main():
                     elif field_type == '0D:time_series':
                         mc_ens   = np.zeros(shape=[2, niters, ntime])
                         axis_ens = 1
+
+                    mc_min = np.zeros(shape=[2, niters])
+                    mc_max = np.zeros(shape=[2, niters])
 
                 elif archive_type_var == 'ensemble_mean':
                     if  field_type == '2D:horizontal':
@@ -425,6 +454,8 @@ def main():
                         mc_ens   = np.zeros(shape=[1, niters, ntime])
                         axis_ens = 1
 
+                    mc_min = np.zeros(shape=[1, niters])
+                    mc_max = np.zeros(shape=[1, niters])
 
             # if we need to extact another field from input (e.g. ensemble variance)
             if len(npfile_to_extract) > 1:
@@ -440,6 +471,9 @@ def main():
                         indices = range(0,Nsample)
                         mc_ens[0,r,:] = np.take(field_values,indices,axis=axis_ens)
 
+                        mc_min[0,r] = np.nanmin(mc_ens[0,r,:])
+                        mc_max[0,r] = np.nanmax(mc_ens[0,r,:])
+                        
                 elif archive_type_var == 'ensemble_mean_spread':
                     if input_type == 'ensemble_full':
                         # calculate ensemble mean and standard-deviation from full ensemble
@@ -453,14 +487,24 @@ def main():
                         # (stored in field_values2)
                         mc_ens[1,r,:] = np.sqrt(field_values2)
 
+                    mc_min[0,r] = np.nanmin(mc_ens[0,r,:])
+                    mc_max[0,r] = np.nanmax(mc_ens[0,r,:])
+                    mc_min[1,r] = np.nanmin(mc_ens[1,r,:])
+                    mc_max[1,r] = np.nanmax(mc_ens[1,r,:])
+                        
                 elif archive_type_var == 'ensemble_mean':
                     if input_type == 'ensemble_full':
                         # calculate ensemble mean from full ensemble members
                         mc_ens[0,r,:] = np.mean(field_values, axis=axis_ens)
 
+                        mc_min[0,r] = np.nanmin(mc_ens[0,r,:])
+                        mc_max[0,r] = np.nanmax(mc_ens[0,r,:])
+                        
             else: # no further processing needed
                 mc_ens[0,r,:] = field_values
 
+                mc_min[0,r] = np.nanmin(mc_ens[0,r,:])
+                mc_max[0,r] = np.nanmax(mc_ens[0,r,:])
 
             # expected that any missing values in field_values, and now in mc_ens,
             # are indicated by NaNs. Change these to specified value to be written
@@ -545,6 +589,10 @@ def main():
                 # '0D:time_series': no need to pull in info on spatial coords.
                 pass
 
+            # Arrays to store min & max field values, to define variable actual range
+            minval = np.min(mc_min[k,:])
+            maxval = np.max(mc_max[k,:])
+            
             # define variables & upload the data to file
             # ------------------------------------------
 
@@ -600,8 +648,7 @@ def main():
                 varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
-                indok = np.not_equal(mc_ens_outarr[k,:], missing_val)
-                varout.actual_range = np.array((np.nanmin(mc_ens_outarr[k,indok]), np.nanmax(mc_ens_outarr[k,indok])),dtype=np.float)
+                varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
                 
                 # upload this data to file
                 lat[:]    = lat1d
@@ -651,8 +698,7 @@ def main():
                 varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
-                indok = np.not_equal(mc_ens_outarr[k,:], missing_val)
-                varout.actual_range = np.array((np.nanmin(mc_ens_outarr[k,indok]), np.nanmax(mc_ens_outarr[k,indok])),dtype=np.float)
+                varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
 
                 # upload the data to file
                 lat[:]    = lat1d
@@ -691,8 +737,7 @@ def main():
                 varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
-                indok = np.not_equal(mc_ens_outarr[k,:], missing_val)
-                varout.actual_range = np.array((np.nanmin(mc_ens_outarr[k,indok]), np.nanmax(mc_ens_outarr[k,indok])),dtype=np.float)
+                varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
 
                 # upload the data to file
                 lat[:]    = lat1d
@@ -722,8 +767,7 @@ def main():
                 varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
-                indok = np.not_equal(mc_ens_outarr[k,:], missing_val)
-                varout.actual_range = np.array((np.nanmin(mc_ens_outarr[k,indok]), np.nanmax(mc_ens_outarr[k,indok])),dtype=np.float)
+                varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
 
                 # upload the data to file
                 time[:]   = time_output
