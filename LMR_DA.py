@@ -64,12 +64,12 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
     kcov = np.dot(Xbp,np.transpose(ye)) / (Nens-1)
 
     # Option to inflate the covariances by a certain factor
-    if inflate is not None:
-        kcov = inflate * kcov
+    #if inflate is not None:
+    #    kcov = inflate * kcov # This implementation is not correct. To be revised later.
 
     # Option to localize the gain
-    #if loc is not None:
-    #    kcov = np.multiply(kcov,loc) # This implementation is not correct. To be revised later.
+    if loc is not None:
+        kcov = np.multiply(kcov,loc) 
    
     # Kalman gain
     kmat = np.divide(kcov, kdenom)
