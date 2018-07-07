@@ -783,6 +783,9 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
     # --------------------------------------------------------
     if write_posterior_Ye:
 
+        if 'xa_ens' in dir():
+            del xa_ens
+        
         # get information on dim of state without the Ye's (before augmentation)
         stateDim  = npzfile['stateDim']
         Xbtmp_aug = npzfile['Xb_one_aug']
