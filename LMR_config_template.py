@@ -77,6 +77,8 @@ Revisions:
  - Clearer more flexible options to save ensemble information other than the mean
    (i.e. full ensemble, ensemble variance, percentiles or subset of members)
    [ R. Tardif, Univ. of Washington, April 2018 ]
+ - Added feature of multiprocessing
+   [ F. Zhu, Univ. of Southern California, July 2018 ]
 """
 
 from os.path import join
@@ -228,6 +230,8 @@ class core(ConfigGroup):
         Time period for reconstruction
     nens: int
         Ensemble size
+    nthreads: int
+        number of threads
     loc_rad: float
         Localization radius for DA (in km)
     inflation_fact : float
@@ -270,6 +274,7 @@ class core(ConfigGroup):
     #recon_timescale = 500
     
     nens = 100
+    nthreads = 8
 
     seed = None
 

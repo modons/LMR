@@ -37,6 +37,7 @@ core:
 #  recon_timescale: 250
   anom_reference_period: !!python/tuple [1951, 1980]
   nens: 100
+  nthreads: 8  # added by fzhu
   seed: null
   loc_rad: null
 

@@ -26,6 +26,11 @@ source activate lmr_py3 (conda <4.4; c shells not supported)
 if you are using a conda version >=4.4, then replace the last line by:
  conda activate lmr_py3
 
+The multiprocessing feature requires the installation of `pathos`, which can be installed by:
+```bash
+pip install pathos
+```
+
 1) File dependencies
 Download this tar file: http://www.atmos.washington.edu/~hakim/lmr_data/LMR_data_control.tar
 

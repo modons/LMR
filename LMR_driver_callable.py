@@ -37,32 +37,35 @@ Revisions:
               each proxy record is deemed sensitive to.
               (R. Tardif - U. of Washington)
    July 2016:
-            - Slight code adjustments for handling possible use of PSM calibrated 
+            - Slight code adjustments for handling possible use of PSM calibrated
               on the basis of proxy records seasonality metadata.
               (R. Tardif - U. of Washington)
  August 2016:
-            - Introduced new function that loads pre-calculated Ye values 
+            - Introduced new function that loads pre-calculated Ye values
               generated using psm types assigned to individual proxy types
-              as defined in the experiment configuration. 
+              as defined in the experiment configuration.
               (R. Tardif - U. of Washington)
    Feb. 2017:
-            - Modifications to temporal loop to allow the production of 
+            - Modifications to temporal loop to allow the production of
               reconstructions at lower temporal resolution (i.e. other
               than annual).
               (R. Tardif - U. of Washington)
   March 2017:
             - Added possibility to by-pass the regridding (truncation of the state).
               (R. Tardif - U. of Washington)
-            - Added another option for regridding that works on gridded 
-              fields with missing values (masked grid points. e.g. ocean fields) 
+            - Added another option for regridding that works on gridded
+              fields with missing values (masked grid points. e.g. ocean fields)
               (R. Tardif - U. of Washington)
-            - Replaced the hared-coded truncation resolution (T42) of spatial fields 
-              updated during the DA (i.e. reconstruction resolution) by a 
+            - Replaced the hared-coded truncation resolution (T42) of spatial fields
+              updated during the DA (i.e. reconstruction resolution) by a
               user-specified value set in the configuration.
  August 2017:
-            - Included the Ye's from withheld proxies to state vector so they get 
+            - Included the Ye's from withheld proxies to state vector so they get
               updated during DA as well for easier & complete proxy-based evaluation
               of reconstruction. (R. Tardif - U. of Washington)
+   July 2018:
+            - Added feature of multiprocessing.
+              (F. Zhu - Univ. of Southern California)
 """
 import numpy as np
 from os.path import join
@@ -75,6 +78,7 @@ import LMR_config as BaseCfg
 from LMR_DA import enkf_update_array, cov_localization
 from LMR_utils import FlagError
 
+from pathos.multiprocessing import ProcessingPool as Pool  # added by fzhu
 
 def LMR_driver_callable(cfg=None):
 
@@ -95,6 +99,7 @@ def LMR_driver_callable(cfg=None):
     recon_timescale = core.recon_timescale
     online = core.online_reconstruction
     nens = core.nens
+    nthreads = core.nthreads  # added by fzhu
     loc_rad = core.loc_rad
     inflation_fact = core.inflation_fact
     prior_source = prior.prior_source
@@ -104,8 +109,8 @@ def LMR_driver_callable(cfg=None):
     state_variables_info = prior.state_variables_info
     regrid_method = prior.regrid_method
     regrid_resolution = prior.regrid_resolution
-    
-    
+
+
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # ==========================================================================
@@ -118,7 +123,7 @@ def LMR_driver_callable(cfg=None):
         print('Name of experiment: ', nexp)
         print(' Monte Carlo iter : ', core.curr_iter)
         print('')
-        
+
     begin_time = time()
 
     # Define the number of years of the reconstruction
@@ -145,18 +150,18 @@ def LMR_driver_callable(cfg=None):
     X.statevars = state_variables
     X.statevars_info = state_variables_info
     X.Nens = nens
-    # Use a specified reference period for state variable anomalies 
+    # Use a specified reference period for state variable anomalies
     X.anom_reference = prior.anom_reference
     # new option: detrending the prior
     X.detrend = prior.detrend
     print('detrend:', X.detrend)
     X.avgInterval = prior.avgInterval
-    
+
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source, prior)
     Xb_one_full = X.ens
 
-    
+
     # Prepare to check for files in the prior (work) directory (this object just
     # points to a directory)
     prior_check = np.DataSource(workdir)
@@ -169,11 +174,12 @@ def LMR_driver_callable(cfg=None):
 
     # check covariance inflation from config
     inflate = None
+
     if inflation_fact is not None:
         inflate = inflation_fact
-        if verbose > 2:            
+        if verbose > 2:
             print(('\nUsing covariance inflation factor: %8.2f' %inflate))
-        
+
     # ==========================================================================
     # Get information on proxies to assimilate ---------------------------------
     # ==========================================================================
@@ -210,12 +216,12 @@ def LMR_driver_callable(cfg=None):
         print('-----------------------------------------------------')
 
 
-        
+
     # ==========================================================================
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
     if regrid_method:
-        
+
         # Declare dictionary w/ info on content of truncated state vector
         new_state_info = {}
 
@@ -254,7 +260,7 @@ def LMR_driver_callable(cfg=None):
                         LMR_utils.regrid_sphere(nlat, nlon, nens, var_array_full, regrid_resolution)
                 elif regrid_method == 'esmpy':
                     target_grid = prior.esmpy_grid_def
-                    
+
                     lat_2d = coords_array_full[:, ind_lat].reshape(nlat, nlon)
                     lon_2d = coords_array_full[:, ind_lon].reshape(nlat, nlon)
 
@@ -273,10 +279,10 @@ def LMR_driver_callable(cfg=None):
                 else:
                     print('Exiting! Unrecognized regridding method.')
                     raise SystemExit
-                
+
                 nlat_new = np.shape(lat_new)[0]
                 nlon_new = np.shape(lat_new)[1]
-                
+
                 print(('=> Full array:      ' + str(np.min(var_array_full)) + ' ' +
                        str(np.max(var_array_full)) + ' ' + str(np.mean(var_array_full)) +
                        ' ' + str(np.std(var_array_full))))
@@ -298,7 +304,7 @@ def LMR_driver_callable(cfg=None):
                 coords_array_new = np.zeros(shape=[new_dims, 2])
                 coords_array_new[:, 0] = lat_new.flatten()
                 coords_array_new[:, 1] = lon_new.flatten()
-                
+
             else:
                 print(var,\
                     ' : not truncating this variable: no changes from full state')
@@ -313,7 +319,7 @@ def LMR_driver_callable(cfg=None):
                 dct['spacecoords'] = X.full_state_info[var]['spacecoords']
                 dct['spacedims'] = X.full_state_info[var]['spacedims']
 
-            
+
             # fill in new state info dictionary
             new_state_info[var] = dct
 
@@ -325,13 +331,13 @@ def LMR_driver_callable(cfg=None):
             else:  # if not 1st time, append to existing array
                 Xb_one = np.append(Xb_one, var_array_new, axis=0)
                 Xb_one_coords = np.append(Xb_one_coords, coords_array_new, axis=0)
-            
+
             # making sure Xb_one has proper mask, if it contains
             # at least one invalid value
-            if np.isnan(Xb_one).any():        
+            if np.isnan(Xb_one).any():
                 Xb_one = np.ma.masked_invalid(Xb_one)
                 np.ma.set_fill_value(Xb_one, np.nan)
-            
+
             # updating dimension of new state vector
             Nx = Nx + new_dims
 
@@ -341,17 +347,17 @@ def LMR_driver_callable(cfg=None):
          X.trunc_state_info = X.full_state_info
          Xb_one = Xb_one_full
          Xb_one_coords = X.coords
-         
+
          [Nx, _] = Xb_one.shape
 
     # Keep dimension of pre-augmented version of state vector
     [state_dim, _] = Xb_one.shape
-    
-    
+
+
     # ==========================================================================
     # Calculate all Ye's (for all sites in sites_assim) ------------------------
     # ==========================================================================
-    
+
     # Load or generate Ye Values for assimilation
     if not online:
         # Load pre calculated ye values if desired or possible
@@ -370,7 +376,7 @@ def LMR_driver_callable(cfg=None):
                 [Ye_eval, Ye_eval_coords] = LMR_utils.load_precalculated_ye_vals_psm_per_proxy(cfg,
                                                     prox_manager, 'eval', X.prior_sample_indices)
                 [eval_proxy_count,_] = Ye_eval.shape
-            
+
         except (IOError, FlagError) as e:
             print(e)
 
@@ -408,12 +414,12 @@ def LMR_driver_callable(cfg=None):
             # Append ensemble of Ye's of withheld proxies to prior state vector
             Xb_one_aug = np.append(Xb_one_aug, Ye_eval, axis=0)
             Xb_one_coords = np.append(Xb_one_coords, Ye_eval_coords, axis=0)
-        
+
     else:
         Xb_one_aug = Xb_one
 
-    
-    # Dump entire prior state vector (Xb_one) to file 
+
+    # Dump entire prior state vector (Xb_one) to file
     filen = workdir + '/' + 'Xb_one'
     try:
         out_Xb_one = Xb_one.filled()
@@ -436,12 +442,12 @@ def LMR_driver_callable(cfg=None):
     if core.seed is not None:
         prior_samples.write('# with seed=%d \n' %(core.seed))
     else:
-        prior_samples.write('# with seed=None \n')        
+        prior_samples.write('# with seed=None \n')
     # write out the list
     prior_samples.write(str(X.prior_sample_indices)+'\n')
     prior_samples.close()
-    
-    
+
+
     # NEW: Dump prior state vector (Xb_one) to file, one file per state variable
     print('\n ---------- saving Xb_one for each variable to separate file -----------\n')
     for var in list(X.trunc_state_info.keys()):
@@ -466,15 +472,15 @@ def LMR_driver_callable(cfg=None):
 
             Xb_var = np.reshape(out_Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
 
-            filen = workdir + '/' + 'Xb_one' + '_' + var 
+            filen = workdir + '/' + 'Xb_one' + '_' + var
             np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
 
         else:
             print(('Warning: Only saving 2D:horizontal variable. Variable (%s) is of another type' %(var)))
             # TODO: Code mods above are a quick fix. Should allow saving other types of variables here!
     # END new file save
-    
-    
+
+
     # ==========================================================================
     # Loop over all years & proxies and perform assimilation -------------------
     # ==========================================================================
@@ -486,14 +492,10 @@ def LMR_driver_callable(cfg=None):
     # TODO: AP temporary fix for no TAS in state
     tas_var = [item for item in cfg.prior.state_variables.keys() if 'tas_sfc_' in item]
     if tas_var:
-        gmt_save = np.zeros([assim_proxy_count+1,ntimes])
-        nhmt_save = np.zeros([assim_proxy_count+1,ntimes])
-        shmt_save = np.zeros([assim_proxy_count+1,ntimes])
         # get state vector indices where to find surface air temperature
         ibeg_tas = X.trunc_state_info[tas_var[0]]['pos'][0]
         iend_tas = X.trunc_state_info[tas_var[0]]['pos'][1]
         xbm = np.mean(Xb_one[ibeg_tas:iend_tas+1, :], axis=1)  # ensemble-mean
-
         nlat_new = X.trunc_state_info[tas_var[0]]['spacedims'][0]
         nlon_new = X.trunc_state_info[tas_var[0]]['spacedims'][1]
         xbm_lalo = xbm.reshape(nlat_new, nlon_new)
@@ -501,6 +503,10 @@ def LMR_driver_callable(cfg=None):
         lat_lalo = lat_coords.reshape(nlat_new, nlon_new)
 
         [gmt,nhmt,shmt] = LMR_utils.global_hemispheric_means(xbm_lalo, lat_lalo[:, 0])
+
+        gmt_save = np.zeros([assim_proxy_count+1,ntimes])
+        nhmt_save = np.zeros([assim_proxy_count+1,ntimes])
+        shmt_save = np.zeros([assim_proxy_count+1,ntimes])
 
         # First row is prior GMT
         gmt_save[0, :] = gmt
@@ -514,12 +520,13 @@ def LMR_driver_callable(cfg=None):
     # -------------------------------------
     # Loop over years of the reconstruction
     # -------------------------------------
-    lasttime = time()
-    for yr_idx, t in enumerate(range(recon_period[0], recon_period[1]+1, recon_timescale)):
-        
+
+    # make the loop of years a function of year, by fzhu
+    def loop_over_year(yr_idx, t):
+        lasttime = time()
         start_yr = int(t-recon_timescale//2)
         end_yr = int(t+recon_timescale//2)
-        
+
         if verbose > 0:
             if start_yr == end_yr:
                 time_str = 'year: '+str(t)
@@ -538,7 +545,7 @@ def LMR_driver_callable(cfg=None):
                 print('Prior file ', filen, ' does not exist...')
             Xb = Xb_one_aug.copy()
 
-            
+
         # -----------------
         # Loop over proxies
         # -----------------
@@ -553,7 +560,7 @@ def LMR_driver_callable(cfg=None):
                 if Yvals.empty: raise KeyError()
                 nYobs = len(Yvals)
                 Yobs =  Yvals.mean()
-                
+
             except KeyError:
                 # Make sure GMT spot filled from previous proxy
                 # TODO: AP temporary fix for no TAS in state
@@ -586,7 +593,7 @@ def LMR_driver_callable(cfg=None):
 
             # if ob is an average of several values, adjust its ob error variance
             if nYobs > 1: ob_err = ob_err/float(nYobs)
-            
+
             # ------------------------------------------------------------------
             # Do the update (assimilation) -------------------------------------
             # ------------------------------------------------------------------
@@ -595,10 +602,8 @@ def LMR_driver_callable(cfg=None):
                        str(Yobs) + ' (nobs=' + str(nYobs) +') | mean prior proxy estimate: ' +
                        str(Ye.mean())))
 
-            # Update the state
             Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc, inflate)
 
-            
             # TODO: AP Temporary fix for no TAS in state
             if tas_var:
                 xam = Xa.mean(axis=1)
@@ -616,7 +621,7 @@ def LMR_driver_callable(cfg=None):
             if (not np.isfinite(np.min(vardiff))) or (not np.isfinite(np.max(vardiff))):
                 print('ERROR: Reconstruction has blown-up. Exiting!')
                 raise SystemExit(1)
-            
+
             # check the variance change for sign
             thistime = time()
             if verbose > 2:
@@ -638,6 +643,36 @@ def LMR_driver_callable(cfg=None):
             np.save(filen, Xb.filled())
         except AttributeError as e:
             np.save(filen, Xb)
+
+        return gmt_save[:, yr_idx], nhmt_save[:, yr_idx], shmt_save[:, yr_idx]
+
+
+    #==================================================================================
+    # added by fzhu below
+    #----------------------------------------------------------------------------------
+    loop_begin_time = time()
+    recon_years = range(recon_period[0], recon_period[1]+1, recon_timescale)
+
+    if nthreads == 1:
+        for yr_idx, t in enumerate(recon_years):
+            loop_over_year(yr_idx, t)
+
+    elif nthreads > 1:
+        with Pool(nthreads) as pool:
+            res = pool.map(loop_over_year, range(np.size(recon_years)), recon_years)
+            res_array = np.asarray(res)
+            gmt_save = res_array[:, 0, :].T
+            nhmt_save = res_array[:, 1, :].T
+            shmt_save = res_array[:, 2, :].T
+    else:
+        print('ERROR: Wrong nthreads value!!!')
+        raise SystemExit(1)
+
+    loop_end_time = time()
+    print('=====================================================')
+    print('DA total time: ' + str((loop_end_time-loop_begin_time)/60.0) + ' mins')
+    print('=====================================================')
+    #==================================================================================
 
     end_time = time() - begin_time
 
@@ -685,7 +720,7 @@ def LMR_driver_callable(cfg=None):
                            for p in prox_manager.sites_assim_proxy_objs()]
     filen = join(workdir, 'assimilated_proxies')
     np.save(filen, assimilated_proxies)
-    
+
     # collecting info on non-assimilated proxies and save to file
     nonassimilated_proxies = [{p.type: [p.id, p.lat, p.lon, p.time,
                                         p.psm_obj.sensitivity]}
