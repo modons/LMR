@@ -1,5 +1,5 @@
 """
-This is a 'lite' version of the LMR driver for Python2. Consider it a wrapper on the basic LMR functionality so that the user is shielded from details, and can work at a higher level. It assumes that you have done the following:
+This is a 'lite' version of the LMR driver for Python3. Consider it a wrapper on the basic LMR functionality so that the user is shielded from details, and can work at a higher level. It assumes that you have done the following:
 
 * set up the configuration file config_lite.py (a regular config.yml file)
 * set up the PSMs and pre-built the Ye values that correspond to the chosen prior.
