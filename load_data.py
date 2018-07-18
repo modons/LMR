@@ -5,7 +5,7 @@ General data loading functions
 """
 
 import pandas
-import cPickle
+import pickle
 
 def query_dataframe(filters):
     pass
@@ -19,4 +19,4 @@ def load_data_frame(data_src):
 def load_cpickle(file):
 
     with open(file, 'rb') as f:
-        return cPickle.load(f)
+        return pickle.load(f)

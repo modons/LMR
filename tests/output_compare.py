@@ -4,35 +4,27 @@ Compares LMR output between two archive directories.
 """
 
 import glob
-import cPickle
+import pickle
 import numpy as np
 import os.path as path
 
-from itertools import izip
+
 
 # proxy-first version vs time-first version comparison
 is_proxy_first_driver_loop = False
 
 # Use this if the two reconstructions use different state variables
 # Also use the
-diff_state_vectors = True
+diff_state_vectors = False
 
 # All close testing tolerances (checks for diff > atol + rtol*desired_value)
 rtol = 1e-4
 atol = 1e-6
 
-#base_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
-base_dir = '/home/disk/kalman3/rtardif/LMR/output'
+base_dir = '/home/katabatic3/wperkins/LMR_output/testing'
 
-# sim_dir1 = 'testdev_production_comparison_1900_1960_seed0_nens10/r0/'
-# sim_dir2 = 'testdev_ncdc_add_comparison_seed0_1900_1960_10nens/r0/'
-#sim_dir1 = 'testdev_precalcye_pages_linearTorP_no_tas/r0/'
-#sim_dir2 = 'testdev_production_pages_linearTorP_comparison/r0/'
-# --
-#sim_dir1 = 'test_ncdc_bilinear_precalc_tp/r0'
-#sim_dir1 = 'test_ncdc_bilinear_precalc_t/r0'
-sim_dir1 = 'test_ncdc_bilinear_precalc_p/r0'
-sim_dir2 = 'test_ncdc_bilinear_noprecalc_tp/r0'
+sim_dir1 = 'test_regrid_spharm_py2_lmrdb_seasonal/r0'
+sim_dir2 = 'test_regrid_spharm_py3_lmrdb_seasonal/r0'
 
 
 dir1 = path.join(base_dir, sim_dir1)
@@ -51,24 +43,29 @@ d2_names = [path.split(fpath)[1] for fpath in d2_files]
 # Match assimilated proxies
 assim_fname = 'assimilated_proxies.npy'
 
-assim1 = np.load(path.join(dir1, assim_fname))
-assim2 = np.load(path.join(dir2, assim_fname))
+assim1 = np.load(path.join(dir1, assim_fname), encoding='latin1')
+assim2 = np.load(path.join(dir2, assim_fname), encoding='latin1')
 
+print('Comparing assimilated proxy files...')
 assim2_idx_match_to1 = []
 for proxy2 in assim2:
-    id2 = proxy2[proxy2.keys()[0]][0]
+    key2, item2 = next(iter(proxy2.items()))
+    id2 = item2[0]
     for i, proxy in enumerate(assim1):
-        id1 = proxy[proxy.keys()[0]][0]
+        key, item = next(iter(proxy.items()))
+        id1 = item[0]
         if id1 == id2:
             assim2_idx_match_to1.append(i)
+            for obj1, obj2 in zip(item, item2):
+                if isinstance(obj1, np.ndarray):
+                    np.testing.assert_array_equal(obj1, obj2)
+                else:
+                    assert obj1 == obj2
             break
-
-# for i, idx in enumerate(assim2_idx_match_to1):
-#     print assim1[idx].keys()
-#     print assim2[i].keys()
 
 nproxies = len(assim2)
 assert len(assim2) == len(assim1)
+print('Found and matched content of {:d} assimilated proxies'.format(nproxies))
 
 #Test that they created the same files. NOTE: if first dir is missing files
 # they will not be checked.  Reference (first directory) should be the benchmark
@@ -79,24 +76,34 @@ for name in d1_names:
 for idx, file in enumerate(d1_files):
 
     idx2 = d2_names.index(d1_names[idx])
-    print d1_names[idx]
+    print(d1_names[idx])
 
     if diff_state_vectors:
         exclude = ['Xb_one.npz', 'gmt.npz', 'gmt_ensemble.npz']
-        if d1_names[idx] in exclude:
-            continue
+
+    exclude = [
+        # 'ensemble_mean_tas_sfc_Amon.npz',
+        # 'ensemble_variance_tas_sfc_Amon.npz',
+        # 'gmt.npz',
+        # 'gmt_ensemble.npz',
+    ]
+
+    if d1_names[idx] in exclude:
+        continue
 
     if path.splitext(file)[1] == '.npz':
         f1 = np.load(file)
         f2 = np.load(d2_files[idx2])
 
-        for key, values in f1.iteritems():
+        for key, values in f1.items():
             values2 = f2[key]
 
-            print '\t', key, ': ', values.dtype
+            print('\t', key, ': ', values.dtype)
 
-            if values.dtype.kind == 'S':
-                for i1, i2 in izip(values, values2):
+            if values.dtype.kind == 'S' or 'U' in values.dtype.kind:
+                values = values.astype(str)
+                values2 = values.astype(str)
+                for i1, i2 in zip(values, values2):
                     assert i1 == i2
             elif not values.dtype == np.object:
                 if is_proxy_first_driver_loop:
@@ -113,29 +120,26 @@ for idx, file in enumerate(d1_files):
                     elif key == 'gmt_save':
                         # Proxies assimilated in different order check ending
                         np.testing.assert_allclose(values[-1], values2[-1],
-                                                   rtol=rtol,
-                                                   atol=atol)
+                                                   rtol=rtol)
                 elif len(values.shape) > 1:
                     np.testing.assert_allclose(values.mean(axis=1),
                                                values2.mean(axis=1),
-                                               rtol=rtol,
-                                               atol=atol)
+                                               rtol=rtol)
                 else:
-                    np.testing.assert_allclose(values, values2, rtol=rtol,
-                                               atol=atol)
+                    np.testing.assert_allclose(values, values2, rtol=rtol)
             else:
                 assert values == values2
 
     elif path.splitext(file)[1] == '.pckl':
         with open(file, 'r') as load_file:
-            f1 = cPickle.load(load_file)
+            f1 = pickle.load(load_file)
         with open(d2_files[idx2], 'r') as load_file:
-            f2 = cPickle.load(load_file)
+            f2 = pickle.load(load_file)
 
-        for key, dict in f1.iteritems():
+        for key, dict in f1.items():
             dict2 = f2[key]
 
-            for sub_key, value in dict.iteritems():
+            for sub_key, value in dict.items():
                 value2 = dict2[sub_key]
                 if is_proxy_first_driver_loop and sub_key == 'HXa':
                     # Proxy order is different between the two right now

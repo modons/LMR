@@ -23,6 +23,8 @@ def pages_xcel_to_dataframes(filename, metaout, dataout):
 
     meta_sheet_name = 'Metadata'
     metadata = pd.read_excel(filename, meta_sheet_name)
+    # rename 'PAGES ID' column header to more general 'Proxy ID'
+    metadata.rename(columns = {'PAGES ID':'Proxy ID'},inplace=True)
     metadata.to_pickle(metaout)
 
     record_sheet_names = ['AntProxies', 'ArcProxies', 'AsiaProxies',
@@ -55,7 +57,7 @@ def pages_xcel_to_dataframes(filename, metaout, dataout):
 if __name__ == "__main__":
     work_dir = '/home/chaos2/wperkins/data/LMR/proxies/'
     fname = work_dir + 'Pages2k_DatabaseS1-All-proxy-records.xlsx'
-    meta_outfile = work_dir + 'Pages2k_Metadata.df.pckl'
-    outfile = work_dir + 'Pages2k_Proxies.df.pckl'
+    meta_outfile = work_dir + 'Pages2kv1_Metadata.df.pckl'
+    outfile = work_dir + 'Pages2kv1_Proxies.df.pckl'
 
     pages_xcel_to_dataframes(fname, meta_outfile, outfile)

@@ -1,0 +1,24 @@
+name: lmr_py3
+
+channels:
+  - conda-forge
+  - nesii/label/dev-esmf
+
+dependencies:
+  - python=3.*
+  - netCDF4
+  - numpy
+  - scipy
+  - matplotlib
+  - statsmodels
+  - pyspharm
+  - pyyaml
+  - pandas
+  - xlrd
+  - pytest
+  - ipython
+  - jpeg
+  - basemap
+  - cartopy
+  - esmpy
+  - pymc3

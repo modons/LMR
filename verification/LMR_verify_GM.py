@@ -9,39 +9,37 @@ Purpose: Generates verification statistics of LMR global-mean 2m air temperature
 Originator: Greg Hakim, U. of Washington, November 2015
 
 Revisions: 
-
+           21 July 2017: add consensus to detrended verification (GJH)
+                         to do: make functions to do the repetetive actions
 """
 
 import matplotlib
-# need to do this when running remotely, and to suppress figures
-matplotlib.use('Agg')
-
 import sys
 import csv
 import glob, os, fnmatch
 import numpy as np
 import mpl_toolkits.basemap as bm
-import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+import matplotlib.pyplot as plt
 from matplotlib import ticker
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
 from scipy import stats
 from netCDF4 import Dataset
 from datetime import datetime, timedelta
-import cPickle
+import pickle
+import warnings
 
 import pandas as pd
 
 # LMR specific imports
 sys.path.append('../')
-from LMR_plot_support import *
-from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram
+from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency, rank_histogram, natural_sort
 from load_gridded_data import read_gridded_data_GISTEMP
 from load_gridded_data import read_gridded_data_HadCRUT
 from load_gridded_data import read_gridded_data_BerkeleyEarth
 from load_gridded_data import read_gridded_data_MLOST
 from load_gridded_data import read_gridded_data_CMIP5_model
-from LMR_plot_support import *
+from LMR_plot_support import find_date_indices, moving_average
 
 # =============================================================================
 def truncate_colormap(cmap, minval=0.0,maxval=1.0,n=100):
@@ -52,6 +50,8 @@ def truncate_colormap(cmap, minval=0.0,maxval=1.0,n=100):
 # =============================================================================
 
 
+warnings.filterwarnings('ignore')
+
 ##################################
 # START:  set user parameters here
 ##################################
@@ -59,14 +59,6 @@ def truncate_colormap(cmap, minval=0.0,maxval=1.0,n=100):
 # define the verification time interval
 stime = 1880
 etime = 2000
-
-# perform verification using all recon. MC realizations ( MCset = None )
-# or over a custom selection ( MCset = (begin,end) )
-# ex. MCset = (0,0)    -> only the first MC run
-#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
-#     MCset = (90,100) -> the 80th to 100th MC runs (21 realizations)
-MCset = None
-MCset = (0,1)
 
 # define the running time mean 
 #nsyrs = 31 # 31-> 31-year running mean--nsyrs must be odd!
@@ -76,8 +68,22 @@ nsyrs = 5 # 5-> 5-year running mean--nsyrs must be odd!
 #iplot = False
 iplot = True
 
+# Open interactive windows of figures
+interactive = False
+
+if interactive:
+    plt.ion()
+else:
+    # need to do this when running remotely, and to suppress figures
+    matplotlib.use('agg')
+    matplotlib.pyplot.switch_backend('agg')
+
 # option to save figures to a file
 fsave = True
+#fsave = False
+
+# save statistics file
+stat_save = True
 
 # file specification
 #
@@ -90,36 +96,29 @@ fsave = True
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesCoralsSrCaD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesSpeleoD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesNoTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
-#nexp = 'testPslW500_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_ERA20C_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'test_ncdc_v0.1.0'
-#nexp = 'test_V2proto'
-#nexp = 'test_V2proto_TorP'
-nexp = 'test_final_precalcYeSeason'
+nexp = 'test'
+# ---
+
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,10)
+
+# reference period over which mean is calculated & subtracted 
+# from all other datasets (in years CE)
+#ref_period = (1951,1980) # ref. period for GIS & BE
+#ref_period = (1961,1990) # ref. period for CRU & MLOST
+ref_period = (1900, 1999) # 20th century
+
 
 # specify directories for LMR data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
-#datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
 datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-#datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+#datadir_output = '/home/disk/katabatic3/wperkins/LMR_output/testing'
 
 # Directory where historical griddded data products can be found
 datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
@@ -146,41 +145,40 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-print '--------------------------------------------------'
-print 'verification of global-mean 2m air temperature'
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('verification of global-mean 2m air temperature')
+print('--------------------------------------------------')
 
 workdir = datadir_output + '/' + nexp
 
 # get directory and information for later use
-
-print '--------------------------------------------------'
-print 'working directory: '+workdir
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('working directory: %s' % workdir)
+print('--------------------------------------------------')
 
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
+# sort
+dirs = natural_sort(dirs)
 
 # query file for assimilated proxy information (for now, ONLY IN THE r0 directory!)
-
 ptypes,nrecords = assimilated_proxies(workdir+'/r0/')
-
-print '--------------------------------------------------'
-print 'Assimilated proxies by type:'
-for pt in ptypes.keys():
-    print pt + ': ' + str(ptypes[pt])
-                
-print 'Total: ' + str(nrecords)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('Assimilated proxies by type:')
+for pt in sorted(ptypes.keys()):
+    print('%40s : %s' % (pt, str(ptypes[pt])))
+print('%40s : %s' % ('Total',str(nrecords)))
+print('--------------------------------------------------')
 
 # ==========================================
 # load GISTEMP, HadCRU, BerkeleyEarth, MLOST
 # ==========================================
 
 # load GISTEMP
-datafile_calib   = 'gistemp1200_ERSST.nc'
+datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
-[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=[1951,1980])
 GIS_time = np.array([d.year for d in gtime])
 nlat_GIS = len(GIS_lat)
 nlon_GIS = len(GIS_lon)
@@ -189,7 +187,8 @@ nlon_GIS = len(GIS_lon)
 # load HadCRUT
 datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
 calib_vars = ['Tsfc']
-[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=[1951,1980])
 CRU_time = np.array([d.year for d in ctime])
 
 ## use GMT time series computed by Hadley Centre instead !!!!!!!!!!!!
@@ -201,10 +200,20 @@ CRU_time = np.array([d.year for d in ctime])
 # load BerkeleyEarth
 datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
 calib_vars = ['Tsfc']
-[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,
+                                                                   outfreq='annual',ref_period=[1951,1980])
 BE_time = np.array([d.year for d in btime])
 
+
 # load NOAA MLOST
+#datafile_calib = 'MLOST_air.mon.anom_V3.5.4.nc'
+datafile_calib = 'NOAAGlobalTemp_air.mon.anom_V4.0.1.nc'
+calib_vars = ['air']
+[btime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,
+                                                                    outfreq='annual',ref_period=ref_period)
+MLOST_time = np.array([d.year for d in btime])
+
+"""
 path = datadir_calib + '/NOAA/'
 #fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v3.5.4.201504.asc'
 fname = 'NOAA_MLOST_aravg.ann.land_ocean.90S.90N.v4.0.0.201506.asc'
@@ -217,11 +226,10 @@ for row in dat:
     mlost_time.append(int(row[0].split()[0]))
     # this is the GMT temperature anomaly
     mlost.append(float(row[0].split()[1]))
-
 # convert to numpy arrays
 mlost_gm = np.array(mlost)
 MLOST_time = np.array(mlost_time)
-
+"""
 
 # ===================
 # Reanalysis products
@@ -229,78 +237,71 @@ MLOST_time = np.array(mlost_time)
 
 # Define month sequence for the calendar year 
 # (argument needed in upload of reanalysis data)
-annual = range(1,13)
+annual = list(range(1,13))
 
 # load ECMWF's 20th century reanalysis (ERA20C) reanalysis --------------------------------
 datadir = datadir_reanl+'/era20c'
 datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
-lat_ERA20C = dd[vardef]['lat']
-lon_ERA20C = dd[vardef]['lon']
+lat_ERA20C = dd[vardef]['lat'][:,0]
+lon_ERA20C = dd[vardef]['lon'][0,:]
 nlat_ERA20C = len(lat_ERA20C)
 nlon_ERA20C = len(lon_ERA20C)
-ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#ERA20C = dd[vardef]['value']                      # Anomalies
-
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
-ref_mean_era = np.mean(ERA20C[smatch:ematch,:,:],axis=0)
-ERA20C = ERA20C - ref_mean_era
+#ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+ERA20C = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
 
 era_gm = np.zeros([len(ERA20C_time)])
 era_nhm = np.zeros([len(ERA20C_time)])
 era_shm = np.zeros([len(ERA20C_time)])
 # Loop over years in dataset
-for i in xrange(0,len(ERA20C_time)): 
+for i in range(0,len(ERA20C_time)): 
     # compute the global & hemispheric mean temperature
-    [era_gm[i],era_nhm[i],era_shm[i]] = global_hemispheric_means(ERA20C[i,:,:],lat_ERA20C)
-
+    [era_gm[i],
+     era_nhm[i],
+     era_shm[i]] = global_hemispheric_means(ERA20C[i,:, :], lat_ERA20C)
 
 # load NOAA's 20th century reanalysis (TCR) reanalysis --------------------------------
 datadir = datadir_reanl+'/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])
-lat_TCR = dd[vardef]['lat']
-lon_TCR = dd[vardef]['lon']
+lat_TCR = dd[vardef]['lat'][:,0]
+lon_TCR = dd[vardef]['lon'][0,:]
 nlat_TCR = len(lat_TCR)
 nlon_TCR = len(lon_TCR)
-TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#TCR = dd[vardef]['value']                      # Anomalies
-
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(TCR_time,1951,1980)
-ref_mean_tcr = np.mean(TCR[smatch:ematch,:,:],axis=0)
-TCR = TCR - ref_mean_tcr
+#TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+TCR = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
 
 tcr_gm = np.zeros([len(TCR_time)])
 tcr_nhm = np.zeros([len(TCR_time)])
 tcr_shm = np.zeros([len(TCR_time)])
 # Loop over years in dataset
-for i in xrange(0,len(TCR_time)): 
+for i in range(0,len(TCR_time)): 
     # compute the global & hemispheric mean temperature
-    [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],lat_TCR)
+    [tcr_gm[i],tcr_nhm[i],tcr_shm[i]] = global_hemispheric_means(TCR[i,:,:],
+                                                                 lat_TCR)
 
 
-#
+# ------------------------------------
 # read LMR GMT data computed during DA
-#
+# ------------------------------------
 
-print '--------------------------------------------------'
-print 'reading LMR GMT data...'
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('reading LMR GMT data...')
+print('--------------------------------------------------')
 kk = -1
+print('IPLOT = ' + str(iplot))
 if iplot:
     fig = plt.figure()
 
@@ -314,9 +315,9 @@ else:
     dirset = dirs
 niters = len(dirset)
 
-print '--------------------------------------------------'
-print 'niters = ' + str(niters)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('niters = %s' % str(niters))
+print('--------------------------------------------------')
 
 # NEW---"grand ensemble approach"---collect all iterations into a superensemble
 first = True
@@ -330,7 +331,8 @@ for dir in dirset:
     nhmt = npzfile['nhmt_ensemble']
     shmt = npzfile['shmt_ensemble']
     recon_times = npzfile['recon_times']
-    print gmtpfile
+    print(recon_times)
+    print(gmtpfile)
     gmt_shape = np.shape(gmt)
     nhmt_shape = np.shape(nhmt)
     shmt_shape = np.shape(shmt)
@@ -362,24 +364,23 @@ shmt_min = np.percentile(shse,5,axis=1)
 shmt_max = np.percentile(shse,95,axis=1)
     
 # define for later use
-lmr_gm = sagmt
 LMR_time = recon_times
+lmr_gm = sagmt # This is the *mean* of grand ensemble (MCiters+nens)
+# now keeping all members of the "grand" ensemble (MCiters+nens)
+lmr_gm_GE = gmse
+_, GEnens = lmr_gm_GE.shape
 
-
-# 
-# compute GIS, CRU  & BE global mean 
-#
-
+ 
+# compute GIS, CRU, MLOST & BE global mean 
 [gis_gm,_,_] = global_hemispheric_means(GIS_anomaly,GIS_lat)
 [cru_gm,_,_] = global_hemispheric_means(CRU_anomaly,CRU_lat)
 [be_gm,_,_]  = global_hemispheric_means(BE_anomaly,BE_lat)
+[mlost_gm,_,_]  = global_hemispheric_means(MLOST_anomaly,MLOST_lat)
 
 
-# adjust so that all time series pertain to 20th century mean
-
-# compute and remove the 20th century mean
-satime = 1900
-eatime = 1999
+# adjust so that all time series pertain to mean over reference period
+satime = ref_period[0]
+eatime = ref_period[1]
 
 # LMR
 smatch, ematch = find_date_indices(LMR_time,satime,eatime)
@@ -388,6 +389,15 @@ lmr_gm = lmr_gm - lmr_off
 # fix previously set values
 gmt_min = gmt_min - lmr_off
 gmt_max = gmt_max - lmr_off
+
+# all members (grand ensemble)
+lmr_gm_GE = lmr_gm_GE - lmr_off
+# all members per MC realizations
+ens_mean =  np.mean(gmt_save, axis=1)
+for m in np.arange(niters):
+    lmr_off = np.mean(ens_mean[smatch:ematch,m], axis=0)
+    gmt_save[:,:,m] = gmt_save[:,:,m] - lmr_off
+
 
 # TCR
 smatch, ematch = find_date_indices(TCR_time,satime,eatime)
@@ -421,18 +431,30 @@ cru_smatch, cru_ematch = find_date_indices(CRU_time,stime,etime)
 be_smatch, be_ematch = find_date_indices(BE_time,stime,etime)
 mlost_smatch, mlost_ematch = find_date_indices(MLOST_time,stime,etime)
 
-# "consensus" global mean: average all non-LMR (obs-based) values
-consensus_gmt = np.array([gis_gm[gis_smatch:gis_ematch],cru_gm[cru_smatch:cru_ematch],be_gm[be_smatch:be_ematch],mlost_gm[mlost_smatch:mlost_ematch]])
+
+# "consensus" global mean: average all non-LMR (obs-based) values (excludes reanalyses)
+# -----------------------
+consensus_gmt = np.array([gis_gm[gis_smatch:gis_ematch],
+                          cru_gm[cru_smatch:cru_ematch],
+                          be_gm[be_smatch:be_ematch],
+                          mlost_gm[mlost_smatch:mlost_ematch]])
 con_gm = np.mean(consensus_gmt,axis=0)
-CON_time = range(stime,etime)
+CON_time = np.asarray(np.arange(stime,etime)) # fixed 21 July 2017 (GJH)
 
+# differences between instrumental-era products and consensus 
+diffs = consensus_gmt - con_gm
+# mean-squared deviations (time-resolved) -> estimate of "uncertainty" in consensus
+con_mse = np.mean(np.square(diffs), axis=0)
 
-#
+# write to a file for use by other programs
+#filen = 'consensus_gmt.npz'
+#np.savez(filen,con_gm=con_gm,CON_time=CON_time)
+
+# -------------------------------------------------------
 # correlation coefficients & CE over chosen time interval 
-#
+# -------------------------------------------------------
 
 verif_yrs = np.arange(stime,etime+1,1)
-
 
 # LMR-TCR
 # overlaping years within verification interval
@@ -441,6 +463,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_tcr = np.searchsorted(TCR_time, np.intersect1d(TCR_time, overlap_yrs))
 lmr_tcr_corr = np.corrcoef(lmr_gm[ind_lmr],tcr_gm[ind_tcr])
 lmr_tcr_ce = coefficient_efficiency(tcr_gm[ind_tcr],lmr_gm[ind_lmr])
+# for individual members
+lmrGE_tcr_corr = np.zeros(shape=[GEnens])
+lmrGE_tcr_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_tcr_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],tcr_gm[ind_tcr])[0,1]
+    lmrGE_tcr_ce[m] = coefficient_efficiency(tcr_gm[ind_tcr],lmr_gm_GE[ind_lmr,m])
 
 # LMR-ERA
 # overlaping years within verification interval
@@ -449,6 +477,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_era = np.searchsorted(ERA20C_time, np.intersect1d(ERA20C_time, overlap_yrs))
 lmr_era_corr = np.corrcoef(lmr_gm[ind_lmr],era_gm[ind_era])
 lmr_era_ce = coefficient_efficiency(era_gm[ind_era],lmr_gm[ind_lmr])
+# for individual members
+lmrGE_era_corr = np.zeros(shape=[GEnens])
+lmrGE_era_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_era_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],era_gm[ind_era])[0,1]
+    lmrGE_tcr_ce[m] = coefficient_efficiency(era_gm[ind_era],lmr_gm_GE[ind_lmr,m])
 
 # LMR-GIS
 # overlaping years within verification interval
@@ -457,6 +491,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_gis = np.searchsorted(GIS_time, np.intersect1d(GIS_time, overlap_yrs))
 lmr_gis_corr = np.corrcoef(lmr_gm[ind_lmr],gis_gm[ind_gis])
 lmr_gis_ce = coefficient_efficiency(gis_gm[ind_gis],lmr_gm[ind_lmr])
+# for all members
+lmrGE_gis_corr = np.zeros(shape=[GEnens])
+lmrGE_gis_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_gis_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],gis_gm[ind_gis])[0,1]
+    lmrGE_gis_ce[m] = coefficient_efficiency(gis_gm[ind_gis],lmr_gm_GE[ind_lmr,m])
 
 # LMR-CRU
 # overlaping years within verification interval
@@ -465,6 +505,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_cru = np.searchsorted(CRU_time, np.intersect1d(CRU_time, overlap_yrs))
 lmr_cru_corr = np.corrcoef(lmr_gm[ind_lmr],cru_gm[ind_cru])
 lmr_cru_ce = coefficient_efficiency(cru_gm[ind_cru],lmr_gm[ind_lmr])
+# for all members
+lmrGE_cru_corr = np.zeros(shape=[GEnens])
+lmrGE_cru_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_cru_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],cru_gm[ind_cru])[0,1]
+    lmrGE_cru_ce[m] = coefficient_efficiency(cru_gm[ind_cru],lmr_gm_GE[ind_lmr,m])
 
 # LMR-BE
 # overlaping years within verification interval
@@ -473,6 +519,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_be  = np.searchsorted(BE_time, np.intersect1d(BE_time, overlap_yrs))
 lmr_be_corr = np.corrcoef(lmr_gm[ind_lmr],be_gm[ind_be])
 lmr_be_ce = coefficient_efficiency(be_gm[ind_be],lmr_gm[ind_lmr])
+# for all members
+lmrGE_be_corr = np.zeros(shape=[GEnens])
+lmrGE_be_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_be_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],be_gm[ind_be])[0,1]
+    lmrGE_be_ce[m] = coefficient_efficiency(be_gm[ind_be],lmr_gm_GE[ind_lmr,m])
 
 # LMR-MLOST
 # overlaping years within verification interval
@@ -481,6 +533,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_mlost = np.searchsorted(MLOST_time, np.intersect1d(MLOST_time, overlap_yrs))
 lmr_mlost_corr = np.corrcoef(lmr_gm[ind_lmr],mlost_gm[ind_mlost])
 lmr_mlost_ce = coefficient_efficiency(mlost_gm[ind_mlost],lmr_gm[ind_lmr])
+# for all members
+lmrGE_mlost_corr = np.zeros(shape=[GEnens])
+lmrGE_mlost_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_mlost_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],mlost_gm[ind_mlost])[0,1]
+    lmrGE_mlost_ce[m] = coefficient_efficiency(mlost_gm[ind_mlost],lmr_gm_GE[ind_lmr,m])
 
 # LMR-consensus
 # overlaping years within verification interval
@@ -489,6 +547,12 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, overlap_yrs))
 ind_con = np.searchsorted(CON_time, np.intersect1d(CON_time, overlap_yrs))
 lmr_con_corr = np.corrcoef(lmr_gm[ind_lmr],con_gm[ind_con])
 lmr_con_ce = coefficient_efficiency(con_gm[ind_con],lmr_gm[ind_lmr])
+# for all members
+lmrGE_con_corr = np.zeros(shape=[GEnens])
+lmrGE_con_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_con_corr[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],con_gm[ind_con])[0,1]
+    lmrGE_con_ce[m] = coefficient_efficiency(con_gm[ind_con],lmr_gm_GE[ind_lmr,m])
 
 # GIS-TCR
 # overlaping years within verification interval
@@ -536,20 +600,20 @@ gtc = str(float('%.2f' % gis_tcr_corr[0,1]))
 gec = str(float('%.2f' % gis_era_corr[0,1]))
 gcc = str(float('%.2f' % gis_cru_corr[0,1]))
 gbc = str(float('%.2f' % gis_be_corr[0,1]))
-print '--------------------------------------------------'
-print 'annual-mean correlations: '
-print 'LMR_TCR   correlation: ' + ltc
-print 'LMR_ERA   correlation: ' + lec
-print 'LMR_GIS   correlation: ' + lgc
-print 'LMR_CRU   correlation: ' + lcc
-print 'LMR_BE    correlation: ' + lbc
-print 'LMR_MLOST correlation: ' + lmc
-print 'GIS_TCR   correlation: ' + gtc
-print 'GIS_ERA   correlation: ' + gec
-print 'GIS_CRU   correlation: ' + gcc
-print 'GIS_BE    correlation: ' + gbc
-print 'LMR_consensus correlation: ' + loc
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('annual-mean correlations: ')
+print('LMR_TCR       correlation: %s' % ltc)
+print('LMR_ERA       correlation: %s' % lec)
+print('LMR_GIS       correlation: %s' % lgc)
+print('LMR_CRU       correlation: %s' % lcc)
+print('LMR_BE        correlation: %s' % lbc)
+print('LMR_MLOST     correlation: %s' % lmc)
+print('GIS_TCR       correlation: %s' % gtc)
+print('GIS_ERA       correlation: %s' % gec)
+print('GIS_CRU       correlation: %s' % gcc)
+print('GIS_BE        correlation: %s' % gbc)
+print('LMR_consensus correlation: %s' % loc)
+print('--------------------------------------------------')
 
 
 ltce = str(float('%.2f' % lmr_tcr_ce))
@@ -563,30 +627,95 @@ tgce = str(float('%.2f' % tcr_gis_ce))
 egce = str(float('%.2f' % era_gis_ce))
 bgce = str(float('%.2f' % be_gis_ce))
 cgce = str(float('%.2f' % cru_gis_ce))
-print '--------------------------------------------------'
-print 'coefficient of efficiency: '
-print 'LMR-TCR CE  : ' + str(ltce)
-print 'LMR-ERA CE  : ' + str(lece)
-print 'LMR-GIS CE  : ' + str(lgce)
-print 'LMR-CRU CE  : ' + str(lcce)
-print 'LMR-BE CE   : ' + str(lbce)
-print 'LMR-MLOST CE: ' + str(lmce)
-print 'LMR-CON CE  : ' + str(loce)
-print 'TCR-GIS CE  : ' + str(tgce)
-print 'ERA-GIS CE  : ' + str(egce)
-print 'BE-CRU CE   : ' + str(bgce)
-print 'GIS-CRU CE  : ' + str(cgce)
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('coefficient of efficiency: ')
+print('LMR-TCR CE  : %s' % str(ltce))
+print('LMR-ERA CE  : %s' % str(lece))
+print('LMR-GIS CE  : %s' % str(lgce))
+print('LMR-CRU CE  : %s' % str(lcce))
+print('LMR-BE CE   : %s' % str(lbce))
+print('LMR-MLOST CE: %s' % str(lmce))
+print('LMR-CON CE  : %s' % str(loce))
+print('TCR-GIS CE  : %s' % str(tgce))
+print('ERA-GIS CE  : %s' % str(egce))
+print('BE-CRU CE   : %s' % str(bgce))
+print('GIS-CRU CE  : %s' % str(cgce))
+print('--------------------------------------------------')
 
-#
+# -------------
 # spread--error
-#
-lg_err = lmr_gm[lmr_smatch:lmr_ematch] - gis_gm[gis_smatch:gis_ematch]
-svar = gmt_save[:,lmr_smatch:lmr_ematch].var(0,ddof=1)
-calib = lg_err.var(0,ddof=1)/svar.mean(0)
-print '--------------------------------------------------'
-print 'ensemble calibration: ' + str(calib)
-print '--------------------------------------------------'
+# -------------
+
+# THIS IS NOT RIGHT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+"""
+lg_err = lmr_gm[lmr_smatch:lmr_ematch] - gis_gm[gis_smatch:gis_ematch] # This is the error of the (grand) ensemble-mean !!
+svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)                 # this is the variance in the Nens members for each MC iteration !!
+calib = lg_err.var(0,ddof=1)/svar.mean(0)                              # So this is not the correct ratio !!!!!
+"""
+# THIS IS NOT RIGHT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# Now using consensus rather than GIS only
+#obs = gis_gm[gis_smatch:gis_ematch] # GIS
+obs_historical = con_gm[ind_con] # consensus
+
+# For "grand ensemble":
+lg_err = lmr_gm[lmr_smatch:lmr_ematch] - obs_historical
+gens = lmr_gm_GE[lmr_smatch:lmr_ematch,:]
+svar = gens.var(1,ddof=1)
+
+# NEW calculation (May 2018):
+# calibGE = lg_err.var(0,ddof=1)/((svar+con_mse).mean(0)) # old
+# time-resolved MSE of ensemble-mean
+ens_mean_error2_term = np.square(lg_err)
+# total ensemble variance (including obs-error variance)
+ens_variance_term = svar+con_mse
+# calibration ratio (time resolved)
+calibGE_t = ens_mean_error2_term/ens_variance_term
+# time-mean as metric
+calibGE = np.mean(calibGE_t)
+
+print('--------------------------------------------------')
+print('ensemble calibration (grand ensemble): %s' % str(calibGE))
+print('--------------------------------------------------')
+
+# For ensembles in individual Monte-Carlo realizations 
+nt, nens, nmc = gmt_save[lmr_smatch:lmr_ematch,:].shape
+# ensemble variance
+svar = gmt_save[lmr_smatch:lmr_ematch,:].var(1,ddof=1)
+lg_err = np.zeros(shape=[nt,nmc])
+ens_mean_error2_term = np.zeros(shape=[nt,nmc])
+ens_variance_term = np.zeros(shape=[nt,nmc])
+for mc in np.arange(nmc):
+    mc_ens_mean = np.mean(gmt_save[lmr_smatch:lmr_ematch,:,mc], axis=1) # ensemble-mean for MC run
+    lg_err[:,mc] = mc_ens_mean - obs_historical
+    # MSE of ensemble-mean
+    ens_mean_error2_term[:,mc] = np.square(mc_ens_mean - obs_historical)
+    ens_variance_term[:,mc] = svar[:, mc] + con_mse
+
+# time-resolved calibration ratio
+calib_t = ens_mean_error2_term/ens_variance_term
+# time-mean as metric
+calib = np.mean(calib_t, axis=0)
+
+print('--------------------------------------------------')
+print('ensemble calibration across MC runs: \n%s' % str(calib))
+print('--------------------------------------------------')
+
+if iplot:
+    fig = plt.figure(figsize=[7,5])
+    ax = fig.gca()
+    xmax, = calib.shape
+    MCids = np.arange(xmax+1)    
+    calib = np.append(calib,calib[-1])
+    plt.step(MCids, calib, 'b', where='post', lw=3, alpha=0.75)
+    plt.plot([MCids[0],MCids[-1]], [1.,1.], '--r', lw=2)
+    plt.axis((MCids[0],MCids[-1],0.,5.))
+    plt.xlabel('Monte-Carlo reconstruction')
+    plt.ylabel('Ensemble calibration ratio')
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.title('Global-mean temperature ensemble calibration')
+    plt.savefig(nexp+'_GMT_ensemble_calibration.png')
+
 
 # ========================================================
 # plots
@@ -594,13 +723,13 @@ print '--------------------------------------------------'
 if iplot:
     lw = 2
     fig = plt.figure()
-    plt.plot(LMR_time,lmr_gm,'k-'    ,linewidth=lw*2,label='LMR')
-    plt.plot(GIS_time,gis_gm,'r-'    ,linewidth=lw,label='GISTEMP',alpha=alpha)
-    plt.plot(CRU_time,cru_gm,'m-'    ,linewidth=lw,label='HadCRUT4',alpha=alpha)
-    plt.plot(BE_time,be_gm,'g-'      ,linewidth=lw,label='BE',alpha=alpha)
-    plt.plot(MLOST_time,mlost_gm,'c-',linewidth=lw,label='MLOST',alpha=alpha)
-    plt.plot(TCR_time,tcr_gm,'y-'    ,linewidth=lw,label='20CR-V2',alpha=alpha)
-    plt.plot(ERA20C_time,era_gm,'b-' ,linewidth=lw,label='ERA-20C',alpha=alpha)
+    plt.plot(LMR_time,lmr_gm,'k-'        ,linewidth=lw*2,label='LMR')
+    plt.plot(GIS_time,gis_gm,'r-'        ,linewidth=lw,label='GISTEMP',alpha=alpha)
+    plt.plot(CRU_time,cru_gm,'m-'        ,linewidth=lw,label='HadCRUT4',alpha=alpha)
+    plt.plot(BE_time,be_gm,'g-'          ,linewidth=lw,label='BE',alpha=alpha)
+    plt.plot(MLOST_time,mlost_gm,'c-'    ,linewidth=lw,label='MLOST',alpha=alpha)
+    plt.plot(TCR_time,tcr_gm,'y-'        ,linewidth=lw,label='20CR-V2',alpha=alpha)
+    plt.plot(ERA20C_time,era_gm,'b-'     ,linewidth=lw,label='ERA-20C',alpha=alpha)
     plt.plot(CON_time,con_gm,color='lime',linestyle='-',linewidth=lw,label='consensus',alpha=alpha)
     plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha = 0.5,linewidth=0.)
     #plt.plot(LMR_time,lmr_gm,'k-'    ,linewidth=lw*2) # LMR back on top
@@ -635,7 +764,7 @@ if iplot:
     plt.legend(loc=2)
 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_annual.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_annual.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -643,14 +772,21 @@ if iplot:
 # time averages
 #
 
-LMR_smoothed,LMR_smoothed_years     = moving_average(lmr_gm,recon_times,nsyrs) 
-TCR_smoothed,TCR_smoothed_years     = moving_average(tcr_gm,TCR_time,nsyrs) 
-ERA_smoothed,ERA_smoothed_years     = moving_average(era_gm,ERA20C_time,nsyrs) 
-GIS_smoothed,GIS_smoothed_years     = moving_average(gis_gm,GIS_time,nsyrs) 
-CRU_smoothed,CRU_smoothed_years     = moving_average(cru_gm,CRU_time,nsyrs) 
-BE_smoothed,BE_smoothed_years       = moving_average(be_gm,BE_time,nsyrs) 
-MLOST_smoothed,MLOST_smoothed_years = moving_average(mlost_gm,MLOST_time,nsyrs) 
-CON_smoothed,CON_smoothed_years = moving_average(con_gm,CON_time,nsyrs) 
+LMR_smoothed,LMR_smoothed_years     = moving_average(lmr_gm,recon_times,nsyrs)
+TCR_smoothed,TCR_smoothed_years     = moving_average(tcr_gm,TCR_time,nsyrs)
+ERA_smoothed,ERA_smoothed_years     = moving_average(era_gm,ERA20C_time,nsyrs)
+GIS_smoothed,GIS_smoothed_years     = moving_average(gis_gm,GIS_time,nsyrs)
+CRU_smoothed,CRU_smoothed_years     = moving_average(cru_gm,CRU_time,nsyrs)
+BE_smoothed,BE_smoothed_years       = moving_average(be_gm,BE_time,nsyrs)
+MLOST_smoothed,MLOST_smoothed_years = moving_average(mlost_gm,MLOST_time,nsyrs)
+CON_smoothed,CON_smoothed_years = moving_average(con_gm,CON_time,nsyrs)
+
+# members of LMR's grand ensemble
+tdim, = LMR_smoothed.shape
+LMR_ge_smoothed = np.zeros(shape=[tdim,GEnens])
+for m in np.arange(GEnens):
+    LMR_ge_smoothed[:,m],LMR_smoothed_years  = moving_average(lmr_gm_GE[:,m],recon_times,nsyrs)
+
 
 # index offsets to account for averaging
 toff = int(nsyrs/2)
@@ -663,6 +799,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_tcr = np.searchsorted(TCR_smoothed_years, np.intersect1d(TCR_smoothed_years, overlap_yrs))
 ls_ts_corr = np.corrcoef(LMR_smoothed[ind_lmr],TCR_smoothed[ind_tcr])
 ls_ts_ce = coefficient_efficiency(TCR_smoothed[ind_tcr],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_ts_corr = np.zeros(shape=[GEnens])
+lsGE_ts_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_ts_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],TCR_smoothed[ind_tcr])[0,1]
+    lsGE_ts_ce[m] = coefficient_efficiency(TCR_smoothed[ind_tcr],LMR_ge_smoothed[ind_lmr,m])
 
 lstsc  = str(float('%.2f' % ls_ts_corr[0,1]))
 lstsce = str(float('%.2f' % ls_ts_ce))
@@ -673,6 +815,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_era = np.searchsorted(ERA_smoothed_years, np.intersect1d(ERA_smoothed_years, overlap_yrs))
 ls_es_corr = np.corrcoef(LMR_smoothed[ind_lmr],ERA_smoothed[ind_era])
 ls_es_ce = coefficient_efficiency(ERA_smoothed[ind_era],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_es_corr = np.zeros(shape=[GEnens])
+lsGE_es_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_es_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],ERA_smoothed[ind_era])[0,1]
+    lsGE_es_ce[m] = coefficient_efficiency(ERA_smoothed[ind_era],LMR_ge_smoothed[ind_lmr,m])
 
 lsesc  = str(float('%.2f' % ls_es_corr[0,1]))
 lsesce = str(float('%.2f' % ls_es_ce))
@@ -683,6 +831,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_gis = np.searchsorted(GIS_smoothed_years, np.intersect1d(GIS_smoothed_years, overlap_yrs))
 ls_gs_corr = np.corrcoef(LMR_smoothed[ind_lmr],GIS_smoothed[ind_gis])
 ls_gs_ce = coefficient_efficiency(GIS_smoothed[ind_gis],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_gs_corr = np.zeros(shape=[GEnens])
+lsGE_gs_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_gs_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],GIS_smoothed[ind_gis])[0,1]
+    lsGE_gs_ce[m] = coefficient_efficiency(GIS_smoothed[ind_gis],LMR_ge_smoothed[ind_lmr,m])
 
 lsgsc  = str(float('%.2f' % ls_gs_corr[0,1]))
 lsgsce = str(float('%.2f' % ls_gs_ce))
@@ -693,6 +847,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_cru = np.searchsorted(CRU_smoothed_years, np.intersect1d(CRU_smoothed_years, overlap_yrs))
 ls_cs_corr = np.corrcoef(LMR_smoothed[ind_lmr],CRU_smoothed[ind_cru])
 ls_cs_ce = coefficient_efficiency(CRU_smoothed[ind_cru],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_cs_corr = np.zeros(shape=[GEnens])
+lsGE_cs_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_cs_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],CRU_smoothed[ind_cru])[0,1]
+    lsGE_cs_ce[m] = coefficient_efficiency(CRU_smoothed[ind_cru],LMR_ge_smoothed[ind_lmr,m])
 
 lscsc  = str(float('%.2f' % ls_cs_corr[0,1]))
 lscsce = str(float('%.2f' % ls_cs_ce))
@@ -703,6 +863,12 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_be = np.searchsorted(BE_smoothed_years, np.intersect1d(BE_smoothed_years, overlap_yrs))
 ls_bs_corr = np.corrcoef(LMR_smoothed[ind_lmr],CRU_smoothed[ind_be])
 ls_bs_ce = coefficient_efficiency(BE_smoothed[ind_be],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_bs_corr = np.zeros(shape=[GEnens])
+lsGE_bs_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_bs_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],BE_smoothed[ind_be])[0,1]
+    lsGE_bs_ce[m] = coefficient_efficiency(BE_smoothed[ind_be],LMR_ge_smoothed[ind_lmr,m])
 
 lsbsc  = str(float('%.2f' % ls_bs_corr[0,1]))
 lsbsce = str(float('%.2f' % ls_bs_ce))
@@ -713,12 +879,18 @@ ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years,
 ind_mlost = np.searchsorted(MLOST_smoothed_years, np.intersect1d(MLOST_smoothed_years, overlap_yrs))
 ls_ms_corr = np.corrcoef(LMR_smoothed[ind_lmr],MLOST_smoothed[ind_mlost])
 ls_ms_ce = coefficient_efficiency(MLOST_smoothed[ind_mlost],LMR_smoothed[ind_lmr])
+# members of the grand ensemble
+lsGE_ms_corr = np.zeros(shape=[GEnens])
+lsGE_ms_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_ms_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],MLOST_smoothed[ind_mlost])[0,1]
+    lsGE_ms_ce[m] = coefficient_efficiency(MLOST_smoothed[ind_mlost],LMR_ge_smoothed[ind_lmr,m])
 
 lsmsc  = str(float('%.2f' % ls_ms_corr[0,1]))
 lsmsce = str(float('%.2f' % ls_ms_ce))
 
 
-# LMR-concensus
+# LMR-consensus
 overlap_yrs = np.intersect1d(np.intersect1d(LMR_smoothed_years, CON_smoothed_years), verif_yrs)
 ind_lmr = np.searchsorted(LMR_smoothed_years, np.intersect1d(LMR_smoothed_years, overlap_yrs))
 ind_con = np.searchsorted(CON_smoothed_years, np.intersect1d(CON_smoothed_years, overlap_yrs))
@@ -726,46 +898,51 @@ ls_con_corr = np.corrcoef(LMR_smoothed[ind_lmr],CON_smoothed[ind_con])
 ls_con_ce = coefficient_efficiency(CON_smoothed[ind_con],LMR_smoothed[ind_lmr])
 lmr_con_corr = np.corrcoef(lmr_gm[ind_lmr],con_gm[ind_con])
 lmr_con_ce = coefficient_efficiency(con_gm[ind_con],lmr_gm[ind_lmr])
+# members of the grand ensemble
+lsGE_con_corr = np.zeros(shape=[GEnens])
+lsGE_con_ce   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lsGE_con_corr[m] = np.corrcoef(LMR_ge_smoothed[ind_lmr,m],CON_smoothed[ind_con])[0,1]
+    lsGE_con_ce[m] = coefficient_efficiency(CON_smoothed[ind_con],LMR_ge_smoothed[ind_lmr,m])
 
 lsconsc  = str(float('%.2f' % ls_con_corr[0,1]))
 lsconsce = str(float('%.2f' % ls_con_ce))
 
-
-print '--------------------------------------------------'
-print str(nsyrs)+'-year-smoothed correlations...'
-print 'smoothed lmr-gis correlation =   ' + lsgsc
-print 'smoothed lmr-cru correlation =   ' + lscsc
-print 'smoothed lmr-be correlation =    ' + lsbsc
-print 'smoothed lmr-mlost correlation = ' + lsmsc
-print 'smoothed lmr-tcr correlation =   ' + lstsc
-print 'smoothed lmr-era correlation =   ' + lsesc
-print 'smoothed lmr-con correlation =   ' + lsconsc
-print '--------------------------------------------------'
-print '--------------------------------------------------'
-print str(nsyrs)+'-year-smoothed CE...'
-print 'smoothed lmr-gis CE =   ' + lsgsce
-print 'smoothed lmr-cru CE =   ' + lscsce
-print 'smoothed lmr-be CE =    ' + lsbsce
-print 'smoothed lmr-mlost CE = ' + lsmsce
-print 'smoothed lmr-tcr CE =   ' + lstsce
-print 'smoothed lmr-era CE =   ' + lsesce
-print 'smoothed lmr-con CE =   ' + lsconsce
-print '--------------------------------------------------'
-
+print('--------------------------------------------------')
+print('%s-year-smoothed correlations:' % str(nsyrs))
+print('smoothed lmr-gis correlation =   %s' % lsgsc)
+print('smoothed lmr-cru correlation =   %s' % lscsc)
+print('smoothed lmr-be correlation =    %s' % lsbsc)
+print('smoothed lmr-mlost correlation = %s' % lsmsc)
+print('smoothed lmr-tcr correlation =   %s' % lstsc)
+print('smoothed lmr-era correlation =   %s' % lsesc)
+print('smoothed lmr-con correlation =   %s' % lsconsc)
+print('--------------------------------------------------')
+print('--------------------------------------------------')
+print('%s-year-smoothed CE:' % str(nsyrs))
+print('smoothed lmr-gis CE =   %s' % lsgsce)
+print('smoothed lmr-cru CE =   %s' % lscsce)
+print('smoothed lmr-be CE =    %s' % lsbsce)
+print('smoothed lmr-mlost CE = %s' % lsmsce)
+print('smoothed lmr-tcr CE =   %s' % lstsce)
+print('smoothed lmr-era CE =   %s' % lsesce)
+print('smoothed lmr-con CE =   %s' % lsconsce)
+print('--------------------------------------------------')
 
 if iplot:
     fig = plt.figure()
     #plt.plot(recon_times,lmr_gm,'k-',linewidth=2)
-    plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha=alpha,linewidth=0.)
+    #plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha=alpha,linewidth=0.)
 
     # add smoothed lines
-    plt.plot(LMR_smoothed_years,LMR_smoothed,'k-'    ,linewidth=4, label='LMR')
-    plt.plot(GIS_smoothed_years,GIS_smoothed,'r-'    ,linewidth=4, label='GISTEMP',alpha=alpha)
-    plt.plot(CRU_smoothed_years,CRU_smoothed,'m-'    ,linewidth=4, label='HadCRUT4',alpha=alpha)
-    plt.plot(BE_smoothed_years,BE_smoothed,'g-'      ,linewidth=4, label='BE',alpha=alpha)
-    plt.plot(MLOST_smoothed_years,MLOST_smoothed,'c-',linewidth=4, label='MLOST',alpha=alpha)
-    plt.plot(TCR_smoothed_years,TCR_smoothed,'y-'    ,linewidth=4, label='20CR-V2',alpha=alpha)
-    plt.plot(ERA_smoothed_years,ERA_smoothed,'b-'    ,linewidth=4, label='ERA-20C',alpha=alpha)
+    plt.plot(LMR_smoothed_years,LMR_smoothed,'k-'         ,linewidth=4, label='LMR')
+    plt.plot(GIS_smoothed_years,GIS_smoothed,'r-'         ,linewidth=4, label='GISTEMP',alpha=alpha)
+    plt.plot(CRU_smoothed_years,CRU_smoothed,'m-'         ,linewidth=4, label='HadCRUT4',alpha=alpha)
+    plt.plot(BE_smoothed_years,BE_smoothed,'g-'           ,linewidth=4, label='BE',alpha=alpha)
+    plt.plot(MLOST_smoothed_years,MLOST_smoothed,'c-'     ,linewidth=4, label='MLOST',alpha=alpha)
+    plt.plot(TCR_smoothed_years,TCR_smoothed,'y-'         ,linewidth=4, label='20CR-V2',alpha=alpha)
+    plt.plot(ERA_smoothed_years,ERA_smoothed,'b-'         ,linewidth=4, label='ERA-20C',alpha=alpha)
+    plt.plot(CON_smoothed_years,CON_smoothed,color='lime' ,linewidth=4, label='consensus',alpha=alpha)
     #plt.title('Global mean temperature range (gray) and ' +str(nsyrs) + '-year moving average\n(' + nexp + ')',weight='bold',y=1.03)
     plt.title('Global mean temperature range (gray) and ' +str(nsyrs) + '-year moving average',weight='bold',y=1.03)
     plt.xlabel('Year CE', fontweight='bold')
@@ -797,25 +974,27 @@ if iplot:
     plt.text(txl,tyl,'(LMR,20CR-V2)  : r= ' + lstsc.ljust(5,' ') + ' CE= ' + lstsce.ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-0.05
     plt.text(txl,tyl,'(LMR,ERA-20C)  : r= ' + lsesc.ljust(5,' ') + ' CE= ' + lsesce.ljust(5,' '), fontsize=14, family='monospace')
-    #tyl = tyl-0.05
-    #plt.text(txl,tyl,'(LMR,consensus): r= ' + lsosc.ljust(5,' ') + ' CE= ' + lsosce.ljust(5,' '), fontsize=14, family='monospace')
+    tyl = tyl-0.05
+    plt.text(txl,tyl,'(LMR,consensus): r= ' + lsconsc.ljust(5,' ') + ' CE= ' + lsconsce.ljust(5,' '), fontsize=14, family='monospace')
 
     plt.plot(xl_loc,[0,0],color='gray',linestyle=':',lw=2)
     plt.legend(loc=2)
 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+str(nsyrs)+'yr_smoothed.pdf',bbox_inches='tight', dpi=300, format='pdf')
+
+
 
 
 # =======================================
 # detrend and verify the detrended signal
 # =======================================
 
-print '--------------------------------------------------'
-print 'verification of detrended data'
-print '--------------------------------------------------'
+print('--------------------------------------------------')
+print('verification of detrended data')
+print('--------------------------------------------------')
 
 verif_yrs = np.arange(stime,etime+1,1)
 
@@ -824,10 +1003,17 @@ ind_lmr = np.searchsorted(LMR_time, np.intersect1d(LMR_time, verif_yrs))
 # save copies of the original data for residual estimates later
 lmr_gm_copy = np.copy(lmr_gm[ind_lmr])
 LMR_time_copy = np.copy(LMR_time[ind_lmr])
-xvar = range(len(lmr_gm_copy))
+xvar = list(range(len(lmr_gm_copy)))
 lmr_slope, lmr_intercept, r_value, p_value, std_err = stats.linregress(xvar,lmr_gm_copy)
 lmr_trend = lmr_slope*np.squeeze(xvar) + lmr_intercept
 lmr_gm_detrend = lmr_gm_copy - lmr_trend
+# for individual ensemble members
+lmr_GE_slope = np.zeros(shape=[GEnens])
+lmr_gm_GE_detrend = np.zeros(shape=[len(ind_lmr),GEnens])
+for m in np.arange(GEnens):
+    lmr_GE_slope[m], lmr_intercept, r_value, p_value, std_err = stats.linregress(xvar,lmr_gm_GE[ind_lmr,m])
+    lmr_trend = lmr_GE_slope[m]*np.squeeze(xvar) + lmr_intercept
+    lmr_gm_GE_detrend[:,m] = lmr_gm_GE[ind_lmr,m] - lmr_trend
 
 
 # for GIS
@@ -837,33 +1023,49 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_gis = np.searchsorted(GIS_time, np.intersect1d(GIS_time, overlap_yrs))
 GIS_time_copy = GIS_time[ind_gis]
 gis_gm_copy = np.copy(gis_gm[ind_gis])
-xvar = range(len(ind_gis))
+xvar = list(range(len(ind_gis)))
 gis_slope, gis_intercept, r_value, p_value, std_err = stats.linregress(xvar,gis_gm_copy)
 gis_trend = gis_slope*np.squeeze(xvar) + gis_intercept
 gis_gm_detrend = gis_gm_copy - gis_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - gis_gm_copy
 lmr_gis_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],gis_gm_copy)
 lmr_gis_ce_full = coefficient_efficiency(gis_gm_copy,lmr_gm_copy[ind_lmr])
 lgrf =  str(float('%.2f' % lmr_gis_corr_full[0,1]))
 lgcf =  str(float('%.2f' % lmr_gis_ce_full))
+# for individual ensemble members
+lmrGE_gis_corr_full = np.zeros(shape=[GEnens])
+lmrGE_gis_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_gis_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],gis_gm_copy)[0,1]
+    lmrGE_gis_ce_full[m] = coefficient_efficiency(gis_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_gis_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],gis_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - gis_gm_detrend
 lmr_gis_ce_detrend = coefficient_efficiency(gis_gm_detrend,lmr_gm_detrend[ind_lmr])
 lgrd   =  str(float('%.2f' % lmr_gis_corr_detrend[0,1]))
 lgcd   =  str(float('%.2f' % lmr_gis_ce_detrend))
+# for individual ensemble members
+lmrGE_gis_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_gis_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_gis_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],gis_gm_detrend)[0,1]
+    lmrGE_gis_ce_detrend[m] = coefficient_efficiency(gis_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # check if the two pieces are correlated (if not, then they sum to the total error)
 error_trend = lmr_trend[ind_lmr] - gis_trend
 error_detrend = lmr_gm_detrend[ind_lmr] - gis_gm_detrend
 check = np.corrcoef(error_trend,error_detrend)
-print 'correlaton between trend and detrend errors = ' + str(check[0,1])
-print 'check error variances...'
-print 'trend error: ' + str(np.var(error_trend))
-print 'detrend error: ' + str(np.var(error_detrend))
-print 'detrend error + trend error: ' + str(np.var(error_trend)+np.var(error_detrend))
-print 'full error : ' + str(np.var(error_trend+error_detrend))
+print('correlaton between trend and detrend errors = %s' % str(check[0,1]))
+print('check error variances...')
+print('trend error: %s' % str(np.var(error_trend)))
+print('detrend error: %s' % str(np.var(error_detrend)))
+print('detrend error + trend error: %s' % str(np.var(error_trend)+np.var(error_detrend)))
+print('full error : %s' % str(np.var(error_trend+error_detrend)))
+
 
 # for CRU
 # overlaping years within verification interval
@@ -872,22 +1074,37 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_cru = np.searchsorted(CRU_time, np.intersect1d(CRU_time, overlap_yrs))
 CRU_time_copy = CRU_time[ind_cru]
 cru_gm_copy = np.copy(cru_gm[ind_cru])
-xvar = range(len(ind_cru))
+xvar = list(range(len(ind_cru)))
 cru_slope, cru_intercept, r_value, p_value, std_err = stats.linregress(xvar,cru_gm_copy)
 cru_trend = cru_slope*np.squeeze(xvar) + cru_intercept
 cru_gm_detrend = cru_gm_copy - cru_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - cru_gm_copy
 lmr_cru_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],cru_gm_copy)
 lmr_cru_ce_full = coefficient_efficiency(cru_gm_copy,lmr_gm_copy[ind_lmr])
 lcrf =  str(float('%.2f' % lmr_cru_corr_full[0,1]))
 lccf =  str(float('%.2f' % lmr_cru_ce_full))
+# for individual ensemble members
+lmrGE_cru_corr_full = np.zeros(shape=[GEnens])
+lmrGE_cru_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_cru_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],cru_gm_copy)[0,1]
+    lmrGE_cru_ce_full[m] = coefficient_efficiency(cru_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_cru_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],cru_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - cru_gm_detrend
 lmr_cru_ce_detrend = coefficient_efficiency(cru_gm_detrend,lmr_gm_detrend[ind_lmr])
 lcrd   =  str(float('%.2f' % lmr_cru_corr_detrend[0,1]))
 lccd   =  str(float('%.2f' % lmr_cru_ce_detrend))
+# for individual ensemble members
+lmrGE_cru_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_cru_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_cru_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],cru_gm_detrend)[0,1]
+    lmrGE_cru_ce_detrend[m] = coefficient_efficiency(cru_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for BE
 # overlaping years within verification interval
@@ -896,22 +1113,37 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_be = np.searchsorted(BE_time, np.intersect1d(BE_time, overlap_yrs))
 BE_time_copy = BE_time[ind_be]
 be_gm_copy = np.copy(be_gm[ind_be])
-xvar = range(len(ind_be))
+xvar = list(range(len(ind_be)))
 be_slope, be_intercept, r_value, p_value, std_err = stats.linregress(xvar,be_gm_copy)
 be_trend = be_slope*np.squeeze(xvar) + be_intercept
 be_gm_detrend = be_gm_copy - be_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - be_gm_copy
 lmr_be_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],be_gm_copy)
 lmr_be_ce_full = coefficient_efficiency(be_gm_copy,lmr_gm_copy[ind_lmr])
 lbrf =  str(float('%.2f' % lmr_be_corr_full[0,1]))
 lbcf =  str(float('%.2f' % lmr_be_ce_full))
+# for individual ensemble members
+lmrGE_be_corr_full = np.zeros(shape=[GEnens])
+lmrGE_be_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_be_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],be_gm_copy)[0,1]
+    lmrGE_be_ce_full[m] = coefficient_efficiency(be_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_be_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],be_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - be_gm_detrend
 lmr_be_ce_detrend = coefficient_efficiency(be_gm_detrend,lmr_gm_detrend[ind_lmr])
 lbrd   =  str(float('%.2f' % lmr_be_corr_detrend[0,1]))
 lbcd   =  str(float('%.2f' % lmr_be_ce_detrend))
+# for individual ensemble members
+lmrGE_be_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_be_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_be_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],be_gm_detrend)[0,1]
+    lmrGE_be_ce_detrend[m] = coefficient_efficiency(be_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for MLOST
 # overlaping years within verification interval
@@ -920,22 +1152,37 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_mlost = np.searchsorted(MLOST_time, np.intersect1d(MLOST_time, overlap_yrs))
 MLOST_time_copy = MLOST_time[ind_mlost]
 mlost_gm_copy = np.copy(mlost_gm[ind_mlost])
-xvar = range(len(ind_mlost))
+xvar = list(range(len(ind_mlost)))
 mlost_slope, mlost_intercept, r_value, p_value, std_err = stats.linregress(xvar,mlost_gm_copy)
 mlost_trend = mlost_slope*np.squeeze(xvar) + mlost_intercept
 mlost_gm_detrend = mlost_gm_copy - mlost_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - mlost_gm_copy
 lmr_mlost_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],mlost_gm_copy)
 lmr_mlost_ce_full = coefficient_efficiency(mlost_gm_copy,lmr_gm_copy[ind_lmr])
 lmrf =  str(float('%.2f' % lmr_mlost_corr_full[0,1]))
 lmcf =  str(float('%.2f' % lmr_mlost_ce_full))
+# for individual ensemble members
+lmrGE_mlost_corr_full = np.zeros(shape=[GEnens])
+lmrGE_mlost_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_mlost_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],mlost_gm_copy)[0,1]
+    lmrGE_mlost_ce_full[m] = coefficient_efficiency(mlost_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_mlost_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],mlost_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - mlost_gm_detrend
 lmr_mlost_ce_detrend = coefficient_efficiency(mlost_gm_detrend,lmr_gm_detrend[ind_lmr])
 lmrd   =  str(float('%.2f' % lmr_mlost_corr_detrend[0,1]))
 lmcd   =  str(float('%.2f' % lmr_mlost_ce_detrend))
+# for individual ensemble members
+lmrGE_mlost_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_mlost_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_mlost_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],mlost_gm_detrend)[0,1]
+    lmrGE_mlost_ce_detrend[m] = coefficient_efficiency(mlost_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for TCR
 # overlaping years within verification interval
@@ -944,22 +1191,37 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_tcr = np.searchsorted(TCR_time, np.intersect1d(TCR_time, overlap_yrs))
 TCR_time_copy = TCR_time[ind_tcr]
 tcr_gm_copy = np.copy(tcr_gm[ind_tcr])
-xvar = range(len(ind_tcr))
+xvar = list(range(len(ind_tcr)))
 tcr_slope, tcr_intercept, r_value, p_value, std_err = stats.linregress(xvar,tcr_gm_copy)
 tcr_trend = tcr_slope*np.squeeze(xvar) + tcr_intercept
 tcr_gm_detrend = tcr_gm_copy - tcr_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - tcr_gm_copy
 lmr_tcr_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],tcr_gm_copy)
 lmr_tcr_ce_full = coefficient_efficiency(tcr_gm_copy,lmr_gm_copy[ind_lmr])
 ltrf =  str(float('%.2f' % lmr_tcr_corr_full[0,1]))
 ltcf =  str(float('%.2f' % lmr_tcr_ce_full))
+# for individual ensemble members
+lmrGE_tcr_corr_full = np.zeros(shape=[GEnens])
+lmrGE_tcr_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_tcr_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],tcr_gm_copy)[0,1]
+    lmrGE_tcr_ce_full[m] = coefficient_efficiency(tcr_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_tcr_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],tcr_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - tcr_gm_detrend
 lmr_tcr_ce_detrend = coefficient_efficiency(tcr_gm_detrend,lmr_gm_detrend[ind_lmr])
 ltrd   =  str(float('%.2f' % lmr_tcr_corr_detrend[0,1]))
 ltcd   =  str(float('%.2f' % lmr_tcr_ce_detrend))
+# for individual ensemble members
+lmrGE_tcr_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_tcr_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_tcr_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],tcr_gm_detrend)[0,1]
+    lmrGE_tcr_ce_detrend[m] = coefficient_efficiency(tcr_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
 
 # for ERA
 # overlaping years within verification interval
@@ -968,22 +1230,75 @@ ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_y
 ind_era = np.searchsorted(ERA20C_time, np.intersect1d(ERA20C_time, overlap_yrs))
 ERA_time_copy = ERA20C_time[ind_era]
 era_gm_copy = np.copy(era_gm[ind_era])
-xvar = range(len(ind_era))
+xvar = list(range(len(ind_era)))
 era_slope, era_intercept, r_value, p_value, std_err = stats.linregress(xvar,era_gm_copy)
 era_trend = era_slope*np.squeeze(xvar) + era_intercept
 era_gm_detrend = era_gm_copy - era_trend
+
 # r and ce on full data
 full_err  = lmr_gm_copy[ind_lmr] - era_gm_copy
 lmr_era_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],era_gm[ind_era])
 lmr_era_ce_full = coefficient_efficiency(era_gm_copy,lmr_gm_copy[ind_lmr])
 lerf =  str(float('%.2f' % lmr_era_corr_full[0,1]))
 lecf =  str(float('%.2f' % lmr_era_ce_full))
+# for individual ensemble members
+lmrGE_era_corr_full = np.zeros(shape=[GEnens])
+lmrGE_era_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_era_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],era_gm_copy)[0,1]
+    lmrGE_era_ce_full[m] = coefficient_efficiency(era_gm_copy,lmr_gm_GE[ind_lmr,m])
+
 # r and ce on detrended data
 lmr_era_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],era_gm_detrend)
 lmr_detrend_err = lmr_gm_detrend[ind_lmr] - era_gm_detrend
 lmr_era_ce_detrend = coefficient_efficiency(era_gm_detrend,lmr_gm_detrend[ind_lmr])
 lerd   =  str(float('%.2f' % lmr_era_corr_detrend[0,1]))
 lecd   =  str(float('%.2f' % lmr_era_ce_detrend))
+# for individual ensemble members
+lmrGE_era_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_era_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_era_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],era_gm_detrend)[0,1]
+    lmrGE_era_ce_detrend[m] = coefficient_efficiency(era_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
+
+
+# for CONsensus
+# overlaping years within verification interval
+overlap_yrs = np.intersect1d(np.intersect1d(LMR_time_copy, CON_time), verif_yrs)
+ind_lmr = np.searchsorted(LMR_time_copy, np.intersect1d(LMR_time_copy, overlap_yrs))
+ind_con = np.searchsorted(CON_time, np.intersect1d(CON_time, overlap_yrs))
+CON_time_copy = CON_time[ind_con]
+con_gm_copy = np.copy(con_gm[ind_con])
+xvar = list(range(len(ind_con)))
+con_slope, con_intercept, r_value, p_value, std_err = stats.linregress(xvar,con_gm_copy)
+con_trend = con_slope*np.squeeze(xvar) + con_intercept
+con_gm_detrend = con_gm_copy - con_trend
+
+# r and ce on full data
+full_err  = lmr_gm_copy[ind_lmr] - con_gm_copy
+lmr_con_corr_full = np.corrcoef(lmr_gm_copy[ind_lmr],con_gm[ind_con])
+lmr_con_ce_full = coefficient_efficiency(con_gm_copy,lmr_gm_copy[ind_lmr])
+lconrf =  str(float('%.2f' % lmr_con_corr_full[0,1]))
+lconcf =  str(float('%.2f' % lmr_con_ce_full))
+# for individual ensemble members
+lmrGE_con_corr_full = np.zeros(shape=[GEnens])
+lmrGE_con_ce_full   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_con_corr_full[m] = np.corrcoef(lmr_gm_GE[ind_lmr,m],con_gm_copy)[0,1]
+    lmrGE_con_ce_full[m] = coefficient_efficiency(con_gm_copy,lmr_gm_GE[ind_lmr,m])
+
+# r and ce on detrended data
+lmr_con_corr_detrend = np.corrcoef(lmr_gm_detrend[ind_lmr],con_gm_detrend)
+lmr_detrend_err = lmr_gm_detrend[ind_lmr] - con_gm_detrend
+lmr_con_ce_detrend = coefficient_efficiency(con_gm_detrend,lmr_gm_detrend[ind_lmr])
+lconrd   =  str(float('%.2f' % lmr_con_corr_detrend[0,1]))
+lconcd   =  str(float('%.2f' % lmr_con_ce_detrend))
+# for individual ensemble members
+lmrGE_con_corr_detrend = np.zeros(shape=[GEnens])
+lmrGE_con_ce_detrend   = np.zeros(shape=[GEnens])
+for m in np.arange(GEnens):
+    lmrGE_con_corr_detrend[m] = np.corrcoef(lmr_gm_GE_detrend[ind_lmr,m],con_gm_detrend)[0,1]
+    lmrGE_con_ce_detrend[m] = coefficient_efficiency(con_gm_detrend,lmr_gm_GE_detrend[ind_lmr,m])
 
 # Trends
 lmrs   =  str(float('%.2f' % (lmr_slope*100.)))
@@ -993,10 +1308,12 @@ bes    =  str(float('%.2f' % (be_slope*100.)))
 mlosts =  str(float('%.2f' % (mlost_slope*100.)))
 tcrs   =  str(float('%.2f' % (tcr_slope*100.)))
 eras   =  str(float('%.2f' % (era_slope*100.)))
+cons   =  str(float('%.2f' % (con_slope*100.)))
 
-print 'r:  ' + str(lgrf) + ' ' + str(lgrd)
-print 'ce: ' + str(lgcf) + ' ' + str(lgcd)
+print('r:  %s %s' % (str(lgrf), str(lgrd)))
+print('ce: %s %s' % (str(lgcf), str(lgcd)))
 
+print('LMR trend: '+str(lmrs) + ' K/100yrs')
 # plots
 
 if iplot:
@@ -1023,7 +1340,10 @@ if iplot:
     # ERA
     #plt.plot(ERA_time_copy,era_trend,'b-',lw=lw,alpha=alpha)
     plt.plot(ERA_time_copy,era_gm_detrend,'b-',lw=lw,alpha=alpha,label='ERA-20C (trend: '+eras+' K/100yrs)')
-
+    # CONsensus
+    #plt.plot(CON_time_copy,con_trend,color='lime',lw=lw,alpha=alpha)
+    plt.plot(CON_time_copy,con_gm_detrend,color='lime',lw=lw*2,alpha=alpha,label='consensus (trend: '+cons+' K/100yrs)')
+    
     plt.ylim(-1,1)    
     plt.legend(loc=2,fontsize=12)
 
@@ -1037,7 +1357,7 @@ if iplot:
     plt.xlim(xl_loc)
     plt.ylim(yl_loc)
     txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.005
-    tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.14
+    tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.15
     
     off = .03
     plt.text(txl,tyl,      '(LMR,GISTEMP) : r full= ' + lgrf.ljust(4,' ') + ' r detrend= ' + lgrd.ljust(4,' ') + ' CE full= ' + lgcf.ljust(5,' ') + ' CE detrend= ' + lgcd.ljust(5,' '), fontsize=12, family='monospace')
@@ -1046,33 +1366,105 @@ if iplot:
     plt.text(txl,tyl-3*off,'(LMR,MLOST)   : r full= ' + lmrf.ljust(4,' ') + ' r detrend= ' + lmrd.ljust(4,' ') + ' CE full= ' + lmcf.ljust(5,' ') + ' CE detrend= ' + lmcd.ljust(5,' '), fontsize=12, family='monospace')
     plt.text(txl,tyl-4*off,'(LMR,20CR-V2) : r full= ' + ltrf.ljust(4,' ') + ' r detrend= ' + ltrd.ljust(4,' ') + ' CE full= ' + ltcf.ljust(5,' ') + ' CE detrend= ' + ltcd.ljust(5,' '), fontsize=12, family='monospace')
     plt.text(txl,tyl-5*off,'(LMR,ERA-20C) : r full= ' + lerf.ljust(4,' ') + ' r detrend= ' + lerd.ljust(4,' ') + ' CE full= ' + lecf.ljust(5,' ') + ' CE detrend= ' + lecd.ljust(5,' '), fontsize=12, family='monospace')
+    plt.text(txl,tyl-6*off,'(LMR,consens.): r full= ' + lconrf.ljust(4,' ') + ' r detrend= ' + lconrd.ljust(4,' ') + ' CE full= ' + lconcf.ljust(5,' ') + ' CE detrend= ' + lconcd.ljust(5,' '), fontsize=12, family='monospace')
     
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.png')
         plt.savefig(nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_'+'detrended.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
-"""
+
 # rank histograms
 # loop over all years; send ensemble and a verification value
-print ' '
-print np.shape(gmt_save)
-print lmr_smatch
-print len(lmr_gm_copy)
-rank = []
-for yr in range(len(lmr_gm_copy)):
-    rankval = rank_histogram(gmt_save[lmr_smatch+yr:lmr_smatch+yr+1,:,:],gis_gm_copy[yr])
-    rank.append(rankval)
+print(' ')
+# Grand ensemble (combined MCiters and Nens)
+rank_GE = []
+for yr in verif_yrs:
     
+    obs_val = con_gm[CON_time==yr]
+    nelem, = obs_val.shape
+
+    GrandEnsemble = np.squeeze(lmr_gm_GE[LMR_time==yr,:])
+    nens, =  GrandEnsemble.shape
+
+    if nens == GEnens and nelem > 0:
+        rankval = rank_histogram(GrandEnsemble,obs_val)
+        rank_GE.append(rankval)
+
+# Now the plot
 if iplot:
     fig = plt.figure()
     nbins = 10
-    plt.hist(rank,nbins)
+    bins = np.linspace(0,GEnens,nbins)
+    plt.hist(rank_GE,bins=bins,histtype='stepfilled', alpha=0.5)
+    plt.xlim([0,GEnens])
+    plt.ylabel('Counts')
+    plt.xlabel('Rank')
+    
     if fsave:
-        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_rank_histogram.png'
-        print fname
+        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_GRANDensemble_rank_histogram.png'
         plt.savefig(fname)
-"""
+
+    # for each Monte-Carlo reconstruction
+    if niters > 1:
+        nt,nens,niters = gmt_save[lmr_smatch:lmr_ematch,:,:].shape
+        rankarr = np.zeros(shape=[niters,nt], dtype=np.int)
+        bins = np.linspace(0,nens,nbins)
+        mvals = []
+        for mc in np.arange(niters):
+            rank = []
+            for yr in verif_yrs:
+                obs_val = con_gm[CON_time==yr]
+                nelem, = obs_val.shape
+
+                Ensemble = np.squeeze(gmt_save[LMR_time==yr,:,mc])
+
+                if nelem > 0:
+                    rankval = rank_histogram(Ensemble,obs_val)
+                    rank.append(rankval)
+
+            rankarr[mc,:] = np.asarray(rank)
+
+            # to get the max of yaxis right
+            fig = plt.figure()
+            plt.hist(rankarr[mc,:],bins=bins,histtype='stepfilled',alpha=0.5)
+            xmin,xmax,ymin,ymax = plt.axis()
+            mvals.append(ymax)
+            plt.close()
+
+        ymax = np.max(mvals)
+
+        # now create the figure
+        fig = plt.figure()
+        ncols = 5
+        if niters > 51:
+            ncols = 10
+        elif niters > 11 and niters < 21:
+            ncols = 4
+        elif niters <= 11:
+            ncols=3
+        
+        nrows = niters//ncols
+        if nrows*ncols < niters:
+            nrows = nrows + 1
+
+        for mc in np.arange(niters):
+            ax = fig.add_subplot(nrows,ncols,mc+1)
+            bins = np.linspace(0,nens,nbins)
+            ax.hist(rankarr[mc,:],bins=bins,histtype='stepfilled',alpha=0.5)
+            ax.set_xlim([0,nens])
+            ax.set_ylim([0,ymax])
+            ax.set_title('MC: %s' %str(mc),fontsize=9)
+            xlims = ax.get_xlim()
+            ylims = ax.get_ylim()
+            ax.set_xticks(xlims)
+            ax.set_yticks(ylims)
+            ax.tick_params(axis='both',labelsize=8)
+        
+        fig.tight_layout()
+        fname = nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_MCensemble_rank_histogram.png'
+        plt.savefig(fname)
+
 
 #  Summary "table" figures
 
@@ -1131,8 +1523,6 @@ ind_ver = np.searchsorted(verif_yrs,   np.intersect1d(TCR_time[ind_tcr], verif_y
 tcr_gm_pad[ind_ver]     = tcr_gm[ind_tcr]
 ind_ver = np.searchsorted(verif_yrs,   np.intersect1d(ERA20C_time[ind_era], verif_yrs))
 era_gm_pad[ind_ver]     = era_gm[ind_era]
-
-CON_time = np.asarray(CON_time) # not sure why CON_time is a list here ...
 ind_ver = np.searchsorted(verif_yrs,   np.intersect1d(CON_time[ind_con], verif_yrs))
 con_gm_pad[ind_ver]     = con_gm[ind_con]
 
@@ -1294,62 +1684,115 @@ fname =  nexp+'_GMT_'+str(xl[0])+'-'+str(xl[1])+'_ce_table'
 plt.savefig(fname+'.pdf',format='pdf',dpi=300,bbox_inches='tight')
 
     
-#
-# NEW 9/15/16 dictionary for objective verification
-#
+# ---------------------------------------------------------
+# NEW 9/15/16 save to dictionary for objective verification
+# ---------------------------------------------------------
+if stat_save:
 
-gmt_verification_stats = {}
-stat_vars = ['stime','etime',
-             'ltc','lec','lgc','lcc','lbc','lmc','loc',
-             'ltce','lece','lgce','lcce','lbce','lmce','loce',
-             'lgrd','lgcd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
-             'lmrs','gs','crus','bes','mlosts','tcrs','eras']
+    # if stats on individual ensemble members, infer range and save
+    # against consensus only for now
+    # - correlation
+    loc_low = str(float('%.2f' % (np.percentile(lmrGE_con_corr, 1))))
+    loc_upp = str(float('%.2f' % (np.percentile(lmrGE_con_corr,99))))
+    #loc_low = str(float('%.2f' % (np.min(lmrGE_con_corr))))
+    #loc_upp = str(float('%.2f' % (np.max(lmrGE_con_corr))))
+    # - CE
+    loce_low = str(float('%.2f' % (np.percentile(lmrGE_con_ce, 1))))
+    loce_upp = str(float('%.2f' % (np.percentile(lmrGE_con_ce,99))))
+    #loce_low = str(float('%.2f' % (np.min(lmrGE_con_ce))))
+    #loce_upp = str(float('%.2f' % (np.max(lmrGE_con_ce))))
+    # - detrended correlation
+    lconrd_low = str(float('%.2f' % (np.percentile(lmrGE_con_corr_detrend, 1))))
+    lconrd_upp = str(float('%.2f' % (np.percentile(lmrGE_con_corr_detrend, 99))))
+    #lconrd_low = str(float('%.2f' % (np.min(lmrGE_con_corr_detrend))))
+    #lconrd_upp = str(float('%.2f' % (np.max(lmrGE_con_corr_detrend))))
+    # - detrended CE
+    lconcd_low = str(float('%.2f' % (np.percentile(lmrGE_con_ce_detrend, 1))))
+    lconcd_upp = str(float('%.2f' % (np.percentile(lmrGE_con_ce_detrend, 99))))
+    #lconcd_low = str(float('%.2f' % (np.min(lmrGE_con_ce_detrend))))
+    #lconcd_upp = str(float('%.2f' % (np.max(lmrGE_con_ce_detrend))))    
+    # - LMR trend
+    lmrs_low = str(float('%.2f' % (np.percentile(lmr_GE_slope*100., 1))))
+    lmrs_upp = str(float('%.2f' % (np.percentile(lmr_GE_slope*100., 99))))
+    #lmrs_low = str(float('%.2f' % (np.min(lmr_GE_slope*100))))
+    #lmrs_upp = str(float('%.2f' % (np.max(lmr_GE_slope*100))))
+    
+    print(' ')
+    print('full corr  ==>', loc, loc_low, loc_upp)
+    print('full CE    ==>', loce, loce_low, loce_upp)
+    print('detrend R  ==>', lconrd, lconrd_low, lconrd_upp)
+    print('detrend CE ==>', lconcd, lconcd_low, lconcd_upp)
+    print('LMR trend  ==>', lmrs, lmrs_low, lmrs_upp)
+    print(' ')
 
-stat_metadata = {'stime':"starting year of verification time period",
-                 'etime':"ending year of verification time period",
-                 'ltc':'LMR_TCR correlation',
-                 'lec':'LMR_ERA correlation',
-                 'lgc':'LMR_GIS correlation',
-                 'lcc':'LMR_CRU correlation',
-                 'lbc':'LMR_BE correlation',
-                 'lmc':'LMR_MLOST correlation',
-                 'loc':'LMR_consensus correlation',
-                 'ltce':'LMR_TCR coefficient of efficiency',
-                 'lece':'LMR_ERA coefficient of efficiency',
-                 'lgce':'LMR_GIS coefficient of efficiency',
-                 'lcce':'LMR_CRU coefficient of efficiency',
-                 'lbce':'LMR_BE coefficient of efficiency',
-                 'lmce':'LMR_MLOST coefficient of efficiency',
-                 'loce':'LMR_consensus coefficient of efficiency',
-                 'ltrd':'LMR_TCR detrended correlation',
-                 'lerd':'LMR_ERA detrended correlation',
-                 'lgrd':'LMR_GIS detrended correlation',
-                 'lcrd':'LMR_CRU detrended correlation',
-                 'lbrd':'LMR_BE detrended correlation',
-                 'lmrd':'LMR_MLOST detrended correlation',
-                 'ltcd':'LMR_TCR detrended coefficient of efficiency',
-                 'lecd':'LMR_ERA detrended coefficient of efficiency',
-                 'lgcd':'LMR_GIS detrended coefficient of efficiency',
-                 'lccd':'LMR_CRU detrended coefficient of efficiency',
-                 'lbcd':'LMR_BE detrended coefficient of efficiency',
-                 'lmcd':'LMR_MLOST detrended coefficient of efficiency',
-                 'lmrs':'LMR trend (K/100 years)',
-                 'gs':'GIS trend (K/100 years)',
-                 'crus':'CRU trend (K/100 years)',
-                 'bes':'BE trend (K/100 years)',
-                 'mlosts':'MLOST trend (K/100 years)',
-                 'tcrs':'TCR trend (K/100 years)',
-                 'eras':'ERA trend (K/100 years)',
-                 'stat_metadata':'metdata'
-                 }
+    gmt_verification_stats = {}
+    stat_vars = ['stime','etime',
+                 'ltc','lec','lgc','lcc','lbc','lmc','loc',
+                 'ltce','lece','lgce','lcce','lbce','lmce','loce',
+                 'lgrd','lgcd', 'lconcd','lconrd','lcrd','lccd','lbrd','lbcd','lmrd','lmcd','ltrd','ltcd','lerd','lecd',
+                 'lmrs','gs','crus','bes','mlosts','tcrs','eras','cons',
+                 'loc_low', 'loc_upp', 'loce_low', 'loce_upp', 'lconrd_low', 'lconrd_upp', 'lconcd_low', 'lconcd_upp',
+                 'calibGE']
 
-for var in stat_vars:
-    gmt_verification_stats[var] = locals()[var]
+    stat_metadata = {'stime':"starting year of verification time period",
+                     'etime':"ending year of verification time period",
+                     'ltc':'LMR_TCR correlation',
+                     'lec':'LMR_ERA correlation',
+                     'lgc':'LMR_GIS correlation',
+                     'lcc':'LMR_CRU correlation',
+                     'lbc':'LMR_BE correlation',
+                     'lmc':'LMR_MLOST correlation',
+                     'loc':'LMR_consensus correlation',
+                     'ltce':'LMR_TCR coefficient of efficiency',
+                     'lece':'LMR_ERA coefficient of efficiency',
+                     'lgce':'LMR_GIS coefficient of efficiency',
+                     'lcce':'LMR_CRU coefficient of efficiency',
+                     'lbce':'LMR_BE coefficient of efficiency',
+                     'lmce':'LMR_MLOST coefficient of efficiency',
+                     'loce':'LMR_consensus coefficient of efficiency',
+                     'ltrd':'LMR_TCR detrended correlation',
+                     'lerd':'LMR_ERA detrended correlation',
+                     'lgrd':'LMR_GIS detrended correlation',
+                     'lcrd':'LMR_CRU detrended correlation',
+                     'lbrd':'LMR_BE detrended correlation',
+                     'lmrd':'LMR_MLOST detrended correlation',
+                     'lconrd':'LMR_consensus detrended correlation',
+                     'ltcd':'LMR_TCR detrended coefficient of efficiency',
+                     'lecd':'LMR_ERA detrended coefficient of efficiency',
+                     'lgcd':'LMR_GIS detrended coefficient of efficiency',
+                     'lccd':'LMR_CRU detrended coefficient of efficiency',
+                     'lbcd':'LMR_BE detrended coefficient of efficiency',
+                     'lmcd':'LMR_MLOST detrended coefficient of efficiency',
+                     'lconcd':'LMR_consensus detrended coefficient of efficiency',
+                     'lmrs':'LMR trend (K/100 years)',
+                     'gs':'GIS trend (K/100 years)',
+                     'crus':'CRU trend (K/100 years)',
+                     'bes':'BE trend (K/100 years)',
+                     'mlosts':'MLOST trend (K/100 years)',
+                     'tcrs':'TCR trend (K/100 years)',
+                     'eras':'ERA trend (K/100 years)',
+                     'cons':'Consensus trend (K/100 years)',
+                     'loc_low':'LMR_consensus lowerbound correlation',
+                     'loc_upp':'LMR_consensus upperbound correlation',
+                     'loce_low':'LMR_consensus lowerbound coefficient of efficiency',
+                     'loce_upp':'LMR_consensus upperbound coefficient of efficiency',
+                     'lconrd_low':'LMR_consensus lowerbound detrended correlation',
+                     'lconrd_upp':'LMR_consensus upperbound detrended correlation',
+                     'lconcd_low':'LMR_consensus lowerbound detrended coefficient of efficiency',
+                     'lconcd_upp':'LMR_consensus upperbound detrended coefficient of efficiency',
+                     'calibGE': 'LMR grand ensemble calibration ratio',
+                     'stat_metadata':'metdata'
+                     }
 
-gmt_verification_stats['stat_metadata'] = stat_metadata
+    for var in stat_vars:
+        gmt_verification_stats[var] = locals()[var]
 
-# dump the dictionary to a pickle file
-spfile = nexp+'_'+str(niters)+'_iters_gmt_verification.pckl'
-print 'writing statistics to pickle file: ' + spfile
-outfile = open(spfile,'w')
-cPickle.dump(gmt_verification_stats,outfile)
+    gmt_verification_stats['stat_metadata'] = stat_metadata
+    # dump the dictionary to a pickle file
+    spfile = nexp + '_' + str(niters) + '_iters_gmt_verification.pckl'
+    print('writing statistics to pickle file: ' + spfile)
+    outfile = open(spfile, 'wb')
+    pickle.dump(gmt_verification_stats, outfile)
+
+if interactive:
+    plt.show(block=True)

@@ -37,23 +37,10 @@ coverage.xml
 # Translations
 *.mo
 
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# Rope
-.ropeproject
-
-# Django stuff:
-*.log
-*.pot
-
 # Sphinx documentation
 docs/_build/
 
-#Ignore figures
-*.jpg
+# Images
 *.pdf
 *.png
 
@@ -73,9 +60,12 @@ scratch/*
 tests/data/*
 
 #Video Files
-*.gif
 *.avi
 *.mp4
 Figs/*
 Archive/*
 *.nc
+
+# default configuration
+config.yml
+LMR_config.py
