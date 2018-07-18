@@ -1,0 +1,89 @@
+Notes for using the Pages2kv2 dataset.
+   Michael Erb, 4/14/2017
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Running the LMR with Pages2k v2.0.0
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+PAGES2k v2.0.0 is the current release of the PAGES2k dataset.  To use this dataset in the LMR,
+do the following steps.
+
+1) Retrieve the PAGES2kv2 dataset.  Contact Michael Erb (erbm@usc.edu) if you don't
+   already have this.  Put this file in the same directory as your NCDC proxy data file.
+
+2) In LMR_proxy_preprocess.py, make sure that "proxy_data_source" is set to "PAGES2Kv2".
+   Then run this file with "python LMR_proxy_preprocess.py".  This creates proxy and
+   metadata files named in the same convention as the NCDC files, but with "Pages2kv2"
+   in the name.
+
+3) In LMR_PSMbuild.py and LMR_config.py, make sure that "use_from" is set to "NCDC" and
+   "dbversion" is set to "Pages2kv2".  The preprocessed Pages2v2 datasets have been
+   designed to work with the "NCDC" code.
+
+4) The code is currently set up to use ALL data records except boreholes and hybrid records,
+   which is more types than our typical LMR experiments.  If you want to exclude things
+   like "temperature" records or speleothems, comment the appropriate lines in the
+   "proxy_order" variable in LMR_config.py.  See the notes section of this document to see
+   how many of each proxy type are in the pages2kv2 dataset.
+
+5) Follow the steps in README_v2 to run "LMR_PSMbuild.py", "build_ye_file.py", and
+   "LMR_wrapper.py" to run your desired experiment.
+
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Notes for using calendar vs tropical year
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+The LMR_proxy_preprocess.py script can average the pages2kv2 proxies on either a calendar
+year (Jan-Dec) or a tropical year (Apr-Mar).  However, if you want to use a tropical year
+in the LMR reanalysis, you must also change some variables in other files:
+
+NOTE: THIS METHODOLOGY COULD BE IMPROVED!
+
+File                      Parameter             Value for calendar year        Value for tropical year
+----                      ---------             -----------------------        -----------------------
+LMR_proxy_preprocess.py   year_type             "calendar year"                "tropical year"
+misc/build_ye_file.py     all instances of...   [1,2,3,4,5,6,7,8,9,10,11,12]   [4,5,6,7,8,9,10,11,12,13,14,15]
+LMR_psms.py               ""                    ""                             ""
+LMR_PSMbuild.py           ""                    ""                             ""
+""                        dbversion             Pages2kv2                      Pages2kv2_tropicalyear
+LMR_config.py             avgInterval           None                           [4,5,6,7,8,9,10,11,12,13,14,15]
+""                        dbversion             Pages2kv2                      Pages2kv2_tropicalyear
+
+
+-=-=-=-
+Notes
+-=-=-=-
+
+ - The proxy types and units in the processesed PAGES2k v2.0.0 dataset are as follows:
+
+ Corals and Sclerosponges -                   Sr_Ca :  28
+ Corals and Sclerosponges -           calcification :   2
+ Corals and Sclerosponges -               composite :   6
+ Corals and Sclerosponges -                    d18O :  67
+ Corals and Sclerosponges -             temperature :   1
+                Ice Cores -                    d18O :  39
+                Ice Cores -                      dD :   8
+                Ice Cores -                    melt :   2
+               Lake Cores -             RABD660_670 :   1
+               Lake Cores - X_radiograph_dark_layer :   1
+               Lake Cores -                massacum :   1
+               Lake Cores -             temperature :  33
+               Lake Cores -               thickness :   6
+             Marine Cores -                    d18O :   1
+             Marine Cores -             temperature :  57
+              Speleothems -                    d18O :   4
+               Tree Rings -                     MXD :  55
+               Tree Rings -                 density :   5
+               Tree Rings -             temperature :   6
+               Tree Rings -            temperature1 :   1
+               Tree Rings -                   trsgi : 348
+                  bivalve -                    d18O :   1
+                 borehole -             temperature :   3
+                documents -             temperature :  15
+                   hybrid -             temperature :   1
+
+ - In the analysis/ directory, the file "summarize_pages2kv2.py" can be run to produce the
+   list above and make figures of every proxy record.
+

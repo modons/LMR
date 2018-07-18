@@ -93,6 +93,9 @@ ln -s tas_Amon_CCSM4_past1000_085001-185012.nc tas_sfc_Amon_CCSM4_past1000_08500
        the data (proxy and calibration dataset for PSM calibration.
        Ex. (1850,2000)
 
+     - psm_type: dictionary defining the type of PSM to calibrate per proxy database.
+       Either 'linear' or 'bilinear'
+
    * In class v_proxies:
      - use_from: List defining the proxy database to
        Either ['pages'] or ['NCDC']
@@ -111,9 +114,6 @@ ln -s tas_Amon_CCSM4_past1000_085001-185012.nc tas_sfc_Amon_CCSM4_past1000_08500
        or 'anom' (temporal mean removed)
 
    * In class v_psm:
-     - use_psm: dictionary defining the type of PSM to calibrate per proxy database.
-       Either 'linear' or 'bilinear'
-
      - avgPeriod: String defining the averaging period over which the calibration is
        to be performed. Either 'annual' or 'season' are allowed.
 

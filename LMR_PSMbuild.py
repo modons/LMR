@@ -2,7 +2,7 @@
  Module: LMR_PSMbuild.py
  
    Stand-alone tool building linear forward models (Proxy System Models) relating surface
-   temperature and/or moisture to various proxy measurements, through linear regression 
+   temperature and/or moisture to various proxy measurements, through linear regression
    between proxy chronologies and historical gridded surface analyses.
    This updated version uses the Pandas DataFrame version of the proxy database and
    metadata, and can therefore be used on the PAGES2kS1 and NCDC pandas-formatted 
@@ -13,43 +13,43 @@
 
  Revisions: 
  - Included definitions related to calibration of linear PSMs for proxy records in the
-   NCDC database. 
+   NCDC database.
    [R. Tardif, U. of Washington, Spring 2016]
  - Included the GPCC precipitation historical dataset as a possible PSM calibration source.
    [R. Tardif, U. of Washington, Spring 2016]
  - Included the Dai PSDI historical dataset as a possible PSM calibration source.
    [R. Tardif, U. of Washington, Spring 2016]
  - Added definitions of parameters related to the calibration of bilinear (temperature/
-   precipitation or moisture) PSMs. 
+   precipitation or moisture) PSMs.
    [R. Tardif, U. of Washington, June 2016]
  - Added definitions related to the calibration of PSMs on the basis of a proxy record 
-   seasonality metadata. 
+   seasonality metadata.
    [ R. Tardif, Univ. of Washington, July 2016 ]
  - Adjustment to specification of psm type to calibrate for compatibility with modified 
    classes handling use of different psms per proxy types.
    [ R. Tardif, Univ. of Washington, August 2016 ]
  - Added filters on proxy records based on conditions of data availability.
    [ R. Tardif, Univ. of Washington, October 2016 ]
- - Code modifications for more efficient calibration. Upload of calibration data 
-   is now done once up front and passed to psm calibration functions for use on all 
-   proxy chronologies. The original code was structured in a way that the upload 
+ - Code modifications for more efficient calibration. Upload of calibration data
+   is now done once up front and passed to psm calibration functions for use on all
+   proxy chronologies. The original code was structured in a way that the upload
    of the calibration data was performed every time a psm for a proxy chronology
-   was to be calibrated. 
+   was to be calibrated.
    [ R. Tardif, Univ. of Washington, December 2016 ]
- - Added functionalities to objectively determine the seasonality of proxy chronologies 
-   based on the quality of the fit to calibration data. 
+ - Added functionalities to objectively determine the seasonality of proxy chronologies
+   based on the quality of the fit to calibration data.
    [ R. Tardif, Univ. of Washington, December 2016 ]
  - Adjustments to proxy types considered for new merged (PAGES2kv2 and NCDC)
-   proxy datasets.   
+   proxy datasets.
    [ R. Tardif, Univ. of Washington, May 2017 ]
- - Renamed the proxy databases to less-confusing convention. 
+ - Renamed the proxy databases to less-confusing convention.
    'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
    [ R. Tardif, Univ. of Washington, Sept 2017 ]
 
 """
 import os
 import numpy as np
-import pickle    
+import pickle
 import datetime
 from time import time
 from os.path import join
@@ -90,7 +90,7 @@ class v_core(object):
     # lmr_path: where all the data is located ... model (prior), analyses (GISTEMP, HadCRUT...) and proxies.
     # lmr_path = '/home/katabatic/wperkins/data/LMR'
     # lmr_path = '/home/disk/kalman3/rtardif/LMR'
-    lmr_path = '/home/disk/kalman3/rtardif/LMRpy3'    
+    lmr_path = '/home/disk/kalman3/rtardif/LMRpy3'
 
     # PSM type to calibrate: 'linear' or 'bilinear'
     #psm_type = 'linear'
@@ -106,11 +106,11 @@ class v_core(object):
     # Period (years) over which proxy and instrumental data are to be used to
     # calibrate statistical PSMs (determine regression parameters)
     calib_period = (1850, 2015)
-    
+
     # Boolean to indicate whether upload of existing PSM data is to be performed.
-    # Keep False here. 
-    load_psmobj = False 
-    
+    # Keep False here.
+    load_psmobj = False
+
     ##** END User Parameters **##
         
     def __init__(self):
@@ -122,7 +122,7 @@ class v_core(object):
             self.load_psmobj = self.load_psmobj
         except:
             pass
-            
+
 class v_proxies(object):
     """
     Parameters for proxy data
@@ -148,7 +148,7 @@ class v_proxies(object):
     proxy_frac = 1.0 # this needs to remain = 1.0 if all possible proxies are to be considered for calibration
 
     # Filtering proxy records on conditions of data availability during
-    # the reconstruction period. 
+    # the reconstruction period.
     # - Filtrering disabled if proxy_availability_filter = False.
     # - If proxy_availability_filter = True, only records with
     #   oldest and youngest data outside or at edges of the recon. period
@@ -157,14 +157,14 @@ class v_proxies(object):
     #   on data availability fraction (proxy_availability_fraction parameter).
     #   Records with a fraction of available data (ratio of valid data over
     #   the maximum data expected within the reconstruction period) below the
-    #   user-defined threshold are omitted. 
+    #   user-defined threshold are omitted.
     #   Set this threshold to 0.0 if you do not want this threshold applied.
     #   Set this threshold to 1.0 to prevent assimilation of records with
-    #   any missing data within the reconstruction period. 
+    #   any missing data within the reconstruction period.
     proxy_availability_filter = False
     proxy_availability_fraction = 0.0
-    
-    
+
+
     # ---------------------
     # for PAGES2kv1 proxies
     # ---------------------
@@ -263,36 +263,36 @@ class v_proxies(object):
         #       DJFMAM = [-12,1,2,3,4,5]
         proxy_psm_seasonality = {
             'Tree ring_Width'      : {'flag':True,
-                                      'seasons': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]}, 
+                                      'seasons': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
             'Tree ring_Density'    : {'flag':True,
-                                      'seasons': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]}, 
+                                      'seasons': [[1,2,3,4,5,6,7,8,9,10,11,12],[6,7,8],[6,7,8,9,10,11],[-12,1,2],[-12,1,2,3,4,5]]},
             'Ice core_d18O'        : {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             'Ice core_d2H'         : {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             'Ice core_Accumulation': {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             'Coral_d18O'           : {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             'Coral_Luminescence'   : {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             'Lake sediment_All'    : {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             'Marine sediment_All'  : {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             'Speleothem_All'       : {'flag':False,
                                       'seasons_T': [],
-                                      'seasons_M': []}, 
+                                      'seasons_M': []},
             }
-        
-        
+
+
         # A blacklist on proxy records, to prevent assimilation of chronologies
         # known to be duplicates.
         proxy_blacklist = []
@@ -380,11 +380,11 @@ class v_proxies(object):
         #          in NCDC-templated text files.
         #  v0.2.0: merge of v0.1.0 NCDC proxies (w/o the NCDC-templated PAGES2k phase2) with
         #          published version (2.0.0) of the PAGES2k2017 proxies contained in a pickle
-        #          file exported directly from the LiPD database. 
-        #  v0.3.0: second version of merged proxy db: published version (2.0.0) of the 
+        #          file exported directly from the LiPD database.
+        #  v0.3.0: second version of merged proxy db: published version (2.0.0) of the
         #          PAGES2k2017 proxies and additional records collected as part of LMR project.
-        #          Lingering duplicate records in v0.2.0 were eliminated. 
-        #  v0.4.0: third version of merged proxy db: published version (2.0.0) of the 
+        #          Lingering duplicate records in v0.2.0 were eliminated.
+        #  v0.4.0: third version of merged proxy db: published version (2.0.0) of the
         #          PAGES2k2017 proxies and additional records collected as part of LMR project.
         #          Nearly identical to v0.3.0, tho only exception is the most recent version of
         #          the Palmyra d18O record (2013) replaces the older record included in the
@@ -421,11 +421,13 @@ class v_proxies(object):
 #old        'Tree Rings_WidthPages',
             'Tree Rings_WidthPages2',
             'Tree Rings_WidthBreit',
-            'Tree Rings_WoodDensity',
             'Tree Rings_Isotopes',
+            'Tree Rings_Temperature',
             'Corals and Sclerosponges_d18O',
             'Corals and Sclerosponges_SrCa',
             'Corals and Sclerosponges_Rates',
+            'Corals and Sclerosponges_Composite',
+            'Corals and Sclerosponges_Temperature',
             'Ice Cores_d18O',
             'Ice Cores_dD',
             'Ice Cores_Accumulation',
@@ -484,6 +486,11 @@ class v_proxies(object):
                                                'density',
                                                'MXD'],
             'Tree Rings_Isotopes'           : ['d18O'],
+            'Tree Rings_Temperature'        : ['temperature'],
+            'bivalve_d18O'                  : ['d18O'],
+            'borehole_Temperature'          : ['temperature'],
+            'documents_Temperature'         : ['temperature'],
+            'hybrid_Temperature'            : ['temperature'],
             }
 
 
@@ -561,7 +568,7 @@ class v_proxies(object):
                                                'seasons_M': []}
         }
 
-        
+
         def __init__(self):
             if self.datadir_proxy is None:
                 self.datadir_proxy = join(v_core.lmr_path, 'data', 'proxies')
@@ -585,7 +592,7 @@ class v_proxies(object):
             self.proxy_blacklist = list(self.proxy_blacklist)
             self.proxy_availability_filter = v_proxies.proxy_availability_filter
             self.proxy_availability_fraction = v_proxies.proxy_availability_fraction
-            
+
             self.proxy_psm_type = {}
             for p in self.proxy_order: self.proxy_psm_type[p] = v_core.psm_type
 
@@ -622,7 +629,7 @@ class v_psm(object):
 
     # ...
     load_precalib = False
-    
+
     # PSM calibrated on annual or seasonal data: allowed tags are 'annual' or 'season'
     #avgPeriod = 'annual'
     avgPeriod = 'season'
@@ -633,7 +640,7 @@ class v_psm(object):
     # Activated only if avgPeriod = 'season' above.
     # If set to True, refer back to the appropriate proxy class above
     # (proxy_psm_seasonality dict.) to set which proxy type(s) and associated seasons
-    # will be considered. 
+    # will be considered.
     test_proxy_seasonality = True
     
     ##** END User Parameters **##
@@ -643,8 +650,8 @@ class v_psm(object):
             avgPeriod = avgPeriod+'PSM'
         else:
             avgPeriod = avgPeriod+'META'
-    
-    
+
+
     class _linear(object):
         """
         Parameters for the linear fit PSM.
@@ -669,7 +676,7 @@ class v_psm(object):
 
         datadir_calib = None
         pre_calib_datafile = None
-        
+
         # Choice between:
         datatag_calib = 'GISTEMP'
         datafile_calib = 'gistemp1200_ERSSTv4.nc'
@@ -694,7 +701,7 @@ class v_psm(object):
         # or
         #datatag_calib = 'SPEI'
         #datafile_calib = 'spei_monthly_v2.4_190001-201412.nc'
-                
+
         psm_r_crit = 0.0
 
         ##** END User Parameters **##
@@ -773,7 +780,7 @@ class v_psm(object):
         
         datadir_calib = None
         pre_calib_datafile = None
-        
+
         # calibration w.r.t. temperature
         # -----------------------------
         # Choice between:
@@ -806,7 +813,7 @@ class v_psm(object):
 
         psm_r_crit = 0.0
 
-        
+
         ##** END User Parameters **##
         
         def __init__(self):
@@ -889,7 +896,7 @@ def main():
     print('Calib. period       :', Cfg.core.calib_period)
     print('Anom. ref. period   :', Cfg.core.anom_reference_period)
 
-    
+
     if proxy_database == 'PAGES2kv1':
         print('Proxy data location :', Cfg.proxies.PAGES2kv1.datadir_proxy)
         proxy_psm_seasonality =  Cfg.proxies.PAGES2kv1.proxy_psm_seasonality
@@ -912,7 +919,7 @@ def main():
         C.datafile_calib = Cfg.psm.linear.datafile_calib
         C.anom_reference_period = Cfg.core.anom_reference_period
         C.read_calibration()
-        
+
     elif psm_type == 'bilinear':
         datatag_calib_T = Cfg.psm.bilinear.datatag_calib_T
         datatag_calib_P = Cfg.psm.bilinear.datatag_calib_P
@@ -940,7 +947,7 @@ def main():
     
     # corresponding file containing complete diagnostics
     psm_file_diag = psm_file.replace('.pckl', '_diag.pckl')
-    
+
     # Check if psm_file already exists, archive it with current date/time if it exists
     # and replace by new file
     if os.path.isfile(psm_file):        
@@ -948,7 +955,7 @@ def main():
         os.system('mv %s %s_%s.pckl' %(psm_file,psm_file.rstrip('.pckl'),nowstr) )
         if os.path.isfile(psm_file_diag):
             os.system('mv %s %s_%s.pckl' %(psm_file_diag,psm_file_diag.rstrip('.pckl'),nowstr) )
-        
+
     prox_manager = LMR_proxy_pandas_rework.ProxyManager(Cfg, Cfg.core.calib_period)
     type_site_calib = prox_manager.assim_ids_by_group
 
@@ -972,10 +979,10 @@ def main():
         print(' ')
         print(sitetag)
 
-        
+
         # -----------------------------------------------------
         # Prep: defining seasons to be tested, depending on the
-        # chosen configuration 
+        # chosen configuration
         # -----------------------------------------------------
         if calib_avgPeriod == 'annual':
             # override any proxy seasonality metadata with calendar year
@@ -1000,7 +1007,7 @@ def main():
                     if Y.seasonality not in seasons:
                         seasons.insert(0, Y.seasonality)
 
-                    
+
                 elif psm_type == 'bilinear':
                     seasons_T = proxy_psm_seasonality[Y.type]['seasons_T'][:]
                     seasons_M = proxy_psm_seasonality[Y.type]['seasons_M'][:]
@@ -1008,7 +1015,7 @@ def main():
                     # insert entry from metadata at beginning of list, if not part of list already
                     if Y.seasonality not in seasons_T: seasons_T.insert(0, Y.seasonality)
                     if Y.seasonality not in seasons_M: seasons_M.insert(0, Y.seasonality)
-                    
+
             else:
                 # revert back to proxy metadata
                 seasons = [Y.seasonality]
@@ -1016,7 +1023,7 @@ def main():
                     seasons_T = seasons[:]
                     seasons_M = seasons[:]
 
-        else: 
+        else:
             raise SystemExit('Error in choice of seasonality. Exiting!')
 
         # ---------------------------------------------------------
@@ -1037,14 +1044,14 @@ def main():
             # Loop over seasonality iterable
             for s in seasons:
                 Y.seasonality = s # re-assign seasonality to proxy object
-            
+
                 # Create a psm object
                 psm_obj = Y.get_psm_obj(Cfg,Y.type)
 
                 try:
                     # Calibrate the statistical forward model (psm)
                     test_psm_obj = psm_obj(Cfg, Y, calib_obj=C)
-                    
+
                     print('=>', "{:2d}".format(i),
                            "{:45s}".format(str(s)),
                            "{:12.4f}".format(test_psm_obj.slope),
@@ -1052,15 +1059,15 @@ def main():
                            "{:12.4f}".format(test_psm_obj.corr),
                            "{:12.4f}".format(test_psm_obj.R),
                            '(', "{:10.5f}".format(test_psm_obj.R2adj), ')')
-                    
-                                        
+
+
                     # BIC used as the selection criterion
                     #metric[i] = test_psm_obj.BIC
                     # Adjusted R-squared used as the selection criterion
                     metric[i] = test_psm_obj.R2adj
-                    
+
                     test_psm_obj_dict[str(s)] =  test_psm_obj
-                
+
                 except ValueError as e:
                     print(e)
                     print('Test on seasonality %s could not be completed.' %
@@ -1068,7 +1075,7 @@ def main():
 
 
                 i += 1
-            
+
         elif psm_type == 'bilinear':
             # ----------------
             # --- bilinear ---
@@ -1086,7 +1093,7 @@ def main():
                 Y.seasonality_T = sT
                 for sM in seasons_M:
                     Y.seasonality_P = sM
-                    
+
                     # Create a psm object
                     psm_obj = Y.get_psm_obj(Cfg,Y.type)
 
@@ -1102,7 +1109,7 @@ def main():
                               "{:12.4f}".format(test_psm_obj.intercept),
                               "{:12.4f}".format(test_psm_obj.corr),
                               "{:12.4f}".format(test_psm_obj.R))
-                
+
                         # BIC used as the selection criterion
                         #metric[i] = test_psm_obj.BIC
                         # Adjusted R-squared used as the selection criterion
@@ -1112,11 +1119,11 @@ def main():
                         # and psm object
                         seasons[i] = (sT,sM)
                         test_psm_obj_dict[str((sT,sM))] =  test_psm_obj
-                                                
+
                     except:
                         print('Test on seasonality pair %s could not be completed.' %(str(sT)+':'+str(sM)))
 
-                    
+
                     i += 1
 
 
@@ -1128,14 +1135,14 @@ def main():
 
 
         # Select the psm object corresponding to the season (linear) or
-        # pair of seasons (bilinear) that provide the best fit 
+        # pair of seasons (bilinear) that provide the best fit
         # -------------------------------------------------------------
         # Select the "seasonal" model (psm)
         # criterion: min of metric if BIC, max if adjusted R-squared
         # first, make sure default values are unaccounted for
         metric[metric==defaultnb] = np.nan
         indmin = np.nanargmin(metric)
-        indmax = np.nanargmax(metric)        
+        indmax = np.nanargmax(metric)
         #select_psm_obj = test_psm_obj_dict[str(seasons[indmin])]
         #Y.seasonality = seasons[indmin] # a list if linear psm, a tuple of lists if bilinear
         select_psm_obj = test_psm_obj_dict[str(seasons[indmax])]
@@ -1144,7 +1151,7 @@ def main():
         Y.psm_obj = select_psm_obj
         Y.psm = Y.psm_obj.psm
 
-        
+
         # Load proxy object in dictionary
         # -------------------------------
         # Site info
@@ -1162,14 +1169,14 @@ def main():
 
         # diagnostic information
         psm_dict_diag[sitetag] = {}
-        
+
         if psm_type == 'linear':
             psm_dict[sitetag]['calib']        = datatag_calib
             psm_dict[sitetag]['PSMslope']     = Y.psm_obj.slope
             psm_dict[sitetag]['PSMintercept'] = Y.psm_obj.intercept
             psm_dict[sitetag]['fitBIC']       = Y.psm_obj.BIC
             psm_dict[sitetag]['fitR2adj']     = Y.psm_obj.R2adj
-            
+
             # diagnostic information
             # ----------------------
             # copy main psm attributes
@@ -1187,8 +1194,8 @@ def main():
             psm_dict[sitetag]['PSMslope_moisture']    = Y.psm_obj.slope_moisture
             psm_dict[sitetag]['PSMintercept']         = Y.psm_obj.intercept
             psm_dict[sitetag]['fitBIC']               = Y.psm_obj.BIC
-            psm_dict[sitetag]['fitR2adj']             = Y.psm_obj.R2adj            
-            
+            psm_dict[sitetag]['fitR2adj']             = Y.psm_obj.R2adj
+
             # diagnostic information
             # ----------------------
             # copy main psm attributes
@@ -1199,7 +1206,7 @@ def main():
             psm_dict_diag[sitetag]['calib_moisture_refer_values'] = Y.psm_obj.calib_moisture_refer_values
             psm_dict_diag[sitetag]['calib_proxy_values'] = Y.psm_obj.calib_proxy_values
             psm_dict_diag[sitetag]['calib_fit_values'] = Y.psm_obj.calib_proxy_fit
-            
+
         else:
             raise SystemExit('ERROR: problem with the type of psm!')
 
@@ -1221,7 +1228,7 @@ def main():
     print('%45s : %5d' % ('TOTAL', total_proxy_count))
     print('--------------------------------------------------------------------')
 
-    
+
     # Dump dictionaries to pickle files
     outfile = open('%s' % (psm_file),'wb')
     # using protocol 2 for more efficient storing
@@ -1235,7 +1242,7 @@ def main():
     pickle.dump(psm_info,outfile_diag,protocol=2)
     outfile_diag.close()
 
-    
+
     end_time = time() - begin_time
     print('=========================================================')
     print('PSM calibration completed in '+ str(end_time/60.0)+' mins')
