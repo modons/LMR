@@ -94,7 +94,7 @@ SRC_DIR = os.path.abspath(__file__)
 
 # Control logging output. (0 = none; 1 = most important; 2 = many; 3 = a lot;
 #   >=4 all)
-LOG_LEVEL = 2
+LOG_LEVEL = 1
 
 # Class for distinction of configuration classes
 class ConfigGroup(object):
