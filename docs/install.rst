@@ -34,7 +34,7 @@ option requires a sizeable chunk of disk space.
   installation with no additional packages.
 
 .. note:: Due to package dependencies of our regridding facilities, we do not
-currently support LMR code on Windows OS.
+  currently support LMR code on Windows OS.
 
 Installing Required Packages
 ----------------------------
@@ -66,8 +66,9 @@ conda (recommended), or you can manually prepend the environment directory to
 your path environment variable.
 
 .. note:: The activate script provided by conda works by default with  bash for
-versions before conda v4.4.  It can be edited to work with other modern shells,
-but I don’t think it works with csh or related shells.
+  versions before conda v4.4.  It can be edited to work with other modern
+  shells,
+  but I don’t think it works with csh or related shells.
 
 To activate your new environment (i.e., set it as the current python target) use
 the following::
@@ -95,8 +96,8 @@ You should see the environment prefix disappear, indicating you're back in your
 original Python environment.
 
 .. warning:: if an executable (like ipython) is not in your new python
-environment, but your path can still find ipython from your original
-installation you might not notice you're using an older/different version.
+  environment, but your path can still find ipython from your original
+  installation you might not notice you're using an older/different version.
 
 .. sample_data::
 

@@ -11,8 +11,8 @@ reconstruction but hides many of the details.  In this section we’ll run throu
 a simple reconstruction that uses the base data downloaded in `sample_data`_.
 
 .. note:: Many of the utility functions used in this script and in
-``LMR_lite_utils.py`` are useful for running LMR in jupyter notebook
-environments.
+  ``LMR_lite_utils.py`` are useful for running LMR in jupyter notebook
+  environments.
 
 Configuration
 -------------
@@ -48,10 +48,11 @@ be directories for initial and long-term storage. ::
       archive_dir: /home/path/to/archive_output
 
 .. note:: There are many more options allowing for fine control over a
-reconstruction. Please see :ref:`configuration` for details. The sample files
-provided let you run this experiment out of the box. Other configuration changes
-may require you to recreate intermediate files associated with PSM calibration
-and estimated obs (Ye values) from the prior.
+  reconstruction. Please see :ref:`configuration` for details. The sample files
+  provided let you run this experiment out of the box. Other configuration
+  changes
+  may require you to recreate intermediate files associated with PSM calibration
+  and estimated obs (Ye values) from the prior.
 
 Running LMR_lite
 ----------------

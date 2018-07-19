@@ -11,12 +11,12 @@ How to add a new PSM to the LMR
 ------------------------
 
 1. Edit LMR_psms.py to make the new PSM class. Once the class is added, it must
-become part of the _psm_classes list.
+  become part of the _psm_classes list.
 2. Add the new PSM information to LMR_utils.py by generating a PSM calibration
-string and finding pkind.
+  string and finding pkind.
 3. Add the new PSM information to misc/build_ye_file.py by giving it a psm_key.
-There may be one or two other places to add information depending on what the
-PSM looks like.
+  There may be one or two other places to add information depending on what the
+  PSM looks like.
 4. Edit LMR_config.py and config.yml to include the new PSM class. Once the
-class is added, it must be initialized with def __init__.
+  class is added, it must be initialized with def __init__.
 
