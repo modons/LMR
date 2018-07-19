@@ -14,7 +14,7 @@ fields to be reconstructed, and aspects of the data assimilation method.
 The ``config_template.yml`` and ``LMR_config_template.py`` file should be
 copied into the source directory from the ``config_templs/`` directory
 as ``config.yml`` and ``LMR_config.py``.  This is the default file searched for
- by the code to run
+by the code to run
 a reconstruction and holds the parameters available to users.  Use cases are
 described below followed by a general outline of the parameters available.
 

@@ -47,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'LMReanalysis'
-copyright = '2017, G. Hakim, R. Tardif, A. Perkins'
+copyright = '2018, G. Hakim, R. Tardif, W.A. Perkins'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

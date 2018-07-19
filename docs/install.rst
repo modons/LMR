@@ -8,8 +8,8 @@ Installation & LMR setup
 Get the LMR code
 ================
 
-The source code for this project can be found on Github at
-`https:\\github.com\frodre\LMR`_
+The source code for this project can be found on Github at:
+`<https://github.com/frodre/LMR>`_
 
 You can either clone directly from the public repository::
 
