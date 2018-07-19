@@ -1,15 +1,15 @@
 .. _proxies:
 
-Adding proxy records:
-=================
+Adding proxy records
+====================
 
 NCDC file formatting:
------------------------
+---------------------
 [Example of correctly formatted file with additional information about possible
 options.]
 
 How to add proxy records to the LMR
-------------------------
+-----------------------------------
 1. Add a new class to LMR_config.py.
 2. Add new proxy database information to LMR_proxy_preprocess.py into def main
    and create and new function to create the database from whatever starting

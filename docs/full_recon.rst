@@ -1,7 +1,7 @@
 .. _full_recon:
 
 *******************************
-Performin a Full Reconstruction
+Performing a Full Reconstruction
 *******************************
 
 .. warning:: This section is a WIP

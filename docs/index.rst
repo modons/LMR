@@ -24,7 +24,8 @@ Originators: R. Tardif, W. A. Perkins, G. J. Hakim
              M. B. Erb
              North Arizona University
              June 2018
-
+.. toctree::
+   :maxdepth: 1
 
 Where to start
 --------------
@@ -33,17 +34,15 @@ Where to start
 * :ref:`full_recon`
 
 
-
-.. toctree::
-   :maxdepth: 1
-
-   install
-   quick_recon
-   full_recon
-   configuration
-   proxies
-   prior
-   psm
+Documentation pages
+-------------------
+* :ref:`install`
+* :ref:`quick_recon`
+* :ref:`full_recon`
+* :ref:`configuration`
+* :ref:`proxies`
+* :ref:`prior`
+* :ref:`psm`
 
 
 

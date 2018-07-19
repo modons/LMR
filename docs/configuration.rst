@@ -1,6 +1,6 @@
 .. _configuration:
 
-LMR Configuration
+LMR configuration
 =================
 
 .. toctree::
@@ -19,7 +19,7 @@ a reconstruction and holds the parameters available to users.  Use cases are
 described below followed by a general outline of the parameters available.
 
 
-General Configuration
+General configuration
 ---------------------
 When running a reconstruction, the ``LMR_wrapper.py`` script is set up to
 look for ``config.yml`` in the code directory to use as the configuration.
@@ -50,7 +50,7 @@ prior:
    If ``config.yml`` is not found or if any extraneous parameters (including misspellings)
    are found in the file, the reconstruction code will exit immediately.
 
-Custom Configuration Files
+Custom configuration files
 --------------------------
 
 If you would like to use a file other than ``config.yml`` as the reconstruction
@@ -65,7 +65,7 @@ changing ``config.yml``.
 .. note::
     If the file specified as an argument is not found, the code will exit immediately.
 
-Legacy Configuration
+Legacy configuration
 --------------------
 
 The LMR code was originally set up to use ``LMR_config.py`` as the primary
@@ -86,7 +86,7 @@ between the commented sections ::
     parameter2 = '/test_dir'
     ##** END User Parameters **##
 
-Programmatic Config Updating
+Programmatic config updating
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In some instances you may want to update configuration values on the fly.
 There are a few different ways to accomplish this within ``LMR_config.py``.

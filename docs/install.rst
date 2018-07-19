@@ -1,11 +1,11 @@
 .. _install:
 
 ************************
-Installation & LMR Setup
+Installation & LMR setup
 ************************
 
 
-Get the LMR Code
+Get the LMR code
 ================
 
 The source code for this project can be found on Github at
@@ -28,15 +28,15 @@ Python stack. For ease of use, it is recommended to use a Python distribution
 such as Anaconda/Miniconda to create your working environment.
 
 * `Anaconda <https://www.anaconda.com/download/>`_ (recommended) provides many
-of the required packages and many more useful packages pre-installed.   This
-option requires a sizeable chunk of disk space.
+  of the required packages and many more useful packages pre-installed.   This
+  option requires a sizeable chunk of disk space.
 * `Miniconda <https://conda.io/miniconda.html>`_ is a barebones
   installation with no additional packages.
 
 .. note:: Due to package dependencies of our regridding facilities, we do not
   currently support LMR code on Windows OS.
 
-Installing Required Packages
+Installing required packages
 ----------------------------
 
 The Anaconda/Miniconda distributions come with a built in package manager
@@ -101,7 +101,7 @@ original Python environment.
 
 .. sample_data::
 
-Retrieving LMR Data
+Retrieving LMR data
 ===================
 Before running an experiment, you’ll have to download some of the source data
 for proxies, models, and instrumental analyses.
