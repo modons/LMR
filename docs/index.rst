@@ -26,23 +26,18 @@ Originators: R. Tardif, W. A. Perkins, G. J. Hakim
              June 2018
 .. toctree::
    :maxdepth: 1
+   :caption: Documentation
 
-Where to start
---------------
-* :ref:`install`
-* :ref:`quick_recon`
-* :ref:`full_recon`
+   install
+   quick_recon
+   full_recon
+   configuration
+   proxies
+   prior
+   psm
 
 
-Documentation pages
--------------------
-* :ref:`install`
-* :ref:`quick_recon`
-* :ref:`full_recon`
-* :ref:`configuration`
-* :ref:`proxies`
-* :ref:`prior`
-* :ref:`psm`
+
 
 
 
