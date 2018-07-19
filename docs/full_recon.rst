@@ -4,14 +4,14 @@
 Performing a full reconstruction
 ********************************
 
-.. warning:: This section is a WIP
+.. warning:: This section is a work in progress and needs your help!
 
-To run an experiment, you must edit configuration. First, in the LMR code directory,
+To run an experiment, you must edit the configuration. First, in the LMR code directory,
 copy the file ``LRM_config_template.py`` to ``LMR_config.py``.  In ``LMR_config.py``,
 change the ``SRC_DIR`` variable to the LMR code directory on your machine (i.e. the
 directory which contains the ``LMR_config_template.py`` file).
 
-Next, copy ``config_template.yml``, which is under version control, to ``config .yml``,
+Next, copy ``config_template.yml``, which is under version control, to ``config.yml``,
 which is not. ::
 
     cp config_template.yml config.yml

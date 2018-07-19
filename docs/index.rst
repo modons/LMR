@@ -14,13 +14,13 @@ The Last Millennium Reanalysis (LMR) code provides a framework for ensemble
 Kalman filter paleoclimate reconstructions from [Hakim2016]_.  Its modular
 design facilitates rapid prototyping and experimentation for paleoclimate
 research.  The code can be found on
-`Github <https://www.github.com/frodre/LMR>`_ and we welcome collaborators to
+`Github <https://www.github.com/modons/LMR>`_ and we welcome collaborators to
 build and improve on the framework!
 
 Version 3.0
 July 2018
 
-**Originators:**
+**Documentation contributors:**
 
 * R. Tardif, W. A. Perkins, G. J. Hakim, *University of Washington*
 * M. B. Erb, *North Arizona University*
