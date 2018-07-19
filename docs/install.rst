@@ -106,9 +106,10 @@ Retrieving LMR data
 Before running an experiment, you’ll have to download some of the source data
 for proxies, models, and instrumental analyses.
 
-#TODO Need to update the base data provided to new users.
+.. todo: Fix this tar file location for users
+
 Download this tar file:
-`LMR_data_control.tar `<http://www.atmos.washington.edu/~hakim/lmr_data/LMR_data_control.tar>`_
+`LMR_data_control.tar <http://www.atmos.washington.edu/~hakim/lmr_data/LMR_data_control.tar>`_
 and move it to a directory where you will unpack it; here we will call that
 directory /home/disk/foo/LMR_data. This directory must be readable from wherever
 you plan to perform the experiment. ::

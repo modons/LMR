@@ -10,6 +10,10 @@ In this section we’ll start with the ``LMR_lite.py`` script which can run a fu
 reconstruction but hides many of the details.  In this section we’ll run through
 a simple reconstruction that uses the base data downloaded in `sample_data`_.
 
+.. todo: Make sure the sample data actually references the sample download
+   specified in the installation
+
+
 .. note:: Many of the utility functions used in this script and in
   ``LMR_lite_utils.py`` are useful for running LMR in jupyter notebook
   environments.
