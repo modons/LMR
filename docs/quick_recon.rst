@@ -47,7 +47,7 @@ be directories for initial and long-term storage. ::
       datadir_output: /home/path/to/working_output
       archive_dir: /home/path/to/archive_output
 
-..note:: There are many more options allowing for fine control over a
+.. note:: There are many more options allowing for fine control over a
 reconstruction. Please see :ref:`configuration` for details. The sample files
 provided let you run this experiment out of the box. Other configuration changes
 may require you to recreate intermediate files associated with PSM calibration

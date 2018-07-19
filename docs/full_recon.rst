@@ -1,5 +1,9 @@
 .. _full_recon:
 
+*******************************
+Performin a Full Reconstruction
+*******************************
+
 .. warning:: This section is a WIP
 
 To run an experiment, you must edit configuration. First, in the LMR code directory,
