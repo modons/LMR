@@ -3,34 +3,48 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+******************************
+Last Millenium Reanalysis Docs
+******************************
+
 Welcome to the LMR project documentation!
 =========================================
 
-The Last Millennium reanalysis code provides a framework for ensemble Kalman
-filter paleoclimate reconstructions from [Hakim2016]_.
+The Last Millennium Reanalysis (LMR) code provides a framework for ensemble
+Kalman filter paleoclimate reconstructions from [Hakim2016]_.  Its modular
+design facilitates rapid prototyping and experimentation for paleoclimate
+research.  The code can be found on
+`Github <https://www.github.com/frodre/LMR>`_ and we welcome collaborators to
+build and improve on the framework!
 
-Version 2.0
+Version 3.0
 
 Originators: R. Tardif, W. A. Perkins, G. J. Hakim
              University of Washington
-             September 2016
+             M. B. Erb
+             North Arizona University
+             June 2018
 
-.. note:: This documentation is preliminary and will likely be updated before
- the LMR Workshop.
 
 Where to start
 --------------
-* :ref:`Quick Start Guide <quick>`
+* :ref:`install`
+* :ref:`quick_recon`
+* :ref:`full_recon`
 
 
-Introductory info
------------------
 
 .. toctree::
    :maxdepth: 1
 
-   quick
+   install
+   quick_recon
+   full_recon
    configuration
+   proxies
+   prior
+   psm
+
 
 
 Contributing to docs
@@ -38,16 +52,9 @@ Contributing to docs
 The documentation needs more work!  If you'd like to contribute please
 consider taking a bit of time to write on a topic.
 
-A few examples off information still needed are:
 
-* creating a proxy database
-* pre-calibrating observation models,
-* pre-calculating Ye values
-* running verification scripts.
-
-This list is by no means definitive.  If there's some usage of the LMR
-framework that's not described, write about it! The documentation itself is
-is written using reStructuredText format.
+If there's some usage of the LMR framework that's not described, write about it!
+The documentation itself is written using reStructuredText format.
 
 Resources
 ^^^^^^^^^
@@ -62,6 +69,7 @@ Citations
  D. M., Tardif, R., … Perkins, W. A. (2016). The Last Millennium Climate
  Reanalysis Project: Framework and First Results. Journal of Geophysical
  Research: Atmospheres. http://doi.org/10.1002/2016JD024751
+
 
 
 

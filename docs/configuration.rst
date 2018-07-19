@@ -11,8 +11,10 @@ Overview
 The LMR configuration groups a set of user defined parameters detailing
 the reconstruction experiment including: the proxy data to use, the
 fields to be reconstructed, and aspects of the data assimilation method.
-The ``config_template.yml`` file should be copied into the source directory
-as ``config.yml``.  This is the default file searched for by the code to run
+The ``config_template.yml`` and ``LMR_config_template.py`` file should be
+copied into the source directory from the ``config_templs/`` directory
+as ``config.yml`` and ``LMR_config.py``.  This is the default file searched for
+ by the code to run
 a reconstruction and holds the parameters available to users.  Use cases are
 described below followed by a general outline of the parameters available.
 
@@ -68,7 +70,7 @@ Legacy Configuration
 
 The LMR code was originally set up to use ``LMR_config.py`` as the primary
 configuration mechanism.  It provided an easy object-oriented way to
-encaspulate parameters passed around to different classes at runtime.
+encapsulate parameters passed around to different classes at runtime.
 The nature of providing parameter listings that couldn't be changed
 during an experiment at by outside references to the configuration
 reduced the readability.  To switch away from using the YAML files
@@ -121,3 +123,5 @@ Reference
 
 .. automodule:: LMR_config
    :members:
+
+
