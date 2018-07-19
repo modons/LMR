@@ -19,11 +19,13 @@ build and improve on the framework!
 
 Version 3.0
 
-Originators: R. Tardif, W. A. Perkins, G. J. Hakim
-             University of Washington
-             M. B. Erb
-             North Arizona University
-             June 2018
+Originators:
+* R. Tardif, W. A. Perkins, G. J. Hakim
+  University of Washington
+* M. B. Erb
+  North Arizona University
+  July 2018
+
 .. toctree::
    :maxdepth: 1
    :caption: Documentation
@@ -35,11 +37,6 @@ Originators: R. Tardif, W. A. Perkins, G. J. Hakim
    proxies
    prior
    psm
-
-
-
-
-
 
 Contributing to docs
 --------------------

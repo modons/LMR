@@ -1,6 +1,6 @@
 .. _quick_recon:
 
-Quick Start Reconstruction
+Quickstart reconstruction
 ==========================
 
 After getting Python installed and downloading the LMR sample data, you are now
