@@ -98,7 +98,7 @@ original Python environment.
   environment, but your path can still find the executable in your original
   installation you might not notice you're using an older/different version.
 
-.. sample_data::
+.. _sample_data:
 
 Retrieving LMR data
 ===================

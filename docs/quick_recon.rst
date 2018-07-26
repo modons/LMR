@@ -8,7 +8,7 @@ set to run a simple reconstruction of surface air temperature!
 
 In this section we’ll start with the ``LMR_lite.py`` script which runs a full
 reconstruction but hides many of the details.  In this section we’ll run through
-a simple reconstruction that uses the base data downloaded in `lmr_data`_.
+a simple reconstruction that uses the downloaded :ref:`sample data <sample_data>`.
 
 .. todo: Make sure the sample data actually references the sample download
    specified in the installation

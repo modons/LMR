@@ -68,7 +68,7 @@ How to add a new prior to the LMR
 
 4. In the LMR/misc folder, precalculate ye’s by running build_ye_file.py.
    You will need to follow the above steps 1 through 4 every time you add a new
-    prior.
+   prior.
 
 5. Run the main LMR code (LMR_wrapper.py) once you have precalculated the ye’s.
 
