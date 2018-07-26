@@ -17,8 +17,8 @@ research.  The code can be found on
 `Github <https://www.github.com/modons/LMR>`_ and we welcome collaborators to
 build and improve on the framework!
 
-Version 3.0
-July 2018
+Version |version|
+Documentation generated on |today|
 
 **Documentation contributors:**
 

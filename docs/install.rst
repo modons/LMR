@@ -16,9 +16,9 @@ You can either clone directly from the public repository::
     $ git clone https://github.com/modons/LMR.git
 
 Or download the
-`source tarball <https://github.com/frodre/LMR/tarball/production>`_::
+`source tarball <https://github.com/modons/LMR/tarball/production>`_::
 
-    $ curl -OL https://github.com/modons/LMR/tarball/master
+    $ curl -OL https://github.com/modons/LMR/tarball/production
 
 Installing Python 3
 ===================
@@ -105,20 +105,19 @@ Retrieving LMR data
 Before running an experiment, you’ll have to download some of the source data
 for proxies, models, and instrumental analyses.
 
-.. todo: Fix this tar file location for users
+.. _lmr_data: http://www.atmos.uw.edu/~wperkins/nobackup/lmr_data/LMR_data.tar.gz
 
 Download this tar file:
-`LMR_data_control.tar <http://www.atmos.washington.edu/~hakim/lmr_data/LMR_data_control.tar>`_
-and move it to a directory where you will unpack it; here we will call that
-directory /home/disk/foo/LMR_data. This directory must be readable from wherever
-you plan to perform the experiment. Extract files using::
+`lmr_data`_ and move it to a directory where you will unpack it; here we will
+call that directory /home/disk/foo/LMR_data. This directory must be readable
+from wherever you plan to perform the experiment. Extract files using::
 
-    $ tar -xvf LMR_data_control.tar
+    $ tar -xvf LMR_data.tar.gz
 
 giving you something that looks like this in the /home/disk/foo/LMR_data
 directory ::
 
-    data/  LMR_data_control.tar  PSM/
+    data/  LMR_data.tar.gz  PSM/ ye_precalc_files/
 
 This is the default directory structure, which allows the LMR framework to easily look
 for data sources in known locations.  However, non-standard data directories
@@ -152,6 +151,9 @@ simulations). And finally, the proxies folder is where the proxy databases
 The directory ``PSM/`` holds precalibrated statistical PSM files created by
 LMR_PSMbuild.py.  Anytime proxy databases are updated, or adjustments to
 statistical calibration are made, the files in this folder should be updated.
+
+The directory ``ye_precalc_files/`` holds precalculated estimated observations
+based on the current config.yml.
 
 Again, if necessary, the path to most of these files can be directly specified in the
 configuration file, but we recommend using the default directory structure.
