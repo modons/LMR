@@ -90,7 +90,7 @@ import os
 LEGACY_CONFIG = False
 
 # Absolute path to LMR source code directory
-SRC_DIR = os.path.abspath(__file__)
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Control logging output. (0 = none; 1 = most important; 2 = many; 3 = a lot;
 #   >=4 all)
