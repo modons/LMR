@@ -6,12 +6,9 @@ Quickstart reconstruction
 After getting Python installed and downloading the LMR sample data, you are now
 set to run a simple reconstruction of surface air temperature!
 
-In this section we’ll start with the ``LMR_lite.py`` script which runs a full
+In this section we’ll start with the ``LMR_lite.py`` script which runs a
 reconstruction but hides many of the details.  In this section we’ll run through
 a simple reconstruction that uses the downloaded :ref:`sample data <sample_data>`.
-
-.. todo: Make sure the sample data actually references the sample download
-   specified in the installation
 
 .. note:: Many of the utility functions used in this script and in
   ``LMR_lite_utils.py`` are useful for running LMR in jupyter notebook
@@ -34,23 +31,14 @@ The ``config_lite.yml`` file holds a subset of the configuration parameters we�
 need for the reconstruction, while ``LMR_config.py`` is the main file for all
 configuration business logic.
 
-Next, you’ll have to edit a few things in ``config_lite.yml``.
-
-First, you will set the input data location, the working directory for
-output, and the location where the reconstruction will be archived when
-it is completed. To do this, edit
-the paths defined in the ``core`` section: ``lmr_path`` should point to the
-input data folder (e.g., /home/disk/foo/LMR_data or whatever you defined when
-unzipping the sample data), while ``datadir_output`` and ``archive_dir`` should
-be directories for initial and long-term storage. ::
-
+Next, you’ll have to edit a line in ``config_lite.yml``. In this file, edit the
+path ``lmr_path`` defined in the ``core`` section.  It should be changed to
+point to the input data folder (e.g., /home/disk/foo/LMR_data or whatever you
+defined when unzipping the sample data) ::
 
     core:
       nexp: test_lmr_recon
       lmr_path: /home/path/to/LMR/
-
-      datadir_output: /home/path/to/working_output
-      archive_dir: /home/path/to/archive_output
 
 .. note:: There are many more options that allow for fine control over a
   reconstruction. Please see :ref:`configuration` for details. The sample files
@@ -61,7 +49,7 @@ be directories for initial and long-term storage. ::
 Running LMR_lite
 ----------------
 
-After making the configuration changes the reconstruction is ready for launch!
+After making the configuration change the reconstruction is ready for launch!
 
 If you installed an Anaconda environment, make sure that you have the correct
 one activated. E.g., ::
@@ -72,11 +60,12 @@ Then you can run a reconstruction using::
 
     $ (lmr_py3) python LMR_lite.py
 
-T code will print out reconstruction progress in your
-terminal.  As the reconstruction finishes you'll see ...
+The code will print out reconstruction progress in your terminal.
 After the reconstruction is finished you’ll see the total
-time elapsed and commands the code issues to move the finished reconstruction files to the
-archive directory.  And that’s all for a simple reconstruction!  For an in-depth
+time elapsed, a few plot windows will open up if you are running locally, and
+you'll see that a file of analyzed output will be saved in the source directory
+(analyses_1900_2000_1880_2000.npz). And that’s all for a simple
+reconstruction!  For an in-depth
 description of configuring and running a reconstruction from start to finish
 please see :ref:`full_recon`.
 
@@ -113,6 +102,11 @@ Example end of reconstruction output
     -----------------------------------------------------
     Reconstruction completed in 9.480862776438395 mins
     -----------------------------------------------------
+
+Figure of global mean temperatures against analysis data produced by
+``LMR_lite.py``.
+
+.. image:: ../lite_testing_GMT_annual.png
 
 
 
