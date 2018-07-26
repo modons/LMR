@@ -115,10 +115,10 @@ proxies:
       Lake Cores_GeoChem:             linear
       Lake Cores_Misc:                linear
       Marine Cores_d18O:              linear
-      Tree Rings_WidthPages2:         linear
-      Tree Rings_WidthBreit:          linear
-      Tree Rings_WoodDensity:         linear
-      Tree Rings_Isotopes:            linear
+      Tree Rings_WidthPages2:         bilinear
+      Tree Rings_WidthBreit:          bilinear
+      Tree Rings_WoodDensity:         bilinear
+      Tree Rings_Isotopes:            bilinear
       Speleothems_d18O:               linear
       Bivalve_d18O:                   linear
 
@@ -156,7 +156,6 @@ prior:
 
   state_variables:
     tas_sfc_Amon: anom
-    pr_sfc_Amon: anom
 
   detrend: False
 
