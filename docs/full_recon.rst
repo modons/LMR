@@ -6,7 +6,7 @@ Performing a full reconstruction
 
 This section gives a brief walkthrough of the necessary steps for running a full
 LMR reconstruction including: configuration, setting up proxies, PSMs, and
-usage of pre-calculated observation.
+usage of pre-calculated observations.
 
 Building the proxy database
 ===========================
@@ -70,13 +70,13 @@ The proxy system models (PSMs) are essential for translating our
 reconstructed fields (in climate model space) to something comparable to the
 proxy data (observation space).  We implement a few different statistical
 regressions that fit proxies against instrumental data to form a PSM.  These
-models are fit using annual or meta-data-defined seasonal averages and a
+models are fit using annual or seasonal averages and a
 univariate or bivariate fit to moisture and temperature variables.
 
 The ``LMR_PSMbuild.py`` script creates the pickle files found in the
-``LMR_data/PSM/`` directory.  This file still uses the legacy
+``LMR_data/PSM/`` directory.  This file still uses a legacy
 configuration style, so at first glance it's a bit more dense than other
-configuration interactions.  The parameters for users are denoted between the
+configuration interactions. The parameters for users are denoted between the
 makers::
 
     ##** BEGIN User Parameters **##
@@ -85,7 +85,7 @@ makers::
 
     ##** END User Parameters **##
 
-Below user parameters are described for each configuration section of
+Below, user parameters are described for each configuration section of
 ``LMR_PSMbuild.py``.  After setting the relevant parameters for desired PSM
 calibration, create the files using the command::
 
@@ -96,8 +96,8 @@ class v_core
 
 * **lmr_path**: Path to LMR input data folders (e.g., /home/disk/foo/LMR_data/)
 * **psm_type**: Setting to use 'linear' or 'bilinear' statistical PSM
-* **anom_reference_period**: The period to set as the reference for all proxy
-  PSMs
+* **anom_reference_period**: The time period over which the average is
+  taken to use as the reference value for all proxy PSMs
 * **calib_period**: Years over which proxy and instrumental data are used to
   calibrate the PSM
 
@@ -105,7 +105,7 @@ class v_proxies
 ---------------
 
 * **use_from**: Which proxy database to use for calibration (['PAGES2kv1'] or
-  ['LMRdb'], both are provided for ease of swapping via commenting out.)
+  ['LMRdb'])
 
 class v_psm
 -----------
@@ -150,7 +150,7 @@ code directory for LMR.  Wherever you cloned/downloaded the source code
 (we’ll use the path /home/disk/foo/LMR_src for our code directory) there should
 be a ``config_templs/`` folder which holds configuration templates.
 From the LMR_src directory, there are two files you need to copy to
-there to perform an experiment::
+ run an experiment::
 
     $ cp config_templs/config_template.yml ./config.yml
     $ cp config_templs/LMR_config_template.py ./LMR_config.py
@@ -163,43 +163,54 @@ Important options for a reconstruction
 --------------------------------------
 
 * **core**
+
   * **nexp**: Experiment name
   * **lmr_path**: Path to LMR_data directory
   * **datadir_output**: Working directory to temporarily store LMR output files
   * **archive_dir**: Archive directory to store final post-processed LMR output
   * **recon_period**: Range of years (edge inclusive) to reconstruct
-  * **nens**: Number of prior ensembe members (should generally be above 50)
-  * **save_archive**: Detail of field output. 'ens_variance' and
-    'ens_percentiles' are more econmical, while 'ens_subsample' and
+  * **nens**: Number of prior ensemble members (should generally be above 50)
+  * **save_archive**: Ensemble detail of field output. 'ens_variance' and
+    'ens_percentiles' are more econmical reductions, while 'ens_subsample' and
     'ens_full' store full-field ensemble members and can use large amounts of
      disk space
   * **seed**: Sets the RNG seed to ensure reproducability for the ensemble
-    sample and proxy record sample.  WARNING: overwritten by wrapper .multi_seed
+    sample and proxy record sample.  WARNING: overwritten by wrapper.multi_seed
     and should not be used when running multiple iterations of a
     reconstruction.
+
 * **proxies**
+
   * **use_from**: Which proxy database to use for the reconstruction. [LMRdb]
     or [PAGES2kv1]
   * **proxy_frac**: Fraction of available proxy records to use. Useful for
-    independent verification on withheld
+    independent verification on withheld proxies
   * **proxy_order** (Database specific): Order of assimilation for proxy
-    records. Commenting out proxy groups here will remove them from the
+    records. Commenting out proxy groups here will omit them from use in the
     reconstruction
   * **proxy_psm_type** (Database specific): Specifies which PSM type to be
     used for which proxy groups. E.g., Tree ring_Width: bilinear
+  * (database specific means there are separate configuration settings for
+    each proxy database)
+
 * **psm**
-  * **calib_period**: Distinction of instrumental period to calibrate PSMs to
+
+  * **calib_period**: Distinction of instrumental time period to calibrate PSMs to
   * **avgPeriod**: Whether to use annual or seasonal averages to calibrate PSMs
-  * **season_source** (Only used for seasonal PSMs): Use season defined in
-    the proxy metadata or an objectively derived best season
+  * **season_source** (Only used for seasonal PSMs): Use season defined by
+    the proxy metadata or an objectively-derived best season
   * **datatag_calib** (PSM dependent): Which instrumental data source to use
-    for calibration. Options defined by ``all_calib_sources``
+    for calibration. Options defined in ``all_calib_sources`` parameter
+
 * **prior**
+
   * **prior_source**: Experiment tag to use as source data for the prior
     ensemble.  Should match the tag defined in datasets.yml
   * **state_variables**: Which state variables to reconstruct and output.  If
     not using pre-calculated Ye-values (estimated observations) the
-    PSM-required-variables must be listed.  'anom' uses anomaly values for the
+    PSM-required-variables must be listed (i.e., temperature and/or moisture
+    fields).  The associated value after each field can be either 'anom' or
+    'full'.  'anom' uses anomaly values for the
     prior. 'full' uses original non-centered data for the prior and is not
     guaranteed to work in all cases.
   * **regrid_method**: Specification for regridding data that is loaded in
@@ -210,51 +221,57 @@ Important options for a reconstruction
     truncation.  E.g., 42 is a 44x66 grid.)
   * **esmpy_interp_method** (esmpy only): Which interpolation method to use
     ('bilinear' or 'patch')
-  * **esmpy_regrid_to** (esmpy only): Grid definition tag to regrid to as
-    defined in ``grid_def.yml``
+  * **esmpy_regrid_to** (esmpy only): Target regrid definition tag defined
+    in ``grid_def.yml``
 
-Important options for a Monte-Carlo iteration
+Important options for a Monte-Carlo (MC) iteration
 ---------------------------------------------
 
 Advantages of the LMR framework include the capacity to run many realizations
-of a reconstruction by subsampling the input data.  This generates uncertainty
+of a reconstruction by sampling from the input data.  This generates uncertainty
 bounds on reconstructed output and is an essential product for determining the
 robustness of reconstructed signals.  There are a few options in the
 configuration important for MC operations.
 
 * **wrapper**
+
   * **iter_range**: Number range to perform iterations over.  [0, 5] will
-    output 5 different directories named r0 - r5.  One can easily distribute
+    output reconstructions to 5 different directories named r0 - r5.  One
+    can easily distribute
     runs on an a cluster by farming out different iteration ranges. E.g., set
-    the range as [0, 5] on one node and [6, 10] on another.
+    the range as [0, 5] for a reconstruction on one machine and [6, 10] on another.
   * **multi_seed**: Seeds for creating reproducible iterations.  Must be of
     length such that indexing from the ``iter_range`` number is not out of
     bounds.
+
 * **core**
+
   * **nens**: Number of prior ensembe members (should generally be above 50).
     This is resampled for each iteration.
+
 * **proxies**
+
   * **proxy_frac**: Fraction of available proxy records to use. Useful for
     independent verification on withheld proxies. Resampled for each iteration.
 
 Pre-calculating estimated observations (Ye values)
 ==================================================
 
-For offline reconstructions estimated observations from the prior sample are
+For offline reconstructions, estimated observations from the prior sample are
 re-used each year.  If we are not interested in outputting a field required for
 the PSM, the Ye values (estimated observations) can be calculated and the field
 ommitted. This saves memory and disk space and allows for individual fields
 to be reconstructed separately when using RNG seeding (i.e., ``multi_seed`` for
-Monte-Carlo reconstructions).
+MC reconstructions).
 
-To enable this we first need to create the pre-calculated Ye file.  After
-setting up the config.yml ``cd`` into the ``misc/`` directory and run
+To enable this, we first need to create the pre-calculated Ye file.  After
+setting up the config.yml, ``cd`` into the ``misc/`` directory and run
 the command::
 
     (lmr_py3) $ python build_ye_file.py <path/to/desired/config.yml>
 
-If no configuration file is provided as a command-line argument, the
-``config.yml`` in the source code directory is used.  It builds the Ye file
+If no configuration file is provided as a command-line argument, the code
+uses ``config.yml`` in the source code directory. This script builds the Ye file
 based on the chosen proxy database, PSMs and averaging period, and the prior
 source.  Numpy zip files contining the calculated Ye values are output in the
 ``lmr_path`` directory under ``ye_precalc_files``.
