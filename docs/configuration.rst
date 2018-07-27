@@ -123,12 +123,17 @@ Reference
 
 .. automodule:: LMR_config
    :members: update_config_class_yaml
+
    .. autoclass:: core
+
    .. autoclass:: proxies
       :members: PAGES2kv1, LMRdb
+
    .. autoclass:: psm
       :members: linear, bilinear, h_interp
+
    .. autoclass:: prior
+
    .. autoclass:: Config
 
 
