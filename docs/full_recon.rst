@@ -150,7 +150,7 @@ code directory for LMR.  Wherever you cloned/downloaded the source code
 (we’ll use the path /home/disk/foo/LMR_src for our code directory) there should
 be a ``config_templs/`` folder which holds configuration templates.
 From the LMR_src directory, there are two files you need to copy to
- run an experiment::
+run an experiment::
 
     $ cp config_templs/config_template.yml ./config.yml
     $ cp config_templs/LMR_config_template.py ./LMR_config.py
@@ -173,7 +173,7 @@ Important options for a reconstruction
   * **save_archive**: Ensemble detail of field output. 'ens_variance' and
     'ens_percentiles' are more econmical reductions, while 'ens_subsample' and
     'ens_full' store full-field ensemble members and can use large amounts of
-     disk space
+    disk space
   * **seed**: Sets the RNG seed to ensure reproducability for the ensemble
     sample and proxy record sample.  WARNING: overwritten by wrapper.multi_seed
     and should not be used when running multiple iterations of a
@@ -225,7 +225,7 @@ Important options for a reconstruction
     in ``grid_def.yml``
 
 Important options for a Monte-Carlo (MC) iteration
----------------------------------------------
+--------------------------------------------------
 
 Advantages of the LMR framework include the capacity to run many realizations
 of a reconstruction by sampling from the input data.  This generates uncertainty
