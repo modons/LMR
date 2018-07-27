@@ -641,7 +641,7 @@ class v_psm(object):
     # If set to True, refer back to the appropriate proxy class above
     # (proxy_psm_seasonality dict.) to set which proxy type(s) and associated seasons
     # will be considered.
-    test_proxy_seasonality = True
+    test_proxy_seasonality = False
     
     ##** END User Parameters **##
 
