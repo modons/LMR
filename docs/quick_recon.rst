@@ -24,7 +24,7 @@ be a ``config_templs/`` folder which holds configuration templates.
 From the LMR_src directory, there are two files you need to copy to
 there to perform an experiment::
 
-    $ cp config_templs/confg_lite_template.yml ./config_lite.yml
+    $ cp config_templs/config_lite_template.yml ./config_lite.yml
     $ cp config_templs/LMR_config_template.py ./LMR_config.py
 
 The ``config_lite.yml`` file holds a subset of the configuration parameters we’ll
