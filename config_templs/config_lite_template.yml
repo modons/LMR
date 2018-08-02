@@ -72,7 +72,7 @@ proxies:
       Speleothem_All:        linear
 
   LMRdb:
-    dbversion: 'v0.4.0'
+    dbversion: 'v1.0.0'
     datadir_proxy: null
     datafile_proxy: 'LMRdb_{}_Proxies.df.pckl'
     metafile_proxy: 'LMRdb_{}_Metadata.df.pckl'

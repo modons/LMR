@@ -50,7 +50,7 @@ proxy_db = 'LMRdb'
 
 # Version of the database to query (for proxy_db = LMRdb only)
 #dbversion = 'v0.3.0'
-dbversion = 'v0.4.0'
+dbversion = 'v1.0.0'
 
 # Filter on proxy temporal resolution (range is inclusive)
 temporal_resolution_range = (1,1); resolution_tag = 'annual'
@@ -62,7 +62,7 @@ temporal_resolution_range = (1,1); resolution_tag = 'annual'
 #output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/PAGES2kv1/Figs/"
 #output_directory = "/home/disk/kalman3/rtardif/LMR/data/proxies/LMRdb/Figs/summary_v0.2.0/"
 #output_directory = "/home/disk/kalman3/rtardif/LMRpy3/data/proxies/LMRdb/Figs/summary_v0.3.0/"
-output_directory = "/home/disk/kalman3/rtardif/LMRpy3/data/proxies/LMRdb/Figs/summary_v0.4.0/"
+output_directory = "/home/disk/kalman3/rtardif/LMRpy3/data/proxies/LMRdb/Figs/summary_v1.0.0/"
 
 # Swith to indicate whether you want the figure to the produced on-screen (False)
 # or save in .png files (True)

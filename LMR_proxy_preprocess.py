@@ -91,7 +91,8 @@ def main():
     # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0). stored in .pklz file
     #LMRdb_dbversion = 'v0.2.0'
     #LMRdb_dbversion = 'v0.3.0'
-    LMRdb_dbversion = 'v0.4.0'
+    # LMRdb_dbversion = 'v0.4.0'
+    LMRdb_dbversion = 'v1.0.0'
 
     # File containing info on duplicates in proxy records
     infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMR'+LMRdb_dbversion+'.xlsx'
