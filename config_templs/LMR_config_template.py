@@ -1786,11 +1786,13 @@ def update_config_class_yaml(yaml_dict, cfg_module):
     Examples
     --------
     If cfg_module is an imported LMR_config as cfg then the following
-    dictionary could be used to update a core and linear psm attribute.
-    yaml_dict = {'core': {'lmr_path': '/new/path/to/LMR_files'},
-                 'psm': {'linear': {'datatag_calib': 'GISTEMP'}}}
+    dictionary could be used to update a core and linear psm attribute::
 
-    These are the types of dictionaries that result from a yaml.load function.
+        yaml_dict = {'core': {'lmr_path': '/new/path/to/LMR_files'},
+                     'psm': {'linear': {'datatag_calib': 'GISTEMP'}}}
+
+    These are the same types of dictionaries that result from a yaml.load
+    function.
 
     Warnings
     --------
