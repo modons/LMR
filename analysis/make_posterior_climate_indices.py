@@ -37,18 +37,18 @@ def main():
     experiment_sst = os.path.join(data_dir,
                                   experiment_name + sst_exp_name_postfix,
                                   'sst_MCruns_ensemble_subsample.nc')
-    with Dataset(experiment_sst, 'r') as sst_ncf:
-        sst_all = sst_ncf.variables['sst'][:]
-        lon = sst_ncf.variables['lon'][:]
-        lat = sst_ncf.variables['lat'][:]
-        time_days = sst_ncf['time'][:]
+    sst_ncf = Dataset(experiment_sst, 'r')
+    sst_all = sst_ncf.variables['sst']
+    lon = sst_ncf.variables['lon'][:]
+    lat = sst_ncf.variables['lat'][:]
+    time_days = sst_ncf['time'][:]
 
     experiment_psl = os.path.join(data_dir,
                                   experiment_name + psl_exp_name_postfix,
                                   'prmsl_MCruns_ensemble_subsample.nc')
 
-    with Dataset(experiment_psl, 'r') as psl_ncf:
-        psl_all = psl_ncf.variables['prmsl'][:]
+    psl_ncf = Dataset(experiment_psl, 'r')
+    psl_all = psl_ncf.variables['prmsl']
 
     years = time_days/365
     years = years.astype(int)
@@ -91,6 +91,9 @@ def main():
 
             curr_nino34 = calculate_nino34(curr_sst, lat, lon)
             nino34[:, iteration, ens_member] = curr_nino34
+
+    sst_ncf.close()
+    psl_ncf.close()
 
     # OUTPUT THE DATA TO A FILE
 
@@ -195,6 +198,7 @@ def calculate_pdo(sst, lat, lon):
     # Compute the global-mean and remove the global-mean SST from the data.
     sst_globalmean = global_mean_masked(sst, lat)
     sst_anomalies = sst - sst_globalmean[:, None, None]
+    sst_anomalies = sst_anomalies.filled(np.nan)
 
     # Find the i and j values which cover the Pacific Ocean north of 20N
     # All latitudes between 20 and 66N
@@ -234,9 +238,9 @@ def calculate_pdo(sst, lat, lon):
     eofs, svals, pcs = svd(wgt_compressed_sst.T, full_matrices=False)
 
     # Put EOFs back into non-compressed field
-    full_space_eof = np.empty((spatial_len, ntimes)) * np.nan
-    full_space_eof[finite_mask, :] = eofs
-    eof_1 = full_space_eof[0, :].reshape(spatial_shape)
+    full_space_eof = np.empty(spatial_len) * np.nan
+    full_space_eof[finite_mask] = eofs[:, 0]
+    eof_1 = full_space_eof.reshape(spatial_shape)
     pc_1 = pcs[0]
 
     # Compute EOF
