@@ -18,11 +18,13 @@ research.  The code can be found on
 build and improve on the framework!
 
 Version |version|
-Documentation generated on |today|
+
+Documentation generated: |today|
 
 **Documentation contributors:**
 
-* R. Tardif, W. A. Perkins, G. J. Hakim, *University of Washington*
+* R. Tardif, W. A. Perkins, G. J. Hakim, M. K. Brennan, J. A. Badgeley,
+  L. A. Parsons, *University of Washington*
 * M. B. Erb, *North Arizona University*
 
 .. toctree::
@@ -39,12 +41,13 @@ Documentation generated on |today|
 
 Contributing to docs
 --------------------
-The documentation needs more work!  If you'd like to contribute please
+The documentation needs more work!  If you'd like to contribute, please
 consider taking a bit of time to write on a topic.
 
 
 If there's some usage of the LMR framework that's not described, write about it!
-The documentation itself is written using reStructuredText format.
+The documentation is written using reStructuredText format and generated
+using Sphinx.
 
 Resources
 ^^^^^^^^^

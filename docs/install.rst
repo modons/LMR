@@ -107,10 +107,10 @@ for proxies, models, and instrumental analyses.
 
 .. _lmr_data: http://www.atmos.uw.edu/~wperkins/nobackup/lmr_data/LMR_data.tar.gz
 
-Download this tar file:
-`lmr_data`_ and move it to a directory where you will unpack it; here we will
-call that directory /home/disk/foo/LMR_data. This directory must be readable
-from wherever you plan to perform the experiment. Extract files using::
+Download this tar file, `LMR_data.tar.gz`_, and move it to a directory where
+you will unpack it; here we will call that directory /home/disk/foo/LMR_data.
+This directory must be readable from wherever you plan to perform the
+experiment. Extract files using::
 
     $ tar -xvf LMR_data.tar.gz
 
