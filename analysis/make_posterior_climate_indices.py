@@ -17,6 +17,9 @@
 #    - Cleaned up formatting for clairty and some move towards PEP8 compliance
 #    - Simplified some of the numpy usage for weighted means, anomaly
 #      calculations, and standardization
+#    - Changed the PDO calculation to find the pattern on the grand ensemble
+#      mean and then use that pattern to determine an index for each ensemble
+#      member.  Still assumes that the first ensemble mean EOF is the PDO.
 #=============================================================================
 
 import numpy as np
@@ -43,6 +46,13 @@ def main():
     lat = sst_ncf.variables['lat'][:]
     time_days = sst_ncf['time'][:]
 
+    # Load Ensemble Mean and take average over MC-iterations for PDO calc
+    exp_sst_ensmean = os.path.join(data_dir,
+                                   experiment_name + sst_exp_name_postfix,
+                                   'sst_MCruns_ensemble_mean.nc')
+    with Dataset(exp_sst_ensmean, 'r') as sst_ensmean_ncf:
+        sst_grand_mean = sst_ensmean_ncf.variables['sst'][:].mean(axis=1)
+
     experiment_psl = os.path.join(data_dir,
                                   experiment_name + psl_exp_name_postfix,
                                   'prmsl_MCruns_ensemble_subsample.nc')
@@ -59,7 +69,6 @@ def main():
     nyears = years.shape[0]
     niter = sst_all.shape[1]
     nens = sst_all.shape[4]
-    pdo_pattern = {}
 
     # Initialize nan arrays
     pdo = np.empty((nyears, niter, nens)) * np.nan
@@ -67,8 +76,17 @@ def main():
     soi = np.empty((nyears, niter, nens)) * np.nan
     nino34 = np.empty((nyears, niter, nens)) * np.nan
 
+    [ensmean_pdo_patt,
+     ensmean_pdo_idx,
+     lat_npac,
+     lon_npac] = calculate_pdo(sst_grand_mean, lat, lon)
+
+    pdo_pat_out = os.path.join(output_dir,
+                               'ensmean_pdo_pattern_index.npz')
+    np.savez(pdo_pat_out, pdo_pattern=ensmean_pdo_patt,
+             pdo_idx=ensmean_pdo_idx, lat_npac=lat_npac, lon_npac=lon_npac)
+
     for iteration in range(niter):
-        pdo_pattern[iteration] = {}
         for ens_member in range(nens):
             print('\n === Calculating climate indices.  Iteration: ' +
                   str(iteration+1) + '/' + str(niter) +
@@ -78,10 +96,9 @@ def main():
             curr_sst = sst_all[:, iteration, :, :, ens_member]
             curr_psl = psl_all[:, iteration, :, :, ens_member]
 
-            [curr_pdo_patt,
-             pdo_vals] = calculate_pdo(curr_sst, lat, lon)
-            pdo_pattern[iteration][ens_member] = curr_pdo_patt
-            pdo[:, iteration, ens_member] = pdo_vals
+            curr_pdo_idx = calculate_pdo_index(ensmean_pdo_patt,
+                                               curr_sst, lat, lon)
+            pdo[:, iteration, ens_member] = curr_pdo_idx
 
             curr_amo = calculate_amo(curr_sst, lat, lon)
             amo[:, iteration, ens_member] = curr_amo
@@ -109,13 +126,33 @@ def main():
     outfile.createDimension('time', nyears)
     outfile.createDimension('member', niter)
     outfile.createDimension('ensemble_member', nens)
+    outfile.createDimension('lat_npac', len(lat_npac))
+    outfile.createDimension('lon_npac', len(lon_npac))
 
     # define variables & upload the data to file
 
     # time
     time = outfile.createVariable('time', 'i', ('time',))
     time.description = 'time'
-    time.long_name = 'time since 0000-01-01 00:00:00'
+    time.units = 'time since 0000-01-01 00:00:00'
+
+    varout_ensmean_pdo_patt = outfile.createVariable('ensmean_pdo_pattern',
+                                                     'f',
+                                                     ('lat_npac', 'lon_npac'))
+    varout_ensmean_pdo_patt.description = 'ensmean_pdo_pattern'
+    varout_ensmean_pdo_patt.long_name = 'Pacific Decadal Oscillation Pattern'
+    varout_ensmean_pdo_patt.units = ''
+    varout_ensmean_pdo_patt.level = 'sfc'
+
+    varout_lat_npac = outfile.createVariable('lat_npac', 'f', ('lat_npac',))
+    varout_lat_npac.description = 'North Pacific latitudes for PDO Pattern'
+    varout_lat_npac.long_name = 'North Pacific latitudes'
+    varout_lat_npac.units = 'Degrees latitude'
+
+    varout_lon_npac = outfile.createVariable('lon_npac', 'f', ('lon_npac',))
+    varout_lon_npac.description = 'North Pacific longitudes for PDO Pattern'
+    varout_lon_npac.long_name = 'North Pacific longitudes'
+    varout_lon_npac.units = 'Degrees longitude'
 
     varout_amo = outfile.createVariable('amo', 'f', ('time','member','ensemble_member'))
     varout_amo.description = 'amo'
@@ -147,6 +184,9 @@ def main():
     varout_pdo[:]    = pdo
     varout_soi[:]    = soi
     varout_nino34[:] = nino34
+    varout_ensmean_pdo_patt[:] = ensmean_pdo_patt
+    varout_lat_npac[:] = lat_npac
+    varout_lon_npac[:] = lon_npac
 
     # Closing the file
     outfile.close()
@@ -157,20 +197,59 @@ def main():
 def global_mean_masked(variable, lats):
     lat_weights = np.cos(np.radians(lats))
     wgt_variable = variable * lat_weights[:, None]
-    variable_global = np.ma.mean(wgt_variable, axis=(1,2))
+    variable_global = np.ma.mean(wgt_variable, axis=(1, 2))
     return variable_global
 
 
-# This function takes a time-lat-lon variable and computes the mean for a given
-# range of i and j.
-def spatial_mean(variable, lats, j_min, j_max, i_min, i_max):
-    print('Computing spatial mean. i={}-{}, j={}-{}. Points are inclusive.'
-          ''.format(i_min, i_max, j_min, j_max))
-    variable_zonal = np.nanmean(variable[:, :, i_min:i_max+1], axis=2)
-    lat_weights = np.cos(np.radians(lats))
-    wgt_zonal = variable_zonal * lat_weights
-    variable_mean = wgt_zonal[:, j_min:j_max+1].mean(axis=1)
-    return variable_mean
+def spatial_mean_bounded(variable, lat, lon, lat_bnds, lon_bnds):
+    print('Computing spatial mean. lat={}-{}, lon={}-{}. Points are inclusive.'
+          ''.format(*lat_bnds, *lon_bnds))
+
+    [reduced_var,
+     reduced_lat,
+     reduced_lon] = reduce_to_lat_lon_box(variable, lat, lon,
+                                          lat_bnds, lon_bnds)
+
+    avg_over_lat = global_mean_masked(reduced_var, reduced_lat)
+
+    return avg_over_lat
+
+
+# This functions takes a field reduces it to lat/lon boundaries
+def reduce_to_lat_lon_box(field, lat, lon, lat_bnds, lon_bnds):
+    lat_lb, lat_ub = lat_bnds
+    lon_lb, lon_ub = lon_bnds
+
+    lat_mask = (lat >= lat_lb) & (lat <= lat_ub)
+    lon_mask = (lon >= lon_lb) & (lon <= lon_ub)
+
+    lon_compressed = lon[lon_mask]
+    lat_compressed = lat[lat_mask]
+
+    field_compressed = np.compress(lon_mask, field, axis=2)
+    field_compressed = np.compress(lat_mask, field_compressed, axis=1)
+
+    return field_compressed, lat_compressed, lon_compressed
+
+
+def remove_spatial_nans(field):
+
+    assert field.ndim > 1
+
+    # Flatten spatial dimension
+    ntimes = field.shape[0]
+    flat_field = field.reshape(ntimes, -1)
+
+    # Find NaN values in spatial dimension and remove them
+    nan_vals = np.isnan(flat_field)
+    total_nan_vals = nan_vals.sum(axis=0)
+    # No NaNs if sum == 0
+    finite_mask = total_nan_vals == 0
+
+    compressed_field = np.compress(finite_mask, flat_field, axis=1)
+
+    return compressed_field, finite_mask
+
 
 
 def calculate_pdo(sst, lat, lon):
@@ -194,59 +273,39 @@ def calculate_pdo(sst, lat, lon):
     # Remove the mean SSTs from the data.
     sst = sst - np.mean(sst, axis=0)
 
-    # TODO: Is this correct?
     # Compute the global-mean and remove the global-mean SST from the data.
     sst_globalmean = global_mean_masked(sst, lat)
     sst_anomalies = sst - sst_globalmean[:, None, None]
     sst_anomalies = sst_anomalies.filled(np.nan)
 
-    # Find the i and j values which cover the Pacific Ocean north of 20N
-    # All latitudes between 20 and 66N
-    j_indices = np.where((lat >= 20) & (lat <= 66))[0]
-    # All longitudes between 100E and 100W
-    i_indices = np.where((lon >= 100) & (lon <= (360-100)))[0]
-    j_min = min(j_indices)
-    j_max = max(j_indices)
-    i_min = min(i_indices)
-    i_max = max(i_indices)
-    print('Computing mean of indices.  j: {}-{}, i: {}-{}'
-          ''.format(j_min, j_max, i_min, i_max))
-    sst_for_PDO_NPac = sst_anomalies[:, j_min:j_max+1, i_min:i_max+1]
+    # Reduce field to all latitudes between 20-66N and 100E-100W
+    [sst_for_PDO_NPac,
+     lat_NPac,
+     lon_NPac] = reduce_to_lat_lon_box(sst_anomalies, lat, lon,
+                                       lat_bnds=(20, 66),
+                                       lon_bnds=(100, 260))
 
-    lon_NPac = lon[i_min:i_max+1]
-    lat_NPac = lat[j_min:j_max+1]
-    lon_NPac_2D,lat_NPac_2D = np.meshgrid(lon_NPac, lat_NPac)
+    # lon_NPac = lon[i_min:i_max+1]
+    # lat_NPac = lat[j_min:j_max+1]
+    lon_NPac_2D, lat_NPac_2D = np.meshgrid(lon_NPac, lat_NPac)
 
     # Area weights are equilivent to the cosine of the latitude.
     weights_NPac = np.cos(np.radians(lat_NPac_2D))
-
-    ntimes = sst_for_PDO_NPac.shape[0]
     spatial_shape = sst_for_PDO_NPac.shape[1:3]
 
-    # Flatten spatial dimension
-    flat_spatial_sst = sst_for_PDO_NPac.reshape(ntimes, -1)
-    spatial_len = flat_spatial_sst.shape[1]
-
-    # Find NaN values in spatial dimension and remove them
-    nan_vals = np.isnan(flat_spatial_sst)
-    total_nan_vals = nan_vals.sum(axis=0)
-    finite_mask = total_nan_vals == 0
-    compressed_sst = np.compress(finite_mask, flat_spatial_sst, axis=1)
+    [compressed_sst,
+     valid_data] = remove_spatial_nans(sst_for_PDO_NPac)
 
     # Weight compressed field by latitude and calculate EOFs
-    wgt_compressed_sst = compressed_sst * weights_NPac.flatten()[finite_mask]
+    wgt_compressed_sst = compressed_sst * weights_NPac.flatten()[valid_data]
     eofs, svals, pcs = svd(wgt_compressed_sst.T, full_matrices=False)
 
     # Put EOFs back into non-compressed field
-    full_space_eof = np.empty(spatial_len) * np.nan
-    full_space_eof[finite_mask] = eofs[:, 0]
+    full_space_eof = np.empty_like(valid_data,
+                                   dtype=np.float) * np.nan
+    full_space_eof[valid_data] = eofs[:, 0]
     eof_1 = full_space_eof.reshape(spatial_shape)
     pc_1 = pcs[0]
-
-    # Compute EOF
-    # solver = Eof(sst_for_PDO_NPac,weights=weights_NPac)
-    # eof_1 = solver.eofs(neofs=1)  # First EOF
-    # pc_1 = solver.pcs(npcs=1)     # First principle component
 
     PDO_pattern = np.squeeze(eof_1)
     PDO_index = np.squeeze(pc_1)
@@ -261,7 +320,32 @@ def calculate_pdo(sst, lat, lon):
     # Normalize the PDO index
     PDO_index_normalized = PDO_index/np.std(PDO_index)
 
-    return PDO_pattern, PDO_index_normalized
+    return PDO_pattern, PDO_index_normalized, lat_NPac, lon_NPac
+
+
+def calculate_pdo_index(pdo_pattern, sst, lat, lon):
+    """
+    Projects PDO pattern on to data.  Assumes sst field is time x lat x lon.
+    """
+    if np.ma.is_masked(sst):
+        sst = sst.filled(np.nan)
+
+    # Reduce field to all latitudes between 20-66N and 100E-100W
+    sst_for_PDO, _, _ = reduce_to_lat_lon_box(sst, lat, lon,
+                                              lat_bnds=(20, 66),
+                                              lon_bnds=(100, 260))
+
+    # Remove NaN values
+    [compressed_sst,
+     valid_data] = remove_spatial_nans(sst_for_PDO)
+
+    # Remove NaN value locations in sst field from PDO pattern
+    pdo_pattern = pdo_pattern.flatten()[valid_data]
+
+    pdo_index = compressed_sst @ pdo_pattern
+    pdo_index = pdo_index / pdo_index.std()
+
+    return pdo_index
 
 
 def calculate_amo(sst, lat, lon):
@@ -284,35 +368,19 @@ def calculate_amo(sst, lat, lon):
     # Remove the mean SSTs from the data.
     sst = sst - np.mean(sst, axis=0)
 
-    # Compute the mean over the North Atlantic region (0-60N, 80W-0)
-    # All latitudes between 0 and 60N
-    j_indices = np.where((lat >= 0) & (lat <= 60))[0]
-    # All longitudes between 80W and 0W
-    i_indices = np.where((lon >= (360-80)) & (lon <= 360))[0]
-    j_min = min(j_indices)
-    j_max = max(j_indices)
-    i_min = min(i_indices)
-    i_max = max(i_indices)
-    print('Computing mean of indices.  j: {}-{}, i:{}-{}'
-          ''.format(j_min, j_max, i_min, i_max))
-    sst_mean_NAtl = spatial_mean(sst, lat, j_min, j_max, i_min, i_max)
+    # Reduce field and average to lats from 0-60N and 80W - 0W
+    sst_mean_NAtl = spatial_mean_bounded(sst, lat, lon,
+                                         lat_bnds=(0, 60),
+                                         lon_bnds=(280, 360))
 
-    # Compute the mean SST from 60S-60N.
-    # All latitudes between 60S and 60N
-    j_indices = np.where((lat >= -60) & (lat <= 60))[0]
-    # All longitudes
-    i_indices = np.where((lon >= -0) & (lon <= 360))[0]
-    j_min = min(j_indices)
-    j_max = max(j_indices)
-    i_min = min(i_indices)
-    i_max = max(i_indices)
-    print('Computing mean of indices.  j: {}-{}, i: {}-{}'
-          ''.format(j_min, j_max, i_min, i_max))
-    sst_mean_60S_60N = spatial_mean(sst, lat, j_min, j_max, i_min, i_max)
-    #
+    # Reduce field and average to lats from 60S-60N
+    sst_mean_60S_60N = spatial_mean_bounded(sst, lat, lon,
+                                            lat_bnds=(-60, 60),
+                                            lon_bnds=(0, 360))
+
     # Compute the AMO index
     AMO_index = sst_mean_NAtl - sst_mean_60S_60N
-    #
+
     return AMO_index
 
 
@@ -385,19 +453,9 @@ def calculate_nino34(sst, lat, lon):
     # Remove the mean SSTs from the data.
     sst = sst - np.mean(sst, axis=0)
 
-    # Compute the mean over the Nino3.4 region (0-60N, 80W-0)
-    # All latitudes between 5S and 5N
-    j_indices = np.where((lat >= -5) & (lat <= 5))[0]
-    # All longitudes between 170W and 120W
-    i_indices = np.where((lon >= (360-170)) & (lon <= (360-120)))[0]
-    j_min = min(j_indices)
-    j_max = max(j_indices)
-    i_min = min(i_indices)
-    i_max = max(i_indices)
-    print('Computing mean of indices.  j: {}-{}, i: {}-{}'
-          ''.format(j_min, j_max, i_min, i_max))
-
-    Nino34 = spatial_mean(sst, lat, j_min, j_max, i_min, i_max)
+    # Reduce field and average Nino3.4 region (5S-5N, 170W-120W)
+    Nino34 = spatial_mean_bounded(sst, lat, lon, lat_bnds=(-5, 5),
+                                  lon_bnds=(190, 240))
 
     return Nino34
 
