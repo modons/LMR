@@ -1,24 +1,24 @@
 name: lmr_py3
 
 channels:
+  - defaults
   - conda-forge
-  - nesii/label/dev-esmf
 
 dependencies:
-  - python=3.*
-  - netCDF4
+  - python=3.6
+  - netCDF4=1.4.0
   - numpy
   - scipy
   - matplotlib
   - statsmodels
   - pyspharm
   - pyyaml
-  - pandas
+  - pandas=0.23
   - xlrd
   - pytest
   - ipython
   - jpeg
   - basemap
   - cartopy
-  - esmpy
+  - esmpy=7.1
   - pymc3
