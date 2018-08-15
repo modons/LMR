@@ -116,13 +116,11 @@ def main():
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
 
     # datadir: directory where the original proxy datafiles are located
-    # datadir = '/home/katabatic2/wperkins/data/LMR/proxies/'
-    datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    datadir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
 
     # outdir: directory where the proxy database files will be created
     #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py
-    outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
-    #outdir  = '/home/scec-00/lmr/erbm/LMR/data/proxies/'
+    outdir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
 
     #
     # Section for User-defined options: end
@@ -476,95 +474,8 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     # TODO: make sure year index is consecutive
     #write data to file
+    df = df.to_sparse()
     df.to_pickle(dataout)
-
-
-def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
-    """
-    Computes annual-means from raw data.
-    Inputs:
-        time_raw   : Original time axis
-        data_raw   : Original data
-        valid_frac : The fraction of sub-annual data necessary to create annual mean.  Otherwise NaN.
-        year_type  : "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
-    Outputs: time_annual, data_annual
-
-    Authors: R. Tardif, Univ. of Washington; M. Erb, Univ. of Southern California
-
-    """
-
-    time_between_records = np.diff(time_raw, n=1)
-
-    # Temporal resolution of the data, calculated as the mode of time difference.
-    time_resolution = abs(stats.mode(time_between_records)[0][0])
-
-    # check if time_resolution = 0.0 !!! sometimes adjacent records are tagged at same time ...
-    if time_resolution == 0.0:
-        print('***WARNING! Found adjacent records with same times!')
-        inderr = np.where(time_between_records == 0.0)
-        print(inderr)
-        time_between_records = np.delete(time_between_records,inderr)
-        time_resolution = abs(stats.mode(time_between_records)[0][0])
-
-    max_nb_per_year = int(1.0/time_resolution)
-
-    if time_resolution <=1.0:
-        proxy_resolution = int(1.0)
-    else:
-        proxy_resolution = int(time_resolution)
-
-    # Get the integer values of all years.
-    years_all = [int(time_raw[k]) for k in range(0,len(time_raw))]
-    years = list(set(years_all)) # 'set' is used to get unique values in list
-    years = sorted(years) # sort the list
-    years = np.insert(years,0,years[0]-1) # Add a year prior to the first year because of tropical year adjustments.
-
-    time_annual = np.asarray(years,dtype=np.float64)
-    data_annual = np.zeros(shape=[len(years)], dtype=np.float64)
-    # fill with NaNs for default values
-    data_annual[:] = np.NAN
-
-    # If some of the time values are floats and year_type is tropical_year,
-    # adjust the years to cover the tropical year (Apr-Mar).
-    if np.equal(np.mod(time_raw,1),0).all() == False and year_type == 'tropical year':
-        print("Tropical year method")
-
-        # Make a variable for the time axis, adjusted to a tropical year
-        time_adjusted = np.zeros(len(time_raw))
-        time_adjusted[:] = np.nan
-
-        for i in range(0,len(time_raw)):
-            year_int = int(time_raw[i])
-            if calendar.isleap(year_int):
-                time_adjusted[i] = time_raw[i]-((31+29+31)/float(366))
-            else:
-                time_adjusted[i] = time_raw[i]-((31+28+31)/float(365))
-
-        time_raw = time_adjusted
-
-    # Calculate the mean of all data points with the same year.
-    for i in range(len(years)):
-        ind = [j for j, k in enumerate(years_all) if k == years[i]]
-        nbdat = len(ind)
-
-        # TODO: check nb of non-NaN values !!!!! ... ... ... ... ... ...
-
-        if time_resolution <= 1.0:
-            frac = float(nbdat)/float(max_nb_per_year)
-            if frac > valid_frac:
-                data_annual[i] = np.nanmean(data_raw[ind],axis=0)
-        else:
-            if nbdat > 1:
-                print('***WARNING! Found multiple records in same year in '
-                      'data with multiyear resolution!')
-                print('   year=', years[i], nbdat)
-            # Note: this calculates the mean if multiple entries found
-            data_annual[i] = np.nanmean(data_raw[ind],axis=0)
-
-        #print years[i], nbdat, max_nb_per_year, data_annual[i,:]
-
-    return time_annual, data_annual, proxy_resolution
-
 
 # ===================================================================================
 # For PAGES2k v2.0.0 proxy data ---------------------------------------------------------
@@ -1899,7 +1810,8 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             #proxydata_dict[proxy_name]['Sensitivity']      = d['Sensitivity']
 
             proxydata_dict[proxy_name]['Years']            = time_annual
-            proxydata_dict[proxy_name]['Data']             = data_annual[:,k]
+            proxydata_dict[proxy_name]['Data']             = data_annual[:, k]
+
 
 
             if d['Duplicates']:
@@ -2197,6 +2109,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
 
     # Write data to file
     print('Now writing to file:', data_outfile)
+    df = df.to_sparse()
     df.to_pickle(data_outfile)
 
     print('Done!')
@@ -2394,6 +2307,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
 
     # Write data to file
     print('Now writing to file:', dataout)
+    df = df.to_sparse()
     df.to_pickle(dataout)
     print(' ')
     print('Done!')
