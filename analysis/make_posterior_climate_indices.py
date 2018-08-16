@@ -140,9 +140,20 @@ def main():
                                                      'f',
                                                      ('lat_npac', 'lon_npac'))
     varout_ensmean_pdo_patt.description = 'ensmean_pdo_pattern'
-    varout_ensmean_pdo_patt.long_name = 'Pacific Decadal Oscillation Pattern'
+    varout_ensmean_pdo_patt.long_name = ('Ensemble Mean Pacific Decadal '
+                                         'Oscillation Pattern')
     varout_ensmean_pdo_patt.units = ''
     varout_ensmean_pdo_patt.level = 'sfc'
+
+    varout_ensmean_pdo_idx = outfile.createVariable('ensmean_pdo_idx',
+                                                    'f', ('time',))
+    varout_ensmean_pdo_idx.description = ('PDO index calculated on the grand '
+                                          'ensemble mean (average of mc_iter '
+                                          'and ensemble members)')
+    varout_ensmean_pdo_idx.long_name = ('Ensemble Mean Pacific Decadal '
+                                        'Oscillation Index')
+    varout_ensmean_pdo_idx.units = ''
+    varout_ensmean_pdo_idx.level = 'sfc'
 
     varout_lat_npac = outfile.createVariable('lat_npac', 'f', ('lat_npac',))
     varout_lat_npac.description = 'North Pacific latitudes for PDO Pattern'
@@ -185,6 +196,7 @@ def main():
     varout_soi[:]    = soi
     varout_nino34[:] = nino34
     varout_ensmean_pdo_patt[:] = ensmean_pdo_patt
+    varout_ensmean_pdo_idx[:] = ensmean_pdo_idx
     varout_lat_npac[:] = lat_npac
     varout_lon_npac[:] = lon_npac
 
@@ -195,9 +207,15 @@ def main():
 # This function takes a time-lat-lon variable and computes the global-mean for
 # masked files.
 def global_mean_masked(variable, lats):
-    lat_weights = np.cos(np.radians(lats))
-    wgt_variable = variable * lat_weights[:, None]
-    variable_global = np.ma.mean(wgt_variable, axis=(1, 2))
+    lat_weights = np.cos(np.deg2rad(lats))
+
+    lon_dim_avg = variable.mean(axis=2)
+    if np.ma.is_masked(lon_dim_avg):
+        variable_global = np.ma.average(lon_dim_avg, axis=1,
+                                        weights=lat_weights)
+    else:
+        variable_global = np.average(lon_dim_avg, axis=1, weights=lat_weights)
+
     return variable_global
 
 
@@ -404,13 +422,13 @@ def calculate_soi(psl, lat, lon, years, mean_year_begin=1951,
     psl = psl - np.mean(psl,axis=0)
 
     # Sea level pressure at closest model grid cell to Tahiti
-    j_Tahiti = np.abs(lat-17.55).argmin()         # Latitude:   17.55S
+    j_Tahiti = np.abs(lat-(-17.55)).argmin()         # Latitude:   17.55S
     i_Tahiti = np.abs(lon-(360-149.617)).argmin()  # Longitude: 149.617W
     print('Indices for Tahiti.  j: {}, i: {}'.format(j_Tahiti, i_Tahiti))
     psl_Tahiti = psl[:, j_Tahiti, i_Tahiti]
     #
     # Sea level pressure at closest model grid cell to Darwin, Australia
-    j_Darwin = np.abs(lat-12.467).argmin()  # Latitude:   12.467S
+    j_Darwin = np.abs(lat-(-12.467)).argmin()  # Latitude:   12.467S
     i_Darwin = np.abs(lon-130.85).argmin()   # Longitude: 130.85E
     print('Indices for Darwin.  j: {}, i: {}'.format(j_Darwin, i_Darwin))
     psl_Darwin = psl[:, j_Darwin, i_Darwin]
