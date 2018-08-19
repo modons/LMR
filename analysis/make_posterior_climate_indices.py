@@ -377,6 +377,11 @@ def calculate_amo(sst, lat, lon):
     ---------
     Trenberth and Shea, Geophys. Res. Lett., 2006
 
+    Notes
+    -----
+    Different groups have different methods of removing the global temperature signal from the N. Atlantic region.
+    In this function we remove global signal by removing the global average SST from 60S - 60N.
+
     """
     print("Calculating the Atlantic Multidecadal Oscillation (AMO)")
 
