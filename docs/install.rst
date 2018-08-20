@@ -105,7 +105,7 @@ Retrieving LMR data
 Before running an experiment, you’ll have to download some of the source data
 for proxies, models, and instrumental analyses.
 
-.. _LMR_data.tar.gz: http://www.atmos.uw.edu/~wperkins/nobackup/lmr_data/LMR_data.tar.gz
+.. _LMR_data.tar.gz: http://www.atmos.uw.edu/~hakim/nobackup/lmr_data/LMR_data.tar.gz
 
 Download this tar file, `LMR_data.tar.gz`_, and move it to a
 directory where you will unpack it; here we will call that directory

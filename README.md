@@ -3,7 +3,7 @@
 Welcome to the Last Millennium Reanalysis (LMR) framework code base-- a toolset
 for climate field reconstructions using ensemble data assimilation. For more
 information, please see the 
-[LMR documentation page.](https://atmos.washington.edu/~wperkins/LMR/)
+[LMR documentation page.](https://atmos.washington.edu/~hakim/LMR/)
 
 * Free software provided under the modified BSD License
 * Tested and running on at least Python 3.6

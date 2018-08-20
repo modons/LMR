@@ -12,20 +12,11 @@ wrapper:
   multi_seed: null
 
 core:
-  nexp: test
-#  lmr_path: /home/katabatic/wperkins/data/LMR
-#  lmr_path: /home/disk/ice4/nobackup/hakim/lmr
+  nexp: test_recon
   lmr_path: /home/disk/kalman3/rtardif/LMR
 
-#  datadir_output: /home/katabatic/wperkins/data/LMR/output/working
-#  datadir_output: /home/disk/ice4/hakim/svnwork/lmr/trunk/data
   datadir_output: /home/disk/kalman3/rtardif/LMR/output/wrk
-#  datadir_output: /home/disk/ekman4/rtardif/LMR/output/wrk
-
-#  archive_dir: /home/katabatic2/wperkins/LMR_output/testing
-#  archive_dir: /home/disk/kalman3/hakim/LMR
   archive_dir: /home/disk/kalman3/rtardif/LMR/output
-#  archive_dir: /home/disk/ekman4/rtardif/LMR/output
 
   online_reconstruction: False
   clean_start: True
