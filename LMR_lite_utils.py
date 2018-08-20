@@ -380,7 +380,7 @@ def load_config(yaml_file,verbose=False):
         if not proceed:
             raise SystemExit()
         else:
-            print('OK!')
+            #print('OK!')
             pass
     
     if verbose:
