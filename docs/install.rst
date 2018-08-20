@@ -33,11 +33,14 @@ such as Anaconda/Miniconda to create your working environment.
 * `Miniconda <https://conda.io/miniconda.html>`_ is a barebones
   installation with no additional packages.
 
-.. note:: Due to package dependencies of our regridding facility, we do not
-  currently support LMR code on Windows OS.
-
 Installing required packages
 ----------------------------
+
+.. note:: Due to package dependencies of our regridding facility, we do not
+  currently support LMR code on Windows OS.  It may be possible to omit
+  regridding packages in the code and run reconstructions on Windows, but we
+  have not tested this use case.  We welcome user input and contributions
+  towards using the LMR framework on Windows.
 
 The Anaconda/Miniconda distributions come with a built in package manager
 `conda`, that makes it easy to install/update/remove Python packages.
