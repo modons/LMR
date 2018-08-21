@@ -21,10 +21,10 @@ diff_state_vectors = False
 rtol = 1e-4
 atol = 1e-6
 
-base_dir = '/home/katabatic3/wperkins/LMR_output/testing'
+base_dir = '/home/katabatic/wperkins/data/LMR/output/testing'
 
-sim_dir1 = 'test_regrid_spharm_py2_lmrdb_seasonal/r0'
-sim_dir2 = 'test_regrid_spharm_py3_lmrdb_seasonal/r0'
+sim_dir1 = 'test_proxydb_lmrdb_ref/r0'
+sim_dir2 = 'test_final_proxydb_lmrdb_sparse/r0'
 
 
 dir1 = path.join(base_dir, sim_dir1)
@@ -59,6 +59,8 @@ for proxy2 in assim2:
             for obj1, obj2 in zip(item, item2):
                 if isinstance(obj1, np.ndarray):
                     np.testing.assert_array_equal(obj1, obj2)
+                elif isinstance(obj1, float):
+                    np.testing.assert_allclose(obj1, obj2, rtol=1e-6)
                 else:
                     assert obj1 == obj2
             break

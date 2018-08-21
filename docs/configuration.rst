@@ -1,6 +1,6 @@
 .. _configuration:
 
-LMR Configuration
+LMR configuration
 =================
 
 .. toctree::
@@ -11,13 +11,15 @@ Overview
 The LMR configuration groups a set of user defined parameters detailing
 the reconstruction experiment including: the proxy data to use, the
 fields to be reconstructed, and aspects of the data assimilation method.
-The ``config_template.yml`` file should be copied into the source directory
-as ``config.yml``.  This is the default file searched for by the code to run
+The ``config_template.yml`` and ``LMR_config_template.py`` file should be
+copied into the source directory from the ``config_templs/`` directory
+as ``config.yml`` and ``LMR_config.py``.  This is the default file searched for
+by the code to run
 a reconstruction and holds the parameters available to users.  Use cases are
 described below followed by a general outline of the parameters available.
 
 
-General Configuration
+General configuration
 ---------------------
 When running a reconstruction, the ``LMR_wrapper.py`` script is set up to
 look for ``config.yml`` in the code directory to use as the configuration.
@@ -48,7 +50,7 @@ prior:
    If ``config.yml`` is not found or if any extraneous parameters (including misspellings)
    are found in the file, the reconstruction code will exit immediately.
 
-Custom Configuration Files
+Custom configuration files
 --------------------------
 
 If you would like to use a file other than ``config.yml`` as the reconstruction
@@ -63,12 +65,12 @@ changing ``config.yml``.
 .. note::
     If the file specified as an argument is not found, the code will exit immediately.
 
-Legacy Configuration
+Legacy configuration
 --------------------
 
 The LMR code was originally set up to use ``LMR_config.py`` as the primary
 configuration mechanism.  It provided an easy object-oriented way to
-encaspulate parameters passed around to different classes at runtime.
+encapsulate parameters passed around to different classes at runtime.
 The nature of providing parameter listings that couldn't be changed
 during an experiment at by outside references to the configuration
 reduced the readability.  To switch away from using the YAML files
@@ -84,7 +86,7 @@ between the commented sections ::
     parameter2 = '/test_dir'
     ##** END User Parameters **##
 
-Programmatic Config Updating
+Programmatic config updating
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In some instances you may want to update configuration values on the fly.
 There are a few different ways to accomplish this within ``LMR_config.py``.
@@ -120,4 +122,18 @@ Reference
 ---------
 
 .. automodule:: LMR_config
-   :members:
+   :members: update_config_class_yaml
+
+   .. autoclass:: core
+
+   .. autoclass:: proxies
+      :members: PAGES2kv1, LMRdb
+
+   .. autoclass:: psm
+      :members: linear, bilinear, h_interp
+
+   .. autoclass:: prior
+
+   .. autoclass:: Config
+
+

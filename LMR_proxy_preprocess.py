@@ -91,7 +91,8 @@ def main():
     # - NCDC collection for LMR + published PAGES2k phase 2 proxies (version 2.0.0). stored in .pklz file
     #LMRdb_dbversion = 'v0.2.0'
     #LMRdb_dbversion = 'v0.3.0'
-    LMRdb_dbversion = 'v0.4.0'
+    # LMRdb_dbversion = 'v0.4.0'
+    LMRdb_dbversion = 'v1.0.0'
 
     # File containing info on duplicates in proxy records
     infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMR'+LMRdb_dbversion+'.xlsx'
@@ -105,33 +106,21 @@ def main():
     year_type = "calendar year"
     #year_type = "tropical year"
 
+    eliminate_duplicates = True
+
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
 
     #proxy_data_source = 'DTDA'
-    #dtda_dbversion = 'v0.0.0'
+    dtda_dbversion = 'v0.0.0'
 
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
 
-    eliminate_duplicates = True
-
-    # *** Begin pages2k v2.0.0 options.  These two options only work for the "PAGES2Kv2" dataset above. ***
-    # This option transforms all data to a Gaussian distribution.  It should only be used for
-    # regressions, not physically-based PSMs.
-    gaussianize_data = False
-
-    # Specify the type of year to use for data averaging. "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
-    year_type = "calendar year"
-    #year_type = "tropical year"
-    # *** End pages2k v2.0.0 options ***
-
     # datadir: directory where the original proxy datafiles are located
-    # datadir = '/home/katabatic2/wperkins/data/LMR/proxies/'
-    datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    datadir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
 
     # outdir: directory where the proxy database files will be created
     #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py
-    outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
-    #outdir  = '/home/scec-00/lmr/erbm/LMR/data/proxies/'
+    outdir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
 
     #
     # Section for User-defined options: end
@@ -485,94 +474,8 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
 
     # TODO: make sure year index is consecutive
     #write data to file
+    df = df.to_sparse()
     df.to_pickle(dataout)
-
-
-def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
-    """
-    Computes annual-means from raw data.
-    Inputs:
-        time_raw   : Original time axis
-        data_raw   : Original data
-        valid_frac : The fraction of sub-annual data necessary to create annual mean.  Otherwise NaN.
-        year_type  : "calendar year" (Jan-Dec) or "tropical year" (Apr-Mar)
-    Outputs: time_annual, data_annual
-
-    Authors: R. Tardif, Univ. of Washington; M. Erb, Univ. of Southern California
-
-    """
-
-    time_between_records = np.diff(time_raw, n=1)
-
-    # Temporal resolution of the data, calculated as the mode of time difference.
-    time_resolution = abs(stats.mode(time_between_records)[0][0])
-
-    # check if time_resolution = 0.0 !!! sometimes adjacent records are tagged at same time ...
-    if time_resolution == 0.0:
-        print '***WARNING! Found adjacent records with same times!'
-        inderr = np.where(time_between_records == 0.0)
-        print inderr
-        time_between_records = np.delete(time_between_records,inderr)
-        time_resolution = abs(stats.mode(time_between_records)[0][0])
-
-    max_nb_per_year = int(1.0/time_resolution)
-
-    if time_resolution <=1.0:
-        proxy_resolution = int(1.0)
-    else:
-        proxy_resolution = int(time_resolution)
-
-    # Get the integer values of all years.
-    years_all = [int(time_raw[k]) for k in range(0,len(time_raw))]
-    years = list(set(years_all)) # 'set' is used to get unique values in list
-    years = sorted(years) # sort the list
-    years = np.insert(years,0,years[0]-1) # Add a year prior to the first year because of tropical year adjustments.
-
-    time_annual = np.asarray(years,dtype=np.float64)
-    data_annual = np.zeros(shape=[len(years)], dtype=np.float64)
-    # fill with NaNs for default values
-    data_annual[:] = np.NAN
-
-    # If some of the time values are floats and year_type is tropical_year,
-    # adjust the years to cover the tropical year (Apr-Mar).
-    if np.equal(np.mod(time_raw,1),0).all() == False and year_type == 'tropical year':
-        print "Tropical year method"
-
-        # Make a variable for the time axis, adjusted to a tropical year
-        time_adjusted = np.zeros(len(time_raw))
-        time_adjusted[:] = np.nan
-
-        for i in range(0,len(time_raw)):
-            year_int = int(time_raw[i])
-            if calendar.isleap(year_int):
-                time_adjusted[i] = time_raw[i]-((31+29+31)/float(366))
-            else:
-                time_adjusted[i] = time_raw[i]-((31+28+31)/float(365))
-
-        time_raw = time_adjusted
-
-    # Calculate the mean of all data points with the same year.
-    for i in range(len(years)):
-        ind = [j for j, k in enumerate(years_all) if k == years[i]]
-        nbdat = len(ind)
-
-        # TODO: check nb of non-NaN values !!!!! ... ... ... ... ... ...
-
-        if time_resolution <= 1.0:
-            frac = float(nbdat)/float(max_nb_per_year)
-            if frac > valid_frac:
-                data_annual[i] = np.nanmean(data_raw[ind],axis=0)
-        else:
-            if nbdat > 1:
-                print '***WARNING! Found multiple records in same year in data with multiyear resolution!'
-                print '   year=', years[i], nbdat
-            # Note: this calculates the mean if multiple entries found
-            data_annual[i] = np.nanmean(data_raw[ind],axis=0)
-
-        #print years[i], nbdat, max_nb_per_year, data_annual[i,:]
-
-    return time_annual, data_annual, proxy_resolution
-
 
 # ===================================================================================
 # For PAGES2k v2.0.0 proxy data ---------------------------------------------------------
@@ -601,10 +504,10 @@ def pages2kv2_pickle_to_dataframes(datadir, metaout, dataout, eliminate_duplicat
 
     # Summary of the final_proxy_list
     nbsites = len(pages2k_data)
-    print '----------------------------------------------------------------------'
-    print ' SUMMARY: '
-    print '  Total nb of records : ', nbsites
-    print '  ------------------------------------------------------'
+    print('----------------------------------------------------------------------')
+    print(' SUMMARY: ')
+    print('  Total nb of records : ', nbsites)
+    print('  ------------------------------------------------------')
 
     tot = []
     # Loop over proxy types specified in *main*
@@ -623,7 +526,8 @@ def pages2kv2_pickle_to_dataframes(datadir, metaout, dataout, eliminate_duplicat
         # Give each record a unique descriptive name
         pages2k_data[counter]['siteID'] = "PAGES2kv2_"+pages2k_data[counter]['dataSetName']+"_"+pages2k_data[counter]['paleoData_pages2kID']+":"+pages2k_data[counter]['paleoData_variableName']
         nb.append(pages2k_data[counter]['siteID'])
-        print "Processing metadata", counter+1, "/", len(pages2k_data), ":", pages2k_data[counter]['paleoData_pages2kID']
+        print("Processing metadata", counter+1, "/", len(pages2k_data), ":",
+              pages2k_data[counter]['paleoData_pages2kID'])
 
         # If the time axis goes backwards (i.e. newer to older), reverse it.
         if pages2k_data[counter]['year'][-1] - pages2k_data[counter]['year'][-2] < 0:
@@ -736,28 +640,29 @@ def pages2kv2_pickle_to_dataframes(datadir, metaout, dataout, eliminate_duplicat
         #print '   ', '{:40}'.format(key), ' : ', len(nb)
         tot.append(len(nb))
     nbtot = sum(tot)
-    print '  ------------------------------------------------------'
-    print '   ','{:40}'.format('Total:'), ' : ', nbtot
-    print '----------------------------------------------------------------------'
-    print ' '
+    print('  ------------------------------------------------------')
+    print('   ','{:40}'.format('Total:'), ' : ', nbtot)
+    print('----------------------------------------------------------------------')
+    print(' ')
 
 
     # Redefine column headers
     metadf.columns = headers
 
     # Write metadata to file
-    print 'Now writing metadata to file:', metaout
+    print('Now writing metadata to file:', metaout)
     metadf.to_pickle(metaout)
 
     # -----------------------------------------------------
     # Build the proxy **data** DataFrame and output to file
     # -----------------------------------------------------
-    print ' '
-    print 'Now creating & loading the data in the pandas DataFrame...'
-    print ' '
+    print(' ')
+    print('Now creating & loading the data in the pandas DataFrame...')
+    print(' ')
 
     for counter in range(0,len(pages2k_data)):
-        print "Processing metadata", counter+1, "/", len(pages2k_data), ":", pages2k_data[counter]['paleoData_pages2kID']
+        print("Processing metadata", counter+1, "/", len(pages2k_data), ":",
+              pages2k_data[counter]['paleoData_pages2kID'])
 
         nbdata = len(pages2k_data[counter]['time_annual'])
 
@@ -783,10 +688,10 @@ def pages2kv2_pickle_to_dataframes(datadir, metaout, dataout, eliminate_duplicat
     df.sort_index(inplace=True)
 
     # Write data to file
-    print 'Now writing to file:', dataout
+    print('Now writing to file:', dataout)
     df.to_pickle(dataout)
-    print ' '
-    print 'Done!'
+    print(' ')
+    print('Done!')
 
 
 
@@ -1905,7 +1810,8 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             #proxydata_dict[proxy_name]['Sensitivity']      = d['Sensitivity']
 
             proxydata_dict[proxy_name]['Years']            = time_annual
-            proxydata_dict[proxy_name]['Data']             = data_annual[:,k]
+            proxydata_dict[proxy_name]['Data']             = data_annual[:, k]
+
 
 
             if d['Duplicates']:
@@ -2203,6 +2109,7 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
 
     # Write data to file
     print('Now writing to file:', data_outfile)
+    df = df.to_sparse()
     df.to_pickle(data_outfile)
 
     print('Done!')
@@ -2400,6 +2307,7 @@ def ncdc_txt_to_dataframes(datadir, proxy_def, metaout, dataout, eliminate_dupli
 
     # Write data to file
     print('Now writing to file:', dataout)
+    df = df.to_sparse()
     df.to_pickle(dataout)
     print(' ')
     print('Done!')

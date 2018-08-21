@@ -47,6 +47,9 @@ docs/_build/
 #Data Files
 *.npy
 *.h5
+*.pckl
+*.pkl
+*.npz
 
 #Ipython stuff 
 *.ipynb

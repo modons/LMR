@@ -82,6 +82,7 @@ Revisions:
 from os.path import join
 from copy import deepcopy
 import yaml
+import os
 #import matlab.engine
 
 
@@ -89,12 +90,11 @@ import yaml
 LEGACY_CONFIG = False
 
 # Absolute path to LMR source code directory
-#SRC_DIR = '/home/disk/ekman/rtardif/codes/LMR/pyLMR'
-SRC_DIR = '/home/disk/ice4/hakim/gitwork/LMR'
+SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Control logging output. (0 = none; 1 = most important; 2 = many; 3 = a lot;
 #   >=4 all)
-LOG_LEVEL = 4
+LOG_LEVEL = 1
 
 # Class for distinction of configuration classes
 class ConfigGroup(object):
@@ -250,8 +250,6 @@ class core(ConfigGroup):
 
     nexp = 'test'
 
-    #lmr_path = '/home/disk/ice4/nobackup/hakim/lmr'
-    #lmr_path = '/home/chaos2/wperkins/data/LMR'
     lmr_path = '/home/disk/kalman3/rtardif/LMR'
 
     online_reconstruction = False
@@ -278,17 +276,11 @@ class core(ConfigGroup):
     inflation_fact = None
 
     # Reference period w.r.t. which anomalies are to be defined.
-    anom_reference_period = (1951,1980)
-    
-    #datadir_output = '/home/disk/ice4/hakim/svnwork/lmr/trunk/data'
-    #datadir_output = '/home/chaos2/wperkins/data/LMR/output/working'
+    anom_reference_period = (1951, 1980)
+
     datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
-    #datadir_output  = '/home/disk/kalman3/rtardif/LMR/output/wrk'
     
-    #archive_dir = '/home/disk/kalman3/hakim/LMR/'
-    #archive_dir = '/home/chaos2/wperkins/data/LMR/output/testing'
     archive_dir = '/home/disk/kalman3/rtardif/LMR/output'
-    #archive_dir = '/home/disk/ekman4/rtardif/LMR/output'
 
     # Whether or not to produce the analysis_Ye.pckl file
     write_posterior_Ye = False
@@ -622,7 +614,7 @@ class proxies(ConfigGroup):
 
         ##** BEGIN User Parameters **##
 
-        dbversion = 'v0.4.0'
+        dbversion = 'v1.0.0'
         
         datadir_proxy = None
         datafile_proxy = 'LMRdb_{}_Proxies.df.pckl'
@@ -958,7 +950,7 @@ class psm(ConfigGroup):
 
     # Period over which data is used to establish a statistical relationship
     # between proxy and instrumental data (statistical PSMs only)
-    calib_period = (1850,2015)
+    calib_period = (1850, 2015)
     
     # Averaging period for the PSM: 'annual' or 'season'
     avgPeriod = 'annual'
@@ -1651,7 +1643,7 @@ class prior(ConfigGroup):
     #    Note: fields with missing/masked values (e.g. ocean variables) allowed.
     # 4) 'esmpy': regridding facilitated by ESMpy package, includes blinear,
     #    and higher order patch interpolation
-    regrid_method = 'simple'
+    regrid_method = 'esmpy'
     # resolution of truncated grid, based on triangular truncation (e.g., use 42 for T42))
     # note: this option applies only to 'simple' or 'spherical_harmonics' options
     regrid_resolution = 42
@@ -1662,7 +1654,7 @@ class prior(ConfigGroup):
     # Dict. defining which variables represent temperature or moisture.
     # To be modified only if a new temperature or moisture state variable is added. 
     state_variables_info = {'temperature': ['tas_sfc_Amon'],
-                            'moisture': ['pr_sfc_Amon','scpdsi_sfc_Amon']}
+                            'moisture': ['pr_sfc_Amon', 'scpdsi_sfc_Amon']}
 
     
     ##** END User Parameters **##
@@ -1794,11 +1786,13 @@ def update_config_class_yaml(yaml_dict, cfg_module):
     Examples
     --------
     If cfg_module is an imported LMR_config as cfg then the following
-    dictionary could be used to update a core and linear psm attribute.
-    yaml_dict = {'core': {'lmr_path': '/new/path/to/LMR_files'},
-                 'psm': {'linear': {'datatag_calib': 'GISTEMP'}}}
+    dictionary could be used to update a core and linear psm attribute::
 
-    These are the types of dictionaries that result from a yaml.load function.
+        yaml_dict = {'core': {'lmr_path': '/new/path/to/LMR_files'},
+                     'psm': {'linear': {'datatag_calib': 'GISTEMP'}}}
+
+    These are the same types of dictionaries that result from a yaml.load
+    function.
 
     Warnings
     --------

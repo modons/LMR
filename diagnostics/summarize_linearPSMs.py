@@ -40,7 +40,7 @@ from LMR_utils import coefficient_efficiency
 # ------------------------------------------------------------ #
 # -------------- Begin: user-defined parameters -------------- #
 
-LMRdbversion = 'v0.4.0'
+LMRdbversion = 'v1.0.0'
 psm_type     = 'linear'        # linear, linear_TorP or bilinear
 calib_source = 'GISTEMP'       # linear: GISTEMP, MLOST, NOAAGlobalTemp, HadCRUT, BerkeleyEarth, GPCC or DaiPDSI
                                # bilinear: GISTEMP_GPCC, etc.

@@ -389,11 +389,16 @@ class v_proxies(object):
         #          Nearly identical to v0.3.0, tho only exception is the most recent version of
         #          the Palmyra d18O record (2013) replaces the older record included in the
         #          PAGES2k phase 2 proxies.
+        #  v1.0.0: LMR v3.0 release updates the database version to 1.0.0.
+        #          No changes were made to the database, the name is changing
+        #          for consistency.
+
         #dbversion = 'v0.0.0'
         #dbversion = 'v0.1.0'
         #dbversion = 'v0.2.0'
         #dbversion = 'v0.3.0'
-        dbversion = 'v0.4.0'
+        # dbversion = 'v0.4.0'
+        dbversion = 'v1.0.0'
         
         datadir_proxy = None
         datafile_proxy = 'LMRdb_%s_Proxies.df.pckl' %(dbversion)
@@ -641,7 +646,7 @@ class v_psm(object):
     # If set to True, refer back to the appropriate proxy class above
     # (proxy_psm_seasonality dict.) to set which proxy type(s) and associated seasons
     # will be considered.
-    test_proxy_seasonality = True
+    test_proxy_seasonality = False
     
     ##** END User Parameters **##
 

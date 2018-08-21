@@ -336,6 +336,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
             meta_src = load_data_frame(pages2kv1_cfg.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(pages2kv1_cfg.datafile_proxy)
+            data_src = data_src.to_dense()
 
         site_meta = meta_src[meta_src['Proxy ID'] == site]
         pid = site_meta['Proxy ID'].iloc[0]
@@ -390,6 +391,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
             meta_src = load_data_frame(config.proxies.PAGES2kv1.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(config.proxies.PAGES2kv1.datafile_proxy)
+            data_src = data_src.to_dense()
 
         filters = config.proxies.PAGES2kv1.simple_filters
         proxy_order = config.proxies.PAGES2kv1.proxy_order
@@ -504,6 +506,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
             meta_src = load_data_frame(config.proxies.PAGES2kv1.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(config.proxies.PAGES2kv1.datafile_proxy)
+            data_src = data_src.to_dense()
 
         useable = meta_src['Resolution (yr)'] == 1.0
 
@@ -546,6 +549,7 @@ class ProxyLMRdb(BaseProxyObject):
             meta_src = load_data_frame(LMRdb_cfg.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(LMRdb_cfg.datafile_proxy)
+            data_src = data_src.to_dense()
 
         site_meta = meta_src[meta_src['Proxy ID'] == site]
         pid = site_meta['Proxy ID'].iloc[0]
@@ -602,6 +606,7 @@ class ProxyLMRdb(BaseProxyObject):
             meta_src = load_data_frame(config.proxies.LMRdb.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(config.proxies.LMRdb.datafile_proxy)
+            data_src = data_src.to_dense()
 
         filters = config.proxies.LMRdb.simple_filters
         proxy_order = config.proxies.LMRdb.proxy_order
@@ -750,6 +755,7 @@ class ProxyLMRdb(BaseProxyObject):
             meta_src = load_data_frame(config.proxies.LMRdb.metafile_proxy)
         if data_src is None:
             data_src = load_data_frame(config.proxies.LMRdb.datafile_proxy)
+            data_src = data_src.to_dense()
 
         # TODO: For now hard coded to annual resolution - AP
         useable = meta_src['Resolution (yr)'] == 1.0
