@@ -3,9 +3,10 @@
 #
 
 import numpy as np
-import LMR_utils
-import matplotlib 
+import matplotlib
 import matplotlib.pyplot as plt
+
+import LMR_utils
 
 
 # set number of ensemble members and degrees of freedom, and bogus lat,lon data
@@ -39,7 +40,7 @@ for t in range(startim,startim+ntims):
     # make up some data with the right shape as in the LMR code (Ndof,Nens)
     Xa = np.random.randn(Ndof,Nens)    
     xam = np.mean(Xa,axis=1)
-    print 'Xa shape: ' + str(np.shape(Xa))
+    print('Xa shape: ' + str(np.shape(Xa)))
 
     # Dump Xa to file (to be used as prior for next assimilation)
     ypad = LMR_utils.year_fix(t)
@@ -57,7 +58,7 @@ LMR_utils.ensemble_mean(workdir)
 # now "post-process" the file just written as in verify_grid_testing.py
 #
 
-print 'reading Xb_one file...'
+print('reading Xb_one file...')
 
 # reset workdir to a real LMR experiment
 workdir = '../data/testdev_check_1000_75pct/r0/'
@@ -70,8 +71,8 @@ nlat = npzfile['nlat']
 nlon = npzfile['nlon']
 lat2 = np.reshape(lat,(nlat,nlon))
 lon2 = np.reshape(lon,(nlat,nlon))
-print np.shape(lat)
-print np.shape(lat2)
+print(np.shape(lat))
+print(np.shape(lat2))
 
 """
 print 'lat check (should be zero): ' + str(np.max(np.max(lat - lat_new)))
@@ -80,14 +81,14 @@ print 'nlat check:' + str(nlat_new) + ' =? ' + str(nlat)
 print 'nlon check:' + str(nlon_new) + ' =? ' + str(nlon)
 """
 
-print '\n reading LMR ensemble-mean data...\n'
+print('\n reading LMR ensemble-mean data...\n')
 ensfiln = workdir + '/ensemble_mean.npz'
-print ensfiln
+print(ensfiln)
 npzfile = np.load(ensfiln)
 npzfile.files
 xam_check = npzfile['xam']
 
-print '\n shape of xam from ensemble_mean.npz = ' + str(np.shape(xam_check))
+print('\n shape of xam from ensemble_mean.npz = ' + str(np.shape(xam_check)))
 
 """
 print xam_check
@@ -112,14 +113,14 @@ npzfile.files
 gmt = npzfile['gmt_save']
 recon_times = npzfile['recon_times']
 apcount = npzfile['apcount']
-print gmtpfile
-print apcount
+print(gmtpfile)
+print(apcount)
 gmt_src = gmt[-1,:]
-print 'shape gmt = ' + str(np.shape(gmt))
-print 'shape gmt_src = ' + str(np.shape(gmt_src))
+print('shape gmt = ' + str(np.shape(gmt)))
+print('shape gmt_src = ' + str(np.shape(gmt_src)))
 
 gmt_err = gmt_src - gmt_check
-print 'mx gmt error = ' + str(np.max(gmt_err))
+print('mx gmt error = ' + str(np.max(gmt_err)))
 
 plt.plot(gmt_src,'r-')
 plt.plot(gmt_check,'b-')

@@ -1,0 +1,278 @@
+# Configuration parameters for running an LMR reconstruction.  See LMR_config
+# for a description of each parameter.  Here we provide a default setting as an
+# example, not a best-use scenario.
+#
+# The 'null' value resolves to a default path pattern (using lmr_path) for all
+# directory parameters.  For other parameters 'null' signifies the parameter is
+# not used.
+
+wrapper:
+  iter_range:  !!python/tuple [0, 0]
+  param_search:  null
+  multi_seed: [0, 1, 2, 3, 4]
+
+core:
+  nexp: testdev_yaml
+  lmr_path: /home/katabatic/wperkins/data/LMR
+  datadir_output: /test/to/working/output
+  archive_dir: /test/to/archive
+  online_reconstruction: False
+  clean_start: True
+  use_precalc_ye: False
+  recon_period: !!python/tuple [1960, 1970]
+  nens: 10
+  seed: null
+  loc_rad: null
+
+proxies:
+  use_from: [pages]
+  proxy_frac: 0.75
+  proxy_timeseries_kind: asis
+
+  pages:
+    datadir_proxy: null
+    datafile_proxy: Pages2k_Proxies.df.pckl
+    metafile_proxy: Pages2k_Metadata.df.pckl
+    dataformat_proxy: DF
+    regions: [
+      'Antarctica',
+      'Arctic',
+      'Asia',
+      'Australasia',
+      'Europe',
+      'North America',
+      'South America'
+      ]
+    proxy_resolution: [1.0]
+    proxy_blacklist: []
+    proxy_order: [
+      'Tree ring_Width',
+      'Tree ring_Density',
+      'Ice core_d18O',
+      'Ice core_d2H',
+      'Ice core_Accumulation',
+      'Coral_d18O',
+      'Coral_Luminescence',
+      'Lake sediment_All',
+      'Marine sediment_All',
+      'Speleothem_All'
+      ]
+    proxy_psm_type:
+      Tree ring_Width: linear
+      Tree ring_Density: linear
+      Ice core_d18O: linear
+      Ice core_d2H: linear
+      Ice core_Accumulation: linear
+      Coral_d18O: linear
+      Coral_Luminescence: linear
+      Lake sediment_All: linear
+      Marine sediment_All: linear
+      Speleothem_All: linear
+    proxy_assim2:
+      Tree ring_Width: [
+        'Ring width',
+        'Tree ring width',
+        'Total ring width',
+        'TRW'
+        ]
+      Tree ring_Density: [
+        'Maximum density',
+        'Minimum density',
+        'Earlywood density',
+        'Latewood density',
+        'MXD'
+        ]
+      Ice core_d18O: [ 'd18O' ]
+      Ice core_d2H: [ 'd2H' ]
+      Ice core_Accumulation: [ 'Accumulation' ]
+      Coral_d18O: [ 'd18O' ]
+      Coral_Luminescence: [ 'Luminescence' ]
+      Lake sediment_All: [
+        'Varve thickness',
+        'Thickness',
+        'Mass accumulation rate',
+        'Particle-size distribution',
+        'Organic matter',
+        'X-ray density'
+        ]
+      Marine sediment_All: [ 'Mg/Ca' ]
+      Speleothem_All: [ 'Lamina thickness' ]
+
+  ncdc:
+    dbversion: 'v0.1.0'
+    datadir_proxy: null
+    datafile_proxy: 'NCDC_{}_Proxies.df.pckl'
+    metafile_proxy: 'NCDC_{}_Metadata.df.pckl'
+    dataformat_proxy: 'DF'
+    regions: [
+      'Antarctica',
+      'Arctic',
+      'Asia',
+      'Australasia',
+      'Europe',
+      'North America',
+      'South America'
+      ]
+    proxy_resolution: [1.0]
+    database_filter: [
+#     'PAGES2',
+#     'LMR'
+      ]
+    proxy_blacklist: ['00aust01a', '06cook02a', '06cook03a', '08vene01a',
+                      '09japa01a', '10guad01a', '99aust01a', '99fpol01a',
+                      '72Devo01',  '72Devo05']
+    proxy_order: [
+      'Tree Rings_WoodDensity',
+#     'Tree Rings_WidthPages',
+      'Tree Rings_WidthPages2',
+      'Tree Rings_WidthBreit',
+      'Tree Rings_Isotopes',
+      'Corals and Sclerosponges_d18O',
+      'Corals and Sclerosponges_SrCa',
+      'Corals and Sclerosponges_Rates',
+      'Ice Cores_d18O',
+      'Ice Cores_dD',
+      'Ice Cores_Accumulation',
+      'Ice Cores_MeltFeature',
+      'Lake Cores_Varve',
+      'Lake Cores_BioMarkers',
+      'Lake Cores_GeoChem',
+      'Marine Cores_d18O'
+      ]
+    proxy_psm_type:
+      Corals and Sclerosponges_d18O: linear
+      Corals and Sclerosponges_SrCa: linear
+      Corals and Sclerosponges_Rates: linear
+      Ice Cores_d18O: linear
+      Ice Cores_dD: linear
+      Ice Cores_Accumulation: linear
+      Ice Cores_MeltFeature: linear
+      Lake Cores_Varve: linear
+      Lake Cores_BioMarkers: linear
+      Lake Cores_GeoChem: linear
+      Marine Cores_d18O: linear
+      Tree Rings_WidthBreit: linear
+      Tree Rings_WidthPages2: linear
+      Tree Rings_WidthPages:  bilinear
+      Tree Rings_WoodDensity: linear_TorP
+      Tree Rings_Isotopes: linear
+      Speleothems_d18O: linear
+    proxy_assim2:
+      Corals and Sclerosponges_d18O: [
+        'd18O',
+        'delta18O',
+        'd18o',
+        'd18O_stk',
+        'd18O_int',
+        'd18O_norm',
+        'd18o_avg',
+        'd18o_ave',
+        'dO18',
+        'd18O_4'
+        ]
+      Corals and Sclerosponges_SrCa: [
+        'Sr/Ca',
+        'Sr_Ca',
+        'Sr/Ca_norm',
+        'Sr/Ca_anom',
+        'Sr/Ca_int'
+        ]
+      Corals and Sclerosponges_Rates: [
+        'ext',
+        'calc'
+        ]
+      Ice Cores_d18O: [
+        'd18O',
+        'delta18O',
+        'delta18o',
+        'd18o',
+        'd18o_int',
+        'd18O_int',
+        'd18O_norm',
+        'd18o_norm',
+        'dO18',
+        'd18O_anom'
+        ]
+      Ice Cores_dD: [
+        'deltaD',
+        'delD',
+        'dD'
+        ]
+      Ice Cores_Accumulation: [
+        'accum',
+        'accumu'
+        ]
+      Ice Cores_MeltFeature: ['MFP']
+      Lake Cores_Varve: [
+        'varve',
+        'varve_thickness',
+        'varve thickness'
+        ]
+      Lake Cores_BioMarkers: [
+        'Uk37',
+        'TEX86'
+        ]
+      Lake Cores_GeoChem: [
+        'Sr/Ca',
+        'Mg/Ca',
+        'Cl_cont'
+        ]
+      Marine Cores_d18O: ['d18O']
+      Speleothems_d18O: ['d18O']
+      Tree Rings_WidthBreit: ['trsgi_breit']
+      Tree Rings_WidthPages2: ['trsgi']
+      Tree Rings_WidthPages: [
+        'TRW',
+        'ERW',
+        'LRW'
+        ]
+      Tree Rings_WoodDensity: [
+        'max_d',
+        'min_d',
+        'early_d',
+        'earl_d',
+        'density',
+        'late_d',
+        'MXD'
+        ]
+      Tree Rings_Isotopes: ['d18O']
+
+psm:
+  all_calib_sources:
+    temperature: [GISTEMP, MLOST, HadCRUT, BerkeleyEarth]
+    moisture: [GPCC, DaiPDSI]
+
+  avgPeriod: annual
+
+  linear:
+    datatag_calib: GISTEMP
+    pre_calib_datafile: '/home/katabatic/wperkins/data/LMR/PSM/PSMs_GISTEMP.pckl'
+    psm_r_crit: 0.2
+
+  linear_TorP:
+    datatag_calib_T: GISTEMP
+    datatag_calib_P: GPCC
+    pre_calib_datafile_T: null
+    pre_calib_datafile_P: null
+    psm_r_crit: 0.2
+
+  bilinear:
+    datatag_calib_T: GISTEMP
+    datatag_calib_P: GPCC
+    pre_calib_datafile: null
+    psm_r_crit: 0.2
+
+  h_interp:
+    radius_influence: 50.0
+    datadir_obsError: ./
+    filename_obsError: R.txt
+    dataformat_obsError: TXT
+    datafile_obsError: None
+
+prior:
+  prior_source: ccsm4_last_millenium
+  state_variables:
+    tas_sfc_Amon: anom
+    pr_sfc_Amon: anom
+  detrend: False
+  avgInterval: null

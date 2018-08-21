@@ -1,0 +1,24 @@
+name: lmr_py3
+
+channels:
+  - defaults
+  - conda-forge
+
+dependencies:
+  - python=3.6
+  - netCDF4=1.4.0
+  - numpy
+  - scipy
+  - matplotlib
+  - statsmodels
+  - pyspharm
+  - pyyaml
+  - pandas=0.23
+  - xlrd
+  - pytest
+  - ipython
+  - jpeg
+  - basemap
+  - cartopy
+  - esmpy=7.1
+  - pymc3

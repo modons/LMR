@@ -11,8 +11,10 @@ Revisions:
 
 """
 import matplotlib
-# need to do this backend when running remotely or to suppress figures interactively
+# need to do this when running remotely, and to suppress figures
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+# need to do this backend when running remotely or to suppress figures interactively
 
 # generic imports
 import numpy as np
@@ -20,9 +22,11 @@ import glob, os, sys
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import mpl_toolkits.basemap as bm
-import matplotlib.pyplot as plt
 from matplotlib import ticker
 from spharm import Spharmt, getspecindx, regrid
+import pickle
+import warnings
+
 # LMR specific imports
 sys.path.append('../')
 from LMR_utils import global_hemispheric_means, assimilated_proxies, coefficient_efficiency
@@ -37,6 +41,8 @@ from LMR_plot_support import *
 # change default value of latlon kwarg to True.
 bm.latlon_default = True
 
+
+warnings.filterwarnings('ignore')
 
 ##################################
 # START:  set user parameters here
@@ -53,34 +59,15 @@ nya = 0
 fsave = True
 #fsave = False
 
+# save statistics file
+stat_save = True
+
 # set paths, the filename for plots, and global plotting preferences
 
 # file specification
 #
 # current datasets
 #
-#nexp = 'testing_1000_75pct_ens_size_Nens_10'
-#nexp = 'testdev_150yr_75pct'
-#nexp = 'testdev_check_1000_75pct'
-#nexp = 'ReconDevTest_1000_testing_coral'
-#nexp = 'ReconDevTest_1000_testing_icecore'
-#nexp = 'testdev_1000_100pct_icecoreonly'
-#nexp = 'testdev_1000_100pct_mxdonly'
-#nexp = 'testdev_1000_100pct_sedimentonly'
-# ---
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_CCSM4_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_GFDLCM3_PiControl_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_MPIESMP_LastMillenium_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_20CR_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p3rlrc0_ERA20C_ens100_cMLOST_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_CCSM4_LastMillenium_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
-#nexp = 'p4rlrc0_GFDLCM3_PiControl_ens100_cGISTEMP_allAnnualProxyTypes_pf0.75'
 # ---
 #nexp = 'production_gis_ccsm4_pagesall_0.75'
 #nexp = 'production_mlost_ccsm4_pagesall_0.75'
@@ -88,40 +75,24 @@ fsave = True
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesCoralsSrCaD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesIceCoresOnly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesSpeleoD18Oonly_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cMLOST_NCDCproxiesPAGES1_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesNoTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 't2_2k_CCSM4_LastMillenium_ens100_cGISTEMP_NCDCproxiesBreitTrees_pf0.75'
-#nexp = 'testPslW500_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500_2c_ERA20C_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+nexp = 'test'
 # ---
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPseason_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
-nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
 
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,10)
 
 # override datadir
 #datadir_output = './data/'
-#datadir_output = '/home/disk/kalman3/hakim/LMR'
+#datadir_output = '/home/katabatic2/wperkins/LMR_output/testing'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
+
 
 # Directory where reanalysis data can be found
 datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model'
@@ -136,16 +107,16 @@ nlevs = 21
 alpha = 0.5
 
 # time range for verification (in years CE)
-trange = [1880,2000] #works for nya = 0
-#trange = [1885,1995] #works for nya = 5
-#trange = [1890,1990] #works for nya = 10
-#trange = [1900,2000]
+trange = (1880,2000) #works for nya = 0
+#trange = (1885,1995) #works for nya = 5
+#trange = (1890,1990) #works for nya = 10
+#trange = (1900,2000)
 
 # reference period over which mean is calculated & subtracted 
 # from all other datasets (in years CE)
-#ref_period = [1951,1980] # ref. period for GIS & BE
-#ref_period = [1961,1990] # ref. period for CRU & MLOST
-ref_period = [1900, 1999] # 20th century
+#ref_period = (1951,1980) # ref. period for GIS & BE
+#ref_period = (1961,1990) # ref. period for CRU & MLOST
+ref_period = (1900, 1999) # 20th century
 
 # set the default size of the figure in inches. ['figure.figsize'] = width, height;  
 # aspect ratio appears preserved on smallest of the two
@@ -160,34 +131,33 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-# variable
+# variable---this script is temperature only!
 var = 'tas_sfc_Amon'
 
 workdir = datadir_output + '/' + nexp
-print 'working directory = ' + workdir
+print('working directory = %s' %workdir)
 
-print '\n getting file system information...\n'
+print('\n getting file system information...\n')
 
 # get number of mc realizations from directory count
 # RT: modified way to determine list of directories with mc realizations
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
-# sorted
-dirs.sort()
-mcdir = [item.split('/')[-1] for item in dirs]
+
+# selecting  the MC iterations to keep
+if MCset:
+    dirset = dirs[MCset[0]:MCset[1]+1]
+else:
+    dirset = dirs
+
+mcdir = [item.split('/')[-1] for item in dirset]
 niters = len(mcdir)
 
-print 'mcdir:' + str(mcdir)
-print 'niters = ' + str(niters)
-
-# get time period from the GMT file...
-gmtpfile =  workdir + '/r0/gmt.npz'
-npzfile = np.load(gmtpfile)
-npzfile.files
-LMR_time = npzfile['recon_times']
+print('mcdir: %s' % str(mcdir))
+print('niters = %s' % str(niters))
 
 # read ensemble mean data
-print '\n reading LMR ensemble-mean data...\n'
+print('\n reading LMR ensemble-mean data...\n')
 
 first = True
 k = -1
@@ -197,9 +167,9 @@ for dir in mcdir:
     #ensfiln = workdir + '/' + dir + '/ensemble_mean.npz'
     ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
     npzfile = np.load(ensfiln)
-    print  npzfile.files
+    print(npzfile.files)
     tmp = npzfile['xam']
-    print 'shape of tmp: ' + str(np.shape(tmp))
+    print('shape of tmp: %s' % str(np.shape(tmp)))
 
     # load prior data
     file_prior = workdir + '/' + dir + '/Xb_one.npz'
@@ -207,12 +177,15 @@ for dir in mcdir:
     Xb_one = Xprior_statevector['Xb_one']
     # extract variable (sfc temperature) from state vector
     state_info = Xprior_statevector['state_info'].item()
+    print(state_info)
     posbeg = state_info[var]['pos'][0]
     posend = state_info[var]['pos'][1]
     tas_prior = Xb_one[posbeg:posend+1,:]
     
     if first:
         first = False
+        recon_times = npzfile['years']
+        LMR_time = np.array(list(map(int,recon_times)))
         lat = npzfile['lat']
         lon = npzfile['lon']
         nlat = npzfile['nlat']
@@ -225,8 +198,8 @@ for dir in mcdir:
         xam_all = np.zeros([niters,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
         # prior
         [_,Nens] = tas_prior.shape
-        nlatp = state_info['tas_sfc_Amon']['spacedims'][0]
-        nlonp = state_info['tas_sfc_Amon']['spacedims'][1]
+        nlatp = state_info[var]['spacedims'][0]
+        nlonp = state_info[var]['spacedims'][1]
         xbm_all = np.zeros([niters,nyrs,nlatp,nlonp])
 
     xam = xam + tmp
@@ -247,29 +220,29 @@ xam_check = xam_all.mean(0)
 #  check..
 max_err = np.max(np.max(np.max(xam_check - xam)))
 if max_err > 1e-4:
-    print 'max error = ' + str(max_err)
+    print('max error = ' + str(max_err))
     raise Exception('sample mean does not match what is in the ensemble files!')
 
 # sample variance
 xam_var = xam_all.var(0)
-print np.shape(xam_var)
+print(np.shape(xam_var))
 
-print '\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
-print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
-print '\n shape of the ensemble-mean prior array: ' + str(np.shape(xbm)) +'\n'
+print('\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n')
+print('\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n')
+print('\n shape of the ensemble-mean prior array: ' + str(np.shape(xbm)) +'\n')
 
 lmr_lat_range = (lat2[0,0],lat2[-1,0])
 lmr_lon_range = (lon2[0,0],lon2[0,-1])
-print 'LMR grid info:'
-print ' lats=', lmr_lat_range
-print ' lons=', lmr_lon_range
+print('LMR grid info:')
+print((' lats=%s' % str(lmr_lat_range)))
+print((' lons=%s' % str(lmr_lon_range)))
 
 
 # ===========================================================================================================
 # BEGIN: load verification data (GISTEMP, MLOST, HadCRU, BE, 20CR and ERA20C) 
 # ===========================================================================================================
 
-print '\nloading verification data...\n'
+print('\nloading verification data...\n')
 
 # ===================
 # Reanalysis products
@@ -277,54 +250,79 @@ print '\nloading verification data...\n'
 
 # Define month sequence for the calendar year 
 # (argument needed in upload of reanalysis data)
-annual = range(1,13)
+annual = list(range(1,13))
 
 # load ERA20C reanalysis -------------------------------------------------------
 datadir = datadir_reanl+'/era20c'
 datafile = 'tas_sfc_Amon_ERA20C_190001-201012.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 ERA20C_time = np.array([d.year for d in rtime])
-lat_ERA20C = dd[vardef]['lat']
-lon_ERA20C = dd[vardef]['lon']
-nlat_ERA20C = len(lat_ERA20C)
-nlon_ERA20C = len(lon_ERA20C)
+lats = dd[vardef]['lat']
+lons = dd[vardef]['lon']
+latshape = lats.shape
+lonshape = lons.shape
+if len(latshape) == 2 & len(lonshape) == 2:
+    # stored in 2D arrays
+    lat_ERA20C = np.unique(lats)
+    lon_ERA20C = np.unique(lons)
+    nlat_ERA20C, = lat_ERA20C.shape
+    nlon_ERA20C, = lon_ERA20C.shape
+else:
+    # stored in 1D arrays
+    lon_ERA20C = lons
+    lat_ERA20C = lats
+    nlat_ERA20C = len(lat_ERA20C)
+    nlon_ERA20C = len(lon_ERA20C)
 lon2d_ERA20C, lat2d_ERA20C = np.meshgrid(lon_ERA20C, lat_ERA20C)
-ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#ERA20C = dd[vardef]['value']                      # Anomalies
 
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
-ref_mean_era = np.mean(ERA20C[smatch:ematch,:,:],axis=0)
-ERA20C = ERA20C - ref_mean_era
+#ERA20C = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+ERA20C = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
 
+## compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
+#smatch, ematch = find_date_indices(ERA20C_time,1951,1980)
+#ref_mean_era = np.mean(ERA20C[smatch:ematch,:,:],axis=0)
+#ERA20C = ERA20C - ref_mean_era
 
 # load 20th century reanalysis (TCR) reanalysis --------------------------------
 datadir = datadir_reanl+'/20cr'
 datafile = 'tas_sfc_Amon_20CR_185101-201112.nc'
 vardict = {'tas_sfc_Amon': 'anom'}
-vardef = vardict.keys()[0]
+vardef = list(vardict.keys())[0]
 
-dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                   anom_ref=ref_period)
 rtime = dd[vardef]['years']
 TCR_time = np.array([d.year for d in rtime])
-lat_TCR = dd[vardef]['lat']
-lon_TCR = dd[vardef]['lon']
-nlat_TCR = len(lat_TCR)
-nlon_TCR = len(lon_TCR)
+lats = dd[vardef]['lat']
+lons = dd[vardef]['lon']
+latshape = lats.shape
+lonshape = lons.shape
+if len(latshape) == 2 & len(lonshape) == 2:
+    # stored in 2D arrays
+    lat_TCR = np.unique(lats)
+    lon_TCR = np.unique(lons)
+    nlat_TCR, = lat_TCR.shape
+    nlon_TCR, = lon_TCR.shape
+else:
+    # stored in 1D arrays
+    lon_TCR = lons
+    lat_TCR = lats
+    nlat_TCR = len(lat_TCR)
+    nlon_TCR = len(lon_TCR)
 lon2d_TCR, lat2d_TCR = np.meshgrid(lon_TCR, lat_TCR)
-TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
-#TCR = dd[vardef]['value']                      # Anomalies
 
-# compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
-smatch, ematch = find_date_indices(TCR_time,1951,1980)
-ref_mean_tcr = np.mean(TCR[smatch:ematch,:,:],axis=0)
-TCR = TCR - ref_mean_tcr
+#TCR = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
+TCR = dd[vardef]['value']                      # Anomalies w.r.t. ref_period
+
+## compute and remove the mean over 1951-1980 reference period as w/ GIS & BE
+#smatch, ematch = find_date_indices(TCR_time,1951,1980)
+#ref_mean_tcr = np.mean(TCR[smatch:ematch,:,:],axis=0)
+#TCR = TCR - ref_mean_tcr
 
 # ==================
 # Obs-based products
@@ -335,78 +333,82 @@ datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
 
 # load GISTEMP -----------------------------------------------------------------
 # Note: Anomalies w.r.t. 1951-1980 mean
-datafile_calib   = 'gistemp1200_ERSST.nc'
+datafile_calib   = 'gistemp1200_ERSSTv4.nc'
 calib_vars = ['Tsfc']
-[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=ref_period)
 GIS_time = np.array([d.year for d in gtime])
 nlat_GIS = len(GIS_lat)
 nlon_GIS = len(GIS_lon)
 lon2d_GIS, lat2d_GIS = np.meshgrid(GIS_lon, GIS_lat)
 gis_lat_range = (lat2d_GIS[0,0],lat2d_GIS[-1,0])
 gis_lon_range = (lon2d_GIS[0,0],lon2d_GIS[0,-1])
-print 'GIS grid info:'
-print ' lats=', gis_lat_range
-print ' lons=', gis_lon_range
+print('GIS grid info:')
+print(' lats=%s' % str(gis_lat_range))
+print(' lons=%s' % str(gis_lon_range))
 # GIS longitudes are off by 180 degrees
-print ' Shifting longitudes by 180 degrees'
-lat2d_GIS = np.roll(lat2d_GIS,shift=nlon_GIS/2,axis=1)
-lon2d_GIS = np.roll(lon2d_GIS,shift=nlon_GIS/2,axis=1)
-GIS_anomaly = np.roll(GIS_anomaly,shift=nlon_GIS/2,axis=2)
+print(' Shifting longitudes by 180 degrees')
+lat2d_GIS = np.roll(lat2d_GIS,shift=nlon_GIS//2,axis=1)
+lon2d_GIS = np.roll(lon2d_GIS,shift=nlon_GIS//2,axis=1)
+GIS_anomaly = np.roll(GIS_anomaly,shift=nlon_GIS//2,axis=2)
 
 # load HadCRUT -----------------------------------------------------------------
-# Note: Anomalies w.r.t. 1961-1990 mean
+# Note: Product is anomalies w.r.t. 1961-1990 mean
 datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
 calib_vars = ['Tsfc']
-[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,
+                                                                outfreq='annual',ref_period=ref_period)
 CRU_time = np.array([d.year for d in ctime])
 nlat_CRU = len(CRU_lat)
 nlon_CRU = len(CRU_lon)
 lon2d_CRU, lat2d_CRU = np.meshgrid(CRU_lon, CRU_lat)
 cru_lat_range = (lat2d_CRU[0,0],lat2d_CRU[-1,0])
 cru_lon_range = (lon2d_CRU[0,0],lon2d_CRU[0,-1])
-print 'CRU grid info:'
-print ' lats=', cru_lat_range
-print ' lons=', cru_lon_range
+print('CRU grid info:')
+print(' lats=%s' % str(cru_lat_range))
+print(' lons=%s' % str(cru_lon_range))
 # CRU longitudes are off by 180 degrees
-print ' Shifting longitudes by 180 degrees'
-lat2d_CRU = np.roll(lat2d_CRU,shift=nlon_CRU/2,axis=1)
-lon2d_CRU = np.roll(lon2d_CRU,shift=nlon_CRU/2,axis=1)
-CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU/2,axis=2)
+print(' Shifting longitudes by 180 degrees')
+lat2d_CRU = np.roll(lat2d_CRU,shift=nlon_CRU//2,axis=1)
+lon2d_CRU = np.roll(lon2d_CRU,shift=nlon_CRU//2,axis=1)
+CRU_anomaly = np.roll(CRU_anomaly,shift=nlon_CRU//2,axis=2)
 
 # load BerkeleyEarth -----------------------------------------------------------
 # Note: Anomalies w.r.t. 1951-1980 mean
 datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
 calib_vars = ['Tsfc']
-[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,
+                                                                   outfreq='annual',ref_period=ref_period)
 BE_time = np.array([d.year for d in btime])
 nlat_BE = len(BE_lat)
 nlon_BE = len(BE_lon)
 lon2d_BE, lat2d_BE = np.meshgrid(BE_lon, BE_lat)
 be_lat_range = (lat2d_BE[0,0],lat2d_BE[-1,0])
 be_lon_range = (lon2d_BE[0,0],lon2d_BE[0,-1])
-print 'BE grid info:'
-print ' lats=', be_lat_range
-print ' lons=', be_lon_range
+print('BE grid info:')
+print(' lats=%s' % str(be_lat_range))
+print(' lons=%s' % str(be_lon_range))
 # BE longitudes are off by 180 degrees
-print ' Shifting longitudes by 180 degrees'
-lat2d_BE = np.roll(lat2d_BE,shift=nlon_BE/2,axis=1)
-lon2d_BE = np.roll(lon2d_BE,shift=nlon_BE/2,axis=1)
-BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE/2,axis=2)
+print(' Shifting longitudes by 180 degrees')
+lat2d_BE = np.roll(lat2d_BE,shift=nlon_BE//2,axis=1)
+lon2d_BE = np.roll(lon2d_BE,shift=nlon_BE//2,axis=1)
+BE_anomaly = np.roll(BE_anomaly,shift=nlon_BE//2,axis=2)
 
 # load MLOST -------------------------------------------------------------------
-# Note: Anomalies w.r.t. 1961-1990 mean
+# Note: Product is anomalies w.r.t. 1961-1990 mean
 datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
 calib_vars = ['Tsfc']
-[mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,outfreq='annual')
+[mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,
+                                                                    outfreq='annual',ref_period=ref_period)
 MLOST_time = np.array([d.year for d in mtime])
 nlat_MLOST = len(MLOST_lat)
 nlon_MLOST = len(MLOST_lon)
 lon2d_MLOST, lat2d_MLOST = np.meshgrid(MLOST_lon, MLOST_lat)
 mlost_lat_range = (lat2d_MLOST[0,0],lat2d_MLOST[-1,0])
 mlost_lon_range = (lon2d_MLOST[0,0],lon2d_MLOST[0,-1])
-print 'MLOST grid info:'
-print ' lats=', mlost_lat_range
-print ' lons=', mlost_lon_range
+print('MLOST grid info:')
+print(' lats=%s' % str(mlost_lat_range))
+print(' lons=%s' % str(mlost_lon_range))
 
 
 # ===========================================================================================================
@@ -444,7 +446,7 @@ smatch, ematch = find_date_indices(MLOST_time,stime,etime)
 MLOST_anomaly = MLOST_anomaly - np.nanmean(MLOST_anomaly[smatch:ematch,:,:],axis=0)
 
 
-print '\n regridding LMR data to grids of verification data...\n'
+print('\n regridding LMR data to grids of verification data...\n')
 
 iplot_loc= False
 #iplot_loc= True
@@ -465,7 +467,7 @@ iw = 0
 if nya > 0:
     iw = (nya-1)/2
 
-cyears = range(trange[0],trange[1])
+cyears = list(range(trange[0],trange[1]))
 
 # time series for combination of data products
 lmr_tcr_csave   = np.zeros([len(cyears)])
@@ -557,10 +559,11 @@ for yr in cyears:
     CRU_smatch, CRU_ematch     = find_date_indices(CRU_time,yr-iw,yr+iw+1)
     MLOST_smatch, MLOST_ematch = find_date_indices(MLOST_time,yr-iw,yr+iw+1)
 
-    print '------------------------------------------------------------------------'
-    print 'working on year...' + str(yr)
-    print 'working on year...' + str(yr) + ' LMR index = ' + str(LMR_smatch) + ' = LMR year ' + str(LMR_time[LMR_smatch])
+    print('------------------------------------------------------------------------')
+    print('working on year... %s' % str(yr))
+    print('working on year... %5s LMR index = %5s : LMR year = %5s' % (str(yr),str(LMR_smatch),str(LMR_time[LMR_smatch])))
 
+    
     # TCR
     if TCR_smatch and TCR_ematch:
         tcr_verif = np.mean(TCR[TCR_smatch:TCR_ematch,:,:],0)
@@ -795,7 +798,7 @@ for yr in cyears:
         lmr_tcr_csave[k] = np.corrcoef(lmr_on_tcr_vec[indok],tcr_vec[indok])[0,1]
     else:
         lmr_tcr_csave[k] = np.nan
-    print '  lmr-tcr correlation  : '+ str(lmr_tcr_csave[k])
+    print('  lmr-tcr correlation     : %s' % str(lmr_tcr_csave[k]))
 
     # lmr <-> era
     indok = np.isfinite(era_vec); nbok = np.sum(indok); nball = era_vec.shape[1]
@@ -804,8 +807,8 @@ for yr in cyears:
         lmr_era_csave[k] = np.corrcoef(lmr_on_era_vec[indok],era_vec[indok])[0,1]
     else:
         lmr_era_csave[k] = np.nan
-    print '  lmr-era correlation  : '+ str(lmr_era_csave[k])
-
+    print('  lmr-era correlation     : %s' % str(lmr_era_csave[k]))
+    
     # lmr <-> gis
     indok = np.isfinite(gis_vec); nbok = np.sum(indok); nball = gis_vec.shape[1]
     ratio = float(nbok)/float(nball)
@@ -813,8 +816,8 @@ for yr in cyears:
         lmr_gis_csave[k] = np.corrcoef(lmr_on_gis_vec[indok],gis_vec[indok])[0,1]
     else:
         lmr_gis_csave[k] = np.nan
-    print '  lmr-gis correlation  : '+ str(lmr_gis_csave[k])
-
+    print('  lmr-gis correlation     : %s' % str(lmr_gis_csave[k]))
+    
     # lmr <-> be
     indok = np.isfinite(be_vec); nbok = np.sum(indok); nball = be_vec.shape[1]
     ratio = float(nbok)/float(nball)
@@ -822,8 +825,8 @@ for yr in cyears:
         lmr_be_csave[k] = np.corrcoef(lmr_on_be_vec[indok],be_vec[indok])[0,1]
     else:
         lmr_be_csave[k] = np.nan
-    print '  lmr-be correlation   : '+ str(lmr_be_csave[k])
-
+    print('  lmr-be correlation      : %s' % str(lmr_be_csave[k]))
+    
     # lmr <-> cru
     indok = np.isfinite(cru_vec); nbok = np.sum(indok); nball = cru_vec.shape[1]
     ratio = float(nbok)/float(nball)
@@ -831,8 +834,8 @@ for yr in cyears:
         lmr_cru_csave[k] = np.corrcoef(lmr_on_cru_vec[indok],cru_vec[indok])[0,1]
     else:
         lmr_cru_csave[k] = np.nan
-    print '  lmr-cru correlation  : '+ str(lmr_cru_csave[k])
-
+    print('  lmr-cru correlation     : %s' % str(lmr_cru_csave[k]))
+    
     # lmr <-> mlost
     indok = np.isfinite(mlost_vec); nbok = np.sum(indok); nball = mlost_vec.shape[1]
     ratio = float(nbok)/float(nball)
@@ -840,8 +843,8 @@ for yr in cyears:
         lmr_mlost_csave[k] = np.corrcoef(lmr_on_mlost_vec[indok],mlost_vec[indok])[0,1]
     else:
         lmr_mlost_csave[k] = np.nan
-    print '  lmr-mlost correlation: '+ str(lmr_mlost_csave[k])
-
+    print('  lmr-mlost correlation   : %s' % str(lmr_mlost_csave[k]))
+    
     # tcr <-> gis
     if ~np.isnan(tcr_on_gis_vec).all():
         indok = np.isfinite(gis_vec); nbok = np.sum(indok); nball = gis_vec.shape[1]
@@ -852,8 +855,8 @@ for yr in cyears:
             tcr_gis_csave[k] = np.nan
     else:
         tcr_gis_csave[k] = np.nan
-    print '  tcr-gis correlation  : '+ str(tcr_gis_csave[k])
-
+    print('  tcr-gis correlation     : %s' % str(tcr_gis_csave[k]))
+    
     # era <-> gis
     if ~np.isnan(era_on_gis_vec).all():
         indok = np.isfinite(gis_vec); nbok = np.sum(indok); nball = gis_vec.shape[1]
@@ -864,8 +867,8 @@ for yr in cyears:
             era_gis_csave[k] = np.nan
     else:
         era_gis_csave[k] = np.nan
-    print '  era-gis correlation  : '+ str(era_gis_csave[k])
-
+    print('  era-gis correlation     : %s' % str(era_gis_csave[k]))
+    
 
 # ===================================================================================
 # plots for anomaly correlation statistics
@@ -889,7 +892,7 @@ ax.set_xlim(trange[0],trange[-1])
 ax.set_ylim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,2)
-ax.hist(lmr_tcr_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+ax.hist(lmr_tcr_csave[~np.isnan(lmr_tcr_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
 ax.set_title('LMR - 20CR-V2')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -913,7 +916,7 @@ ax.set_xlim(trange[0],trange[-1])
 ax.set_ylim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,4)
-ax.hist(lmr_era_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+ax.hist(lmr_era_csave[~np.isnan(lmr_era_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
 ax.set_title('LMR - ERA-20C')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -939,7 +942,8 @@ ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,6)
 indok = np.isfinite(lmr_gis_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+            range=(bins.min(), bins.max()))
 ax.set_title('LMR - GISTEMP')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -953,6 +957,7 @@ ax.set_ylim(ymin,ymax)
 ypos = ymax-0.15*(ymax-ymin)
 xpos = xmin+0.025*(xmax-xmin)
 ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(lmr_gis_csave)),fontsize=11,fontweight='bold')
+print('LMR-GIS mean anomaly correlation: ' + str (np.nanmean(lmr_gis_csave)))
 
 # BE
 ax = fig.add_subplot(6,2,7)
@@ -965,7 +970,8 @@ ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,8)
 indok = np.isfinite(lmr_be_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_be_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_be_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+            range=(bins.min(), bins.max()))
 ax.set_title('LMR - BE')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -991,7 +997,8 @@ ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(6,2,10)
 indok = np.isfinite(lmr_cru_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_cru_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_cru_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+        range=(bins.min(), bins.max()))
 ax.set_title('LMR - HadCRUT4')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -1018,7 +1025,8 @@ ax.set_xlabel('Year CE',fontweight='bold')
 ax = fig.add_subplot(6,2,12)
 indok = np.isfinite(lmr_mlost_csave)
 if np.sum(indok) > 0:
-    ax.hist(lmr_mlost_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_mlost_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+        range=(bins.min(), bins.max()))
 ax.set_title('LMR - MLOST')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -1038,7 +1046,7 @@ fig.tight_layout()
 plt.subplots_adjust(left=0.1, bottom=0.05, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
 fig.suptitle('Surface air temperature anomaly correlation',fontweight='bold') 
 if fsave:
-    print 'saving to .png'
+    print('saving to .png')
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -1057,7 +1065,8 @@ if fsave:
     ax.set_ylim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Correlation',fontweight='bold')
     ax = fig.add_subplot(2,2,2)
-    ax.hist(lmr_tcr_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lmr_tcr_csave,bins=bins,histtype='stepfilled',alpha=0.25,
+        range=(bins.min(), bins.max()))
     ax.set_title('LMR - 20CR-V2')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -1084,7 +1093,8 @@ if fsave:
     ax = fig.add_subplot(2,2,4)
     indok = np.isfinite(lmr_gis_csave)
     if np.sum(indok) > 0:
-        ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25)
+        ax.hist(lmr_gis_csave[indok],bins=bins,histtype='stepfilled',alpha=0.25,
+                range=(bins.min(), bins.max()))
     ax.set_title('LMR - GISTEMP')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -1105,7 +1115,7 @@ if fsave:
     plt.subplots_adjust(left=0.1, bottom=0.45, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
     fig.suptitle('Surface air temperature anomaly correlation',fontweight='bold') 
 
-    print 'saving to .png'
+    print('saving to .png')
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -1123,7 +1133,7 @@ ax.set_xlim(trange[0],trange[-1])
 ax.set_ylim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Correlation',fontweight='bold')
 ax = fig.add_subplot(2,2,2)
-ax.hist(tcr_gis_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+ax.hist(tcr_gis_csave[~np.isnan(tcr_gis_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
 ax.set_title('20CR-V2 - GISTEMP')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -1148,7 +1158,7 @@ ax.set_ylim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Correlation',fontweight='bold')
 ax.set_xlabel('Year CE',fontweight='bold')
 ax = fig.add_subplot(2,2,4)
-ax.hist(era_gis_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+ax.hist(era_gis_csave[~np.isnan(era_gis_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
 ax.set_title('ERA-20C - GISTEMP')
 ax.set_xlim(corr_range[0],corr_range[-1])
 ax.set_ylabel('Counts',fontweight='bold')
@@ -1168,7 +1178,7 @@ ax.text(xpos,ypos,'Mean = %s' %"{:.2f}".format(np.nanmean(era_gis_csave)),fontsi
 plt.subplots_adjust(left=0.1, bottom=0.55, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
 fig.suptitle('Surface air temperature anomaly correlation',fontweight='bold') 
 if fsave:
-    print 'saving to .png'
+    print('saving to .png')
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
     plt.savefig(nexp+'_verify_grid_anomaly_correlation_reference_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -1440,17 +1450,18 @@ for la in range(nlat_GIS):
 # LMR-TCR
 # -------
 # median
+print('')
 lat_TCR = np.squeeze(lat2d_TCR[:,0])
 indlat = np.where((lat_TCR[:] > -60.0) & (lat_TCR[:] < 60.0))
-lmr_tcr_rmedian = str(float('%.2f' % np.median(np.median(r_lmr_tcr)) ))
-print 'lmr-tcr all-grid median r    : ' + str(lmr_tcr_rmedian)
-lmr_tcr_rmedian60 = str(float('%.2f' % np.median(np.median(r_lmr_tcr[indlat,:])) ))
-print 'lmr-tcr 60S-60N median r     : ' + str(lmr_tcr_rmedian60)
-lmr_tcr_cemedian = str(float('%.2f' % np.median(np.median(ce_lmr_tcr)) ))
-print 'lmr-tcr all-grid median ce   : ' + str(lmr_tcr_cemedian)
-lmr_tcr_cemedian60 = str(float('%.2f' % np.median(np.median(ce_lmr_tcr[indlat,:])) ))
-print 'lmr-tcr 60S-60N median ce    : ' + str(lmr_tcr_cemedian60)
-lmr_tcr_biasmedian = str(float('%.2f' % np.median(bias_lmr_tcr) ))
+lmr_tcr_rmedian = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_tcr)) ))
+print('lmr-tcr all-grid median r    : %s' % str(lmr_tcr_rmedian))
+lmr_tcr_rmedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_tcr[indlat,:])) ))
+print('lmr-tcr 60S-60N median r     : %s' % str(lmr_tcr_rmedian60))
+lmr_tcr_cemedian = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr)) ))
+print('lmr-tcr all-grid median ce   : %s' % str(lmr_tcr_cemedian))
+lmr_tcr_cemedian60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr[indlat,:])) ))
+print('lmr-tcr 60S-60N median ce    : %s' % str(lmr_tcr_cemedian60))
+lmr_tcr_biasmedian = str(float('%.2f' % np.nanmedian(bias_lmr_tcr) ))
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_tcr,lat_TCR)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_tcr,lat_TCR)
@@ -1482,17 +1493,18 @@ xbm_tcr_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 # LMR-ERA
 # -------
 # median
+print('')
 lat_ERA = np.squeeze(lat2d_ERA20C[:,0])
 indlat = np.where((lat_ERA20C[:] > -60.0) & (lat_ERA20C[:] < 60.0))
-lmr_era_rmean = str(float('%.2f' % np.median(np.median(r_lmr_era)) ))
-print 'lmr-era all-grid median r    : ' + str(lmr_era_rmean)
-lmr_era_rmean60 = str(float('%.2f' % np.median(np.median(r_lmr_era[indlat,:])) ))
-print 'lmr-era 60S-60N median r     : ' + str(lmr_era_rmean60)
-lmr_era_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_era)) ))
-print 'lmr-era all-grid median ce   : ' + str(lmr_era_cemean)
-lmr_era_cemean60 = str(float('%.2f' % np.median(np.median(ce_lmr_era[indlat,:])) ))
-print 'lmr-era 60S-60N median ce    : ' + str(lmr_era_cemean60)
-lmr_era_biasmean = str(float('%.2f' % np.median(bias_lmr_era) ))
+lmr_era_rmean = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_era)) ))
+print('lmr-era all-grid median r    : %s' % str(lmr_era_rmean))
+lmr_era_rmean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_era[indlat,:])) ))
+print('lmr-era 60S-60N median r     : %s' % str(lmr_era_rmean60))
+lmr_era_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_era)) ))
+print('lmr-era all-grid median ce   : %s' % str(lmr_era_cemean))
+lmr_era_cemean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_era[indlat,:])) ))
+print('lmr-era 60S-60N median ce    : %s' % str(lmr_era_cemean60))
+lmr_era_biasmean = str(float('%.2f' % np.nanmedian(bias_lmr_era) ))
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_era,lat_ERA20C)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_era,lat_ERA20C)
@@ -1524,17 +1536,18 @@ xbm_era_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 # LMR_GIS
 # -------
 # median
+print('')
 lat_GIS = np.squeeze(lat2d_GIS[:,0])
 indlat = np.where((lat_GIS[:] > -60.0) & (lat_GIS[:] < 60.0))
-lmr_gis_rmean = str(float('%.2f' % np.median(np.median(r_lmr_gis)) ))
-print 'lmr-gis all-grid median r    : ' + str(lmr_gis_rmean)
-lmr_gis_rmean60 = str(float('%.2f' % np.median(np.median(r_lmr_gis[indlat,:])) ))
-print 'lmr-gis 60S-60N median r     : ' + str(lmr_gis_rmean60)
-lmr_gis_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_gis)) ))
-print 'lmr-gis all-grid median ce   : ' + str(lmr_gis_cemean)
-lmr_gis_cemean60 = str(float('%.2f' % np.median(np.median(ce_lmr_gis[indlat,:])) ))
-print 'lmr-gis 60S-60N median ce    : ' + str(lmr_gis_cemean60)
-lmr_gis_biasmean = str(float('%.2f' % np.median(bias_lmr_gis[~np.isnan(bias_lmr_gis)]) ))
+lmr_gis_rmean = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_gis)) ))
+print('lmr-gis all-grid median r    : %s' % str(lmr_gis_rmean))
+lmr_gis_rmean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_gis[indlat,:])) ))
+print('lmr-gis 60S-60N median r     : %s' % str(lmr_gis_rmean60))
+lmr_gis_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_gis)) ))
+print('lmr-gis all-grid median ce   : %s' % str(lmr_gis_cemean))
+lmr_gis_cemean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_gis[indlat,:])) ))
+print('lmr-gis 60S-60N median ce    : %s' % str(lmr_gis_cemean60))
+lmr_gis_biasmean = str(float('%.2f' % np.nanmedian(bias_lmr_gis[~np.isnan(bias_lmr_gis)]) ))
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_gis,lat_GIS)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_gis,lat_GIS)
@@ -1562,21 +1575,24 @@ xbm_gis_biasmean_global = str(float('%.2f' %biasmean_global[0]))
 xbm_gis_biasmean_nh     = str(float('%.2f' %biasmean_nh[0]))
 xbm_gis_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 
+print('LMR-GIS globa-mean CE:' + str(lmr_gis_cemean_global))
+
 # ------
 # LMR_BE
 # ------
 # median
+print('')
 lat_BE = np.squeeze(lat2d_BE[:,0])
 indlat = np.where((lat_BE[:] > -60.0) & (lat_BE[:] < 60.0))
-lmr_be_rmean = str(float('%.2f' % np.median(np.median(r_lmr_be)) ))
-print 'lmr-be all-grid median r     : ' + str(lmr_be_rmean)
-lmr_be_rmean60 = str(float('%.2f' % np.median(np.median(r_lmr_be[indlat,:])) ))
-print 'lmr-be 60S-60N median r      : ' + str(lmr_be_rmean60)
-lmr_be_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_be)) ))
-print 'lmr-be all-grid median ce    : ' + str(lmr_be_cemean)
-lmr_be_cemean60 = str(float('%.2f' % np.median(np.median(ce_lmr_be[indlat,:])) ))
-print 'lmr-be 60S-60N median ce     : ' + str(lmr_be_cemean60)
-lmr_be_biasmean = str(float('%.2f' % np.median(bias_lmr_be[~np.isnan(bias_lmr_be)]) ))
+lmr_be_rmean = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_be)) ))
+print('lmr-be all-grid median r     : %s' % str(lmr_be_rmean))
+lmr_be_rmean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_be[indlat,:])) ))
+print('lmr-be 60S-60N median r      : %s' % str(lmr_be_rmean60))
+lmr_be_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_be)) ))
+print('lmr-be all-grid median ce    : %s' % str(lmr_be_cemean))
+lmr_be_cemean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_be[indlat,:])) ))
+print('lmr-be 60S-60N median ce     : %s' % str(lmr_be_cemean60))
+lmr_be_biasmean = str(float('%.2f' % np.nanmedian(bias_lmr_be[~np.isnan(bias_lmr_be)]) ))
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_be,lat_BE)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_be,lat_BE)
@@ -1608,17 +1624,18 @@ xbm_be_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 # LMR_CRU
 # -------
 # median
+print('')
 lat_CRU = np.squeeze(lat2d_CRU[:,0])
 indlat = np.where((lat_CRU[:] > -60.0) & (lat_CRU[:] < 60.0))
-lmr_cru_rmean = str(float('%.2f' % np.median(np.median(r_lmr_cru)) ))
-print 'lmr-cru all-grid median r    : ' + str(lmr_cru_rmean)
-lmr_cru_rmean60 = str(float('%.2f' % np.median(np.median(r_lmr_cru[indlat,:])) ))
-print 'lmr-cru 60S-60N median r     : ' + str(lmr_cru_rmean60)
-lmr_cru_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_cru)) ))
-print 'lmr-cru all-grid median ce   : ' + str(lmr_cru_cemean)
-lmr_cru_cemean60 = str(float('%.2f' % np.median(np.median(ce_lmr_cru[indlat,:])) ))
-print 'lmr-cru 60S-60N median ce    : ' + str(lmr_cru_cemean60)
-lmr_cru_biasmean = str(float('%.2f' % np.median(bias_lmr_cru[~np.isnan(bias_lmr_cru)]) ))
+lmr_cru_rmean = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_cru)) ))
+print('lmr-cru all-grid median r    : %s' % str(lmr_cru_rmean))
+lmr_cru_rmean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_cru[indlat,:])) ))
+print('lmr-cru 60S-60N median r     : %s' % str(lmr_cru_rmean60))
+lmr_cru_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_cru)) ))
+print('lmr-cru all-grid median ce   : %s' % str(lmr_cru_cemean))
+lmr_cru_cemean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_cru[indlat,:])) ))
+print('lmr-cru 60S-60N median ce    : %s' % str(lmr_cru_cemean60))
+lmr_cru_biasmean = str(float('%.2f' % np.nanmedian(bias_lmr_cru[~np.isnan(bias_lmr_cru)]) ))
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_cru,lat_CRU)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_cru,lat_CRU)
@@ -1650,17 +1667,18 @@ xbm_cru_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 # LMR_MLOST
 # ---------
 # median
+print('')
 lat_MLOST = np.squeeze(lat2d_MLOST[:,0])
 indlat = np.where((lat_MLOST[:] > -60.0) & (lat_MLOST[:] < 60.0))
-lmr_mlost_rmean = str(float('%.2f' % np.median(np.median(r_lmr_mlost)) ))
-print 'lmr-mlost all-grid median r  : ' + str(lmr_mlost_rmean)
-lmr_mlost_rmean60 = str(float('%.2f' % np.median(np.median(r_lmr_mlost[indlat,:])) ))
-print 'lmr-mlost 60S-60N median r   : ' + str(lmr_mlost_rmean60)
-lmr_mlost_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_mlost)) ))
-print 'lmr-mlost all-grid median ce : ' + str(lmr_mlost_cemean)
-lmr_mlost_cemean60 = str(float('%.2f' % np.median(np.median(ce_lmr_mlost[indlat,:])) ))
-print 'lmr-mlost 60S-60N median ce  : ' + str(lmr_mlost_cemean60)
-lmr_mlost_biasmean = str(float('%.2f' % np.median(bias_lmr_mlost[~np.isnan(bias_lmr_mlost)]) ))
+lmr_mlost_rmean = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_mlost)) ))
+print('lmr-mlost all-grid median r  : %s' % str(lmr_mlost_rmean))
+lmr_mlost_rmean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_lmr_mlost[indlat,:])) ))
+print('lmr-mlost 60S-60N median r   : %s' % str(lmr_mlost_rmean60))
+lmr_mlost_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_mlost)) ))
+print('lmr-mlost all-grid median ce : %s' % str(lmr_mlost_cemean))
+lmr_mlost_cemean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_mlost[indlat,:])) ))
+print('lmr-mlost 60S-60N median ce  : %s' % str(lmr_mlost_cemean60))
+lmr_mlost_biasmean = str(float('%.2f' % np.nanmedian(bias_lmr_mlost[~np.isnan(bias_lmr_mlost)]) ))
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_lmr_mlost,lat_MLOST)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_lmr_mlost,lat_MLOST)
@@ -1692,17 +1710,18 @@ xbm_mlost_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 # TCR_GIS
 # -------
 # median
+print('')
 lat_GIS = np.squeeze(lat2d_GIS[:,0])
 indlat = np.where((lat_GIS[:] > -60.0) & (lat_GIS[:] < 60.0))
-tcr_gis_rmean = str(float('%.2f' % np.median(np.median(r_tcr_gis)) ))
-print 'tcr-gis all-grid median r    : ' + str(tcr_gis_rmean)
-tcr_gis_rmean60 = str(float('%.2f' % np.median(np.median(r_tcr_gis[indlat,:])) ))
-print 'tcr-gis 60S-60N median r     : ' + str(tcr_gis_rmean60)
-tcr_gis_cemean = str(float('%.2f' % np.median(np.median(ce_tcr_gis)) ))
-print 'tcr-gis all-grid median ce   : ' + str(tcr_gis_cemean)
-tcr_gis_cemean60 = str(float('%.2f' % np.median(np.median(ce_tcr_gis[indlat,:])) ))
-print 'tcr-gis 60S-60N median ce    : ' + str(tcr_gis_cemean60)
-tcr_gis_biasmean = str(float('%.2f' % np.median(bias_tcr_gis[~np.isnan(bias_tcr_gis)]) ))
+tcr_gis_rmean = str(float('%.2f' % np.nanmedian(np.nanmedian(r_tcr_gis)) ))
+print('tcr-gis all-grid median r    : %s' % str(tcr_gis_rmean))
+tcr_gis_rmean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_tcr_gis[indlat,:])) ))
+print('tcr-gis 60S-60N median r     : %s' % str(tcr_gis_rmean60))
+tcr_gis_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_gis)) ))
+print('tcr-gis all-grid median ce   : %s' % str(tcr_gis_cemean))
+tcr_gis_cemean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_gis[indlat,:])) ))
+print('tcr-gis 60S-60N median ce    : %s' % str(tcr_gis_cemean60))
+tcr_gis_biasmean = str(float('%.2f' % np.nanmedian(bias_tcr_gis[~np.isnan(bias_tcr_gis)]) ))
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_tcr_gis,lat_GIS)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_tcr_gis,lat_GIS)
@@ -1721,17 +1740,21 @@ tcr_gis_biasmean_sh     = str(float('%.2f' %biasmean_sh[0]))
 # ERA_GIS
 # -------
 # median
+print('')
 lat_GIS = np.squeeze(lat2d_GIS[:,0])
 indlat = np.where((lat_GIS[:] > -60.0) & (lat_GIS[:] < 60.0))
-era_gis_rmean = str(float('%.2f' % np.median(np.median(r_era_gis)) ))
-print 'era-gis all-grid median r    : ' + str(era_gis_rmean)
-era_gis_rmean60 = str(float('%.2f' % np.median(np.median(r_era_gis[indlat,:])) ))
-print 'era-gis 60S-60N median r     : ' + str(era_gis_rmean60)
-era_gis_cemean = str(float('%.2f' % np.median(np.median(ce_era_gis)) ))
-print 'era-gis all-grid median ce   : ' + str(era_gis_cemean)
-era_gis_cemean60 = str(float('%.2f' % np.median(np.median(ce_era_gis[indlat,:])) ))
-print 'era-gis 60S-60N median ce    : ' + str(era_gis_cemean60)
-era_gis_biasmean = str(float('%.2f' % np.median(bias_era_gis[~np.isnan(bias_era_gis)]) ))
+era_gis_rmean = str(float('%.2f' % np.nanmedian(np.nanmedian(r_era_gis)) ))
+print('era-gis all-grid median r    : %s' % str(era_gis_rmean))
+era_gis_rmean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(r_era_gis[indlat,:])) ))
+print('era-gis 60S-60N median r     : %s' % str(era_gis_rmean60))
+era_gis_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_era_gis)) ))
+print('era-gis all-grid median ce   : %s' % str(era_gis_cemean))
+era_gis_cemean60 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_era_gis[indlat,:])) ))
+print('era-gis 60S-60N median ce    : %s' % str(era_gis_cemean60))
+era_gis_biasmean = str(float('%.2f' % np.nanmedian(bias_era_gis[~np.isnan(bias_era_gis)]) ))
+
+print('')
+
 # mean
 [rmean_global,rmean_nh,rmean_sh]    = global_hemispheric_means(r_era_gis,lat_GIS)
 [cemean_global,cemean_nh,cemean_sh] = global_hemispheric_means(ce_era_gis,lat_GIS)
@@ -1969,7 +1992,7 @@ plt.xlabel('Coefficient of efficiency',fontweight='bold')
 plt.suptitle('LMR zonal-mean verification - surface air temperature',fontweight='bold')
 fig.tight_layout(pad = 2.0)
 if fsave:
-    print 'saving to .png'
+    print('saving to .png')
     plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png')
     plt.savefig(nexp+'_verify_grid_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
     plt.close()
@@ -2022,7 +2045,7 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_bias_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
 
@@ -2042,7 +2065,7 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_bias_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
 
@@ -2119,7 +2142,7 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png')
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -2154,7 +2177,7 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.png')
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_paper.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -2212,7 +2235,7 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_supp.png')
         plt.savefig(nexp+'_verify_grid_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_supp.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
@@ -2248,7 +2271,7 @@ if iplot:
   
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_r_ce_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
         plt.savefig(nexp+'_verify_grid_r_ce_reference_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
@@ -2318,24 +2341,24 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_r_ce_Prior_'+str(trange[0])+'-'+str(trange[1])+'.png')
         plt.savefig(nexp+'_verify_grid_r_ce_Prior_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
 
 
     # Comparisons of CE (full) & CE (unbiased errors)
 
-    lmr_tcr_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_tcr[:,:])) ))
-    lmr_tcr_cemean2 = str(float('%.2f' % np.median(np.median(ce_lmr_tcr[:,:]-ce_lmr_tcr_unbiased[:,:])) ))
+    lmr_tcr_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr[:,:])) ))
+    lmr_tcr_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_tcr[:,:]-ce_lmr_tcr_unbiased[:,:])) ))
 
-    lmr_gis_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_gis[:,:])) ))
-    lmr_gis_cemean2 = str(float('%.2f' % np.median(np.median(ce_lmr_gis[:,:]-ce_lmr_gis_unbiased[:,:])) ))
+    lmr_gis_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_gis[:,:])) ))
+    lmr_gis_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_gis[:,:]-ce_lmr_gis_unbiased[:,:])) ))
 
-    lmr_be_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_be[:,:])) ))
-    lmr_be_cemean2 = str(float('%.2f' % np.median(np.median(ce_lmr_be[:,:]-ce_lmr_be_unbiased[:,:])) ))
+    lmr_be_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_be[:,:])) ))
+    lmr_be_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_be[:,:]-ce_lmr_be_unbiased[:,:])) ))
 
-    lmr_mlost_cemean = str(float('%.2f' % np.median(np.median(ce_lmr_mlost[:,:])) ))
-    lmr_mlost_cemean2 = str(float('%.2f' % np.median(np.median(ce_lmr_mlost[:,:]-ce_lmr_mlost_unbiased[:,:])) ))
+    lmr_mlost_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_mlost[:,:])) ))
+    lmr_mlost_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_lmr_mlost[:,:]-ce_lmr_mlost_unbiased[:,:])) ))
 
     fig = plt.figure()
     ax = fig.add_subplot(4,2,1)    
@@ -2388,16 +2411,16 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_ce_vsBias_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
 
     # Reference
-    tcr_gis_cemean = str(float('%.2f' % np.median(np.median(ce_tcr_gis[:,:])) ))
-    tcr_gis_cemean2 = str(float('%.2f' % np.median(np.median(ce_tcr_gis[:,:]-ce_tcr_gis_unbiased[:,:])) ))
+    tcr_gis_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_gis[:,:])) ))
+    tcr_gis_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_tcr_gis[:,:]-ce_tcr_gis_unbiased[:,:])) ))
 
-    era_gis_cemean = str(float('%.2f' % np.median(np.median(ce_era_gis[:,:])) ))
-    era_gis_cemean2 = str(float('%.2f' % np.median(np.median(ce_era_gis[:,:]-ce_era_gis_unbiased[:,:])) ))
+    era_gis_cemean = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_era_gis[:,:])) ))
+    era_gis_cemean2 = str(float('%.2f' % np.nanmedian(np.nanmedian(ce_era_gis[:,:]-ce_era_gis_unbiased[:,:])) ))
 
     fig = plt.figure()
     ax = fig.add_subplot(4,2,1)    
@@ -2426,52 +2449,13 @@ if iplot:
 
     fig.tight_layout()
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_ce_vsBias_reference_'+str(trange[0])+'-'+str(trange[1])+'.png')
 
-
 if iplot:
-    plt.show()
+    plt.show(block=True)
 
-
-# ensemble calibration
-
-# Need to project TCR on LMR grid
-nyears,nlat,nlon = np.shape(xam_var)
-nyears_tcr,nlat_tcr,nlon_tcr = tcr_allyears.shape
-tcr_on_lmr = np.zeros(shape=[len(cyears),nlat,nlon])
-lmr_err_vs_tcr = np.zeros(shape=[len(cyears),nlat,nlon])
-be_on_lmr = np.zeros(shape=[len(cyears),nlat,nlon])
-lmr_err_vs_be = np.zeros(shape=[len(cyears),nlat,nlon])
-
-k = -1
-for yr in cyears:
-    k = k + 1
-    tcr_on_lmr[k,:,:] = regrid(specob_tcr,specob_lmr,tcr_allyears[k,:,:], ntrunc=None, smooth=None)
-    LMR_smatch, LMR_ematch = find_date_indices(LMR_time,yr,yr+1)
-    pdata_lmr = np.mean(xam[LMR_smatch:LMR_ematch,:,:],0)
-    lmr_err_vs_tcr[k,:,:] =  pdata_lmr - tcr_on_lmr[k,:,:]
-
-
-print np.shape(lmr_err_vs_tcr)
-print np.shape(xam_var)
-LMR_smatch, LMR_ematch = find_date_indices(LMR_time,trange[0],trange[1])
-svar = xam_var[LMR_smatch:LMR_ematch,:,:]
-calib_tcr = lmr_err_vs_tcr.var(0)/svar.mean(0)
-print calib_tcr[0:-1,:].mean()
-
-
-# create the plot
-mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
-fig = plt.figure()
-cb = LMR_plotter(calib_tcr,lat2,lon2,mapcolor_calib,11,0,10,extend='max',nticks=10)
-#cb.set_ticks(range(11))
-# overlay stations!
-plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n Surface air temperature')
-if fsave:
-    print 'saving to .png'
-    plt.savefig(nexp+'_verify_grid_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')
-
+    
 
 # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
 
@@ -2479,3 +2463,149 @@ if fsave:
 
 # zonal means of the original LMR data
 
+# new---time-mean spatial anomaly correlation
+lmr_tcr_mac = str(float('%.2f' %np.nanmean(lmr_tcr_csave)))
+lmr_era_mac = str(float('%.2f' %np.nanmean(lmr_era_csave)))
+lmr_gis_mac = str(float('%.2f' %np.nanmean(lmr_gis_csave)))
+lmr_be_mac = str(float('%.2f' %np.nanmean(lmr_be_csave)))
+lmr_cru_mac = str(float('%.2f' %np.nanmean(lmr_cru_csave)))
+lmr_mlost_mac = str(float('%.2f' %np.nanmean(lmr_mlost_csave)))
+
+# new---store data in pickle file for analysis
+#
+# need to store anomaly correlation data too
+#
+if stat_save:
+    grid_verification_stats = {}
+    stat_vars = ['trange','ref_period',
+                 'lmr_tcr_rmean_global','lmr_tcr_rmean_nh','lmr_tcr_rmean_sh','lmr_tcr_cemean_global','lmr_tcr_cemean_nh','lmr_tcr_cemean_sh',
+                 'lmr_era_rmean_global','lmr_era_rmean_nh','lmr_era_rmean_sh','lmr_era_cemean_global','lmr_era_cemean_nh','lmr_era_cemean_sh',
+                 'lmr_gis_rmean_global','lmr_gis_rmean_nh','lmr_gis_rmean_sh','lmr_gis_cemean_global','lmr_gis_cemean_nh','lmr_gis_cemean_sh',
+                 'lmr_be_rmean_global','lmr_be_rmean_nh','lmr_be_rmean_sh','lmr_be_cemean_global','lmr_be_cemean_nh','lmr_be_cemean_sh',
+                 'lmr_cru_rmean_global','lmr_cru_rmean_nh','lmr_cru_rmean_sh','lmr_cru_cemean_global','lmr_cru_cemean_nh','lmr_cru_cemean_sh',
+                 'lmr_mlost_rmean_global','lmr_mlost_rmean_nh','lmr_mlost_rmean_sh','lmr_mlost_cemean_global','lmr_mlost_cemean_nh','lmr_mlost_cemean_sh',
+                 'xbm_tcr_rmean_global','xbm_tcr_rmean_nh','xbm_tcr_rmean_sh','xbm_tcr_cemean_global','xbm_tcr_cemean_nh','xbm_tcr_cemean_sh',
+                 'xbm_era_rmean_global','xbm_era_rmean_nh','xbm_era_rmean_sh','xbm_era_cemean_global','xbm_era_cemean_nh','xbm_era_cemean_sh',
+                 'xbm_gis_rmean_global','xbm_gis_rmean_nh','xbm_gis_rmean_sh','xbm_gis_cemean_global','xbm_gis_cemean_nh','xbm_gis_cemean_sh',
+                 'xbm_be_rmean_global','xbm_be_rmean_nh','xbm_be_rmean_sh','xbm_be_cemean_global','xbm_be_cemean_nh','xbm_be_cemean_sh',
+                 'xbm_cru_rmean_global','xbm_cru_rmean_nh','xbm_cru_rmean_sh','xbm_cru_cemean_global','xbm_cru_cemean_nh','xbm_cru_cemean_sh',
+                 'xbm_mlost_rmean_global','xbm_mlost_rmean_nh','xbm_mlost_rmean_sh','xbm_mlost_cemean_global','xbm_mlost_cemean_nh','xbm_mlost_cemean_sh',
+                 'lmr_tcr_mac','lmr_era_mac','lmr_gis_mac','lmr_be_mac','lmr_cru_mac','lmr_mlost_mac',
+                 'r_lmr_tcr_zm','ce_lmr_tcr_zm', 'lat_TCR',
+                 'r_lmr_era_zm','ce_lmr_era_zm', 'lat_ERA20C',
+                 'r_lmr_gis_zm','ce_lmr_gis_zm', 'lat_GIS',
+                 'r_lmr_be_zm','ce_lmr_be_zm', 'lat_BE',
+                 'r_lmr_cru_zm','ce_lmr_cru_zm', 'lat_CRU',
+                 'r_lmr_mlost_zm','ce_lmr_mlost_zm', 'lat_MLOST']
+
+    stat_metadata = {'trange':"starting and ending year of verification time period",
+                     'ref_period':"starting and ending year of reference time period (mean removed)",
+                     'lmr_tcr_rmean_global':"LMR_TCR correlation global mean",
+                     'lmr_tcr_rmean_nh':"LMR_TCR correlation Northern Hemisphere mean",
+                     'lmr_tcr_rmean_sh':"LMR_TCR correlation Southern Hemisphere mean",
+                     'lmr_tcr_cemean_global':"LMR_TCR coefficient of efficiency global mean",
+                     'lmr_tcr_cemean_nh':"LMR_TCR coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_tcr_cemean_sh':"LMR_TCR coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_era_rmean_global':"LMR_ERA correlation global mean",
+                     'lmr_era_rmean_nh':"LMR_ERA correlation Northern Hemisphere mean",
+                     'lmr_era_rmean_sh':"LMR_ERA correlation Southern Hemisphere mean",
+                     'lmr_era_cemean_global':"LMR_ERA coefficient of efficiency global mean",
+                     'lmr_era_cemean_nh':"LMR_ERA coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_era_cemean_sh':"LMR_ERA coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_gis_rmean_global':"LMR_GIS correlation global mean",
+                     'lmr_gis_rmean_nh':"LMR_GIS correlation Northern Hemisphere mean",
+                     'lmr_gis_rmean_sh':"LMR_GIS correlation Southern Hemisphere mean",
+                     'lmr_gis_cemean_global':"LMR_GIS coefficient of efficiency global mean",
+                     'lmr_gis_cemean_nh':"LMR_GIS coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_gis_cemean_sh':"LMR_GIS coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_be_rmean_global':"LMR_BE correlation global mean",
+                     'lmr_be_rmean_nh':"LMR_BE correlation Northern Hemisphere mean",
+                     'lmr_be_rmean_sh':"LMR_BE correlation Southern Hemisphere mean",
+                     'lmr_be_cemean_global':"LMR_BE coefficient of efficiency global mean",
+                     'lmr_be_cemean_nh':"LMR_BE coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_be_cemean_sh':"LMR_BE coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_cru_rmean_global':"LMR_CRU correlation global mean",
+                     'lmr_cru_rmean_nh':"LMR_CRU correlation Northern Hemisphere mean",
+                     'lmr_cru_rmean_sh':"LMR_CRU correlation Southern Hemisphere mean",
+                     'lmr_cru_cemean_global':"LMR_CRU coefficient of efficiency global mean",
+                     'lmr_cru_cemean_nh':"LMR_CRU coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_cru_cemean_sh':"LMR_CRU coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_mlost_rmean_global':"LMR_MLOST correlation global mean",
+                     'lmr_mlost_rmean_nh':"LMR_MLOST correlation Northern Hemisphere mean",
+                     'lmr_mlost_rmean_sh':"LMR_MLOST correlation Southern Hemisphere mean",
+                     'lmr_mlost_cemean_global':"LMR_MLOST coefficient of efficiency global mean",
+                     'lmr_mlost_cemean_nh':"LMR_MLOST coefficient of efficiency Northern Hemisphere mean",
+                     'lmr_mlost_cemean_sh':"LMR_MLOST coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_tcr_rmean_global':"XBM_TCR correlation global mean",
+                     'xbm_tcr_rmean_nh':"XBM_TCR correlation Northern Hemisphere mean",
+                     'xbm_tcr_rmean_sh':"XBM_TCR correlation Southern Hemisphere mean",
+                     'xbm_tcr_cemean_global':"XBM_TCR coefficient of efficiency global mean",
+                     'xbm_tcr_cemean_nh':"XBM_TCR coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_tcr_cemean_sh':"XBM_TCR coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_era_rmean_global':"XBM_ERA correlation global mean",
+                     'xbm_era_rmean_nh':"XBM_ERA correlation Northern Hemisphere mean",
+                     'xbm_era_rmean_sh':"XBM_ERA correlation Southern Hemisphere mean",
+                     'xbm_era_cemean_global':"XBM_ERA coefficient of efficiency global mean",
+                     'xbm_era_cemean_nh':"XBM_ERA coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_era_cemean_sh':"XBM_ERA coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_gis_rmean_global':"XBM_GIS correlation global mean",
+                     'xbm_gis_rmean_nh':"XBM_GIS correlation Northern Hemisphere mean",
+                     'xbm_gis_rmean_sh':"XBM_GIS correlation Southern Hemisphere mean",
+                     'xbm_gis_cemean_global':"XBM_GIS coefficient of efficiency global mean",
+                     'xbm_gis_cemean_nh':"XBM_GIS coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_gis_cemean_sh':"XBM_GIS coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_be_rmean_global':"XBM_BE correlation global mean",
+                     'xbm_be_rmean_nh':"XBM_BE correlation Northern Hemisphere mean",
+                     'xbm_be_rmean_sh':"XBM_BE correlation Southern Hemisphere mean",
+                     'xbm_be_cemean_global':"XBM_BE coefficient of efficiency global mean",
+                     'xbm_be_cemean_nh':"XBM_BE coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_be_cemean_sh':"XBM_BE coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_cru_rmean_global':"XBM_CRU correlation global mean",
+                     'xbm_cru_rmean_nh':"XBM_CRU correlation Northern Hemisphere mean",
+                     'xbm_cru_rmean_sh':"XBM_CRU correlation Southern Hemisphere mean",
+                     'xbm_cru_cemean_global':"XBM_CRU coefficient of efficiency global mean",
+                     'xbm_cru_cemean_nh':"XBM_CRU coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_cru_cemean_sh':"XBM_CRU coefficient of efficiency Southern Hemisphere mean",
+                     'xbm_mlost_rmean_global':"XBM_MLOST correlation global mean",
+                     'xbm_mlost_rmean_nh':"XBM_MLOST correlation Northern Hemisphere mean",
+                     'xbm_mlost_rmean_sh':"XBM_MLOST correlation Southern Hemisphere mean",
+                     'xbm_mlost_cemean_global':"XBM_MLOST coefficient of efficiency global mean",
+                     'xbm_mlost_cemean_nh':"XBM_MLOST coefficient of efficiency Northern Hemisphere mean",
+                     'xbm_mlost_cemean_sh':"XBM_MLOST coefficient of efficiency Southern Hemisphere mean",
+                     'lmr_tcr_mac':"LMR_TCR time-mean spatial anomaly correlation",
+                     'lmr_era_mac':"LMR_ERA time-mean spatial anomaly correlation",
+                     'lmr_gis_mac':"LMR_GIS time-mean spatial anomaly correlation",
+                     'lmr_be_mac':"LMR_BE time-mean spatial anomaly correlation",
+                     'lmr_cru_mac':"LMR_CRU time-mean spatial anomaly correlation",
+                     'lmr_mlost_mac':"LMR_MLOST time-mean spatial anomaly correlation",
+                     'r_lmr_tcr_zm' :"LMR_TCR zonal-mean correlation",
+                     'ce_lmr_tcr_zm' :"LMR_TCR zonal-mean coefficient of efficiency",
+                     'lat_TCR':"TCR latitudes",
+                     'r_lmr_era_zm' :"LMR_ERA zonal-mean correlation",
+                     'ce_lmr_era_zm' :"LMR_ERA zonal-mean coefficient of efficiency",
+                     'lat_ERA20C':"ERA20C latitudes",
+                     'r_lmr_gis_zm' :"LMR_GIS zonal-mean correlation",
+                     'ce_lmr_gis_zm' :"LMR_GIS zonal-mean coefficient of efficiency",
+                     'lat_GIS':"GIS latitudes",
+                     'r_lmr_be_zm' :"LMR_BE zonal-mean correlation",
+                     'ce_lmr_be_zm' :"LMR_BE zonal-mean coefficient of efficiency",
+                     'lat_BE':"BE latitudes",
+                     'r_lmr_cru_zm' :"LMR_CRU zonal-mean correlation",
+                     'ce_lmr_cru_zm' :"LMR_CRU zonal-mean coefficient of efficiency",
+                     'lat_CRU':"CRU latitudes",
+                     'r_lmr_mlost_zm' :"LMR_MLOST zonal-mean correlation",
+                     'ce_lmr_mlost_zm' :"LMR_MLOST zonal-mean coefficient of efficiency",
+                     'lat_MLOST':"MLOST latitudes",
+                     'stat_metadata':'metadata'
+                     }
+
+    for var in stat_vars:
+        grid_verification_stats[var] = locals()[var]
+
+    grid_verification_stats['stat_metadata'] = stat_metadata
+
+    # dump the dictionary to a pickle file
+    spfile = nexp+'_'+str(niters)+'_iters_grid_verification.pckl'
+    print('writing statistics to pickle file: ' + spfile)
+    outfile = open(spfile,'wb')
+    pickle.dump(grid_verification_stats,outfile)

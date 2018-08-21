@@ -1,0 +1,21 @@
+# This file keeps some simple grid definitions to use for ESMpy regridding
+
+t42:
+  nlat: 44
+  nlon: 66
+  include_poles: False
+
+reg_4x5deg:
+  nlat: 45
+  nlon: 72
+  include_poles: False
+
+reg_2x2deg:
+  nlat: 91
+  nlon: 180
+  include_poles: False
+
+20CRv2grid:
+  nlat: 91
+  nlon: 180
+  include_poles: True

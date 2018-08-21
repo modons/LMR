@@ -1,5 +1,5 @@
 class EmptyError(Exception):
-    print Exception
+    print(Exception)
 
 #==========================================================================================
 #
@@ -27,11 +27,11 @@ def read_proxy_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_region, proxy
     proxy_list  = {}; # dict list containing proxy types and associated proxy id's (sites)
     sites_assim = {}
     sites_eval  = {}
-    proxy_types = proxy_definition.keys()
+    proxy_types = list(proxy_definition.keys())
 
     # check if dealing with with "order" digits or not in definition of proxies
     try:
-        proxy_types_unordered = [i.split(':', 1)[1] for i in proxy_definition.keys()]
+        proxy_types_unordered = [i.split(':', 1)[1] for i in list(proxy_definition.keys())]
     except:
         proxy_types_unordered = proxy_types
 
@@ -44,7 +44,7 @@ def read_proxy_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_region, proxy
 
     # Define name of file & open
     proxy_file = datadir_proxy + '/'+datafile_proxy;
-    print 'Reading metadata file: ', proxy_file
+    print('Reading metadata file: ', proxy_file)
     workbook = xlrd.open_workbook(proxy_file);
 
     # ====================
@@ -52,22 +52,22 @@ def read_proxy_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_region, proxy
     # ====================
     metadata = workbook.sheet_by_name('Metadata');
     # Get columns headers
-    meta_fields = [metadata.cell(0,col_index).value for col_index in xrange(metadata.ncols)];    
+    meta_fields = [metadata.cell(0,col_index).value for col_index in range(metadata.ncols)];    
     proxy_metadata = []; # dict list containing proxy metadata
-    for row_index in xrange(1,metadata.nrows):
+    for row_index in range(1,metadata.nrows):
         d = {meta_fields[col_index]: metadata.cell(row_index, col_index).value
-             for col_index in xrange(metadata.ncols)};
+             for col_index in range(metadata.ncols)};
         proxy_metadata.append(d)
 
     # =================================================================
     # Restrict to proxy_region and proxy_assim items listed in NAMELIST
     # =================================================================
-    for row_index in xrange(0,metadata.nrows-1):
+    for row_index in range(0,metadata.nrows-1):
         if proxy_metadata[row_index]['PAGES 2k Region'] in proxy_region:
             if proxy_metadata[row_index]['Archive type'] in proxy_category:
                 if proxy_metadata[row_index]['Resolution (yr)'] in proxy_resolution:
                     indt = [i for i, s in enumerate(proxy_definition) if proxy_metadata[row_index]['Archive type'] in s]
-                    proxy_measurement = [proxy_definition[proxy_types[indt[k]]] for k in xrange(len(indt))]
+                    proxy_measurement = [proxy_definition[proxy_types[indt[k]]] for k in range(len(indt))]
                     indm = [i for i, s in enumerate(proxy_measurement) if proxy_metadata[row_index]['Proxy measurement'] in s]
                     if indm: 
                         indtype = indt[indm[0]]
@@ -99,8 +99,8 @@ def create_proxy_lists_from_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_
     proxy_list = {}; # dict list containing proxy types and associated proxy id's (sites)
     sites_assim = {}
     sites_eval = {}
-    proxy_types = proxy_definition.keys()
-    proxy_types_unordered = [i.split(':', 1)[1] for i in proxy_definition.keys()]
+    proxy_types = list(proxy_definition.keys())
+    proxy_types_unordered = [i.split(':', 1)[1] for i in list(proxy_definition.keys())]
 
     for t in proxy_types:
         proxy_list[t] = []
@@ -112,7 +112,7 @@ def create_proxy_lists_from_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_
 
     # Define name of file & open
     proxy_file = datadir_proxy + '/'+datafile_proxy;
-    print 'Reading metadata file: ', proxy_file
+    print('Reading metadata file: ', proxy_file)
     workbook = xlrd.open_workbook(proxy_file);
 
     # ====================
@@ -120,20 +120,20 @@ def create_proxy_lists_from_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_
     # ====================
     metadata = workbook.sheet_by_name('Metadata');
     # Get columns headers
-    meta_fields = [metadata.cell(0,col_index).value for col_index in xrange(metadata.ncols)];    
+    meta_fields = [metadata.cell(0,col_index).value for col_index in range(metadata.ncols)];    
     proxy_metadata = []; # dict list containing proxy metadata
-    for row_index in xrange(1,metadata.nrows):
+    for row_index in range(1,metadata.nrows):
         d = {meta_fields[col_index]: metadata.cell(row_index, col_index).value
-             for col_index in xrange(metadata.ncols)};
+             for col_index in range(metadata.ncols)};
         proxy_metadata.append(d)
 
     # Restrict to proxy_region and proxy_assim items listed in NAMELIST
-    for row_index in xrange(0,metadata.nrows-1):
+    for row_index in range(0,metadata.nrows-1):
         if proxy_metadata[row_index]['PAGES 2k Region'] in proxy_region:
             if proxy_metadata[row_index]['Archive type'] in proxy_category:
                 if proxy_metadata[row_index]['Resolution (yr)'] in proxy_resolution:
                     indt = [i for i, s in enumerate(proxy_definition) if proxy_metadata[row_index]['Archive type'] in s]
-                    proxy_measurement = [proxy_definition[proxy_types[indt[k]]] for k in xrange(len(indt))]
+                    proxy_measurement = [proxy_definition[proxy_types[indt[k]]] for k in range(len(indt))]
                     indm = [i for i, s in enumerate(proxy_measurement) if proxy_metadata[row_index]['Proxy measurement'] in s]
                     if indm: 
                         indtype = indt[indm[0]]
@@ -144,10 +144,10 @@ def create_proxy_lists_from_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_
     # Filter list to retain sites with PSM calibration correlation > PSM_r_crit
     # =========================================================================
     if psm_data is not None:
-        proxy_TypesSites_psm    = psm_data.keys()
+        proxy_TypesSites_psm    = list(psm_data.keys())
         proxy_TypesSites_psm_ok = [t for t in proxy_TypesSites_psm if abs(psm_data[t]['PSMcorrel']) > psm_r_crit]
         proxy_list_ok = {}
-        for t in proxy_list.keys():
+        for t in list(proxy_list.keys()):
             proxy = t.split(':', 1)[1]
             list_ok = [proxy_TypesSites_psm_ok[k][1] for k in range(len(proxy_TypesSites_psm_ok)) if proxy_TypesSites_psm_ok[k][0] == proxy]
             proxy_list_ok[t] = list_ok
@@ -164,13 +164,13 @@ def create_proxy_lists_from_metadata_S1csv(datadir_proxy, datafile_proxy, proxy_
         tmp = [proxy_list_ok[x] for x in proxy_list_ok]
         nbtype = len(tmp)
 
-        for k in xrange(nbtype):
+        for k in range(nbtype):
             mergedlist.extend(tmp[k])
 
         nbsites = len(mergedlist)
         nbsites_assim = int(nbsites*proxy_frac)
         # random selection over entire site list
-        ind_assim = sample(range(0, nbsites), nbsites_assim)
+        ind_assim = sample(list(range(0, nbsites)), nbsites_assim)
         ind_eval = set(range(0,nbsites)) - set(ind_assim) # list indices of sites not chosen
         p_assim = [mergedlist[p] for p in ind_assim]
         p_eval = [mergedlist[p] for p in ind_eval]
@@ -208,18 +208,18 @@ def read_proxy_metadata_S1csv_old(datadir_proxy, datafile_proxy, proxy_region, p
 
     # Uploading proxy data
     proxy_file = datadir_proxy + '/'+datafile_proxy;
-    print 'Reading metadata file: ', proxy_file
+    print('Reading metadata file: ', proxy_file)
     workbook = xlrd.open_workbook(proxy_file);
 
     # Read in the metadata
     metadata = workbook.sheet_by_name('Metadata');
     # Get columns headers
-    meta_fields = [metadata.cell(0,col_index).value for col_index in xrange(metadata.ncols)];
+    meta_fields = [metadata.cell(0,col_index).value for col_index in range(metadata.ncols)];
     
     proxy_metadata = []; # dict list containing proxy metadata
-    for row_index in xrange(1,metadata.nrows):
+    for row_index in range(1,metadata.nrows):
         d = {meta_fields[col_index]: metadata.cell(row_index, col_index).value
-             for col_index in xrange(metadata.ncols)};
+             for col_index in range(metadata.ncols)};
         proxy_metadata.append(d)
 
     # Restrict to proxy_region and proxy_assim items listed in NAMELIST
@@ -227,7 +227,7 @@ def read_proxy_metadata_S1csv_old(datadir_proxy, datafile_proxy, proxy_region, p
     proxy_id_to_assim   = [];
     proxy_lat_to_assim  = [];
     proxy_lon_to_assim  = [];
-    for row_index in xrange(0,metadata.nrows-1):
+    for row_index in range(0,metadata.nrows-1):
         if proxy_metadata[row_index]['PAGES 2k Region'] in proxy_region:
             if proxy_metadata[row_index]['Archive type'] in proxy_type:
                 if proxy_metadata[row_index]['Proxy measurement'] in proxy_measurement:
@@ -278,12 +278,12 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
     # Read in the metadata
     metadata = workbook.sheet_by_name('Metadata');
     # Get columns headers
-    meta_fields = [metadata.cell(0,col_index).value for col_index in xrange(metadata.ncols)];
+    meta_fields = [metadata.cell(0,col_index).value for col_index in range(metadata.ncols)];
     
     proxy_metadata = []; # dict list containing proxy metadata
-    for row_index in xrange(1,metadata.nrows):
+    for row_index in range(1,metadata.nrows):
         d = {meta_fields[col_index]: metadata.cell(row_index, col_index).value
-             for col_index in xrange(metadata.ncols)};
+             for col_index in range(metadata.ncols)};
         proxy_metadata.append(d)
 
     # Restrict to proxy_region and proxy_assim items listed in NAMELIST
@@ -291,7 +291,7 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
     proxy_id_to_assim   = [];
     proxy_lat_to_assim  = [];
     proxy_lon_to_assim  = [];
-    for row_index in xrange(0,metadata.nrows-1):
+    for row_index in range(0,metadata.nrows-1):
         if proxy_metadata[row_index]['PAGES ID'] in proxy_site:
             proxy_id_to_assim.append(proxy_metadata[row_index]['PAGES ID'])
             proxy_type_to_assim.append(proxy_metadata[row_index]['Archive type'])
@@ -314,20 +314,20 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
         num_cols = data.ncols - 1
 
         # Get columns headers
-        tmp_headers = [data.cell(0,col_index).value for col_index in xrange(data.ncols)]
+        tmp_headers = [data.cell(0,col_index).value for col_index in range(data.ncols)]
         data_headers = [str(item) for item in tmp_headers]; # getting rid of unicode encoding
-        tmp_refs = [data.cell(1,col_index).value for col_index in xrange(data.ncols)]
+        tmp_refs = [data.cell(1,col_index).value for col_index in range(data.ncols)]
         data_refs = [str(item) for item in tmp_refs] # getting rid of unicode encoding
         data_headers[0] = data_refs[0]; # correct tag for years
 
         # Column indices of proxy id's in proxy_id_to_assim list
         col_assim = [i for i, item in enumerate(data_headers) if item in proxy_id_to_assim]        
         if col_assim: # if non-empty list
-            for row_index in xrange(2,data.nrows):
+            for row_index in range(2,data.nrows):
                 for col_index in col_assim:
                     found = False
                     # associate metadata to data record
-                    for meta_row_index in xrange(1,len(proxy_metadata)):                        
+                    for meta_row_index in range(1,len(proxy_metadata)):                        
                         if proxy_metadata[meta_row_index]['PAGES ID'] == data_headers[col_index]:
                             found = True
                             typedat    = proxy_metadata[meta_row_index]['Archive type']
@@ -359,8 +359,8 @@ def read_proxy_data_S1csv_site(datadir_proxy, datafile_proxy, proxy_site):
     lon   = proxy_data[0]['lon']
     alt   = proxy_data[0]['alt']
     # proxy time series
-    time  = [proxy_data[k]['time'] for k in xrange(0,len(proxy_data))]
-    value = [proxy_data[k]['value'] for k in xrange(0,len(proxy_data))]
+    time  = [proxy_data[k]['time'] for k in range(0,len(proxy_data))]
+    value = [proxy_data[k]['value'] for k in range(0,len(proxy_data))]
 
     return id, lat, lon, alt, time, value # could add more output here as we develop further
     #return proxy_data
@@ -385,7 +385,7 @@ def read_proxy_data_S1csv(self, datadir_proxy, datafile_proxy, proxy_region, pro
 
     # Uploading proxy data
     proxy_file = datadir_proxy + '/'+datafile_proxy;
-    print 'Reading file: ', proxy_file
+    print('Reading file: ', proxy_file)
     workbook = xlrd.open_workbook(proxy_file);
 
     # Getting general (number & names of worksheets) info on file content
@@ -401,12 +401,12 @@ def read_proxy_data_S1csv(self, datadir_proxy, datafile_proxy, proxy_region, pro
     # Read in the metadata
     metadata = workbook.sheet_by_name('Metadata');
     # Get columns headers
-    meta_fields = [metadata.cell(0,col_index).value for col_index in xrange(metadata.ncols)];
+    meta_fields = [metadata.cell(0,col_index).value for col_index in range(metadata.ncols)];
     
     proxy_metadata = []; # dict list containing proxy metadata
-    for row_index in xrange(1,metadata.nrows):
+    for row_index in range(1,metadata.nrows):
         d = {meta_fields[col_index]: metadata.cell(row_index, col_index).value
-             for col_index in xrange(metadata.ncols)};
+             for col_index in range(metadata.ncols)};
         proxy_metadata.append(d)
 
     # Restrict to proxy_region and proxy_assim items listed in NAMELIST
@@ -414,7 +414,7 @@ def read_proxy_data_S1csv(self, datadir_proxy, datafile_proxy, proxy_region, pro
     proxy_id_to_assim   = [];
     proxy_lat_to_assim  = [];
     proxy_lon_to_assim  = [];
-    for row_index in xrange(0,metadata.nrows-1):
+    for row_index in range(0,metadata.nrows-1):
         if proxy_metadata[row_index]['PAGES 2k Region'] in proxy_region:
             if proxy_metadata[row_index]['Archive type'] in proxy_type:
                 if proxy_metadata[row_index]['Proxy measurement'] in proxy_measurement:
@@ -435,9 +435,9 @@ def read_proxy_data_S1csv(self, datadir_proxy, datafile_proxy, proxy_region, pro
         num_cols = data.ncols - 1
 
         # Get columns headers
-        tmp_headers = [data.cell(0,col_index).value for col_index in xrange(data.ncols)]
+        tmp_headers = [data.cell(0,col_index).value for col_index in range(data.ncols)]
         data_headers = [str(item) for item in tmp_headers]; # getting rid of unicode encoding
-        tmp_refs = [data.cell(1,col_index).value for col_index in xrange(data.ncols)]
+        tmp_refs = [data.cell(1,col_index).value for col_index in range(data.ncols)]
         data_refs = [str(item) for item in tmp_refs] # getting rid of unicode encoding
         data_headers[0] = data_refs[0]; # correct tag for years
 
@@ -445,11 +445,11 @@ def read_proxy_data_S1csv(self, datadir_proxy, datafile_proxy, proxy_region, pro
         col_assim = [i for i, item in enumerate(data_headers) if item in proxy_id_to_assim]
 
         if col_assim: # if non-empty list
-            for row_index in xrange(2,data.nrows):
+            for row_index in range(2,data.nrows):
                 for col_index in col_assim:
                     found = False
                     # associate metadata to data record
-                    for meta_row_index in xrange(1,len(proxy_metadata)):
+                    for meta_row_index in range(1,len(proxy_metadata)):
                         if proxy_metadata[meta_row_index]['PAGES ID'] == data_headers[col_index]:
                             found = True
                             typedat    = proxy_metadata[meta_row_index]['Archive type']
@@ -473,12 +473,12 @@ def read_proxy_data_S1csv(self, datadir_proxy, datafile_proxy, proxy_region, pro
                             proxy_data[nb_ob]['time']  = data.cell(row_index, 0).value
                             proxy_data[nb_ob]['value'] = data.cell(row_index, col_index).value
 
-    id    = [proxy_data[k]['id'] for k in xrange(0,len(proxy_data))]
-    lat   = [proxy_data[k]['lat'] for k in xrange(0,len(proxy_data))]
-    lon   = [proxy_data[k]['lon'] for k in xrange(0,len(proxy_data))]
-    alt   = [proxy_data[k]['alt'] for k in xrange(0,len(proxy_data))]
-    time  = [proxy_data[k]['time'] for k in xrange(0,len(proxy_data))]
-    value = [proxy_data[k]['value'] for k in xrange(0,len(proxy_data))]
+    id    = [proxy_data[k]['id'] for k in range(0,len(proxy_data))]
+    lat   = [proxy_data[k]['lat'] for k in range(0,len(proxy_data))]
+    lon   = [proxy_data[k]['lon'] for k in range(0,len(proxy_data))]
+    alt   = [proxy_data[k]['alt'] for k in range(0,len(proxy_data))]
+    time  = [proxy_data[k]['time'] for k in range(0,len(proxy_data))]
+    value = [proxy_data[k]['value'] for k in range(0,len(proxy_data))]
 
     return id, lat, lon, alt, time, value # should add more output here as we develop further
     #return proxy_data
@@ -531,8 +531,8 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
     proxy_list = {}; # dict list containing proxy types and associated proxy id's (sites)
     sites_assim = {}
     sites_eval = {}
-    proxy_types = proxy_definition.keys()
-    proxy_types_unordered = [i.split(':', 1)[1] for i in proxy_definition.keys()]
+    proxy_types = list(proxy_definition.keys())
+    proxy_types_unordered = [i.split(':', 1)[1] for i in list(proxy_definition.keys())]
 
     for t in proxy_types:
         proxy_list[t]  = []
@@ -543,7 +543,7 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
 
     # Define name of file & open
     proxy_file = datadir_proxy + '/'+datafile_proxy;
-    print 'Reading metadata file: ', proxy_file
+    print('Reading metadata file: ', proxy_file)
     workbook = xlrd.open_workbook(proxy_file);
 
     # ====================
@@ -551,28 +551,28 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
     # ====================
     metadata = workbook.sheet_by_name('Master Metadata File');
     # Get columns headers
-    meta_fields = [metadata.cell(0,col_index).value for col_index in xrange(metadata.ncols)];    
+    meta_fields = [metadata.cell(0,col_index).value for col_index in range(metadata.ncols)];    
     proxy_metadata = []; # dict list containing proxy metadata
-    for row_index in xrange(1,metadata.nrows):
+    for row_index in range(1,metadata.nrows):
         d = {meta_fields[col_index]: metadata.cell(row_index, col_index).value
-             for col_index in xrange(metadata.ncols)};
+             for col_index in range(metadata.ncols)};
         proxy_metadata.append(d)
 
     # =================================================================
     # Restrict to proxy_assim items listed in NAMELIST
     # =================================================================
 
-    for row_index in xrange(0,metadata.nrows-1):
+    for row_index in range(0,metadata.nrows-1):
         if proxy_metadata[row_index]['Archive'] in proxy_category:
             if proxy_metadata[row_index]['Resolution'] in proxy_resolution:
                 indt = [i for i, s in enumerate(proxy_definition) if proxy_metadata[row_index]['Archive'] in s]
-                proxy_measurement = [proxy_definition[proxy_types[indt[k]]] for k in xrange(len(indt))]
+                proxy_measurement = [proxy_definition[proxy_types[indt[k]]] for k in range(len(indt))]
                 l1 = proxy_metadata[row_index]['Variable Short Names'].split(",")
                 l2 = [item.strip("[").strip("]").strip("'").strip().strip("'") for item in l1] # clean the crud...
-                l3 = [str(l2[k]) for k in xrange(len(l2))]
+                l3 = [str(l2[k]) for k in range(len(l2))]
 
                 # Common elements in lists?
-                for indm in xrange(len(proxy_measurement)):
+                for indm in range(len(proxy_measurement)):
                     common_set = set(l3)&set(proxy_measurement[indm])
                     if common_set: # if common element has been found
                         indtype = indt[indm]
@@ -580,8 +580,8 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
                         # Do a check on consistency between 'Unique Identifier' & 'Filename.txt' ... sometimes doesn't match!
                         siteid_from_filename = proxy_metadata[row_index]['Filename.txt'][:-4] # strip the '.txt'
                         if str(proxy_metadata[row_index]['Unique Identifier']) != siteid_from_filename:
-                            print 'Filename & Unique Identifier DO NOT MATCH: using filename instead ...', siteid_from_filename, \
-                                'vs', str(proxy_metadata[row_index]['Unique Identifier'])
+                            print('Filename & Unique Identifier DO NOT MATCH: using filename instead ...', siteid_from_filename, \
+                                'vs', str(proxy_metadata[row_index]['Unique Identifier']))
                             proxy_list[proxy_types[indtype]].append(str(siteid_from_filename))
                         else:
                             proxy_list[proxy_types[indtype]].append(str(proxy_metadata[row_index]['Unique Identifier']))
@@ -594,13 +594,13 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
         tmp = [proxy_list[x] for x in proxy_list]
         nbtype = len(tmp)
 
-        for k in xrange(nbtype):
+        for k in range(nbtype):
             mergedlist.extend(tmp[k])
 
         nbsites = len(mergedlist)
         nbsites_assim = int(nbsites*proxy_frac)
         # random selection over merged site list
-        ind_assim = sample(range(0, nbsites), nbsites_assim)
+        ind_assim = sample(list(range(0, nbsites)), nbsites_assim)
         ind_eval = set(range(0,nbsites)) - set(ind_assim) # list indices of sites not chosen
         p_assim = [mergedlist[p] for p in ind_assim]
         p_eval = [mergedlist[p] for p in ind_eval]
@@ -623,9 +623,9 @@ def create_proxy_lists_from_metadata_NCDC(datadir_proxy, datafile_proxy, proxy_r
 #        print t, proxy_list[t]
 #        print ' '
 
-    print 'Assim:', sites_assim
-    print ' '
-    print 'Eval:', sites_eval
+    print('Assim:', sites_assim)
+    print(' ')
+    print('Eval:', sites_eval)
 
 
     return sites_assim, sites_eval
@@ -641,7 +641,7 @@ def colonReader(string, fCon, fCon_low, end):
     From Julien Emile-Geay (Univ. of Southern California)
     '''
 
-    if isinstance(string, basestring):
+    if isinstance(string, str):
         lstr = string + ': ' # append the annoying stuff
         Index = fCon_low.find(lstr)
         Len = len(lstr)
@@ -721,7 +721,7 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
 
     if os.path.isfile(filename):
 
-        print 'File:', filename
+        print('File:', filename)
 
         # Define root string for filename
         file_s   = filename.replace(" ", '_')  # strip all whitespaces if present
@@ -775,8 +775,8 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
             if not d['TimeUnit']:
                 d['TimeUnit']         = colonReader('time unit', fileContent, fileContent_low, '\n')
 
-        except EmptyError, e:
-            print e
+        except EmptyError as e:
+            print(e)
 
         # ===========================================================================
         # Extract information from the "Variables" section of the file
@@ -860,7 +860,7 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
                 time_col_index = DataColumn_headers.index(', '.join(TimeColumn_tag))
                 TimeColumn_ided = True
             else:
-                print 'TimeColumn: More than one match ...do what then?'                
+                print('TimeColumn: More than one match ...do what then?')                
 
         # Proxy data
         DataColumn_ided = False
@@ -870,8 +870,8 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
                 data_col_index = DataColumn_headers.index(', '.join(DataColumn_tag))
                 DataColumn_ided = True
             else:
-                print 'DataColumn: More than one match ...do what then?'
-                print 'Taking first one...'
+                print('DataColumn: More than one match ...do what then?')
+                print('Taking first one...')
                 DataColumn_tag.remove(DataColumn_tag[1])
                 data_col_index = DataColumn_headers.index(', '.join(DataColumn_tag))
                 DataColumn_ided = True
@@ -923,11 +923,11 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
             elif tdef_parsed[0] == 'y' and tdef_parsed[1] == 'ad':
                 pass # do nothing, time already in years_AD
             else:
-                print 'Unrecognized time definition. Returning empty arrays!'
+                print('Unrecognized time definition. Returning empty arrays!')
                 time  = np.asarray([],dtype=np.float64)
                 value = np.asarray([],dtype=np.float64)                
         else:
-            print '*** WARNING *** Unexpected time definition: string has more elements than expected. Returning empty arrays!'
+            print('*** WARNING *** Unexpected time definition: string has more elements than expected. Returning empty arrays!')
             time  = np.asarray([],dtype=np.float64)
             value = np.asarray([],dtype=np.float64)
 
@@ -950,13 +950,13 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
 
 
         # If subannual, average up to annual --------------------------------------------------------
-        years_all = [int(time[k]) for k in xrange(0,len(time))]
+        years_all = [int(time[k]) for k in range(0,len(time))]
         years = list(set(years_all)) # 'set' is used to get unique values in list
-        years.sort # sort the list
+        years.sort() # sort the list
         time_annual  = np.asarray(years,dtype=np.float64)
         value_annual = np.empty(len(years), dtype=np.float64)
         # Loop over years in dataset
-        for i in xrange(0,len(years)):     
+        for i in range(0,len(years)):     
             ind = [j for j, k in enumerate(years_all) if k == years[i]]
             value_annual[i] = np.nanmean(value[ind],axis=0)
 
@@ -968,7 +968,7 @@ def read_proxy_data_NCDCtxt_site(datadir, site, measurement):
             lon = 360 + lon
 
     else:
-        print 'File NOT FOUND:', filename
+        print('File NOT FOUND:', filename)
         # return empty arrays
         id    = site
         lat   = []

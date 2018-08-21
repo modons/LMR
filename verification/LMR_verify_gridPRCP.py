@@ -38,7 +38,7 @@ bm.latlon_default = True
 
 # option to suppress figures
 iplot = True
-iplot_individual_years = True
+iplot_individual_years = False
 
 # centered time mean (nya must be odd! 3 = 3 yr mean; 5 = 5 year mean; etc 0 = none)
 nya = 0
@@ -52,32 +52,34 @@ fsave = True
 # override datadir
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman2/wperkins/LMR_output/archive'
-#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
-datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/ekman4/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/hakim/LMR'
 
 # Directories where precip and reanalysis data can be found
 datadir_precip = '/home/disk/kalman3/rtardif/LMR/data/verification'
 datadir_reanl  = '/home/disk/kalman3/rtardif/LMR/data/model'
+
 # file specification
 #
 # current datasets
 # ---
-#nexp = 'testPslW500Prcp_2c_CCSM4_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_MPIESMP_LM_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CR_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'testPslW500Prcp_2c_20CRdetrend_cGISTEMP_NCDCproxiesPagesTrees_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMP_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2c_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesBreitDensityOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMP_NCDCprxTreesPagesOnly_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCC_NCDCprxTreesPagesOnly_pf0.75'
+#nexp = 'production_gis_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_ccsm4_pagesall_0.75'
+#nexp = 'production_cru_ccsm4_pagesall_0.75'
+#nexp = 'production_mlost_era20c_pagesall_0.75'
+#nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCannual_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPseason_NCDCv0.1.0TreesPages2only_pf0.75'
-#nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPorGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
-nexp = 'TasPrcpPslZW500_2k_CCSM4lm_cGISTEMPandGPCCseason_NCDCv0.1.0TreesPages2only_pf0.75'
+nexp = 'test'
+# ---
 
+# perform verification using all recon. MC realizations ( MCset = None )
+# or over a custom selection ( MCset = (begin,end) )
+# ex. MCset = (0,0)    -> only the first MC run
+#     MCset = (0,10)   -> the first 11 MC runs (from 0 to 10 inclusively)
+#     MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
+MCset = None
+#MCset = (0,10)
 
 # Definition of variables to verify
 #                       kind   name   variable long name bounds     units   mult. factor
@@ -95,6 +97,7 @@ trange = [1880,2000] #works for nya = 0
 
 # reference period over which mean is calculated & subtracted 
 # from all datasets (in years CE)
+# NOTE: GPCP and CMAP data cover the 1979-2015 period
 ref_period = [1979, 1999]
 
 valid_frac = 0.0
@@ -118,37 +121,35 @@ plt.rc('text', usetex=False)
 # END:  set user parameters here
 ##################################
 
-verif_vars = verif_dict.keys()
+verif_vars = list(verif_dict.keys())
 
 workdir = datadir_output + '/' + nexp
-print 'working directory = ' + workdir
+print('working directory = ' + workdir)
 
-print '\n getting file system information...\n'
+print('\n getting file system information...\n')
 
 # get number of mc realizations from directory count
 # RT: modified way to determine list of directories with mc realizations
 # get a listing of the iteration directories
 dirs = glob.glob(workdir+"/r*")
-# sorted
-dirs.sort()
-mcdir = [item.split('/')[-1] for item in dirs]
+
+# selecting the MC iterations to keep
+if MCset:
+    dirset = dirs[MCset[0]:MCset[1]+1]
+else:
+    dirset = dirs
+
+mcdir = [item.split('/')[-1] for item in dirset]
 niters = len(mcdir)
 
-print 'mcdir:' + str(mcdir)
-print 'niters = ' + str(niters)
-
-# get time period from the GMT file...
-gmtpfile =  workdir + '/r0/gmt.npz'
-npzfile = np.load(gmtpfile)
-npzfile.files
-LMR_time = npzfile['recon_times']
-
+print('mcdir:' + str(mcdir))
+print('niters = ' + str(niters))
 
 # Loop over verif. variables
 for var in verif_vars:
 
     # read ensemble mean data
-    print '\n reading LMR ensemble-mean data...\n'
+    print('\n reading LMR ensemble-mean data...\n')
 
     first = True
     k = -1
@@ -156,11 +157,13 @@ for var in verif_vars:
         k = k + 1
         ensfiln = workdir + '/' + dir + '/ensemble_mean_'+var+'.npz'
         npzfile = np.load(ensfiln)
-        print  dir, ':', npzfile.files
+        print(dir, ':', npzfile.files)
         tmp = npzfile['xam']
-        print 'shape of tmp: ' + str(np.shape(tmp))
+        print('shape of tmp: ' + str(np.shape(tmp)))
         if first:
             first = False
+            recon_times = npzfile['years']
+            LMR_time = np.array(list(map(int,recon_times)))
             lat = npzfile['lat']
             lon = npzfile['lon']
             nlat = npzfile['nlat']
@@ -182,15 +185,15 @@ for var in verif_vars:
     # check..
     max_err = np.max(np.max(np.max(xam_check - xam)))
     if max_err > 1e-4:
-        print 'max error = ' + str(max_err)
+        print('max error = ' + str(max_err))
         raise Exception('sample mean does not match what is in the ensemble files!')
 
     # sample variance
     xam_var = xam_all.var(0)
-    print np.shape(xam_var)
+    print(np.shape(xam_var))
 
-    print '\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n'
-    print '\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n'
+    print('\n shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n')
+    print('\n shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n')
 
 
     # Convert units to match verif dataset: from kg m-2 s-1 to mm (per year)
@@ -206,7 +209,7 @@ for var in verif_vars:
     #################################################################
     # BEGIN: load verification data                                 #
     #################################################################
-    print '\nloading verification data...\n'
+    print('\nloading verification data...\n')
 
 
     # GPCP ----------------------------------------------------------
@@ -250,7 +253,7 @@ for var in verif_vars:
             accum = accum + verif_precip_monthly[inds[k],:,:]*days_in_month
 
         GPCP[i,:,:] = accum # precip in mm
-        #GPCP[i,:,:] = np.mean(verif_precip_monthly[inds,:,:], axis=0) # not mean !? sum ????
+
         i = i + 1
 
 
@@ -295,7 +298,7 @@ for var in verif_vars:
             accum = accum + verif_precip_monthly[inds[k],:,:]*days_in_month
 
         CMAP[i,:,:] = accum # precip in mm
-        #GPCP[i,:,:] = np.mean(verif_precip_monthly[inds,:,:], axis=0) # not mean !? sum ????
+
         i = i + 1
 
     # ----------
@@ -304,7 +307,7 @@ for var in verif_vars:
 
     # Define month sequence for the calendar year 
     # (argument needed in upload of reanalysis data)
-    annual = range(1,13)
+    annual = list(range(1,13))
     
     # 20th Century reanalysis (TCR) ---------------------------------
     vardict = {var: verif_dict[var][0]}
@@ -312,15 +315,28 @@ for var in verif_vars:
     datadir  = datadir_reanl +'/20cr'
     datafile = vardef +'_20CR_185101-201112.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                       anom_ref=ref_period)
     rtime = dd[vardef]['years']
     TCR_time = np.array([d.year for d in rtime])
-    lat_TCR = dd[vardef]['lat']
-    lon_TCR = dd[vardef]['lon']
-    nlat_TCR = len(lat_TCR)
-    nlon_TCR = len(lon_TCR)
+    lats = dd[vardef]['lat']
+    lons = dd[vardef]['lon']
+    latshape = lats.shape
+    lonshape = lons.shape
+    if len(latshape) == 2 & len(lonshape) == 2:
+        # stored in 2D arrays
+        lat_TCR = np.unique(lats)
+        lon_TCR = np.unique(lons)
+        nlat_TCR, = lat_TCR.shape
+        nlon_TCR, = lon_TCR.shape
+    else:
+        # stored in 1D arrays
+        lon_TCR = lons
+        lat_TCR = lats
+        nlat_TCR = len(lat_TCR)
+        nlon_TCR = len(lon_TCR)
     lon2_TCR, lat2_TCR = np.meshgrid(lon_TCR, lat_TCR)
+
     TCRfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
     TCR = dd[vardef]['value']                           # Anomalies
 
@@ -343,15 +359,28 @@ for var in verif_vars:
     datadir  = datadir_reanl +'/era20c'
     datafile = vardef +'_ERA20C_190001-201012.nc'
     
-    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual)
-
+    dd = read_gridded_data_CMIP5_model(datadir,datafile,vardict,outtimeavg=annual,
+                                       anom_ref=ref_period)
     rtime = dd[vardef]['years']
     ERA_time = np.array([d.year for d in rtime])
-    lat_ERA = dd[vardef]['lat']
-    lon_ERA = dd[vardef]['lon']
-    nlat_ERA = len(lat_ERA)
-    nlon_ERA = len(lon_ERA)
+    lats = dd[vardef]['lat']
+    lons = dd[vardef]['lon']
+    latshape = lats.shape
+    lonshape = lons.shape
+    if len(latshape) == 2 & len(lonshape) == 2:
+        # stored in 2D arrays
+        lat_ERA = np.unique(lats)
+        lon_ERA = np.unique(lons)
+        nlat_ERA, = lat_ERA.shape
+        nlon_ERA, = lon_ERA.shape
+    else:
+        # stored in 1D arrays
+        lon_ERA = lons
+        lat_ERA = lats
+        nlat_ERA = len(lat_ERA)
+        nlon_ERA = len(lon_ERA)
     lon2_ERA, lat2_ERA = np.meshgrid(lon_ERA, lat_ERA)
+
     ERAfull = dd[vardef]['value'] + dd[vardef]['climo'] # Full field
     ERA = dd[vardef]['value']                           # Anomalies
 
@@ -405,20 +434,6 @@ for var in verif_vars:
     fig.tight_layout()
     plt.savefig('GPCP_CMAP_20CR_ERA_climo.png')
     plt.close()
-    
-
-    # Precip accum. anomalies ---
-    print 'Removing the temporal mean (for every gridpoint) from the prior...'
-    climo = np.nanmean(GPCP,axis=0)
-    GPCP = (GPCP - climo)
-    climo = np.nanmean(CMAP,axis=0)
-    CMAP = (CMAP - climo)
-
-    print 'GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP)
-    print 'CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP)
-    print 'TCR  : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR)
-    print 'ERA  : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA)
-    print 'LMR  : Global: mean=', np.nanmean(xam), ' , std-dev=', np.nanstd(xam)
 
 
     ###############################################################
@@ -427,10 +442,10 @@ for var in verif_vars:
 
     # ----------------------------------------------------------
     # Adjust so that all anomaly data pertain to the mean over a 
-    # user-defined reference period (e.g. 20th century)
+    # common user-defined reference period (e.g. 20th century)
     # ----------------------------------------------------------
     
-    print 'Re-center on %s-%s period' % (str(ref_period[0]), str(ref_period[1]))
+    print('Re-center on %s-%s period' % (str(ref_period[0]), str(ref_period[1])))
 
     stime = ref_period[0]
     etime = ref_period[1]
@@ -439,7 +454,7 @@ for var in verif_vars:
     LMR = xam
     smatch, ematch = find_date_indices(LMR_time,stime,etime)
     LMR = LMR - np.mean(LMR[smatch:ematch,:,:],axis=0)
-
+    
     # verif
     smatch, ematch = find_date_indices(GPCP_time,stime,etime)
     GPCP = GPCP - np.mean(GPCP[smatch:ematch,:,:],axis=0)
@@ -454,17 +469,17 @@ for var in verif_vars:
     ERA = ERA - np.mean(ERA[smatch:ematch,:,:],axis=0)
 
 
-    print 'GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP)
-    print 'CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP)
-    print 'TCR : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR)
-    print 'ERA : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA)
-    print 'LMR  : Global: mean=', np.nanmean(LMR), ' , std-dev=', np.nanstd(LMR)
+    print('GPCP : Global: mean=', np.nanmean(GPCP), ' , std-dev=', np.nanstd(GPCP))
+    print('CMAP : Global: mean=', np.nanmean(CMAP), ' , std-dev=', np.nanstd(CMAP))
+    print('TCR  : Global: mean=', np.nanmean(TCR), ' , std-dev=', np.nanstd(TCR))
+    print('ERA  : Global: mean=', np.nanmean(ERA), ' , std-dev=', np.nanstd(ERA))
+    print('LMR  : Global: mean=', np.nanmean(LMR), ' , std-dev=', np.nanstd(LMR))
 
 
     # -----------------------------------
     # Regridding the data for comparisons
     # -----------------------------------
-    print '\n regridding data to a common T42 grid...\n'
+    print('\n regridding data to a common grid...\n')
 
     iplot_loc= False
     #iplot_loc= True
@@ -489,18 +504,18 @@ for var in verif_vars:
     blank = np.zeros([nlat_new,nlon_new])
     lat2_new = (veclat + blank.T).T  
     lon2_new = (veclon + blank)  
-
+    
     # create instance of the spherical harmonics object for the new grid
     specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
     lmr_trunc = np.zeros([nyrs,nlat_new,nlon_new])
-    print 'lmr_trunc shape: ' + str(np.shape(lmr_trunc))
+    print('lmr_trunc shape: ' + str(np.shape(lmr_trunc)))
 
     # loop over years of interest and transform...specify trange at top of file
     iw = 0
     if nya > 0:
         iw = (nya-1)/2
 
-    cyears = range(trange[0],trange[1])
+    cyears = list(range(trange[0],trange[1]))
     lg_csave = np.zeros([len(cyears)])
     lc_csave = np.zeros([len(cyears)])
     lt_csave = np.zeros([len(cyears)])
@@ -531,20 +546,24 @@ for var in verif_vars:
         TCR_smatch, TCR_ematch = find_date_indices(TCR_time,yr-iw,yr+iw+1)
         ERA_smatch, ERA_ematch = find_date_indices(ERA_time,yr-iw,yr+iw+1)
 
-        print '------------------------------------------------------------------------'
-        print 'working on year...' + str(yr)
-        print '                  ' + str(yr) + ' LMR index  = ' + str(LMR_smatch) + ' = LMR year ' + str(LMR_time[LMR_smatch])
-        print '                  ' + str(yr) + ' GPCP index = ' + str(GPCP_smatch) + ' = GPCP year ' + str(GPCP_time[GPCP_smatch])
-        print '                  ' + str(yr) + ' CMAP index = ' + str(CMAP_smatch) + ' = CMAP year ' + str(CMAP_time[CMAP_smatch])
-        print '                  ' + str(yr) + ' TCR index = ' + str(TCR_smatch) + ' = TCR year ' + str(TCR_time[TCR_smatch])
-        print '                  ' + str(yr) + ' ERA index = ' + str(ERA_smatch) + ' = ERA year ' + str(ERA_time[ERA_smatch])
-        
+        print('------------------------------------------------------------------------')
+        print('working on year... %5s' %(str(yr)))
+        print('                   %5s LMR index  = %5s : LMR year  = %5s' %(str(yr), str(LMR_smatch), str(LMR_time[LMR_smatch])))
+        if GPCP_smatch:
+            print('                   %5s GPCP index = %5s : GPCP year = %5s' %(str(yr), str(GPCP_smatch), str(GPCP_time[GPCP_smatch])))
+        if CMAP_smatch:
+            print('                   %5s CMAP index = %5s : CMAP year = %5s' %(str(yr), str(CMAP_smatch), str(CMAP_time[CMAP_smatch])))
+        if TCR_smatch:
+            print('                   %5s TCP index  = %5s : TCR year  = %5s' %(str(yr), str(TCR_smatch), str(TCR_time[TCR_smatch])))
+        if ERA_smatch:
+            print('                   %5s ERA index  = %5s : ERA year  = %5s' %(str(yr), str(ERA_smatch), str(ERA_time[ERA_smatch])))
+            
         # LMR
         pdata_lmr = np.mean(LMR[LMR_smatch:LMR_ematch,:,:],0)    
         lmr_trunc = regrid(specob_lmr, specob_new, pdata_lmr, ntrunc=nlat_new-1, smooth=None)
 
         # GPCP
-        if len(GPCP_smatch) and len(GPCP_ematch):
+        if GPCP_smatch and GPCP_ematch:
             pdata_gpcp = np.mean(GPCP[GPCP_smatch:GPCP_ematch,:,:],0)
         else:
             pdata_gpcp = np.zeros(shape=[nlat_GPCP,nlon_GPCP])
@@ -557,7 +576,7 @@ for var in verif_vars:
             gpcp_trunc = regrid(specob_gpcp, specob_new, pdata_gpcp, ntrunc=nlat_new-1, smooth=None)
 
         # CMAP
-        if len(CMAP_smatch) and len(CMAP_ematch):
+        if CMAP_smatch and CMAP_ematch:
             pdata_cmap = np.mean(CMAP[CMAP_smatch:CMAP_ematch,:,:],0)
         else:
             pdata_cmap = np.zeros(shape=[nlat_CMAP,nlon_CMAP])
@@ -570,7 +589,7 @@ for var in verif_vars:
             cmap_trunc = regrid(specob_cmap, specob_new, pdata_cmap, ntrunc=nlat_new-1, smooth=None)
 
         # TCR
-        if len(TCR_smatch) and len(TCR_ematch):
+        if TCR_smatch and TCR_ematch:
             pdata_tcr = np.mean(TCR[TCR_smatch:TCR_ematch,:,:],0)
         else:
             pdata_tcr = np.zeros(shape=[nlat_TCR,nlon_TCR])
@@ -583,7 +602,7 @@ for var in verif_vars:
             tcr_trunc = regrid(specob_tcr, specob_new, pdata_tcr, ntrunc=nlat_new-1, smooth=None)
         
         # ERA
-        if len(ERA_smatch) and len(ERA_ematch):
+        if ERA_smatch and ERA_ematch:
             pdata_era = np.mean(ERA[ERA_smatch:ERA_ematch,:,:],0)
         else:
             pdata_era = np.zeros(shape=[nlat_ERA,nlon_ERA])
@@ -768,8 +787,8 @@ for var in verif_vars:
             lg_csave[k] = np.corrcoef(lmrvec[indok],gpcpvec[indok])[0,1]
         else:
             lg_csave[k] = np.nan
-        print '  lmr-gpcp correlation  : '+ str(lg_csave[k])
-
+        print('  lmr-gpcp correlation    : %s' % str(lg_csave[k]))
+        
         # lmr <-> cmap
         indok = np.isfinite(cmapvec); nbok = np.sum(indok); nball = cmapvec.shape[1]
         ratio = float(nbok)/float(nball)
@@ -777,7 +796,7 @@ for var in verif_vars:
             lc_csave[k] = np.corrcoef(lmrvec[indok],cmapvec[indok])[0,1]
         else:
             lc_csave[k] = np.nan
-        print '  lmr-cmap correlation  : '+ str(lc_csave[k])
+        print('  lmr-cmap correlation    : %s' % str(lc_csave[k]))
 
         # lmr <-> tcr
         indok = np.isfinite(tcrvec); nbok = np.sum(indok); nball = tcrvec.shape[1]
@@ -786,7 +805,7 @@ for var in verif_vars:
             lt_csave[k] = np.corrcoef(lmrvec[indok],tcrvec[indok])[0,1]
         else:
             lt_csave[k] = np.nan
-        print '  lmr-tcr correlation  : '+ str(lt_csave[k])
+        print('  lmr-tcr correlation     : %s' % str(lt_csave[k]))
 
         # lmr <-> era
         indok = np.isfinite(eravec); nbok = np.sum(indok); nball = eravec.shape[1]
@@ -795,7 +814,7 @@ for var in verif_vars:
             le_csave[k] = np.corrcoef(lmrvec[indok],eravec[indok])[0,1]
         else:
             le_csave[k] = np.nan
-        print '  lmr-era correlation  : '+ str(le_csave[k])
+        print('  lmr-era correlation     : %s' % str(le_csave[k]))
         
         # gpcp <-> cmap
         indok = np.isfinite(cmapvec); nbok = np.sum(indok); nball = cmapvec.shape[1]
@@ -804,7 +823,7 @@ for var in verif_vars:
             gc_csave[k] = np.corrcoef(gpcpvec[indok],cmapvec[indok])[0,1]
         else:
             gc_csave[k] = np.nan
-        print '  gpcp-cmap correlation  : '+ str(gc_csave[k])
+        print('  gpcp-cmap correlation   : %s' % str(gc_csave[k]))
 
         # gpcp <-> tcr
         indok = np.isfinite(gpcpvec); nbok = np.sum(indok); nball = gpcpvec.shape[1]
@@ -813,7 +832,7 @@ for var in verif_vars:
             gt_csave[k] = np.corrcoef(gpcpvec[indok],tcrvec[indok])[0,1]
         else:
             gt_csave[k] = np.nan
-        print '  gpcp-tcr correlation  : '+ str(gt_csave[k])
+        print('  gpcp-tcr correlation    : %s' % str(gt_csave[k]))
 
         # gpcp <-> era
         indok = np.isfinite(gpcpvec); nbok = np.sum(indok); nball = gpcpvec.shape[1]
@@ -822,7 +841,7 @@ for var in verif_vars:
             ge_csave[k] = np.corrcoef(gpcpvec[indok],eravec[indok])[0,1]
         else:
             ge_csave[k] = np.nan
-        print '  gpcp-era correlation  : '+ str(ge_csave[k])
+        print('  gpcp-era correlation    : %s' % str(ge_csave[k]))
         
         # tcr <-> era
         indok = np.isfinite(eravec); nbok = np.sum(indok); nball = eravec.shape[1]
@@ -831,11 +850,10 @@ for var in verif_vars:
             te_csave[k] = np.corrcoef(tcrvec[indok],eravec[indok])[0,1]
         else:
             te_csave[k] = np.nan
-        print '  tcr-era correlation  : '+ str(te_csave[k])
+        print('  tcr-era correlation     : %s' % str(te_csave[k]))
 
 
-
-    # plots for anomaly correlation statistics
+    # -- plots for anomaly correlation statistics --
 
     # number of bins in the histograms
     nbins = 15
@@ -854,7 +872,7 @@ for var in verif_vars:
     ax.set_ylabel('Correlation',fontweight='bold')
     # 
     ax = fig.add_subplot(4,2,2)
-    ax.hist(lg_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lg_csave[~np.isnan(lg_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('LMR - GPCP')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -874,7 +892,7 @@ for var in verif_vars:
     ax.set_ylabel('Correlation',fontweight='bold')
     # 
     ax = fig.add_subplot(4,2,4)
-    ax.hist(lc_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lc_csave[~np.isnan(lc_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('LMR - CMAP')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -894,7 +912,7 @@ for var in verif_vars:
     ax.set_ylabel('Correlation',fontweight='bold')
     # 
     ax = fig.add_subplot(4,2,6)
-    ax.hist(lt_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(lt_csave[~np.isnan(lt_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('LMR - 20CR-V2')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -914,7 +932,7 @@ for var in verif_vars:
     ax.set_ylabel('Correlation',fontweight='bold')
     # 
     ax = fig.add_subplot(4,2,8)
-    ax.hist(le_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(le_csave[~np.isnan(le_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('LMR - ERA20C')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -928,7 +946,7 @@ for var in verif_vars:
     plt.subplots_adjust(left=0.1, bottom=0.25, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
     fig.suptitle(verif_dict[var][2]+' anomaly correlation',fontweight='bold') 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_LMR_'+str(trange[0])+'-'+str(trange[1])+'.pdf', bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
@@ -949,7 +967,7 @@ for var in verif_vars:
     ax.set_xlabel('Year CE',fontweight='bold')
     #
     ax = fig.add_subplot(3,2,2)
-    ax.hist(gt_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(gt_csave[~np.isnan(gt_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('20CR-V2 - GPCP')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -971,7 +989,7 @@ for var in verif_vars:
     ax.set_xlabel('Year CE',fontweight='bold')
     #
     ax = fig.add_subplot(3,2,4)
-    ax.hist(ge_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(ge_csave[~np.isnan(ge_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('ERA20C - GPCP')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -993,7 +1011,7 @@ for var in verif_vars:
     ax.set_xlabel('Year CE',fontweight='bold')
     #
     ax = fig.add_subplot(3,2,6)
-    ax.hist(te_csave,bins=bins,histtype='stepfilled',alpha=0.25)
+    ax.hist(te_csave[~np.isnan(te_csave)],bins=bins,histtype='stepfilled',alpha=0.25)
     ax.set_title('ERA20C - GPCP')
     ax.set_xlim(corr_range[0],corr_range[-1])
     ax.set_ylabel('Counts',fontweight='bold')
@@ -1008,7 +1026,7 @@ for var in verif_vars:
     plt.subplots_adjust(left=0.1, bottom=0.35, right=0.95, top=0.93, wspace=0.5, hspace=0.5)
     fig.suptitle(verif_dict[var][2]+' anomaly correlation',fontweight='bold') 
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_'+str(trange[0])+'-'+str(trange[1])+'_reference.png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_anomaly_correlation_'+str(trange[0])+'-'+str(trange[1])+'_reference.pdf', bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
@@ -1146,78 +1164,92 @@ for var in verif_vars:
                 
 
     # median
+    # ------
+
+    lat_trunc = np.squeeze(lat2_new[:,0])
+    indlat = np.where((lat_trunc[:] > -60.0) & (lat_trunc[:] < 60.0))
+
+    # LMR-GPCP
+    print('')
     lg_rmedian = str(float('%.2g' % np.median(np.median(r_lg)) ))
-    print 'lmr-gpcp all-grid median r: ' + str(lg_rmedian)
-    lg_rmedian60 = str(float('%.2g' % np.median(np.median(r_lg[7:34,:])) ))
-    print 'lmr-gpcp 60S-60N median r: ' + str(lg_rmedian60)
+    print('lmr-gpcp all-grid median r   : %s' % str(lg_rmedian))
+    lg_rmedian60 = str(float('%.2g' % np.median(np.median(r_lg[indlat,:])) ))
+    print('lmr-gpcp 60S-60N median r    : %s' % str(lg_rmedian60))
     lg_cemedian = str(float('%.2g' % np.median(np.median(ce_lg)) ))
-    print 'lmr-gpcp all-grid median ce: ' + str(lg_cemedian)
-    lg_cemedian60 = str(float('%.2g' % np.median(np.median(ce_lg[7:34,:])) ))
-    print 'lmr-gpcp 60S-60N median ce: ' + str(lg_cemedian60)
-    #
+    print('lmr-gpcp all-grid median ce  : %s' % str(lg_cemedian))
+    lg_cemedian60 = str(float('%.2g' % np.median(np.median(ce_lg[indlat,:])) ))
+    print('lmr-gpcp 60S-60N median ce   : %s' % str(lg_cemedian60))
+    # LMR-CMAP
+    print('')
     lc_rmedian = str(float('%.2g' % np.median(np.median(r_lc)) ))
-    print 'lmr-cmap all-grid median r: ' + str(lc_rmedian)
-    lc_rmedian60 = str(float('%.2g' % np.median(np.median(r_lc[7:34,:])) ))
-    print 'lmr-cmap 60S-60N median r: ' + str(lc_rmedian60)
+    print('lmr-cmap all-grid median r   : ' + str(lc_rmedian))
+    lc_rmedian60 = str(float('%.2g' % np.median(np.median(r_lc[indlat,:])) ))
+    print('lmr-cmap 60S-60N median r    : ' + str(lc_rmedian60))
     lc_cemedian = str(float('%.2g' % np.median(np.median(ce_lc)) ))
-    print 'lmr-cmap all-grid median ce: ' + str(lc_cemedian)
-    lc_cemedian60 = str(float('%.2g' % np.median(np.median(ce_lc[7:34,:])) ))
-    print 'lmr-cmap 60S-60N median ce: ' + str(lc_cemedian60)
-    #
+    print('lmr-cmap all-grid median ce  : ' + str(lc_cemedian))
+    lc_cemedian60 = str(float('%.2g' % np.median(np.median(ce_lc[indlat,:])) ))
+    print('lmr-cmap 60S-60N median ce   : ' + str(lc_cemedian60))
+    # LMR-TCR
+    print('')
     lr_rmedian = str(float('%.2g' % np.median(np.median(r_lr)) ))
-    print 'lmr-tcr all-grid median r: ' + str(lr_rmedian)
-    lr_rmedian60 = str(float('%.2g' % np.median(np.median(r_lr[7:34,:])) ))
-    print 'lmr-tcr 60S-60N median r: ' + str(lr_rmedian60)
+    print('lmr-tcr all-grid median r    : ' + str(lr_rmedian))
+    lr_rmedian60 = str(float('%.2g' % np.median(np.median(r_lr[indlat,:])) ))
+    print('lmr-tcr 60S-60N median r     : ' + str(lr_rmedian60))
     lr_cemedian = str(float('%.2g' % np.median(np.median(ce_lr)) ))
-    print 'lmr-tcr all-grid median ce: ' + str(lr_cemedian)
-    lr_cemedian60 = str(float('%.2g' % np.median(np.median(ce_lr[7:34,:])) ))
-    print 'lmr-tcr 60S-60N median ce: ' + str(lr_cemedian60)
-    #
+    print('lmr-tcr all-grid median ce   : ' + str(lr_cemedian))
+    lr_cemedian60 = str(float('%.2g' % np.median(np.median(ce_lr[indlat,:])) ))
+    print('lmr-tcr 60S-60N median ce    : ' + str(lr_cemedian60))
+    # LMR-ERA
+    print('')
     le_rmedian = str(float('%.2g' % np.median(np.median(r_le)) ))
-    print 'lmr-era all-grid median r: ' + str(le_rmedian)
-    le_rmedian60 = str(float('%.2g' % np.median(np.median(r_le[7:34,:])) ))
-    print 'lmr-era 60S-60N median r: ' + str(le_rmedian60)
+    print('lmr-era all-grid median r    : ' + str(le_rmedian))
+    le_rmedian60 = str(float('%.2g' % np.median(np.median(r_le[indlat,:])) ))
+    print('lmr-era 60S-60N median r     : ' + str(le_rmedian60))
     le_cemedian = str(float('%.2g' % np.median(np.median(ce_le)) ))
-    print 'lmr-era all-grid median ce: ' + str(le_cemedian)
-    le_cemedian60 = str(float('%.2g' % np.median(np.median(ce_le[7:34,:])) ))
-    print 'lmr-era 60S-60N median ce: ' + str(le_cemedian60)
-    #
+    print('lmr-era all-grid median ce   : ' + str(le_cemedian))
+    le_cemedian60 = str(float('%.2g' % np.median(np.median(ce_le[indlat,:])) ))
+    print('lmr-era 60S-60N median ce    : ' + str(le_cemedian60))
+    # GPCP-CMAP
+    print('')
     gc_rmedian = str(float('%.2g' % np.median(np.median(r_gc)) ))
-    print 'gpcp-cmap all-grid median r: ' + str(gc_rmedian)
-    gc_rmedian60 = str(float('%.2g' % np.median(np.median(r_gc[7:34,:])) ))
-    print 'gpcp-cmap 60S-60N median r: ' + str(gc_rmedian60)
+    print('gpcp-cmap all-grid median r  : ' + str(gc_rmedian))
+    gc_rmedian60 = str(float('%.2g' % np.median(np.median(r_gc[indlat,:])) ))
+    print('gpcp-cmap 60S-60N median r   : ' + str(gc_rmedian60))
     gc_cemedian = str(float('%.2g' % np.median(np.median(ce_gc)) ))
-    print 'gpcp-cmap all-grid median ce: ' + str(gc_cemedian)
-    gc_cemedian60 = str(float('%.2g' % np.median(np.median(ce_gc[7:34,:])) ))
-    print 'gpcp-cmap 60S-60N median ce: ' + str(gc_cemedian60)
-    #
+    print('gpcp-cmap all-grid median ce : ' + str(gc_cemedian))
+    gc_cemedian60 = str(float('%.2g' % np.median(np.median(ce_gc[indlat,:])) ))
+    print('gpcp-cmap 60S-60N median ce  : ' + str(gc_cemedian60))
+    # TCR-GPCP
+    print('')
     tg_rmedian = str(float('%.2g' % np.median(np.median(r_tg)) ))
-    print 'gpcp-tcr all-grid median r: ' + str(tg_rmedian)
-    tg_rmedian60 = str(float('%.2g' % np.median(np.median(r_tg[7:34,:])) ))
-    print 'gpcp-tcr 60S-60N median r: ' + str(tg_rmedian60)
+    print('gpcp-tcr all-grid median r   : ' + str(tg_rmedian))
+    tg_rmedian60 = str(float('%.2g' % np.median(np.median(r_tg[indlat,:])) ))
+    print('gpcp-tcr 60S-60N median r    : ' + str(tg_rmedian60))
     tg_cemedian = str(float('%.2g' % np.median(np.median(ce_tg)) ))
-    print 'gpcp-tcr all-grid median ce: ' + str(tg_cemedian)
-    tg_cemedian60 = str(float('%.2g' % np.median(np.median(ce_tg[7:34,:])) ))
-    print 'gpcp-tcr 60S-60N median ce: ' + str(tg_cemedian60)
-    #
+    print('gpcp-tcr all-grid median ce  : ' + str(tg_cemedian))
+    tg_cemedian60 = str(float('%.2g' % np.median(np.median(ce_tg[indlat,:])) ))
+    print('gpcp-tcr 60S-60N median ce   : ' + str(tg_cemedian60))
+    # ERA-GPCP
+    print('')
     eg_rmedian = str(float('%.2g' % np.median(np.median(r_eg)) ))
-    print 'gpcp-era all-grid median r: ' + str(eg_rmedian)
-    eg_rmedian60 = str(float('%.2g' % np.median(np.median(r_eg[7:34,:])) ))
-    print 'gpcp-era 60S-60N median r: ' + str(eg_rmedian60)
+    print('gpcp-era all-grid median r   : ' + str(eg_rmedian))
+    eg_rmedian60 = str(float('%.2g' % np.median(np.median(r_eg[indlat,:])) ))
+    print('gpcp-era 60S-60N median r    : ' + str(eg_rmedian60))
     eg_cemedian = str(float('%.2g' % np.median(np.median(ce_eg)) ))
-    print 'gpcp-era all-grid median ce: ' + str(eg_cemedian)
-    eg_cemedian60 = str(float('%.2g' % np.median(np.median(ce_eg[7:34,:])) ))
-    print 'gpcp-era 60S-60N median ce: ' + str(eg_cemedian60)
-    #
+    print('gpcp-era all-grid median ce  : ' + str(eg_cemedian))
+    eg_cemedian60 = str(float('%.2g' % np.median(np.median(ce_eg[indlat,:])) ))
+    print('gpcp-era 60S-60N median ce   : ' + str(eg_cemedian60))
+    # TCR-ERA
+    print('')
     te_rmedian = str(float('%.2g' % np.median(np.median(r_te)) ))
-    print 'tcr-era all-grid median r: ' + str(te_rmedian)
-    te_rmedian60 = str(float('%.2g' % np.median(np.median(r_te[7:34,:])) ))
-    print 'tcr-era 60S-60N median r: ' + str(te_rmedian60)
+    print('tcr-era all-grid median r    : ' + str(te_rmedian))
+    te_rmedian60 = str(float('%.2g' % np.median(np.median(r_te[indlat,:])) ))
+    print('tcr-era 60S-60N median r     : ' + str(te_rmedian60))
     te_cemedian = str(float('%.2g' % np.median(np.median(ce_te)) ))
-    print 'tcr-era all-grid median ce: ' + str(te_cemedian)
-    te_cemedian60 = str(float('%.2g' % np.median(np.median(ce_te[7:34,:])) ))
-    print 'tcr-era 60S-60N median ce: ' + str(te_cemedian60)   
-    
+    print('tcr-era all-grid median ce   : ' + str(te_cemedian))
+    te_cemedian60 = str(float('%.2g' % np.median(np.median(ce_te[indlat,:])) ))
+    print('tcr-era 60S-60N median ce    : ' + str(te_cemedian60))
+    print('')    
 
     # spatial mean (area weighted)
     # LMR-GPCP
@@ -1391,7 +1423,7 @@ for var in verif_vars:
     plt.suptitle('LMR zonal-mean verification - '+verif_dict[var][2],fontweight='bold')
     fig.tight_layout(pad = 2.0)
     if fsave:
-        print 'saving to .png'
+        print('saving to .png')
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.png') 
         plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_zonal_mean_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
         plt.close()
@@ -1455,7 +1487,7 @@ for var in verif_vars:
 
         fig.tight_layout()
         if fsave:
-            print 'saving to .png'
+            print('saving to .png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'.pdf',bbox_inches='tight', dpi=300, format='pdf')
             plt.close()
@@ -1519,7 +1551,7 @@ for var in verif_vars:
         
         fig.tight_layout()
         if fsave:
-            print 'saving to .png'
+            print('saving to .png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_reference.png')
             plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_r_ce_'+str(trange[0])+'-'+str(trange[1])+'_reference.pdf',bbox_inches='tight', dpi=300, format='pdf')
             plt.close()
@@ -1528,32 +1560,7 @@ for var in verif_vars:
     if iplot:
         plt.show()
 
-
-    # ensemble calibration
-    print np.shape(lg_err)
-    print np.shape(xam_var)
-    LMR_smatch, LMR_ematch = find_date_indices(LMR_time,trange[0],trange[1])
-    print LMR_smatch, LMR_ematch
-    svar = xam_var[LMR_smatch:LMR_ematch,:,:]
-    print np.shape(svar)
-
-    calib = lg_err.var(0)/svar.mean(0)
-    print np.shape(calib)
-    print calib[0:-1,:].mean()
-
-
-    # create the plot
-    mapcolor_calib = truncate_colormap(plt.cm.YlOrBr,0.0,0.8)
-    fig = plt.figure()
-    cb = LMR_plotter(calib,lat2_new,lon2_new,mapcolor_calib,11,0,10,extend='max',nticks=10)
-    #cb.set_ticks(range(11))
-    # overlay stations!
-    plt.title('Ratio of ensemble-mean error variance to mean ensemble variance \n '+verif_dict[var][2])
-    if fsave:
-        print 'saving to .png'
-        plt.savefig(nexp+'_verify_grid_'+verif_dict[var][1]+'_ensemble_calibration_'+str(trange[0])+'-'+str(trange[1])+'.png')  
-
-
+        
     # in loop over lat,lon, add a call to the rank histogram function; need to move up the function def
         
     # NEW look at trends over specified time periods as a function of latitude
