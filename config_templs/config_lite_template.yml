@@ -1,0 +1,178 @@
+# Configuration parameters for running an LMR reconstruction.  See LMR_config
+# for a description of each parameter.  Here we provide a default setting as an
+# example, not a best-use scenario.
+#
+# The 'null' value resolves to a default path pattern (using lmr_path) for all
+# directory parameters.  For other parameters 'null' signifies the parameter is
+# not used. This is python-interpreted as None. 
+
+wrapper:
+  iter_range:  !!python/tuple [0, 0]
+  multi_seed: null
+
+core:
+  nexp: test_lmr_recon
+  lmr_path: /home/path/to/LMR/
+
+  datadir_output: /home/path/to/working_output
+  archive_dir: /home/path/to/archive_output
+
+  use_precalc_ye: True
+  write_posterior_Ye: False
+  recon_period: !!python/tuple [1800, 2000]
+  recon_timescale: 1
+
+  anom_reference_period: !!python/tuple [1951, 1980]
+  nens: 100
+  seed: null
+
+  # Ensemble archiving options: ens_full, ens_variance, ens_percentiles, ens_subsample
+  save_archive: ens_variance
+  save_archive_percentiles: !!python/tuple [5, 95]
+  save_archive_ens_subsample: 10
+
+  # Possible regridding reanalysis 2D fields
+  archive_regrid_method: null
+  archive_esmpy_interp_method: bilinear
+  archive_esmpy_regrid_to: t42
+
+proxies:
+  # use_from: [PAGES2kv1]
+  use_from: [LMRdb]
+
+  proxy_frac: 0.75
+
+  PAGES2kv1:
+    datadir_proxy: null
+    datafile_proxy: Pages2kv1_Proxies.df.pckl
+    metafile_proxy: Pages2kv1_Metadata.df.pckl
+
+    proxy_order: [
+      'Tree ring_Width',
+      'Tree ring_Density',
+      'Ice core_d18O',
+      'Ice core_d2H',
+      'Ice core_Accumulation',
+      'Coral_d18O',
+      'Coral_Luminescence',
+      'Lake sediment_All',
+      'Marine sediment_All',
+      'Speleothem_All'
+      ]
+    proxy_psm_type:
+      Tree ring_Width:       linear
+      Tree ring_Density:     linear
+      Ice core_d18O:         linear
+      Ice core_d2H:          linear
+      Ice core_Accumulation: linear
+      Coral_d18O:            linear
+      Coral_Luminescence:    linear
+      Lake sediment_All:     linear
+      Marine sediment_All:   linear
+      Speleothem_All:        linear
+
+  LMRdb:
+    dbversion: 'v1.0.0'
+    datadir_proxy: null
+    datafile_proxy: 'LMRdb_{}_Proxies.df.pckl'
+    metafile_proxy: 'LMRdb_{}_Metadata.df.pckl'
+    dataformat_proxy: 'DF'
+    database_filter: [
+#     'PAGES2kv2',
+#     'LMR'
+      ]
+
+    proxy_order: [
+      'Tree Rings_WidthPages2',
+      'Tree Rings_WidthBreit',
+      'Tree Rings_WoodDensity',
+      'Tree Rings_Isotopes',
+      'Corals and Sclerosponges_d18O',
+      'Corals and Sclerosponges_SrCa',
+      'Corals and Sclerosponges_Rates',
+      'Ice Cores_d18O',
+      'Ice Cores_dD',
+      'Ice Cores_Accumulation',
+      'Ice Cores_MeltFeature',
+      'Lake Cores_Varve',
+      'Lake Cores_BioMarkers',
+      'Lake Cores_GeoChem',
+      'Lake Cores_Misc',
+      'Marine Cores_d18O',
+#      'Speleothems_d18O',
+      'Bivalve_d18O'
+      ]
+    proxy_psm_type:
+      Corals and Sclerosponges_d18O:  linear
+      Corals and Sclerosponges_SrCa:  linear
+      Corals and Sclerosponges_Rates: linear
+      Ice Cores_d18O:                 linear
+      Ice Cores_dD:                   linear
+      Ice Cores_Accumulation:         linear
+      Ice Cores_MeltFeature:          linear
+      Lake Cores_Varve:               linear
+      Lake Cores_BioMarkers:          linear
+      Lake Cores_GeoChem:             linear
+      Lake Cores_Misc:                linear
+      Marine Cores_d18O:              linear
+      Tree Rings_WidthPages2:         bilinear
+      Tree Rings_WidthBreit:          bilinear
+      Tree Rings_WoodDensity:         bilinear
+      Tree Rings_Isotopes:            bilinear
+      Speleothems_d18O:               linear
+      Bivalve_d18O:                   linear
+
+psm:
+  all_calib_sources:
+    temperature: [GISTEMP, MLOST, NOAAGlobalTemp, HadCRUT, BerkeleyEarth]
+    moisture: [GPCC, DaiPDSI]
+
+  calib_period: !!python/tuple [1850, 2015]
+  avgPeriod: annual
+#  avgPeriod: season
+
+  season_source: proxy_metadata
+
+  linear:
+    datatag_calib: GISTEMP
+    pre_calib_datafile: null
+    psm_r_crit: 0.0
+
+  bilinear:
+    datatag_calib_T: GISTEMP
+    datatag_calib_P: GPCC
+    pre_calib_datafile: null
+    psm_r_crit: 0.0
+
+  h_interp:
+    radius_influence: 50.0
+    datadir_obsError: ./
+    filename_obsError: R.txt
+    dataformat_obsError: TXT
+    datafile_obsError: None
+
+prior:
+  prior_source: ccsm4_last_millenium
+
+  state_variables:
+    tas_sfc_Amon: anom
+
+  detrend: False
+
+  # regridding options: null, simple, esmpy or spherical_harmonics
+  regrid_method: esmpy
+  # next parameter applies only to *simple* and *spherical_harmonics* options
+  regrid_resolution: 42
+
+  # specific to *esmpy*
+  esmpy_interp_method: bilinear
+  esmpy_regrid_to: 20CRv2grid
+
+  state_variables_info:
+    temperature: [
+      'tas_sfc_Amon'
+      ]
+    moisture: [
+      'pr_sfc_Amon',
+      'scpdsi_sfc_Amon',
+      ]

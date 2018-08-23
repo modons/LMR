@@ -41,7 +41,8 @@ import numpy as np
 import logging
 import os.path
 import LMR_calibrate
-from LMR_utils import haversine, get_distance, smooth2D, get_data_closest_gridpt, class_docs_fixer
+from LMR_utils import (haversine, get_distance, smooth2D,
+                       get_data_closest_gridpt, class_docs_fixer)
 
 import pandas as pd
 from scipy.stats import linregress
