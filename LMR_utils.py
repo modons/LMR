@@ -18,6 +18,7 @@ Revisions:
             'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
             [R. Tardif, U. of Washington, Sept 2017]
 """
+import logging
 import glob
 import os
 import numpy as np
@@ -32,6 +33,8 @@ from math import radians, cos, sin, asin, sqrt
 from scipy import signal, special
 from scipy.spatial import cKDTree
 from spharm import Spharmt, getspecindx, regrid
+
+_log = logging.getLogger(__name__)
 
 def atoi(text):
     try:
@@ -1768,6 +1771,7 @@ def augment_docstr(func):
     func.__doc__ = '%%aug%%' + func.__doc__
     return func
 
+#--GH: start new stuff from Brewster--
 
 def create_precalc_ye_filename(config,psm_key,prior_kind):
     """
@@ -1794,31 +1798,21 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_database = config.proxies.use_from[0]
 
     # Generate PSM calibration string
-    calib_str_ext = ''
-    if config.core.anom_reference_period:
-        calib_str_ext = calib_str_ext+'_ref{}-{}'.format(str(config.core.anom_reference_period[0]),
-                                                         str(config.core.anom_reference_period[1]))
-    if config.psm.calib_period:
-        calib_str_ext = calib_str_ext+'_cal{}-{}'.format(str(config.psm.calib_period[0]),
-                                                         str(config.psm.calib_period[1]))
-    
     if psm_key == 'linear':
         calib_avgPeriod = config.psm.linear.avgPeriod
-        calib_str = config.psm.linear.datatag_calib+calib_str_ext
+        calib_str = config.psm.linear.datatag_calib
         state_vars_for_ye = config.psm.linear.psm_required_variables
         
     elif psm_key == 'linear_TorP':
         calib_avgPeriod = config.psm.linear_TorP.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.linear_TorP.datatag_calib_T,
                                         config.psm.linear_TorP.datatag_calib_P)
-        calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.linear_TorP.psm_required_variables
 
     elif psm_key == 'bilinear':
         calib_avgPeriod = config.psm.bilinear.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.bilinear.datatag_calib_T,
                                         config.psm.bilinear.datatag_calib_P)
-        calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.bilinear.psm_required_variables
         
     elif psm_key == 'h_interp':
@@ -1826,14 +1820,37 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_str = ''
         state_vars_for_ye = config.psm.h_interp.psm_required_variables
 
-    elif  psm_key == 'bayesreg_uk37':
+    elif psm_key == 'bayesreg_uk37':
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_uk37.psm_required_variables
-        
+
+    elif psm_key == 'bayesreg_tex86':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_tex86.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_pachyderma':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_bulloides':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_sacculifer':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_ruberwhite':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
     else:
         raise ValueError('Unrecognized PSM key.')
-
     
     if calib_avgPeriod:
         psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str
@@ -1843,7 +1860,8 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_str = str(proxy_database)
     if proxy_str == 'LMRdb':
         proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
-    elif proxy_str == 'NCDCdtda':
+    elif proxy_str == 'NCDCdadt' or proxy_str == 'NCDCdtda':
+        proxy_str = 'NCDCdadt'
         proxy_str = proxy_str + str(config.proxies.NCDCdtda.dbversion)
         
     # Generate appropriate prior string
@@ -1852,6 +1870,95 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
 
     return '{}_{}_{}.npz'.format(prior_str, psm_str, proxy_str)
 
+def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, sample_idxs):
+    """
+    Convenience function to load a precalculated Ye file for the current
+    experiment.
+
+    Parameters
+    ----------
+    config: LMR_config.Config
+        Current experiment instance of the configuration object.
+    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+        Current experiment proxy manager
+    sample_idxs: list(int)
+        A list of the current sample indices used to create the prior ensemble.
+
+    Returns
+    -------
+    ye_all: ndarray
+        The array of Ye values for the current ensemble and all proxy records
+    """
+
+    begin_load = time()
+
+    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
+
+    num_proxies_assim = len(proxy_manager.ind_assim)
+    num_samples = len(sample_idxs)
+    ye_all = np.zeros((num_proxies_assim, num_samples))
+    ye_all_coords = np.zeros((num_proxies_assim, 2))
+    
+    psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))    
+    precalc_files = {}
+    for psm_key in psm_keys:
+
+        pkind = None
+        if psm_key == 'linear':
+            pkind = list(config.psm.linear.psm_required_variables.values())[0]
+        elif psm_key == 'linear_TorP':
+            pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
+        elif psm_key == 'bilinear':
+            pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
+        elif psm_key == 'h_interp':
+            if config.proxies.proxy_timeseries_kind == 'asis':
+                pkind = 'full'
+            elif config.proxies.proxy_timeseries_kind == 'anom':
+                pkind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
+        elif psm_key == 'bayesreg_uk37':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_tex86':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_ruberwhite':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_sacculifer':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_bulloides':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_pachyderma':
+            pkind = 'full'
+        else:
+            raise ValueError('Unrecognized PSM key.')
+
+        load_fname = create_precalc_ye_filename(config,psm_key,pkind)
+        _log.info('Loading file:' + load_fname)
+        print('loading Ye file: ',load_fname)
+
+        # check if file exists
+        if not os.path.isfile(os.path.join(load_dir, load_fname)):
+            _log.error('ERROR: File does not exist! -- run the precalc file builder: misc/build_ye_file.py to generate the missing file')
+            raise SystemExit()
+        precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
+
+    
+    _log.info('Now extracting proxy type-dependent Ye values...')
+    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
+        psm_key = pobj.psm_obj.psm_key
+        pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
+        precalc_vals = precalc_files[psm_key]['ye_vals']
+        
+        pidx = pid_idx_map[pobj.id]
+        ye_all[i] = precalc_vals[pidx, sample_idxs]
+
+        ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
+        
+    _log.info('Completed in ' +  str(time() - begin_load) + 'secs')
+        
+    return ye_all, ye_all_coords
+
+#--GH: end new stuff from Brewster--
 
 def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     """
@@ -1888,104 +1995,6 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
         ye_all[i] = precalc_vals[pidx, sample_idxs]
 
     return ye_all
-
-
-def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, sample_idxs):
-    """
-    Convenience function to load a precalculated Ye file for the current
-    experiment.
-
-    Parameters
-    ----------
-    config: LMR_config.Config
-        Current experiment instance of the configuration object.
-    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
-        Current experiment proxy manager
-    proxy_set: str
-        String to indicate which proxy set to handle ('assim' or 'eval')
-    sample_idxs: list(int)
-        A list of the current sample indices used to create the prior ensemble.
-
-    Returns
-    -------
-    ye_all: ndarray
-        The array of Ye values for the current ensemble and all records from
-        selected proxy set.
-    """
-
-    begin_load = time()
-
-    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
-    
-    if proxy_set == 'assim':
-        num_proxies_assim = len(proxy_manager.ind_assim)
-        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))
-    elif proxy_set == 'eval':
-        num_proxies_assim = len(proxy_manager.ind_eval)
-        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_eval_proxy_objs()]))
-    num_samples = len(sample_idxs)
-    ye_all = np.zeros((num_proxies_assim, num_samples))
-    ye_all_coords = np.zeros((num_proxies_assim, 2))
-    
-    precalc_files = {}
-    for psm_key in psm_keys:
-
-        pkind = None
-        if psm_key == 'linear':
-            pkind = list(config.psm.linear.psm_required_variables.values())[0]
-        elif psm_key == 'linear_TorP':
-            pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
-        elif psm_key == 'bilinear':
-            pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
-        elif psm_key == 'h_interp':
-            if config.proxies.proxy_timeseries_kind == 'asis':
-                pkind = 'full'
-            elif config.proxies.proxy_timeseries_kind == 'anom':
-                pkind = 'anom'
-            else:
-                raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
-        elif psm_key == 'bayesreg_uk37':
-            pkind = 'full'
-        else:
-            raise ValueError('Unrecognized PSM key.')
-
-        load_fname = create_precalc_ye_filename(config,psm_key,pkind)
-        print('  Loading file:', load_fname)
-        # check if file exists
-        if not os.path.isfile(os.path.join(load_dir, load_fname)):
-            print ('  ERROR: File does not exist!'
-                   ' -- run the precalc file builder:'
-                   ' misc/build_ye_file.py'
-                   ' to generate the missing file')
-            raise SystemExit()
-        precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
-
-    
-    print('  Now extracting proxy type-dependent Ye values...')
-    if proxy_set == 'assim':
-        for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
-            psm_key = pobj.psm_obj.psm_key
-            pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
-            precalc_vals = precalc_files[psm_key]['ye_vals']
-
-            pidx = pid_idx_map[pobj.id]
-            ye_all[i] = precalc_vals[pidx, sample_idxs]
-
-            ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
-    elif proxy_set == 'eval':
-        for i, pobj in enumerate(proxy_manager.sites_eval_proxy_objs()):
-            psm_key = pobj.psm_obj.psm_key
-            pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
-            precalc_vals = precalc_files[psm_key]['ye_vals']
-
-            pidx = pid_idx_map[pobj.id]
-            ye_all[i] = precalc_vals[pidx, sample_idxs]
-
-            ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)        
-            
-    print('  Completed in ',  time() - begin_load, 'secs')
-        
-    return ye_all, ye_all_coords
 
 
 def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample_idxs):

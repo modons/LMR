@@ -23,13 +23,11 @@ from matplotlib import ticker
 import glob, os, fnmatch
 import numpy as np
 
-expts = ['pages2_loc15000_pages2k2_seasonal_TorP_nens200',
-         'pages2_noloc',
-         'pages2_loc12000'
+expts = ['dadt_test'         
          ]
 
 # define the time interval
-stime = 1880
+stime = -40000
 etime = 2000
 
 fig = plt.figure()
@@ -37,7 +35,7 @@ fig = plt.figure()
 xl = [stime,etime]
 
 for nexp in expts:
-    datadir_output = '/home/disk/kalman3/hakim/LMR'
+    datadir_output = '/Users/hakim/data/LMR_python3/archive/'
     workdir = datadir_output + '/' + nexp
 
     # get a listing of the iteration directories
