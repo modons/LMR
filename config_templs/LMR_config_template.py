@@ -1471,56 +1471,83 @@ class psm(ConfigGroup):
         datafile_obsError: str
             Absolute path/filename of obs. error variance data
         """
+        def __init__(self, lmr_path=None, **kwargs):
+            super().__init__(**kwargs)
 
-        ##** BEGIN User Parameters **##
-        
-        datadir_BayesRegressionData = None
-        filename_BayesRegressionData = None
-        
-        dataformat_BayesRegressionData = 'MAT' # a .mat Matlab file
-
-        
-        ##** END User Parameters **##
-
-        def __init__(self, **kwargs):
-            super(self.__class__, self).__init__(**kwargs)
-
-            if self.datadir_BayesRegressionData is None:
-                self.datadir_BayesRegressionData = join(core.lmr_path, 'PSM')
-            else:
-                self.datadir_BayesRegressionData = self.datadir_BayesRegressionData
-            
-            if self.filename_BayesRegressionData is None:
-                self.filename_BayesRegressionData = 'PSM_bayes_posterior_UK37.mat'
-            else:
-                self.filename_BayesRegressionData = self.filename_BayesRegressionData
-
-            self.datafile_BayesRegressionData = join(self.datadir_BayesRegressionData,
-                                              self.filename_BayesRegressionData)
-    
             # define state variable needed to calculate Ye's
             self.psm_required_variables = {'tos_sfc_Odec': 'full'}
 
-            # matlab engine as python object, needed for calculations
-            # of the forward model.
-            #self.MatlabEng = matlab.engine.start_matlab('-nojvm')
 
-            self.datadir_BayesRegressionData = self.datadir_BayesRegressionData
-            self.datafile_BayesRegressionData = self.datafile_BayesRegressionData
-            self.dataformat_BayesRegressionData = self.dataformat_BayesRegressionData
+    class bayesreg_tex86(ConfigGroup):
+        """
+        Parameters for the Bayesian regression PSM for TEX86 proxies.
+
+        Attributes
+        ----------
+        radius_influence : real
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
+        datadir_obsError: str
+            Absolute path to obs. error variance data
+        filename_obsError: str
+            Filename for obs. error variance data
+        dataformat_obsError: str
+            String indicating the format of the file containing obs. error
+            variance data
+            Note: note currently used by code. For info purpose only.
+        datafile_obsError: str
+            Absolute path/filename of obs. error variance data
+        """
+        def __init__(self, lmr_path=None, **kwargs):
+            super().__init__(**kwargs)
+
+            # define state variable needed to calculate Ye's
+            self.psm_required_variables = {'tos_sfc_Odec': 'full'}
 
 
-    # Initialize subclasses with all attributes 
+    class bayesreg_d18o(ConfigGroup):
+        """
+        Parameters for the Bayesian regression PSM for d18O of foram.
+
+        Attributes
+        ----------
+        radius_influence : real
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
+        datadir_obsError: str
+            Absolute path to obs. error variance data
+        filename_obsError: str
+            Filename for obs. error variance data
+        dataformat_obsError: str
+            String indicating the format of the file containing obs. error
+            variance data
+            Note: note currently used by code. For info purpose only.
+        datafile_obsError: str
+            Absolute path/filename of obs. error variance data
+        """
+
+        def __init__(self, lmr_path=None, **kwargs):
+            super().__init__(**kwargs)
+
+            # define state variable needed to calculate Ye's
+            self.psm_required_variables = {'tos_sfc_Odec': 'full', 'sos_sfc_Odec': 'full'}
+
+    # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
         self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))
-        self.linear_TorP = self.linear_TorP(lmr_path=lmr_path,
-                                            **kwargs.pop('linear_TorP', {}))
-        self.bilinear = self.bilinear(lmr_path=lmr_path,
-                                      **kwargs.pop('bilinear', {}))
+        self.linear_TorP = self.linear_TorP(lmr_path=lmr_path, **kwargs.pop('linear_TorP', {}))
+        self.bilinear = self.bilinear(lmr_path=lmr_path, **kwargs.pop('bilinear', {}))
         self.h_interp = self.h_interp(**kwargs.pop('h_interp', {}))
         self.bayesreg_uk37 = self.bayesreg_uk37(**kwargs.pop('bayesreg_uk37', {}))
+        self.bayesreg_tex86 = self.bayesreg_tex86(**kwargs.pop('bayesreg_tex86', {}))
+        self.bayesreg_d18o = self.bayesreg_d18o(**kwargs.pop('bayesreg_d18o', {}))
+        self.bayesreg_d18o_sacculifer = self.bayesreg_d18o
+        self.bayesreg_d18o_ruberwhite = self.bayesreg_d18o
+        self.bayesreg_d18o_bulloides = self.bayesreg_d18o
+        self.bayesreg_d18o_pachyderma = self.bayesreg_d18o
 
-        super(self.__class__, self).__init__(**kwargs)
+
+        super().__init__(**kwargs)
         self.avgPeriod = self.avgPeriod
         self.all_calib_sources = deepcopy(self.all_calib_sources)
 
