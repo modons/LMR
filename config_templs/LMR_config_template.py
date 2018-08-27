@@ -375,7 +375,7 @@ class proxies(ConfigGroup):
     # =============================
     use_from = ['PAGES2kv1']
     #use_from = ['LMRdb']
-    #use_from = ['NCDCdtda']
+    #use_from = ['NCDCdadt']
 
     proxy_frac = 1.0
     #proxy_frac = 0.75
@@ -781,9 +781,9 @@ class proxies(ConfigGroup):
     # --------------------------------------------------------
     # proxies specific to Deep Times Data Assimilation project
     # --------------------------------------------------------
-    class NCDCdtda(ConfigGroup):
+    class NCDCdadt(ConfigGroup):
         """
-        Parameters for NCDCdtda proxy class
+        Parameters for NCDCdadt proxy class
 
         Notes
         -----
@@ -833,8 +833,8 @@ class proxies(ConfigGroup):
         dbversion = 'v0.0.1'
         
         datadir_proxy = None
-        datafile_proxy = 'DTDA_{}_Proxies.df.pckl'
-        metafile_proxy = 'DTDA_{}_Metadata.df.pckl'
+        datafile_proxy = 'DADT_{}_Proxies.df.pckl'
+        metafile_proxy = 'DADT_{}_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         # This is not activated with yet...
@@ -923,7 +923,7 @@ class proxies(ConfigGroup):
     def __init__(self, lmr_path=None, seed=None, **kwargs):
         self.PAGES2kv1 = self.PAGES2kv1(lmr_path=lmr_path, **kwargs.pop('PAGES2kv1', {}))
         self.LMRdb = self.LMRdb(lmr_path=lmr_path, **kwargs.pop('LMRdb', {}))
-        self.NCDCdtda = self.NCDCdtda(lmr_path=lmr_path, **kwargs.pop('NCDCdtda', {}))
+        self.NCDCdadt = self.NCDCdadt(lmr_path=lmr_path, **kwargs.pop('NCDCdadt', {}))
 
         super(self.__class__, self).__init__(**kwargs)
         
@@ -1724,7 +1724,7 @@ class prior(ConfigGroup):
         if core.recon_timescale == 1:
             self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
-            # new format for multiyear DTDA reconstructions:
+            # new format for multiyear DADT reconstructions:
             self.avgInterval = {'multiyear': [core.recon_timescale]}
         else:
             print('ERROR in config.: unrecognized core.recon_timescale!')

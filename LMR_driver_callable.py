@@ -68,7 +68,7 @@ import numpy as np
 from os.path import join
 from time import time
 
-import LMR_proxy_pandas_rework
+import LMR_proxy
 import LMR_prior
 import LMR_utils
 import LMR_config as BaseCfg
@@ -187,7 +187,7 @@ def LMR_driver_callable(cfg=None):
 
     # Build dictionaries of proxy sites to assimilate and those set aside for
     # verification
-    prox_manager = LMR_proxy_pandas_rework.ProxyManager(cfg, recon_period)
+    prox_manager = LMR_proxy.ProxyManager(cfg, recon_period)
     type_site_assim = prox_manager.assim_ids_by_group
 
     if verbose > 3:

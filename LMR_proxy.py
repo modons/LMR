@@ -1,5 +1,5 @@
 """
-Module: LMR_proxy_pandas_rework.py
+Module: LMR_proxy.py
 
 Purpose: Module containing various classes associated with proxy types to be
          assimilated in the LMR, as well as numerous functionalities for
@@ -780,7 +780,7 @@ class ProxyNCDCdadt(BaseProxyObject):
 
     @staticmethod
     def get_psm_obj(config,proxy_type):
-        psm_key = config.proxies.NCDCdtda.proxy_psm_type[proxy_type]
+        psm_key = config.proxies.NCDCdadt.proxy_psm_type[proxy_type]
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
@@ -792,7 +792,7 @@ class ProxyNCDCdadt(BaseProxyObject):
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
         """
 
-        ncdcdadt_cfg = config.proxies.NCDCdtda
+        ncdcdadt_cfg = config.proxies.NCDCdadt
         if meta_src is None:
             meta_src = load_data_frame(ncdcdadt_cfg.metafile_proxy,
                                        key='meta')
@@ -836,7 +836,7 @@ class ProxyNCDCdadt(BaseProxyObject):
         times = values.index.values
 
         # transform in "anomalies" (time-mean removed) if option activated
-        if config.proxies.NCDCdtda.proxy_timeseries_kind == 'anom':
+        if config.proxies.NCDCdadt.proxy_timeseries_kind == 'anom':
             values = values - values.mean() 
             
         if len(values) == 0:
@@ -856,19 +856,19 @@ class ProxyNCDCdadt(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.NCDCdtda.metafile_proxy,
+            meta_src = load_data_frame(config.proxies.NCDCdadt.metafile_proxy,
                                        key='meta')
         if data_src is None:
-            data_src = load_data_frame(config.proxies.NCDCdtda.datafile_proxy,
+            data_src = load_data_frame(config.proxies.NCDCdadt.datafile_proxy,
                                        key='proxy')
 
-        filters = config.proxies.NCDCdtda.simple_filters
-        proxy_order = config.proxies.NCDCdtda.proxy_order
-        ptype_filters = config.proxies.NCDCdtda.proxy_assim2
-        dbase_filters = config.proxies.NCDCdtda.database_filter
-        proxy_blacklist = config.proxies.NCDCdtda.proxy_blacklist
-        availability_filter = config.proxies.NCDCdtda.proxy_availability_filter
-        availability_fraction = config.proxies.NCDCdtda.proxy_availability_fraction
+        filters = config.proxies.NCDCdadt.simple_filters
+        proxy_order = config.proxies.NCDCdadt.proxy_order
+        ptype_filters = config.proxies.NCDCdadt.proxy_assim2
+        dbase_filters = config.proxies.NCDCdadt.database_filter
+        proxy_blacklist = config.proxies.NCDCdadt.proxy_blacklist
+        availability_filter = config.proxies.NCDCdadt.proxy_availability_filter
+        availability_fraction = config.proxies.NCDCdadt.proxy_availability_fraction
         
         # initial mask all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
@@ -1012,10 +1012,10 @@ class ProxyNCDCdadt(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.NCDCdtda.metafile_proxy,
+            meta_src = load_data_frame(config.proxies.NCDCdadt.metafile_proxy,
                                        key='meta')
         if data_src is None:
-            data_src = load_data_frame(config.proxies.NCDCdtda.datafile_proxy,
+            data_src = load_data_frame(config.proxies.NCDCdadt.datafile_proxy,
                                        key='proxy')
 
         # set for any resolution 
@@ -1038,8 +1038,6 @@ class ProxyNCDCdadt(BaseProxyObject):
         # Constant error for now
         return 0.1
 
-
-
     
 def fix_lon(lon):
     """
@@ -1056,8 +1054,8 @@ def fix_lon(lon):
 
 
 #_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdadt': ProxyNCDCdadt}
-#_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdtda': ProxyNCDCdadt}
-_proxy_classes = {'PAGES2kv1': ProxyPAGES2kv1, 'LMRdb': ProxyLMRdb, 'NCDCdtda': ProxyNCDCdadt}
+#_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdadt': ProxyNCDCdadt}
+_proxy_classes = {'PAGES2kv1': ProxyPAGES2kv1, 'LMRdb': ProxyLMRdb, 'NCDCdadt': ProxyNCDCdadt}
 
 def get_proxy_class(proxy_key):
     """

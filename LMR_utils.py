@@ -1860,9 +1860,9 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_str = str(proxy_database)
     if proxy_str == 'LMRdb':
         proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
-    elif proxy_str == 'NCDCdadt' or proxy_str == 'NCDCdtda':
+    elif proxy_str == 'NCDCdadt' or proxy_str == 'NCDCdadt':
         proxy_str = 'NCDCdadt'
-        proxy_str = proxy_str + str(config.proxies.NCDCdtda.dbversion)
+        proxy_str = proxy_str + str(config.proxies.NCDCdadt.dbversion)
         
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
@@ -1879,7 +1879,7 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
     ----------
     config: LMR_config.Config
         Current experiment instance of the configuration object.
-    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+    proxy_manager: LMR_proxy.ProxyManager
         Current experiment proxy manager
     sample_idxs: list(int)
         A list of the current sample indices used to create the prior ensemble.
@@ -1969,7 +1969,7 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     ----------
     config: LMR_config.Config
         Current experiment instance of the configuration object.
-    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+    proxy_manager: LMR_proxy.ProxyManager
         Current experiment proxy manager
     sample_idxs: list(int)
         A list of the current sample indices used to create the prior ensemble.
@@ -2006,7 +2006,7 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
     ----------
     config: LMR_config.Config
         Current experiment instance of the configuration object.
-    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+    proxy_manager: LMR_proxy.ProxyManager
         Current experiment proxy manager
     sample_idxs: list(int)
         A list of the current sample indices used to create the prior ensemble.
@@ -2151,8 +2151,8 @@ def validate_config(config):
         proxy_cfg = config.proxies.LMRdb
     elif proxy_database == 'PAGES2kv1':
         proxy_cfg = config.proxies.PAGES2kv1
-    elif proxy_database == 'NCDCdtda':
-        proxy_cfg = config.proxies.NCDCdtda
+    elif proxy_database == 'NCDCdadt':
+        proxy_cfg = config.proxies.NCDCdadt
     else:
         print('ERROR in specification of proxy database.')
         raise SystemExit()
