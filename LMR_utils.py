@@ -1798,21 +1798,30 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_database = config.proxies.use_from[0]
 
     # Generate PSM calibration string
+    calib_str_ext = ''
+    if config.core.anom_reference_period:
+        calib_str_ext = calib_str_ext+'_ref{}-{}'.format(str(config.core.anom_reference_period[0]),
+                                                         str(config.core.anom_reference_period[1]))
+    if config.psm.calib_period:
+        calib_str_ext = calib_str_ext+'_cal{}-{}'.format(str(config.psm.calib_period[0]),
+                                                         str(config.psm.calib_period[1]))
     if psm_key == 'linear':
         calib_avgPeriod = config.psm.linear.avgPeriod
-        calib_str = config.psm.linear.datatag_calib
+        calib_str = config.psm.linear.datatag_calib+calib_str_ext
         state_vars_for_ye = config.psm.linear.psm_required_variables
         
     elif psm_key == 'linear_TorP':
         calib_avgPeriod = config.psm.linear_TorP.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.linear_TorP.datatag_calib_T,
                                         config.psm.linear_TorP.datatag_calib_P)
+        calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.linear_TorP.psm_required_variables
 
     elif psm_key == 'bilinear':
         calib_avgPeriod = config.psm.bilinear.avgPeriod
         calib_str = 'T:{}-PR:{}'.format(config.psm.bilinear.datatag_calib_T,
                                         config.psm.bilinear.datatag_calib_P)
+        calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.bilinear.psm_required_variables
         
     elif psm_key == 'h_interp':
@@ -1860,8 +1869,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_str = str(proxy_database)
     if proxy_str == 'LMRdb':
         proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
-    elif proxy_str == 'NCDCdadt' or proxy_str == 'NCDCdadt':
-        proxy_str = 'NCDCdadt'
+    elif proxy_str == 'NCDCdadt':
         proxy_str = proxy_str + str(config.proxies.NCDCdadt.dbversion)
         
     # Generate appropriate prior string
