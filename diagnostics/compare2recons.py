@@ -38,20 +38,20 @@ mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
 #datadir = '/home/disk/kalman2/wperkins/LMR_output/archive'
 #datadir = '/home/disk/katabatic2/wperkins/LMR_output/testing'
 #datadir = '/home/disk/kalman3/hakim/LMR'
-datadir = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
-
+datadir = '/Users/hakim/data/LMR_python3/archive'
 
 # Experiments to compare. Format: [test, reference]
 # -------------------------------------------------
 
-exps = ['test2', 'test']
+exps = ['production_short_check', 'production_short_check_pd']
 
 # --
 iter_range = [0,0]
 #iter_range = [0,100]
 # --
-year_range = [1800,2000]
+year_range = [1950,1955]
 #year_range = [0,2000]
 #year_range = [-25000,2000]
 #year_range = [-115000,2000]
@@ -59,7 +59,7 @@ year_range = [1800,2000]
 
 # options of which figures to produce
 make_gmt_plot  = True   # time series of gmt, nhmt and shmt
-make_map_plots = False  # maps for every recon output within year_range
+make_map_plots = True  # maps for every recon output within year_range
 
 # for maps:
 show_assimilated_proxies = False
@@ -1154,6 +1154,8 @@ if make_map_plots:
             m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
             m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
 
+            print('maximum difference in this field:',np.max(plotdata_test-plotdata_refe))
+            
             # Make sure continents appear filled-in for ocean fields
             if 'Omon' in var_to_plot or 'Odec' in var_to_plot: 
                 m.fillcontinents(color=bckgcolor)
