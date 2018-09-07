@@ -18,6 +18,7 @@ Revisions:
             'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
             [R. Tardif, U. of Washington, Sept 2017]
 """
+import logging
 import glob
 import os
 import numpy as np
@@ -32,6 +33,8 @@ from math import radians, cos, sin, asin, sqrt
 from scipy import signal, special
 from scipy.spatial import cKDTree
 from spharm import Spharmt, getspecindx, regrid
+
+_log = logging.getLogger(__name__)
 
 def atoi(text):
     try:
@@ -1654,11 +1657,11 @@ def PAGES2K_regional_means(field,lat,lon):
     """
 
     # print debug statements
-    #debug = True
-    debug = False
+    debug = True
+    #debug = False
     
     # number of geographical regions (default, as defined in PAGES2K(2013) paper
-    nregions = 7
+    nregions = 8
     
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3: # time is a dimension
@@ -1698,12 +1701,17 @@ def PAGES2K_regional_means(field,lat,lon):
     rlat[6,0] = -90.; rlat[6,1] = -60.
     rlon[6,0] = 0.; rlon[6,1] = 360.
     # ...add other regions here...
+    # 8. Greenland
+    rlat[7,0] = 59.; rlat[7,1] = 85.
+    rlon[7,0] = 285.; rlon[7,1] = 350.
     
     # latitude weighting 
     lat_weight = np.cos(np.deg2rad(lat))
-    tmp = np.ones([nlon,nlat])
-    W = np.multiply(lat_weight,tmp).T
-
+    tmp = np.ones([nlat,nlon])
+    W = np.multiply(lat_weight,tmp)
+    if debug:
+        print('W dimensions:',W.shape)
+        
     rm  = np.zeros([nregions,ntime])
 
     # loop over regions
@@ -1714,16 +1722,15 @@ def PAGES2K_regional_means(field,lat,lon):
             print(rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
             
         # regional weighting (ones in region; zeros outside)
-        mask = regional_mask(lat,lon,rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
+        mask = regional_mask(lat[:,0],lon[0,:],rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
         if debug:
-            print('mask=')
-            print(mask)
+            print('mask dimensions',mask.shape)
 
         # this is the weight mask for the regional domain    
         Wmask = np.multiply(mask,W)
 
         # make sure data starts at South Pole
-        if lat[0] > 0:
+        if lat[0,0] > 0:
             # data has NH -> SH format; reverse
             field = np.flipud(field)
 
@@ -1768,6 +1775,7 @@ def augment_docstr(func):
     func.__doc__ = '%%aug%%' + func.__doc__
     return func
 
+#--GH: start new stuff from Brewster--
 
 def create_precalc_ye_filename(config,psm_key,prior_kind):
     """
@@ -1801,7 +1809,6 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     if config.psm.calib_period:
         calib_str_ext = calib_str_ext+'_cal{}-{}'.format(str(config.psm.calib_period[0]),
                                                          str(config.psm.calib_period[1]))
-    
     if psm_key == 'linear':
         calib_avgPeriod = config.psm.linear.avgPeriod
         calib_str = config.psm.linear.datatag_calib+calib_str_ext
@@ -1826,14 +1833,37 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_str = ''
         state_vars_for_ye = config.psm.h_interp.psm_required_variables
 
-    elif  psm_key == 'bayesreg_uk37':
+    elif psm_key == 'bayesreg_uk37':
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_uk37.psm_required_variables
-        
+
+    elif psm_key == 'bayesreg_tex86':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_tex86.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_pachyderma':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_bulloides':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_sacculifer':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+
+    elif psm_key == 'bayesreg_d18o_ruberwhite':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
     else:
         raise ValueError('Unrecognized PSM key.')
-
     
     if calib_avgPeriod:
         psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str
@@ -1843,8 +1873,8 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
     proxy_str = str(proxy_database)
     if proxy_str == 'LMRdb':
         proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
-    elif proxy_str == 'NCDCdtda':
-        proxy_str = proxy_str + str(config.proxies.NCDCdtda.dbversion)
+    elif proxy_str == 'NCDCdadt':
+        proxy_str = proxy_str + str(config.proxies.NCDCdadt.dbversion)
         
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
@@ -1852,6 +1882,95 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
 
     return '{}_{}_{}.npz'.format(prior_str, psm_str, proxy_str)
 
+def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, sample_idxs):
+    """
+    Convenience function to load a precalculated Ye file for the current
+    experiment.
+
+    Parameters
+    ----------
+    config: LMR_config.Config
+        Current experiment instance of the configuration object.
+    proxy_manager: LMR_proxy.ProxyManager
+        Current experiment proxy manager
+    sample_idxs: list(int)
+        A list of the current sample indices used to create the prior ensemble.
+
+    Returns
+    -------
+    ye_all: ndarray
+        The array of Ye values for the current ensemble and all proxy records
+    """
+
+    begin_load = time()
+
+    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
+
+    num_proxies_assim = len(proxy_manager.ind_assim)
+    num_samples = len(sample_idxs)
+    ye_all = np.zeros((num_proxies_assim, num_samples))
+    ye_all_coords = np.zeros((num_proxies_assim, 2))
+    
+    psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))    
+    precalc_files = {}
+    for psm_key in psm_keys:
+
+        pkind = None
+        if psm_key == 'linear':
+            pkind = list(config.psm.linear.psm_required_variables.values())[0]
+        elif psm_key == 'linear_TorP':
+            pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
+        elif psm_key == 'bilinear':
+            pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
+        elif psm_key == 'h_interp':
+            if config.proxies.proxy_timeseries_kind == 'asis':
+                pkind = 'full'
+            elif config.proxies.proxy_timeseries_kind == 'anom':
+                pkind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
+        elif psm_key == 'bayesreg_uk37':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_tex86':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_ruberwhite':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_sacculifer':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_bulloides':
+            pkind = 'full'
+        elif psm_key == 'bayesreg_d18o_pachyderma':
+            pkind = 'full'
+        else:
+            raise ValueError('Unrecognized PSM key.')
+
+        load_fname = create_precalc_ye_filename(config,psm_key,pkind)
+        _log.info('Loading file:' + load_fname)
+        print('loading Ye file: ',load_fname)
+
+        # check if file exists
+        if not os.path.isfile(os.path.join(load_dir, load_fname)):
+            _log.error('ERROR: File does not exist! -- run the precalc file builder: misc/build_ye_file.py to generate the missing file')
+            raise SystemExit()
+        precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
+
+    
+    _log.info('Now extracting proxy type-dependent Ye values...')
+    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
+        psm_key = pobj.psm_obj.psm_key
+        pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
+        precalc_vals = precalc_files[psm_key]['ye_vals']
+        
+        pidx = pid_idx_map[pobj.id]
+        ye_all[i] = precalc_vals[pidx, sample_idxs]
+
+        ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
+        
+    _log.info('Completed in ' +  str(time() - begin_load) + 'secs')
+        
+    return ye_all, ye_all_coords
+
+#--GH: end new stuff from Brewster--
 
 def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     """
@@ -1862,7 +1981,7 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     ----------
     config: LMR_config.Config
         Current experiment instance of the configuration object.
-    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+    proxy_manager: LMR_proxy.ProxyManager
         Current experiment proxy manager
     sample_idxs: list(int)
         A list of the current sample indices used to create the prior ensemble.
@@ -1890,104 +2009,6 @@ def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     return ye_all
 
 
-def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, sample_idxs):
-    """
-    Convenience function to load a precalculated Ye file for the current
-    experiment.
-
-    Parameters
-    ----------
-    config: LMR_config.Config
-        Current experiment instance of the configuration object.
-    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
-        Current experiment proxy manager
-    proxy_set: str
-        String to indicate which proxy set to handle ('assim' or 'eval')
-    sample_idxs: list(int)
-        A list of the current sample indices used to create the prior ensemble.
-
-    Returns
-    -------
-    ye_all: ndarray
-        The array of Ye values for the current ensemble and all records from
-        selected proxy set.
-    """
-
-    begin_load = time()
-
-    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
-    
-    if proxy_set == 'assim':
-        num_proxies_assim = len(proxy_manager.ind_assim)
-        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))
-    elif proxy_set == 'eval':
-        num_proxies_assim = len(proxy_manager.ind_eval)
-        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_eval_proxy_objs()]))
-    num_samples = len(sample_idxs)
-    ye_all = np.zeros((num_proxies_assim, num_samples))
-    ye_all_coords = np.zeros((num_proxies_assim, 2))
-    
-    precalc_files = {}
-    for psm_key in psm_keys:
-
-        pkind = None
-        if psm_key == 'linear':
-            pkind = list(config.psm.linear.psm_required_variables.values())[0]
-        elif psm_key == 'linear_TorP':
-            pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
-        elif psm_key == 'bilinear':
-            pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
-        elif psm_key == 'h_interp':
-            if config.proxies.proxy_timeseries_kind == 'asis':
-                pkind = 'full'
-            elif config.proxies.proxy_timeseries_kind == 'anom':
-                pkind = 'anom'
-            else:
-                raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
-        elif psm_key == 'bayesreg_uk37':
-            pkind = 'full'
-        else:
-            raise ValueError('Unrecognized PSM key.')
-
-        load_fname = create_precalc_ye_filename(config,psm_key,pkind)
-        print('  Loading file:', load_fname)
-        # check if file exists
-        if not os.path.isfile(os.path.join(load_dir, load_fname)):
-            print ('  ERROR: File does not exist!'
-                   ' -- run the precalc file builder:'
-                   ' misc/build_ye_file.py'
-                   ' to generate the missing file')
-            raise SystemExit()
-        precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
-
-    
-    print('  Now extracting proxy type-dependent Ye values...')
-    if proxy_set == 'assim':
-        for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
-            psm_key = pobj.psm_obj.psm_key
-            pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
-            precalc_vals = precalc_files[psm_key]['ye_vals']
-
-            pidx = pid_idx_map[pobj.id]
-            ye_all[i] = precalc_vals[pidx, sample_idxs]
-
-            ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
-    elif proxy_set == 'eval':
-        for i, pobj in enumerate(proxy_manager.sites_eval_proxy_objs()):
-            psm_key = pobj.psm_obj.psm_key
-            pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
-            precalc_vals = precalc_files[psm_key]['ye_vals']
-
-            pidx = pid_idx_map[pobj.id]
-            ye_all[i] = precalc_vals[pidx, sample_idxs]
-
-            ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)        
-            
-    print('  Completed in ',  time() - begin_load, 'secs')
-        
-    return ye_all, ye_all_coords
-
-
 def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample_idxs):
     """
     Convenience function to load a precalculated Ye file for the current
@@ -1997,7 +2018,7 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
     ----------
     config: LMR_config.Config
         Current experiment instance of the configuration object.
-    proxy_manager: LMR_proxy_pandas_rework.ProxyManager
+    proxy_manager: LMR_proxy.ProxyManager
         Current experiment proxy manager
     sample_idxs: list(int)
         A list of the current sample indices used to create the prior ensemble.
@@ -2142,8 +2163,8 @@ def validate_config(config):
         proxy_cfg = config.proxies.LMRdb
     elif proxy_database == 'PAGES2kv1':
         proxy_cfg = config.proxies.PAGES2kv1
-    elif proxy_database == 'NCDCdtda':
-        proxy_cfg = config.proxies.NCDCdtda
+    elif proxy_database == 'NCDCdadt':
+        proxy_cfg = config.proxies.NCDCdadt
     else:
         print('ERROR in specification of proxy database.')
         raise SystemExit()
@@ -2313,111 +2334,6 @@ def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
     mask = np.multiply(lab*lob,tmp.T)
 
     return mask
-
-def PAGES2K_regional_means(field,lat,lon):
-
-    """
-     compute geographical spatial mean valuee for all times in the input (i.e. field) array. regions are defined by The PAGES2K Consortium (2013) Nature Geosciences paper, Supplementary Information.
-     input:  field[ntime,nlat,nlon] or field[nlat,nlon]
-             lat[nlat,nlon] in degrees
-             lon[nlat,nlon] in degrees
-
-     output: rm[nregions,ntime] : regional means of "field" where nregions = 7 by definition, but could change
-     
-    """
-
-    # Originator: Greg Hakim
-    #             University of Washington
-    #             July 2017
-    #
-    # Modifications:
-    #
-
-    # print debug statements
-    #debug = True
-    debug = False
-    
-    # number of geographical regions (default, as defined in PAGES2K(2013) paper
-    nregions = 7
-    
-    # set number of times, lats, lons; array indices for lat and lon    
-    if len(np.shape(field)) == 3: # time is a dimension
-        ntime,nlat,nlon = np.shape(field)
-    else: # only spatial dims
-        ntime = 1
-        nlat,nlon = np.shape(field)
-        field = field[None,:] # add time dim of size 1 for consistent array dims
-
-    if debug:
-        print('field dimensions...')
-        print(np.shape(field))
-
-    # define regions as in PAGES paper
-
-    # lat and lon range for each region (first value is lower limit, second is upper limit)
-    rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
-    # 1. Arctic: north of 60N 
-    rlat[0,0] = 60.; rlat[0,1] = 90.
-    rlon[0,0] = 0.; rlon[0,1] = 360.
-    # 2. Europe: 35-70N, 10W-40E
-    rlat[1,0] = 35.; rlat[1,1] = 70.
-    rlon[1,0] = 350.; rlon[1,1] = 40.
-    # 3. Asia: 23-55N; 60-160E (from map)
-    rlat[2,0] = 23.; rlat[2,1] = 55.
-    rlon[2,0] = 60.; rlon[2,1] = 160.
-    # 4. North America 1 (trees):  30-55N, 75-130W 
-    rlat[3,0] = 30.; rlat[3,1] = 55.
-    rlon[3,0] = 55.; rlon[3,1] = 230.
-    # 5. South America: Text: 20S-65S and 30W-80W
-    rlat[4,0] = -65.; rlat[4,1] = -20.
-    rlon[4,0] = 280.; rlon[4,1] = 330.
-    # 6. Australasia: 110E-180E, 0-50S 
-    rlat[5,0] = -50.; rlat[5,1] = 0.
-    rlon[5,0] = 110.; rlon[5,1] = 180.
-    # 7. Antarctica: south of 60S (from map)
-    rlat[6,0] = -90.; rlat[6,1] = -60.
-    rlon[6,0] = 0.; rlon[6,1] = 360.
-    # ...add other regions here...
-    
-    # latitude weighting 
-    lat_weight = np.cos(np.deg2rad(lat))
-    tmp = np.ones([nlon,nlat])
-    W = np.multiply(lat_weight,tmp).T
-
-    rm  = np.zeros([nregions,ntime])
-
-    # loop over regions
-    for region in range(nregions):
-
-        if debug:
-            print('region='+str(region))
-            print(rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
-            
-        # regional weighting (ones in region; zeros outside)
-        mask = regional_mask(lat,lon,rlat[region,0],rlat[region,1],rlon[region,0],rlon[region,1])
-        if debug:
-            print('mask=')
-            print(mask)
-
-        # this is the weight mask for the regional domain    
-        Wmask = np.multiply(mask,W)
-
-        # make sure data starts at South Pole
-        if lat[0] > 0:
-            # data has NH -> SH format; reverse
-            field = np.flipud(field)
-
-        # Check for valid (non-NAN) values & use numpy average function (includes weighted avg calculation) 
-        # Get arrays indices of valid values
-        indok    = np.isfinite(field)
-        for t in range(ntime):
-            indok_2d = indok[t,:,:]
-            field_2d = np.squeeze(field[t,:,:])
-            if np.max(Wmask) >0.:
-                rm[region,t] = np.average(field_2d[indok_2d],weights=Wmask[indok_2d])
-            else:
-                rm[region,t] = np.nan
-    return rm
 
 def find_date_indices(time,stime,etime):
 
