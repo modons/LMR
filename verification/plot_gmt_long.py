@@ -23,7 +23,7 @@ from matplotlib import ticker
 import glob, os, fnmatch
 import numpy as np
 
-expts = ['dadt_test'         
+expts = ['dadt_full_prior'         
          ]
 
 # define the time interval
@@ -94,7 +94,7 @@ for nexp in expts:
 
     lw = 1
     plt.plot(LMR_time,lmr_gm,linewidth=lw,alpha=0.5,label=nexp)
-    #plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha = 0.5,linewidth=0.)
+    plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha = 0.5,linewidth=0.)
 
 plt.title('Global mean temperature',weight='bold',y=1.025)
 plt.xlabel('Year CE',fontweight='bold')

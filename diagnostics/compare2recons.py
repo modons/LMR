@@ -42,11 +42,10 @@ mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
 datadir = '/Users/hakim/data/LMR_python3/archive'
 
-# Experiments to compare. Format: [test, reference]
+# Experiments to compare. Format: [test, reference]---figures will be written to first experiment
 # -------------------------------------------------
 
-exps = ['production_short_check', 'production_short_check_pd']
-
+exps = ['production_short_inflate_001','production_short_check']
 # --
 iter_range = [0,0]
 #iter_range = [0,100]
