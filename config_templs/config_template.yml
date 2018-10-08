@@ -375,8 +375,6 @@ psm:
     datadir_obsError: null
     filename_obsError: R.txt
     dataformat_obsError: TXT
-    psm_required_variables: 
-      tas_sfc_Amon : full
 
 prior:
   prior_source: ccsm4_last_millenium

@@ -1450,7 +1450,6 @@ class h_interpPSM(BasePSM):
             self.elev = None        
         self.sensitivity = None
         self.RadiusInfluence = config.psm.h_interp.radius_influence
-        self.psm_required_variables = config.psm.h_interp.psm_required_variables
         
         # Try finding file containing obs. error variance info
         # and assign the R value to proxy psm object
@@ -1488,14 +1487,6 @@ class h_interpPSM(BasePSM):
         # ----------------------
         # Calculate the Ye's ...
         # ----------------------
-        
-        # define state variable that is to be interpolated to proxy site
-        required_vars = list(self.psm_required_variables.keys())
-        if len(required_vars) == 1:
-            state_var = required_vars[0]
-        else:
-            raise SystemExit('Multiple variables specified for h_interp PSM.'
-                            ' There should be only one. Exiting.')
         
         if state_var not in list(X_state_info.keys()):
             raise KeyError('Needed variable %s not in state vector for Ye'

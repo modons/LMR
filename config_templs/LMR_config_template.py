@@ -1584,6 +1584,7 @@ class psm(ConfigGroup):
         # gridpoints
         # radius_influence = None
         radius_influence = 50. # distance-scale in km
+        hinterp_var = 'd18O_sfc_Amon'
         
         datadir_obsError = './'
         filename_obsError = 'R.txt'
@@ -1623,7 +1624,6 @@ class psm(ConfigGroup):
                 raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
                                  ' Unable to assign kind to psm_required_variables'
                                  ' in h_interp psm class.')
-            self.psm_required_variables = self.psm_required_variables
 
 
     class bayesreg_uk37(ConfigGroup):
