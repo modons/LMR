@@ -33,7 +33,7 @@ import LMR_utils as Utils
 
 from time import time
 import LMR_prior
-import LMR_proxy_pandas_rework
+import LMR_proxy
 import LMR_utils
 import pandas as pd
 
@@ -380,7 +380,7 @@ def load_config(yaml_file,verbose=False):
         if not proceed:
             raise SystemExit()
         else:
-            print('OK!')
+            #print('OK!')
             pass
     
     if verbose:
@@ -452,7 +452,7 @@ def load_proxies(cfg,verbose=True):
 
     # Build dictionaries of proxy sites to assimilate and those set aside for
     # verification
-    prox_manager = LMR_proxy_pandas_rework.ProxyManager(cfg, core.recon_period)
+    prox_manager = LMR_proxy.ProxyManager(cfg, core.recon_period)
 
     if verbose:
         # count the total number of proxies

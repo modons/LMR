@@ -1653,7 +1653,7 @@ def PAGES2K_regional_means(field,lat,lon):
                 July 2017
     
     Revisions:
-     
+					7 September 2018: added Greenland area average (GJH)     
     """
 
     # print debug statements
@@ -2306,34 +2306,6 @@ class FlagError(ValueError):
     Error for exiting code sections
     """
     pass
-
-def regional_mask(lat,lon,southlat,northlat,westlon,eastlon):
-
-    """
-    Given vectors for lat and lon, and lat-lon boundaries for a regional domain, 
-    return an array of ones and zeros, with ones located within the domain and zeros outside
-    the domain as defined by the input lat,lon vectors.
-    """
-
-    nlat = len(lat)
-    nlon =len(lon)
-
-    tmp = np.ones([nlon,nlat])
-    latgrid = np.multiply(lat,tmp).T
-    longrid = np.multiply(tmp.T,lon)
-
-    lab = (latgrid >= southlat) & (latgrid <=northlat)
-    # check for zero crossing 
-    if eastlon < westlon:
-        lob1 = (longrid >= westlon) & (longrid <=360.)
-        lob2 = (longrid >= 0.) & (longrid <=eastlon)
-        lob = lob1+lob2
-    else:
-        lob = (longrid >= westlon) & (longrid <=eastlon)
-
-    mask = np.multiply(lab*lob,tmp.T)
-
-    return mask
 
 def find_date_indices(time,stime,etime):
 

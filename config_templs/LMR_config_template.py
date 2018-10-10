@@ -375,7 +375,7 @@ class proxies(ConfigGroup):
     # =============================
     use_from = ['PAGES2kv1']
     #use_from = ['LMRdb']
-    #use_from = ['NCDCdtda']
+    #use_from = ['NCDCdadt']
 
     proxy_frac = 1.0
     #proxy_frac = 0.75
@@ -781,9 +781,9 @@ class proxies(ConfigGroup):
     # --------------------------------------------------------
     # proxies specific to Deep Times Data Assimilation project
     # --------------------------------------------------------
-    class NCDCdtda(ConfigGroup):
+    class NCDCdadt(ConfigGroup):
         """
-        Parameters for NCDCdtda proxy class
+        Parameters for NCDCdadt proxy class
 
         Notes
         -----
@@ -833,8 +833,8 @@ class proxies(ConfigGroup):
         dbversion = 'v0.0.1'
         
         datadir_proxy = None
-        datafile_proxy = 'DTDA_{}_Proxies.df.pckl'
-        metafile_proxy = 'DTDA_{}_Metadata.df.pckl'
+        datafile_proxy = 'DADT_{}_Proxies.df.pckl'
+        metafile_proxy = 'DADT_{}_Metadata.df.pckl'
         dataformat_proxy = 'DF'
 
         # This is not activated with yet...
@@ -923,7 +923,7 @@ class proxies(ConfigGroup):
     def __init__(self, lmr_path=None, seed=None, **kwargs):
         self.PAGES2kv1 = self.PAGES2kv1(lmr_path=lmr_path, **kwargs.pop('PAGES2kv1', {}))
         self.LMRdb = self.LMRdb(lmr_path=lmr_path, **kwargs.pop('LMRdb', {}))
-        self.NCDCdtda = self.NCDCdtda(lmr_path=lmr_path, **kwargs.pop('NCDCdtda', {}))
+        self.NCDCdadt = self.NCDCdadt(lmr_path=lmr_path, **kwargs.pop('NCDCdadt', {}))
 
         super(self.__class__, self).__init__(**kwargs)
         
@@ -1471,56 +1471,83 @@ class psm(ConfigGroup):
         datafile_obsError: str
             Absolute path/filename of obs. error variance data
         """
+        def __init__(self, lmr_path=None, **kwargs):
+            super().__init__(**kwargs)
 
-        ##** BEGIN User Parameters **##
-        
-        datadir_BayesRegressionData = None
-        filename_BayesRegressionData = None
-        
-        dataformat_BayesRegressionData = 'MAT' # a .mat Matlab file
-
-        
-        ##** END User Parameters **##
-
-        def __init__(self, **kwargs):
-            super(self.__class__, self).__init__(**kwargs)
-
-            if self.datadir_BayesRegressionData is None:
-                self.datadir_BayesRegressionData = join(core.lmr_path, 'PSM')
-            else:
-                self.datadir_BayesRegressionData = self.datadir_BayesRegressionData
-            
-            if self.filename_BayesRegressionData is None:
-                self.filename_BayesRegressionData = 'PSM_bayes_posterior_UK37.mat'
-            else:
-                self.filename_BayesRegressionData = self.filename_BayesRegressionData
-
-            self.datafile_BayesRegressionData = join(self.datadir_BayesRegressionData,
-                                              self.filename_BayesRegressionData)
-    
             # define state variable needed to calculate Ye's
             self.psm_required_variables = {'tos_sfc_Odec': 'full'}
 
-            # matlab engine as python object, needed for calculations
-            # of the forward model.
-            #self.MatlabEng = matlab.engine.start_matlab('-nojvm')
 
-            self.datadir_BayesRegressionData = self.datadir_BayesRegressionData
-            self.datafile_BayesRegressionData = self.datafile_BayesRegressionData
-            self.dataformat_BayesRegressionData = self.dataformat_BayesRegressionData
+    class bayesreg_tex86(ConfigGroup):
+        """
+        Parameters for the Bayesian regression PSM for TEX86 proxies.
+
+        Attributes
+        ----------
+        radius_influence : real
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
+        datadir_obsError: str
+            Absolute path to obs. error variance data
+        filename_obsError: str
+            Filename for obs. error variance data
+        dataformat_obsError: str
+            String indicating the format of the file containing obs. error
+            variance data
+            Note: note currently used by code. For info purpose only.
+        datafile_obsError: str
+            Absolute path/filename of obs. error variance data
+        """
+        def __init__(self, lmr_path=None, **kwargs):
+            super().__init__(**kwargs)
+
+            # define state variable needed to calculate Ye's
+            self.psm_required_variables = {'tos_sfc_Odec': 'full'}
 
 
-    # Initialize subclasses with all attributes 
+    class bayesreg_d18o(ConfigGroup):
+        """
+        Parameters for the Bayesian regression PSM for d18O of foram.
+
+        Attributes
+        ----------
+        radius_influence : real
+            Distance-scale used the calculation of exponentially-decaying
+            weights in interpolator (in km)
+        datadir_obsError: str
+            Absolute path to obs. error variance data
+        filename_obsError: str
+            Filename for obs. error variance data
+        dataformat_obsError: str
+            String indicating the format of the file containing obs. error
+            variance data
+            Note: note currently used by code. For info purpose only.
+        datafile_obsError: str
+            Absolute path/filename of obs. error variance data
+        """
+
+        def __init__(self, lmr_path=None, **kwargs):
+            super().__init__(**kwargs)
+
+            # define state variable needed to calculate Ye's
+            self.psm_required_variables = {'tos_sfc_Odec': 'full', 'sos_sfc_Odec': 'full'}
+
+    # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
         self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))
-        self.linear_TorP = self.linear_TorP(lmr_path=lmr_path,
-                                            **kwargs.pop('linear_TorP', {}))
-        self.bilinear = self.bilinear(lmr_path=lmr_path,
-                                      **kwargs.pop('bilinear', {}))
+        self.linear_TorP = self.linear_TorP(lmr_path=lmr_path, **kwargs.pop('linear_TorP', {}))
+        self.bilinear = self.bilinear(lmr_path=lmr_path, **kwargs.pop('bilinear', {}))
         self.h_interp = self.h_interp(**kwargs.pop('h_interp', {}))
         self.bayesreg_uk37 = self.bayesreg_uk37(**kwargs.pop('bayesreg_uk37', {}))
+        self.bayesreg_tex86 = self.bayesreg_tex86(**kwargs.pop('bayesreg_tex86', {}))
+        self.bayesreg_d18o = self.bayesreg_d18o(**kwargs.pop('bayesreg_d18o', {}))
+        self.bayesreg_d18o_sacculifer = self.bayesreg_d18o
+        self.bayesreg_d18o_ruberwhite = self.bayesreg_d18o
+        self.bayesreg_d18o_bulloides = self.bayesreg_d18o
+        self.bayesreg_d18o_pachyderma = self.bayesreg_d18o
 
-        super(self.__class__, self).__init__(**kwargs)
+
+        super().__init__(**kwargs)
         self.avgPeriod = self.avgPeriod
         self.all_calib_sources = deepcopy(self.all_calib_sources)
 
@@ -1697,7 +1724,7 @@ class prior(ConfigGroup):
         if core.recon_timescale == 1:
             self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
-            # new format for multiyear DTDA reconstructions:
+            # new format for multiyear DADT reconstructions:
             self.avgInterval = {'multiyear': [core.recon_timescale]}
         else:
             print('ERROR in config.: unrecognized core.recon_timescale!')

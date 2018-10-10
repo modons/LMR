@@ -110,8 +110,8 @@ def main():
 
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
 
-    #proxy_data_source = 'DTDA'
-    dtda_dbversion = 'v0.0.0'
+    #proxy_data_source = 'DADT'
+    dadt_dbversion = 'v0.0.0'
 
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
 
@@ -253,18 +253,18 @@ def main():
         merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile, data_outfile, infoDuplicates, eliminate_duplicates)
 
 
-    elif proxy_data_source == 'DTDA':
+    elif proxy_data_source == 'DADT':
         # ============================================================================
-        # DTDA project proxy data ----------------------------------------------------
+        # DADT project proxy data ----------------------------------------------------
         # ============================================================================
 
         take_average_out = False
 
-        datadir = datadir+'DTDA/'
-        fname = datadir + 'DTDA_proxies_'+dtda_dbversion+'.xlsx'
-        meta_outfile = outdir + 'DTDA_'+dtda_dbversion+'_Metadata.df.pckl'
-        outfile = outdir + 'DTDA_'+dtda_dbversion+'_Proxies.df.pckl'
-        DTDA_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
+        datadir = datadir+'DADT/'
+        fname = datadir + 'DADT_proxies_'+dadt_dbversion+'.xlsx'
+        meta_outfile = outdir + 'DADT_'+dadt_dbversion+'_Metadata.df.pckl'
+        outfile = outdir + 'DADT_'+dadt_dbversion+'_Proxies.df.pckl'
+        DADT_xcel_to_dataframes(fname, meta_outfile, outfile, take_average_out)
 
 
     else:
@@ -696,10 +696,10 @@ def pages2kv2_pickle_to_dataframes(datadir, metaout, dataout, eliminate_duplicat
 
 
 # ===================================================================================
-# For DTDA project proxy data -------------------------------------------------------
+# For DADT project proxy data -------------------------------------------------------
 # ===================================================================================
 
-def DTDA_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
+def DADT_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     """
     Takes in Pages2K CSV and converts it to dataframe storage.  This increases
     size on disk due to the joining along the time index (lots of null values).

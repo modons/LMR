@@ -96,7 +96,7 @@ stat_save = True
 #nexp = 'production_mlost_era20c_pagesall_0.75'
 #nexp = 'production_mlost_era20cm_pagesall_0.75'
 # ---
-nexp = 'test'
+nexp = 'dadt_full_prior'
 # ---
 
 # perform verification using all recon. MC realizations ( MCset = None )
@@ -117,14 +117,16 @@ ref_period = (1900, 1999) # 20th century
 # specify directories for LMR data
 #datadir_output = './data/'
 #datadir_output = '/home/disk/kalman3/hakim/LMR'
-datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_output = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_output = '/home/disk/katabatic3/wperkins/LMR_output/testing'
-
+datadir_output = '/Users/hakim/data/LMR_python3/archive/'
 # Directory where historical griddded data products can be found
-datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
+#datadir_calib = '/home/disk/kalman3/rtardif/LMR/data/analyses'
+datadir_calib = '/Users/hakim/data/LMR_python3/data/analyses'
 
 # Directory where reanalysis data can be found
-datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model'
+#datadir_reanl = '/home/disk/kalman3/rtardif/LMR/data/model'
+datadir_reanl = '/Users/hakim/data/LMR_python3/data/model'
 
 # plotting preferences
 nlevs = 30 # number of contours

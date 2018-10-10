@@ -40,8 +40,9 @@ mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
 
 #datadir = '/Users/hakim/data/LMR/archive'
 #datadir = '/home/disk/kalman2/wperkins/LMR_output/archive'
-datadir = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir = '/home/disk/ekman4/rtardif/LMR/output'
+datadir = '/Users/hakim/data/LMR_python3/archive/'
 
 #exp = 'production_mlost_ccsm4_pagesall_0.75'
 #exp = 'production_mlost_era20c_pagesall_0.75'
@@ -49,11 +50,12 @@ datadir = '/home/disk/kalman3/rtardif/LMR/output'
 #exp = 'production_gis_ccsm4_pagesall_0.75'
 # --
 exp = 'test'
+exp = 'dadt_full_prior'
 # --
 
-year_range = [0,2000]
+#year_range = [0,2000]
 #year_range = [1850,2000]
-#year_range = [-25000,2000]
+year_range = [-25000,2000]
 #year_range = [-115000,2000]
 
 # --
@@ -91,9 +93,9 @@ infile = 'gmt_ensemble'
 # (more concise) dict format 
 #                         mapmin    mapmax  mapint     cmap     cbarfmt
 map_plots = {
-    'tas_sfc_Amon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # temp. anomalies
+#    'tas_sfc_Amon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # temp. anomalies
 #    'tas_sfc_Amon'       : (-6.,        +6.,   2.0, plt.cm.bwr, '%4.0f'), # temp. anomalies(2)
-#    'tas_sfc_Adec'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # temp. full field    
+    'tas_sfc_Adec'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # temp. full field    
 #    'psl_sfc_Amon'       : (98000., 103000., 1000.,   mapcolor, '%4.0f'), # MSLP full field
 #    'wap_850hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies
 #    'wap_700hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies

@@ -1,5 +1,5 @@
 """
-Module: LMR_proxy_pandas_rework.py
+Module: LMR_proxy.py
 
 Purpose: Module containing various classes associated with proxy types to be
          assimilated in the LMR, as well as numerous functionalities for
@@ -25,13 +25,10 @@ Revisions:
            the reconstruction period.
            [ R. Tardif, U. Washington, October 2016 ]
          - Added class for low-resolution marine proxies used for LGM & Holocene
-           reconstructions (NCDCdtda class). 
+           reconstructions (NCDCdadt class). 
            [ R. Tardif, U. Washington, January 2017 ]
-         - Renamed the proxy databases to less-confusing convention. 
-           'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
-           [ R. Tardif, Univ. of Washington, Sept 2017 ]
 """
-
+import logging
 import LMR_psms
 from load_data import load_data_frame
 from LMR_utils import augment_docstr, class_docs_fixer
@@ -41,6 +38,8 @@ from collections import defaultdict
 from random import sample, seed
 from copy import deepcopy
 import ast
+
+_log = logging.getLogger(__name__)
 
 class ProxyManager:
     """
@@ -777,12 +776,11 @@ class ProxyLMRdb(BaseProxyObject):
         # Constant error for now
         return 0.1
 
-
-class ProxyNCDCdtda(BaseProxyObject):
+class ProxyNCDCdadt(BaseProxyObject):
 
     @staticmethod
     def get_psm_obj(config,proxy_type):
-        psm_key = config.proxies.NCDCdtda.proxy_psm_type[proxy_type]
+        psm_key = config.proxies.NCDCdadt.proxy_psm_type[proxy_type]
         return LMR_psms.get_psm_class(psm_key)
 
     @classmethod
@@ -794,20 +792,22 @@ class ProxyNCDCdtda(BaseProxyObject):
         Expects meta_src, data_src to be pickled pandas DataFrame objects.
         """
 
-        NCDCdtda_cfg = config.proxies.NCDCdtda
+        ncdcdadt_cfg = config.proxies.NCDCdadt
         if meta_src is None:
-            meta_src = load_data_frame(NCDCdtda_cfg.metafile_proxy)
+            meta_src = load_data_frame(ncdcdadt_cfg.metafile_proxy,
+                                       key='meta')
         if data_src is None:
-            data_src = load_data_frame(NCDCdtda_cfg.datafile_proxy)
+            data_src = load_data_frame(ncdcdadt_cfg.datafile_proxy,
+                                       key='proxy')
 
         site_meta = meta_src[meta_src['Proxy ID'] == site]
         pid = site_meta['Proxy ID'].iloc[0]
         pmeasure = site_meta['Proxy measurement'].iloc[0]
-        NCDCdtda_type = site_meta['Archive type'].iloc[0]
+        NCDCdadt_type = site_meta['Archive type'].iloc[0]
         try:
-            proxy_type = NCDCdtda_cfg.proxy_type_mapping[(NCDCdtda_type,pmeasure)]
+            proxy_type = ncdcdadt_cfg.proxy_type_mapping[(NCDCdadt_type,pmeasure)]
         except (KeyError, ValueError) as e:
-            print('Proxy type/measurement not found in mapping: {}'.format(e))
+            _log.error('Proxy type/measurement not found in mapping: {}'.format(e))
             raise ValueError(e)
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
@@ -836,7 +836,7 @@ class ProxyNCDCdtda(BaseProxyObject):
         times = values.index.values
 
         # transform in "anomalies" (time-mean removed) if option activated
-        if config.proxies.NCDCdtda.proxy_timeseries_kind == 'anom':
+        if config.proxies.NCDCdadt.proxy_timeseries_kind == 'anom':
             values = values - values.mean() 
             
         if len(values) == 0:
@@ -856,17 +856,19 @@ class ProxyNCDCdtda(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.NCDCdtda.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.NCDCdadt.metafile_proxy,
+                                       key='meta')
         if data_src is None:
-            data_src = load_data_frame(config.proxies.NCDCdtda.datafile_proxy)
+            data_src = load_data_frame(config.proxies.NCDCdadt.datafile_proxy,
+                                       key='proxy')
 
-        filters = config.proxies.NCDCdtda.simple_filters
-        proxy_order = config.proxies.NCDCdtda.proxy_order
-        ptype_filters = config.proxies.NCDCdtda.proxy_assim2
-        dbase_filters = config.proxies.NCDCdtda.database_filter
-        proxy_blacklist = config.proxies.NCDCdtda.proxy_blacklist
-        availability_filter = config.proxies.NCDCdtda.proxy_availability_filter
-        availability_fraction = config.proxies.NCDCdtda.proxy_availability_fraction
+        filters = config.proxies.NCDCdadt.simple_filters
+        proxy_order = config.proxies.NCDCdadt.proxy_order
+        ptype_filters = config.proxies.NCDCdadt.proxy_assim2
+        dbase_filters = config.proxies.NCDCdadt.database_filter
+        proxy_blacklist = config.proxies.NCDCdadt.proxy_blacklist
+        availability_filter = config.proxies.NCDCdadt.proxy_availability_filter
+        availability_fraction = config.proxies.NCDCdadt.proxy_availability_fraction
         
         # initial mask all true before filtering
         useable = meta_src[meta_src.columns[0]] == 0
@@ -921,9 +923,8 @@ class ProxyNCDCdtda(BaseProxyObject):
             # set mask to True for proxies matching all databases found in dbase_filters
             for i in range(len(meta_src[database_col])):      
                 if meta_src[database_col][i]:
-                    #dbase_mask[i] = set(meta_src[database_col][i]).isdisjoint(dbase_filters) # oldold code
-                    #dbase_mask[i] = set(dbase_filters).issubset(meta_src[database_col][i]) # old code
-                    dbase_mask[i] = bool(set(meta_src[database_col][i]).intersection(set(dbase_filters)))                    
+                    #dbase_mask[i] = set(meta_src[database_col][i]).isdisjoint(dbase_filters) # old code
+                    dbase_mask[i] = set(dbase_filters).issubset(meta_src[database_col][i])
                 else:
                     dbase_mask[i] = False
         else:
@@ -1011,9 +1012,11 @@ class ProxyNCDCdtda(BaseProxyObject):
 
         # Load source data files
         if meta_src is None:
-            meta_src = load_data_frame(config.proxies.NCDCdtda.metafile_proxy)
+            meta_src = load_data_frame(config.proxies.NCDCdadt.metafile_proxy,
+                                       key='meta')
         if data_src is None:
-            data_src = load_data_frame(config.proxies.NCDCdtda.datafile_proxy)
+            data_src = load_data_frame(config.proxies.NCDCdadt.datafile_proxy,
+                                       key='proxy')
 
         # set for any resolution 
         useable = meta_src['Resolution (yr)'] > 0.0
@@ -1027,15 +1030,13 @@ class ProxyNCDCdtda(BaseProxyObject):
                                      meta_src=meta_src, data_src=data_src)
                 proxy_objs.append(pobj)
             except ValueError as e:
-                print(e)
+                _log.error(e)
 
         return proxy_objs
 
     def error(self):
         # Constant error for now
         return 0.1
-
-
 
     
 def fix_lon(lon):
@@ -1052,7 +1053,9 @@ def fix_lon(lon):
     return lon
 
 
-_proxy_classes = {'PAGES2kv1': ProxyPAGES2kv1, 'LMRdb': ProxyLMRdb, 'NCDCdtda': ProxyNCDCdtda}
+#_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdadt': ProxyNCDCdadt}
+#_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdadt': ProxyNCDCdadt}
+_proxy_classes = {'PAGES2kv1': ProxyPAGES2kv1, 'LMRdb': ProxyLMRdb, 'NCDCdadt': ProxyNCDCdadt}
 
 def get_proxy_class(proxy_key):
     """

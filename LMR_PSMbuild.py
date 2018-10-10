@@ -55,7 +55,7 @@ from time import time
 from os.path import join
 from copy import deepcopy
 
-import LMR_proxy_pandas_rework
+import LMR_proxy
 import LMR_calibrate
 
 
@@ -131,7 +131,7 @@ class v_proxies(object):
     ----------
     use_from: list(str)
         A list of keys for proxy classes to load from.  Keys available are
-        stored in LMR_proxy_pandas_rework.
+        stored in LMR_proxy.
     proxy_frac: float
         Fraction of available proxy data (sites) to assimilate
     """
@@ -961,7 +961,7 @@ def main():
         if os.path.isfile(psm_file_diag):
             os.system('mv %s %s_%s.pckl' %(psm_file_diag,psm_file_diag.rstrip('.pckl'),nowstr) )
 
-    prox_manager = LMR_proxy_pandas_rework.ProxyManager(Cfg, Cfg.core.calib_period)
+    prox_manager = LMR_proxy.ProxyManager(Cfg, Cfg.core.calib_period)
     type_site_calib = prox_manager.assim_ids_by_group
 
     print('--------------------------------------------------------------------')

@@ -68,7 +68,7 @@ import numpy as np
 from os.path import join
 from time import time
 
-import LMR_proxy_pandas_rework
+import LMR_proxy
 import LMR_prior
 import LMR_utils
 import LMR_config as BaseCfg
@@ -187,7 +187,7 @@ def LMR_driver_callable(cfg=None):
 
     # Build dictionaries of proxy sites to assimilate and those set aside for
     # verification
-    prox_manager = LMR_proxy_pandas_rework.ProxyManager(cfg, recon_period)
+    prox_manager = LMR_proxy.ProxyManager(cfg, recon_period)
     type_site_assim = prox_manager.assim_ids_by_group
 
     if verbose > 3:
@@ -412,6 +412,13 @@ def LMR_driver_callable(cfg=None):
     else:
         Xb_one_aug = Xb_one
 
+    # BEGIN---20 August 2018---inflation fix
+    if inflation_fact:
+        print('**** inflating ensemble perturbations in the augmented state vector ****')
+        # inflate the ensemble deviations
+        Xb_one_aug_mean = np.mean(Xb_one_aug,axis=1,keepdims=True)
+        Xb_one_aug = Xb_one_aug_mean + inflate*(Xb_one_aug - Xb_one_aug_mean)
+    # END---20 August 2018--- inflation fix
     
     # Dump entire prior state vector (Xb_one) to file 
     filen = workdir + '/' + 'Xb_one'
