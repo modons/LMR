@@ -171,7 +171,10 @@ def main(cfgin=None, config_path=None):
             psm_avg = cfg.psm.avgPeriod
         elif psm_key == 'h_interp':
             # h_interp psm class (interpolation of prior isotope data)
-            psm_avg = 'annual' # annual only for this psm
+            if cfg.core.recon_timescale <= 1:
+                psm_avg = 'annual' # annual only for this psm
+            elif cfg.core.recon_timescale > 1:
+                psm_avg = 'multiyear'
 
             # Define the psm-dependent required state variables
             #  check compatibility of options between prior and proxies for this psm class
