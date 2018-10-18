@@ -43,7 +43,7 @@ core:
 proxies:
 #  use_from: [PAGES2kv1]
   use_from: [LMRdb]
-#  use_from: [NCDCdtda]  
+#  use_from: [NCDCdadt]  
   proxy_frac: 0.75
   proxy_timeseries_kind: asis
   proxy_availability_filter: False
@@ -265,32 +265,42 @@ proxies:
       Tree Rings_Isotopes: ['d18O']
 
 
-  NCDCdtda:
-    dbversion: 'v0.0.1'
+  NCDCdadt:
+    dbversion: 'v0.0.2_icevoladj'
     datadir_proxy: null
-    datafile_proxy: 'DTDA_{}_Proxies.df.pckl'
-    metafile_proxy: 'DTDA_{}_Metadata.df.pckl'
+    datafile_proxy: 'DADT_{}_Proxies.h5'
+    metafile_proxy: 'DADT_{}_Proxies.h5'
     dataformat_proxy: 'DF'
     regions: []
     proxy_resolution: [!!python/tuple [0.,5000.]]
     database_filter: []
     proxy_blacklist: []
     proxy_order: [
-#     'Marine Cores_uk37',
-     'Marine sediments_uk37'
-     ]
+      'Marine sediments_uk37',
+      'Marine sediments_tex86',
+      'Marine sediments_d18o_ruberwhite',
+      'Marine sediments_d18o_sacculifer',
+      'Marine sediments_d18o_bulloides',
+      'Marine sediments_d18o_pachyderma',
+    ]
     proxy_psm_type:
-      Marine Cores_uk37:     bayesreg_uk37
+      Marine Cores_uk37: bayesreg_uk37
       Marine sediments_uk37: bayesreg_uk37
+      Marine Cores_tex86: bayesreg_tex86
+      Marine sediments_tex86: bayesreg_tex86
+      Marine sediments_d18o_ruberwhite: bayesreg_d18o_ruberwhite
+      Marine sediments_d18o_sacculifer: bayesreg_d18o_sacculifer
+      Marine sediments_d18o_bulloides: bayesreg_d18o_bulloides
+      Marine sediments_d18o_pachyderma: bayesreg_d18o_pachyderma
     proxy_assim2:
-      Marine Cores_uk37: [
-        'uk37',
-        'UK37'
-        ]
-      Marine sediments_uk37: [
-        'uk37',
-        'UK37'
-        ]
+      Marine Cores_uk37: ['uk37', 'UK37']
+      Marine sediments_uk37: ['uk37', 'UK37']
+      Marine Cores_tex86: ['tex86', 'TEX86']
+      Marine sediments_tex86: ['tex86', 'TEX86']
+      Marine sediments_d18o_ruberwhite: ['d18o_ruber', 'd18O_ruber', 'd18O_ruber_stricto', 'd18O_ruber_lato', 'd18o_ruber_stricto', 'd18o_ruber_lato']
+      Marine sediments_d18o_sacculifer: ['d18o_sacculifer', 'd18O_sacculifer']
+      Marine sediments_d18o_bulloides: ['d18o_bulloides', 'd18O_bulloides']
+      Marine sediments_d18o_pachyderma: ['d18o_pachyderma', 'd18O_pachyderma']
 
 psm:
   all_calib_sources:
