@@ -64,6 +64,7 @@ def main(cfgin=None, config_path=None):
             yaml_file = config_path
         else:
             yaml_file = os.path.join(LMR_config.SRC_DIR, 'config.yml')
+
         _log.debug('Loading configuration: ' + yaml_file)
         f = open(yaml_file, 'r')
         yml_dict = yaml.load(f)
@@ -77,6 +78,7 @@ def main(cfgin=None, config_path=None):
                 '{}'.format(update_result))
         cfg = LMR_config.Config()
 
+        
     masterstarttime = timeit.default_timer()
 
     _log.info('Starting Ye precalculation using prior data from '
@@ -337,4 +339,10 @@ def main(cfgin=None, config_path=None):
     _log.info('Total elapsed time:' + str(elapsedtot/60.0)  + ' mins')
 
 #-------------------- if not called, must be run directly ---------------------------
-main(config_path='../config.yml.brewster_merge')
+#main(config_path='../config.yml.brewster_merge') # RT: this should not be here, hardcoded like this.
+# RT: modif. to maintain flexibility as originally intended
+if len(sys.argv) > 1:
+    yaml_file = sys.argv[1]
+    main(config_path=sys.argv[1])
+else:    
+    main()
