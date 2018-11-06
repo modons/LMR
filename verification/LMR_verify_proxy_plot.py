@@ -131,15 +131,16 @@ r_crit = 0.0
 # ------------------------------------
 
 #datadir_input = '/home/disk/ekman4/rtardif/LMR/output'
-datadir_input = '/home/disk/kalman3/rtardif/LMR/output'
-#datadir_input = '/home/disk/kalman3/rtardif/LMR/output/verification_production_runs'
+#datadir_input = '/home/disk/kalman3/rtardif/LMR/output'
+datadir_input = '/Users/hakim/data/LMR_python3/archive/'
 
-#nexp = 'production_gis_ccsm4_pagesall_0.75'
-#nexp = 'production_mlost_ccsm4_pagesall_0.75'
-nexp = 'test_py3'
+# Name of experiment
+#nexp = 'test'
+nexp = 'dadt_allprior'
 
 #verif_period = [[1880,2000],[0,1879]]
-verif_period = [[1900,2000],[1800,1899]]
+#verif_period = [[1900,2000],[1800,1899]]
+verif_period = [[-22000,-200],[-22000,-200]]
 
 # Output directory, where the figs will be dumped.
 #datadir_output = datadir_input # if want to keep things tidy
