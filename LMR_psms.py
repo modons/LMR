@@ -54,9 +54,19 @@ from load_data import load_cpickle
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import bayspline
-import bayspar
-import deltaoxfox as dfox
+try:
+    import bayspline
+except ImportError as e1:
+    print('Warning:', e1)
+try:
+    import bayspar
+except ImportError as e2:
+    print('Warning:', e2)
+try:
+    import deltaoxfox as dfox
+except ImportError as e3:
+    print('Warning:', e3)
+    
 
 # Logging output utility, configuration controlled by driver
 _log = logging.getLogger(__name__)
