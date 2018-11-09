@@ -1728,7 +1728,9 @@ class BayesRegUK37PSM(BayesRegPSM):
         X_lats = X_coords[var_startidx:(var_endidx + 1), ind_lat]
         var_data = Xb[var_startidx:(var_endidx + 1), :]
         # get prior data at proxy site
-        gridpoint_data = get_data_closest_gridpt(var_data, X_lons, X_lats, self.lon, self.lat, getvalid=True)
+        gridpoint_data = get_data_closest_gridpt(var_data, X_lons, X_lats,
+                                                 self.lon, self.lat,
+                                                 getvalid=True)
 
         # check if gridpoint_data is in K: need deg. C for forward model
         # crude check...
@@ -1842,7 +1844,9 @@ class BayesRegTEX86PSM(BayesRegPSM):
         X_lats = X_coords[var_startidx:(var_endidx + 1), ind_lat]
         var_data = Xb[var_startidx:(var_endidx + 1), :]
         # get prior data at proxy site
-        gridpoint_data = get_data_closest_gridpt(var_data, X_lons, X_lats, self.lon, self.lat, getvalid=True)
+        gridpoint_data = get_data_closest_gridpt(var_data, X_lons, X_lats,
+                                                 self.lon, self.lat,
+                                                 getvalid=True)
 
         # check if gridpoint_data is in K: need deg. C for forward model
         # crude check...
@@ -1898,8 +1902,7 @@ class BayesRegD18oPSM(BayesRegPSM):
         self.psm_required_variables = config.psm.bayesreg_d18o.psm_required_variables
         self.spp = str(spp)
 
-        tmax, tmin = (dfox.modelparams.get_draws(drawtype='d18oc')
-                                      .stats_temp.loc[self.spp, ['max', 'min']])
+        tmin, tmax = (dfox.foram_sst_minmax(self.spp))
         self.R = self._estimate_r(tmin, tmax+1)
 
     def _estimate_r(self, *args, **kwargs):
@@ -1908,7 +1911,7 @@ class BayesRegD18oPSM(BayesRegPSM):
         xrange = np.arange(*args, **kwargs)
 
         # This assumes that changes in salinity will not influence ensemble variance.
-        ensemble = self._mcmc_predict(sst=xrange, sos=np.array([34]))
+        ensemble = self._mcmc_predict(sst=xrange, sos=np.array([35.0]))
         return np.max(np.var(ensemble, axis=1))
 
     def _mcmc_predict(self, sst, sos=None, d18osw=None):
@@ -1924,9 +1927,8 @@ class BayesRegD18oPSM(BayesRegPSM):
             if lon > 180:
                 lon -= 360
 
-            y = dfox.predict_d18oc(seatemp=sst, spp=self.spp, d18osw=None, salinity=sos,
-                                   latlon=(self.lat, lon))
-
+            y = dfox.predict_d18oc(seatemp=sst, spp=self.spp, d18osw=None,
+                                   salinity=sos, latlon=(self.lat, lon))
         else:
             y = dfox.predict_d18oc(seatemp=sst, spp=self.spp, d18osw=d18osw)
 
@@ -1982,28 +1984,28 @@ class BayesRegD18oPSM(BayesRegPSM):
 @class_docs_fixer
 class BayesRegD18oRuberwhitePSM(BayesRegD18oPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'ruberwhite')
+        super().__init__(config, proxy_obj, 'G. ruber white')
         self.psm_key = 'bayesreg_d18o_ruberwhite'
 
 
 @class_docs_fixer
 class BayesRegD18oSacculiferPSM(BayesRegD18oPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'sacculifer')
+        super().__init__(config, proxy_obj, 'G. sacculifer')
         self.psm_key = 'bayesreg_d18o_sacculifer'
 
 
 @class_docs_fixer
 class BayesRegD18oBulloidesPSM(BayesRegD18oPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'bulloides')
+        super().__init__(config, proxy_obj, 'G. bulloides')
         self.psm_key = 'bayesreg_d18o_bulloides'
 
 
 @class_docs_fixer
 class BayesRegD18oPachydermaPSM(BayesRegD18oPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'pachydermasin')
+        super().__init__(config, proxy_obj, 'N. pachyderma sinistral')
         self.psm_key = 'bayesreg_d18o_pachyderma'
 
 
