@@ -337,4 +337,4 @@ def main(cfgin=None, config_path=None):
     _log.info('Total elapsed time:' + str(elapsedtot/60.0)  + ' mins')
 
 #-------------------- if not called, must be run directly ---------------------------
-main(config_path='../config.yml.brewster_merge')
+main(config_path='../config.yml.dadt')
