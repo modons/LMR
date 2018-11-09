@@ -287,7 +287,7 @@ ccsm3_trace21ka:
     multiple_vars: True
     template: '[vardef_template]'
     available_vars: ['tas_sfc_Amon', 'psl_sfc_Adec', 'sfcheight_sfc_Adec',
-                     'tas_sfc_Adec', 'ts_sfc_Adec', 'tsl_sfc_Adec',
+                     'tas_sfc_Adec', 'ts_sfc_Adec', 'tsl_sfc_Adec','theta_sfc_Adec',
                      'prw_int_Adec', 'pr_sfc_Adec',
                      'zg_500hPa_Adec', 'zg_850hPa_Adec', 'wap_700hPa_Adec',
                      'ta_1000hPa_Adec', 'ta_850hPa_Adec', 'ta_700hPa_Adec', 'ta_600hPa_Adec', 'ta_500hPa_Adec', 

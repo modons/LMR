@@ -40,7 +40,7 @@ from os.path import join, isfile
 # LMR specific imports
 sys.path.append('../')
 import LMR_config
-import LMR_proxy_pandas_rework
+import LMR_proxy
 from LMR_utils import coefficient_efficiency, rmsef, natural_sort
 
 # ------------------------------------------------------------ #
@@ -53,10 +53,11 @@ verbose = 1
 #datadir_input  = '/home/disk/kalman3/hakim/LMR/'
 datadir_input  = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_input  = '/home/disk/ekman4/rtardif/LMR/output'
+datadir_input = '/Users/hakim/data/LMR_python3/archive/'
 
 # Name of experiment
 nexp = 'test'
-
+nexp = 'dadt_allprior'
 # perform verification using all recon. MC realizations ( MCset = None )
 # or over a custom selection ( MCset = (begin,end) )
 # ex. MCset = (0,0)    -> only the first MC run
@@ -69,7 +70,8 @@ MCset = None
 # (inclusive)
 #verif_period = (0, 1879)
 #verif_period = (1880, 2000)
-verif_period = (1900, 2000)
+#verif_period = (1900, 2000)
+verif_period = (-22000,-200)
 
 # Output directory, where the verification results & figs will be dumped.
 datadir_output = datadir_input # if want to keep things tidy
@@ -107,7 +109,7 @@ niters = len(dirset)
 # query config found in first MC directory
 # check for experiment config information in input directory 
 
-yaml_file = join(dirset[0], 'config.yml')
+yaml_file = join(dirset[0], 'config.yml.brewster_merge')
 cfgpy_file = join(dirset[0], 'LMR_config.py')
 if isfile(yaml_file):
     # .yml file?
@@ -137,8 +139,8 @@ if proxy_database == 'PAGES2kv1':
     proxy_cfg = cfg.proxies.PAGES2kv1
 elif proxy_database == 'LMRdb':
     proxy_cfg = cfg.proxies.LMRdb
-elif proxy_database == 'NCDCdtda':
-    proxy_cfg = cfg.proxies.ncdcdtda
+elif proxy_database == 'NCDCdadt':
+    proxy_cfg = cfg.proxies.NCDCdadt
 else:
     raise SystemExit('ERROR in specification of proxy database.')
 
@@ -148,7 +150,7 @@ if cfg.psm.avgPeriod == 'annual':
 else:
     psm_seasonality = '_'.join([cfg.psm.avgPeriod,cfg.psm.season_source])
 
-proxy_class = LMR_proxy_pandas_rework.get_proxy_class(proxy_database)
+proxy_class = LMR_proxy.get_proxy_class(proxy_database)
 print('loading proxy data...') 
 
 # ensure all proxies are considered, given the applied filters 
