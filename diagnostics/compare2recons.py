@@ -45,21 +45,22 @@ datadir = '/Users/hakim/data/LMR_python3/archive'
 # Experiments to compare. Format: [test, reference]
 # -------------------------------------------------
 
-exps = ['production_short_check', 'production_short_check_pd']
+#exps = ['production_short_check', 'production_short_check_pd']
+exps = ['dadt_allprior_check','dadt_allprior']
 
 # --
 iter_range = [0,0]
 #iter_range = [0,100]
 # --
-year_range = [1950,1955]
+#year_range = [1950,1955]
 #year_range = [0,2000]
-#year_range = [-25000,2000]
+year_range = [-22000,2000]
 #year_range = [-115000,2000]
 # --
 
 # options of which figures to produce
 make_gmt_plot  = True   # time series of gmt, nhmt and shmt
-make_map_plots = True  # maps for every recon output within year_range
+make_map_plots = False  # maps for every recon output within year_range
 
 # for maps:
 show_assimilated_proxies = False
@@ -81,9 +82,9 @@ infile = 'gmt_ensemble'
 # (more concise) dict format
 #                         mapmin    mapmax  mapint     cmap     cbarfmt
 map_plots = {
-    'tas_sfc_Amon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # temp. anomalies
+#    'tas_sfc_Amon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # temp. anomalies
 #    'tas_sfc_Amon'       : (-6.,        +6.,   2.0, plt.cm.bwr, '%4.0f'), # temp. anomalies(2)
-#    'tas_sfc_Adec'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # temp. full field    
+    'tas_sfc_Adec'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # temp. full field    
 #    'psl_sfc_Amon'       : (98000., 103000., 1000.,   mapcolor, '%4.0f'), # MSLP full field
 #    'wap_850hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies
 #    'wap_700hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies
