@@ -2214,7 +2214,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         # Get info about time coordinate(s)
         # ---------------------------------
 
-        # One of the dims has to be time! 
+        # One of the dims has to be time!
         if 'time' not in vardims:
             raise SystemExit('In read_gridded_data_TraCE21ka: '
                              'Variable does not have *time* as a dimension! Exiting!')
@@ -2658,9 +2658,56 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 
         elif kind == 'full':
             print('Full field provided as the prior')
+            
             # Calculating climo nevertheless. Needed as output.
-            climo = np.nanmean(data_var,axis=0)
-            # do nothing else...
+
+            # monthly or not ?
+            if timetype == 'time_continuous' and time_resolution == monthly:
+                # monthly data available
+                # ----------------------
+
+                # monthly climatology: declaring the array depending on data type
+                if vartype == '0D:time series':
+                    climo_month = np.zeros((12))
+                elif  vartype == '1D:meridional':
+                    _,ndim1 = data_var.shape
+                    climo_month = np.zeros([12, ndim1], dtype=float)
+                elif '2D' in vartype:
+                    _,ndim1,ndim2 = data_var.shape
+                    climo_month = np.zeros([12, ndim1, ndim2], dtype=float)
+                # loop over months
+                for i in range(12):
+                    m = i+1.
+                    print('...calculating climo for month:', m)
+                    indsm = [j for j,v in enumerate(dates.month) if v == m]
+                    climo_month[i] = np.nanmean(data_var[indsm], axis=0)                    
+                climo = climo_month
+
+            elif timetype == 'time_months':
+                # monthly data, but time-averaged already
+                # ---------------------------------------
+                
+                # monthly climatology: declaring the array depending on data type
+                if vartype == '0D:time series':
+                    climo_month = np.zeros((12))
+                elif  vartype == '1D:meridional':
+                    _,_,ndim1 = data_var.shape
+                    climo_month = np.zeros([12, ndim1], dtype=float)
+                elif '2D' in vartype:
+                    _,_,ndim1,ndim2 = data_var.shape
+                    climo_month = np.zeros([12, ndim1, ndim2], dtype=float)
+                
+                # loop over months
+                for i in range(12):
+                    m = i+1
+                    print('...calculating climo for month:', m)
+                    climo_month[i] = np.nanmean(data_var[:,i], axis=0)                
+                climo = climo_month
+                
+            else:
+                # monthly data not available, climo is straight average
+                climo = np.nanmean(data_var,axis=0)
+
         else:
             raise SystemExit('ERROR in the specification of type of prior.'
                              ' Should be "full" or "anom"! Exiting...')
@@ -2747,15 +2794,12 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             print('Annual averaging over month sequence:', season_avg)
 
             # check availability of monthly data
-            if time_resolution == monthly:
+            if timetype == 'time_continuous' and time_resolution == monthly:
 
                 year_current = [m for m in outtimeavg['annual'] if m>0 and m<=12]
                 year_before  = [abs(m) for m in outtimeavg['annual'] if m < 0]        
                 year_follow  = [m-12 for m in outtimeavg['annual'] if m > 12]
-        
-                avgmonths = year_before + year_current + year_follow
-                indsclimo = sorted([item-1 for item in avgmonths])
-        
+
                 # List years available in dataset and sort
                 years_all = [d for d in dates.year]
                 years     = list(set(years_all)) # 'set' used to retain unique values in list
@@ -2793,8 +2837,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                             value[i,:,:] = np.nanmean(data_var[indsyr],axis=0)
                         
                 print(var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
-                    
-                climo = np.mean(climo_month[indsclimo], axis=0)
+
 
             else:
                 raise SystemExit('In read_gridded_data_TraCE21ka: '
@@ -2834,7 +2877,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                                      'Averaging over a season is requested, but monthly '
                                      'information is not available in data. Exiting.')
 
-                # data available, do the seasonal averaging
+                # monthly data available, do the seasonal averaging
                 # use np.take to extract the proper data slice
                 indices = [item-1 for item in season_avg]
                 data_var_to_average = np.nanmean(np.take(data_var, indices, axis=1), axis=1)
@@ -2865,12 +2908,25 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             # initialize array with missing values (NaNs)
             value[:] = np.nan
 
+            """
             for i in range(nbintervals):
                 edgel = i*nbpts
                 edger = edgel+nbpts
                 datesYears[i] = np.mean(years[edgel:edger])
                 value[i] = np.nanmean(data_var_to_average[edgel:edger], axis=0)
+            """
+            # More efficent method, without loop and using np.cumsum
+            ret = np.cumsum(years)
+            ret[nbpts:] = ret[nbpts:] - ret[:-nbpts]
+            avg = ret[nbpts-1:]/nbpts
+            datesYears = avg[::nbpts][:nbintervals]
 
+            
+            ret = np.cumsum(data_var_to_average, axis=0)
+            ret[nbpts:] = ret[nbpts:] - ret[:-nbpts]
+            avg = ret[nbpts-1:]/nbpts
+            value = avg[::nbpts][:nbintervals]
+            
                 
             print(var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
 
