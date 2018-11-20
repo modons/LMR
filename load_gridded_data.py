@@ -42,11 +42,17 @@ from netCDF4 import Dataset, date2num, num2date
 from datetime import datetime, timedelta
 from calendar import monthrange
 from scipy import stats
+from collections import OrderedDict
 import numpy as np
 import pylab as pl
 import os.path
 import string
 import math
+
+# -------------------
+class Object(object):
+    pass
+# -------------------
 
 def read_gridded_data_GISTEMP(data_dir,data_file,data_vars,outfreq,ref_period):
 #==========================================================================================
@@ -2181,11 +2187,11 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         if not os.path.isfile(infile):
             print('Error in specification of gridded dataset')
             print('File ', infile, ' does not exist! - Exiting ...')
-            exit(1)
+            raise SystemExit(1)
         else:
             print('Reading file: ', infile)
 
-        # Load entire dataset from file
+        # Load dataset from file
         data = Dataset(infile,'r')
 
         # Dimensions used to store the data
@@ -2197,123 +2203,183 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         # Define the name of the variable to extract from the variable definition (from namelist)
         var_to_extract = vardef.split('_')[0]
 
-        # Query its dimensions
+        # Query dimensions of input array
         vardims = data.variables[var_to_extract].dimensions
         nbdims  = len(vardims)
-        # names of variable dims
-        vardimnames = []
-        for d in vardims:
-            vardimnames.append(d)
-        
+
         # put everything in lower case for homogeneity
-        vardimnames = [item.lower() for item in vardimnames]
+        vardims = tuple([item.lower() for item in vardims])
+
+        
+        # Get info about time coordinate(s)
+        # ---------------------------------
 
         # One of the dims has to be time! 
-        if 'time' not in vardimnames:
-            print('Variable does not have *time* as a dimension! Exiting!')
-            exit(1)
+        if 'time' not in vardims:
+            raise SystemExit('In read_gridded_data_TraCE21ka: '
+                             'Variable does not have *time* as a dimension! Exiting!')
         else:
+            # Query information on time included in file
+            timedims = [item for item in vardims if item == 'time' or item == 'months']
+
+            timecoords_dict = OrderedDict()
+            for dim in timedims:
+                timecoords_dict[dim] = vardims.index(dim)
+
+            if len(timedims) == 1 and timedims[0] == 'time':
+                timetype = 'time_continuous'
+            elif len(timedims) == 2 and 'time' in timedims and 'months' in timedims:
+                timetype = 'time_months'
+            else:
+                raise SystemExit('In read_gridded_data_TraCE21ka: '
+                                 'Unrecognized time coordinates. Exiting.')
+
             # read in the time netCDF4.Variable
             time = data.variables['time']
 
-        # Transform "ka BP" year to CE years
-        dates = time[:] *1000.0 + 1950.0
-        time_yrs_list = dates.tolist()
-
-        time_diff = np.diff(time_yrs_list)
-        time_diff_mean = np.mean(time_diff)
-        monthly = 1./12.
-        if time_diff_mean < 1.0:
-            # subannual data available
-            # test for monthly
-            if np.isclose(time_diff_mean,monthly, rtol=1e-05, atol=1e-07, equal_nan=False):
-                time_resolution = monthly
+            # Make sure time units are what is expected
+            if time.units == 'ka BP':            
+                # Transform "ka BP" year to CE years
+                #dates_array = time[:] *1000.0 + 1950.0
+                dates_array = time[:] *1000.0 + 1950.958904109 # BP = Dec 15th 1950 # mod RT 11/18 ... ... ... 
             else:
-                time_resolution = time_diff_mean
-        else:
-            # annual or interannual data available
-            time_resolution = np.rint(time_diff_mean)
+                raise SystemExit('In read_gridded_data_TraCE21ka: '
+                                 'Unrecognized time units. Exiting.')
 
-        print(':: Data temporal resolution = ', time_resolution, 'yrs')
+            # check on temporal resolution (in years)
+            time_diff = np.diff(dates_array)
+            time_diff_mean = np.mean(time_diff)
+            monthly = 1./12.
+            if time_diff_mean < 1.0:
+                # subannual data available
+                # test for monthly
+                if np.isclose(time_diff_mean,monthly, rtol=1e-05, atol=1e-07, equal_nan=False):
+                    time_resolution = monthly
+                else:
+                    time_resolution = time_diff_mean
+            else:
+                # annual or interannual data available
+                time_resolution = np.rint(time_diff_mean)
 
-        # List years available in dataset and sort
-        years_all = [int(d) for d in np.rint(dates)]
-        years     = list(set(years_all)) # 'set' is used to retain unique values in list
-        years.sort() # sort the list
-        time_yrs  = np.zeros(len(years), dtype=int)
-        
-                
-        # Query info on spatial coordinates
+            print(':: Data temporal resolution = ', time_resolution, 'yrs')
+
+            # store in "date-like" objects (i.e. with .year and .month attributes)
+            dates = Object()
+            dates.year = dates_array.astype(int)
+
+            # convert to months
+            residuals = dates_array - dates.year
+            if np.any(residuals<0.):
+                residuals[residuals<0.] = 1. + residuals[residuals<0.]
+            dates.month = (residuals*365./30.4167 + 1).astype(int)
+            
+            # get unique years in dataset
+            years = np.asarray(list(set(dates.year)))
+            years.sort(axis=0) # sort
+
+
+        # Get info about spatial coordinates
+        # ----------------------------------
+
         # get rid of time in list of coordinates
-        varspacecoordnames = [item for item in vardimnames if item != 'time'] 
+        varspacecoordnames = [item for item in vardims if item != 'time' and item != 'months']
+        # remaining must be spatial dims
         nbspacecoords = len(varspacecoordnames)
-
-        if nbspacecoords == 0: # data => simple time series
+        
+        if nbspacecoords == 0:
+            # data => simple time series
             vartype = '0D:time series'
             value = np.zeros([len(years)], dtype=float)
-            spacecoords = None
-        elif nbspacecoords == 1: # data => 1D data
+            
+        elif nbspacecoords == 1:
+            # data => 1D data
             if 'lat' in varspacecoordnames:
                 # latitudinally-averaged  variable
                 vartype = '1D:meridional' 
-                spacecoords = ('lat',)
-                spacevar1 = data.variables['lat'][:]
-        elif ((nbspacecoords == 2) or (nbspacecoords == 3 and 'plev' in vardimnames and dictdims['plev'] == 1)): # data => 2D data
-            # get rid of plev in list        
-            varspacecoordnames = [item for item in varspacecoordnames if item != 'plev'] 
-            spacecoords = (varspacecoordnames[0],varspacecoordnames[1])
-            spacevar1 = data.variables[spacecoords[0]][:]
-            spacevar2 = data.variables[spacecoords[1]][:]
+                spacecoords_dict = OrderedDict()
+                spacecoords_dict['lat'] = data.variables['lat'][:]
+                
+        elif ((nbspacecoords == 2) or 
+            (nbspacecoords == 3 and 'plev' in vardims and dictdims['plev'] == 1)):
+            # data => 2D data
 
-            if 'lat' in spacecoords and 'lon' in spacecoords:
+            # get rid of plev (pressure level) in list
+            varspacecoordnames = [item for item in varspacecoordnames if item != 'plev'] 
+            # keep info/values on spatial coordinates in ordered dict
+            spacecoords_dict = OrderedDict()
+            for coord in varspacecoordnames:
+                spacecoords_dict[coord] = data.variables[coord][:]
+            
+            if 'lat' in spacecoords_dict.keys() and 'lon' in spacecoords_dict.keys():
                 vartype = '2D:horizontal'
-            elif 'lat' in spacecoords and 'lev' in spacecoords:
+                #vlat  = data.variables['lat'][:]
+                #vlon  = data.variables['lon'][:]
+                
+            elif 'lat' in spacecoords_dict.keys() and 'lev' in spacecoords_dict.keys():
                 vartype = '2D:meridional_vertical'
+                #vlat  = data.variables['lat'][:]
+                #vlev  = data.variables['lev'][:]
+                
             else:
-                print('Cannot handle this variable yet! 2D variable of unrecognized dimensions... Exiting!')
+                print('In read_gridded_data_TraCE21ka: Cannot handle this variable yet! '
+                      '2D variable of unrecognized dimensions... Exiting!')
                 raise SystemExit(1)
+
         else:
-            print('Cannot handle this variable yet! Too many dimensions... Exiting!')
+            print('In read_gridded_data_TraCE21ka: Cannot handle this variable yet! '
+                  'Unrecognized array structure/dimensions... Exiting!')
             raise SystemExit(1)
 
-        
+
         # load data array
         data_var = data.variables[var_to_extract][:]
-        #data_var = data.variables[var_to_extract]
-        print(data_var.shape)
+        print('Array dims :', vardims)
+        print('Array shape:', data_var.shape)
+
         
-        # if 2D:horizontal variable, check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
+        # --------------------------------------
+        # processing depending on variable type:
+        # --------------------------------------
+
+        # if 2D:horizontal variable
+        # -------------------------
         if vartype == '2D:horizontal':
 
-            vardims = data_var.shape
-
-            # which dim is lat & which is lon?
-            indlat = spacecoords.index('lat')
-            indlon = spacecoords.index('lon')
-            print('indlat=', indlat, ' indlon=', indlon)
+            print('Type of variable:', vartype)
             
-            if indlon == 0:
-                vlon = spacevar1
-                vlat = spacevar2
-                nlat = vardims[2]
-                nlon = vardims[1]
-            elif indlon == 1:
-                vlon = spacevar2
-                vlat = spacevar1
-                nlat = vardims[1]
-                nlon = vardims[2]
+            # which spatial dim is lat & which is lon?
+            # -- in original array (from file)
+            indlatorig = vardims.index('lat')
+            indlonorig = vardims.index('lon')
+            # -- in array that will be the output of this function
+            indlat = list(spacecoords_dict.keys()).index('lat')
+            indlon = list(spacecoords_dict.keys()).index('lon')
 
+            print('indlat(orig)=', indlatorig, ' indlon(orig)=', indlonorig)            
+            print('indlat      =', indlat,     ' indlon      =', indlon)
+
+            nlat = data.dimensions['lat'].size
+            nlon = data.dimensions['lon'].size
+
+            vlat = spacecoords_dict['lat']
+            vlon = spacecoords_dict['lon']
+
+            # check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
+            
             # are coordinates defined as 1d or 2d array?
             spacevardims = len(vlat.shape)
             if spacevardims == 1:
+                # 1D to 2D
                 varlat = np.array([vlat,]*nlon).transpose()
                 varlon = np.array([vlon,]*nlat)
             else:
+                # 2D already
                 varlat = vlat
                 varlon = vlon
 
             varlatdim = len(varlat.shape)
             varlondim = len(varlon.shape)
+
             
             # Check if latitudes are defined in the [-90,90] domain
             # and if longitudes are in the [0,360] domain
@@ -2338,59 +2404,60 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                     else:
                         fliplat = False
                 else:
-                    print('ERROR!')
+                    print('In read_gridded_data_TraCE21ka: ERROR!')
                     raise SystemExit(1)
 
+            
             if fliplat:
                 varlat = np.flipud(varlat)
-                # flip data variable
-                if indlat == 0:
-                    tmp = data_var[:,::-1,:]
-                else:
-                    tmp = data_var[:,:,::-1]
+                # flip the data along the appropriate axis
+                tmp = np.flip(data_var, axis=indlatorig)
                 data_var = tmp
-
+                
             # Transform longitudes from [-180,180] domain to [0,360] domain if needed
             indneg = np.where(varlon < 0)
             if len(indneg) > 0: # if non-empty
                 varlon[indneg] = 360.0 + varlon[indneg]
                 
             # Back into right arrays
-            if indlon == 0:
-                spacevar1 = varlon
-                spacevar2 = varlat
-            elif indlon == 1:
-                spacevar2 = varlon
-                spacevar1 = varlat
-        
+            spacecoords_dict['lat'] = varlat
+            spacecoords_dict['lon'] = varlon
+            
 
         # if 2D:meridional_vertical variable
+        # ----------------------------------
         elif vartype == '2D:meridional_vertical':
+
+            print('Type of variable:', vartype)
+
+            # which spatial dim is lat and which is lev?
+            # -- in original array (from file)
+            indlatorig = vardims.index('lat')
+            indlevorig = vardims.index('lev')
+            # -- in array that will be the output of this function
+            indlat = list(spacecoords_dict.keys()).index('lat')
+            indlev = list(spacecoords_dict.keys()).index('lev')
+
+            print('indlat(orig)=', indlatorig, ' indlev(orig)=', indlevorig)            
+            print('indlat      =', indlat,     ' indlev      =', indlev)
+
+            nlat = data.dimensions['lat'].size
+            nlev = data.dimensions['lev'].size
+
+            vlat = spacecoords_dict['lat']
+            vlev = spacecoords_dict['lev']
+
+
+            # check grid & standardize grid orientation to lat=>[-90,90] if needed
             
-            vardims = data_var.shape
-
-            # which dim is lat and which is lev?
-            indlat = spacecoords.index('lat')
-            indlev = spacecoords.index('lev')
-            print('indlat=', indlat, ' inlev=', indlev)
-
-            if indlev == 0:
-                vlev = spacevar1
-                vlat = spacevar2
-                nlat = vardims[2]
-                nlev = vardims[1]
-            elif indlev == 1:
-                vlev = spacevar2
-                vlat = spacevar1
-                nlat = vardims[1]
-                nlev = vardims[2]
-
             # are coordinates defined as 1d or 2d array?
             spacevardims = len(vlat.shape)
             if spacevardims == 1:
+                # 1D to 2D
                 varlat = np.array([vlat,]*nlev).transpose()
                 varlev = np.array([vlev,]*nlat)
             else:
+                # 2D already
                 varlat = vlat
                 varlev = vlev
 
@@ -2420,54 +2487,64 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                     else:
                         fliplat = False
                 else:
-                    print('ERROR!')
+                    print('In read_gridded_data_TraCE21ka: ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
                 varlat = np.flipud(varlat)
-                # flip data variable
-                if indlat == 0:
-                    tmp = data_var[:,::-1,:]
-                else:
-                    tmp = data_var[:,:,::-1]
+                # flip the data along the appropriate axis
+                tmp = np.flip(data_var, axis=indlatorig)
                 data_var = tmp
+                
 
             # Back into right arrays
-            if indlev == 0:
-                spacevar1 = varlev
-                spacevar2 = varlat
-            elif indlev == 1:
-                spacevar2 = varlev
-                spacevar1 = varlat
-            
+            spacecoords_dict['lat'] = varlat
+            spacecoords_dict['lev'] = varlev
 
+                
         # if 1D:meridional (latitudinally-averaged) variable
+        # --------------------------------------------------
         elif vartype == '1D:meridional':
-            vardims = data_var.shape
+
+            print('Type of variable:', vartype)
             
             # which dim is lat?
-            indlat = spacecoords.index('lat')
-            print('indlat=', indlat)
-            
-            # Check if latitudes are defined in the [-90,90] domain
+            # -- in original array (from file)
+            indlatorig = vardims.index('lat')
+            # -- in array that will be the output of this function
+            indlat = list(spacecoords_dict.keys()).index('lat')
+
+            print('indlat(orig)=', indlatorig, ' indlon(orig)=', indlonorig)            
+            print('indlat      =', indlat,     ' indlon      =', indlon)
+
+            nlat = data.dimensions['lat'].size
+            vlat = spacecoords_dict['lat']
+
+            # check grid & standardize grid orientation to lat=>[-90,90] if needed
             fliplat = None
             # check for monotonically increasing or decreasing values
-            monotone_increase = np.all(np.diff(spacevar1) > 0)
-            monotone_decrease = np.all(np.diff(spacevar1) < 0)
+            monotone_increase = np.all(np.diff(vlat) > 0)
+            monotone_decrease = np.all(np.diff(vlat) < 0)
             if not monotone_increase and not monotone_decrease:
                 # funky grid
                 fliplat = False
 
             if fliplat is None:
-                if spacevar1[0] > spacevar1[-1]: # lat not as [-90,90] => array upside-down
+                if vlat[0] > vlat[-1]: # lat not as [-90,90] => array upside-down
                     fliplat = True
 
             if fliplat:
-                spacevar1 = np.flipud(spacevar1)
-                tmp = data_var[:,::-1]
+                vlat = np.flipud(vlat)
+                # flip the data along the appropriate axis
+                tmp = np.flip(data_var, axis=indlatorig)
                 data_var = tmp
 
-                
+            # Back into right array
+            spacecoords_dict['lat'] = vlat
+
+
+
+        # ------------------------------------     
         # ====== other data processing ======
         
         # --------------------
@@ -2479,55 +2556,88 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
             print('Anomalies provided as the prior: Removing the temporal mean (for every gridpoint)...')
 
             # monthly data?
-            if time_resolution == monthly:
+            if timetype == 'time_continuous' and time_resolution == monthly:
+                # monthly data available
+                # ----------------------
+                
                 # monthly climatology: declaring the array depending on data type
                 if vartype == '0D:time series':
                     climo_month = np.zeros((12))
                 elif  vartype == '1D:meridional':
-                    climo_month = np.zeros([12, vardims[1]], dtype=float)
+                    _,ndim1 = data_var.shape
+                    climo_month = np.zeros([12, ndim1], dtype=float)
                 elif '2D' in vartype:
-                    climo_month = np.zeros([12, vardims[1], vardims[2]], dtype=float)
-
-                # dates array not datetime objects here (not handling negative years)
-                # defining different arrays of years and months
-                dates_years = np.array([math.modf(item)[1] for item in dates])
-                fracyr = np.array([abs(math.modf(item)[0]) for item in dates])
-                dates_months = np.rint((fracyr/monthly)+1.)
-                # flip months for "negative" years
-                indyrneg = np.where(dates_years < 0.)
-                indyrpos = np.where(dates_years >= 0.)
-                fracyr[indyrneg] = 1.-fracyr[indyrneg]
-                dates_months[indyrneg] = np.rint((fracyr[indyrneg]/monthly))
-
-                # clearing temporary arrays
-                del fracyr, indyrneg, indyrpos
+                    _,ndim1,ndim2 = data_var.shape
+                    climo_month = np.zeros([12, ndim1, ndim2], dtype=float)
                 
                 # indices corresponding to reference period   
                 if anom_ref is not None:
-                    indsyrref = [j for j,v in enumerate(dates_years) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
+                    indsyrref = [j for j,v in enumerate(dates.year) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
                     # overlap?
                     if len(indsyrref) == 0:
                         raise SystemExit('ERROR in anomaly calculation: '
                                          ' No overlap between prior simulation'
                                          ' and specified reference period. Exiting!')
-                    
                 else:
                     # no reference period specified: indices over entire length of the simulation
-                    indsyrref = [j for j,v in enumerate(dates_years)]
+                    indsyrref = [j for j,v in enumerate(dates.year)]
 
                 # loop over months
                 for i in range(12):
                     m = i+1.
-                    indsm = [j for j,v in enumerate(dates_months) if v == m]
-                    indsmref = [j for j,v in enumerate(dates_months) if ((v == m) and (j in indsyrref))]
+                    print('...calculating climo for month:', m)
+                    indsm = [j for j,v in enumerate(dates.month) if v == m]
+                    indsmref = [j for j,v in enumerate(dates.month) if ((v == m) and (j in indsyrref))]
                     climo_month[i] = np.nanmean(data_var[indsmref], axis=0)
                     data_var[indsm] = (data_var[indsm] - climo_month[i])
-
+                    
                 climo = climo_month
 
+        
+            elif timetype == 'time_months':
+                # monthly data, but time-averaged already
+                # ---------------------------------------
+
+                axtime  = timecoords_dict['time']
+                axmonth = timecoords_dict['months']
+                print(axtime, axmonth)
+                print(data_var.shape)
+                
+                # monthly climatology: declaring the array depending on data type
+                if vartype == '0D:time series':
+                    climo_month = np.zeros((12))
+                elif  vartype == '1D:meridional':
+                    _,_,ndim1 = data_var.shape
+                    climo_month = np.zeros([12, ndim1], dtype=float)
+                elif '2D' in vartype:
+                    _,_,ndim1,ndim2 = data_var.shape
+                    climo_month = np.zeros([12, ndim1, ndim2], dtype=float)
+
+                # indices corresponding to reference period, if specified                
+                if anom_ref is not None:
+                    indsyrref = [j for j,v in enumerate(dates.year) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
+                    # overlap?
+                    if len(indsyrref) == 0:
+                        raise SystemExit('ERROR in anomaly calculation: '
+                                         ' No overlap between prior simulation'
+                                         ' and specified reference period. Exiting!')
+                else:
+                    # no reference period specified: indices over entire length of the simulation
+                    indsyrref = [j for j,v in enumerate(dates.year)]
+                
+                # loop over months
+                for i in range(12):
+                    m = i+1
+                    print('...calculating climo for month:', m)
+                    climo_month[i] = np.nanmean(data_var[indsyrref,i], axis=0)
+                    data_var[:,i] = (data_var[:,i] - climo_month[i])
+                
+                climo = climo_month
                 
             else:
-                # other than monthly data
+                # monthly data not available
+                # --------------------------
+
                 # indices corresponding to reference period                
                 if anom_ref is not None:
                     indsyrref = [j for j,v in enumerate(dates) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
@@ -2544,13 +2654,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 
                 # calculate anomalies
                 data_var = (data_var - climo)
-                
-
-
-                
-            exit(1) # RT ... ... ... 
-
-                
+            
 
         elif kind == 'full':
             print('Full field provided as the prior')
@@ -2568,6 +2672,9 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         # Possibly detrend the prior
         # --------------------------
         if detrend:
+
+            # RT ... ... ... NOT YET FULLY FUNCTIONAL ... ... ... 
+            
             print('Detrending the prior for variable: '+var_to_extract)
             if vartype == '0D:time series':
                 xdim = data_var.shape[0]
@@ -2617,8 +2724,27 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         #    averaging interval.
         # ------------------------------------------------------------------------
 
-        if list(outtimeavg.keys())[0] == 'annual':
-            print('Averaging over month sequence:', outtimeavg['annual'])
+        # parse/validate information on time averaging
+        # --------------------------------------------
+        if 'annual' in outtimeavg.keys():
+            year_avg = 1
+            season_avg = outtimeavg['annual']
+
+        elif 'multiyear' in outtimeavg.keys():
+            year_avg = outtimeavg['multiyear'][0]
+            if 'season' in outtimeavg.keys():
+                season_avg = outtimeavg['season']
+            else:
+                season_avg = None
+        else:
+            raise SystemExit('In read_gridded_data_TraCE21ka: Unrecognized '
+                             'time averaging configuration. Exiting.')
+
+                
+        if year_avg == 1:
+            # Annual/seasonal averaging
+            # -------------------------
+            print('Annual averaging over month sequence:', season_avg)
 
             # check availability of monthly data
             if time_resolution == monthly:
@@ -2631,7 +2757,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 indsclimo = sorted([item-1 for item in avgmonths])
         
                 # List years available in dataset and sort
-                years_all = [d for d in dates_years]
+                years_all = [d for d in dates.year]
                 years     = list(set(years_all)) # 'set' used to retain unique values in list
                 years.sort() # sort the list
                 ntime = len(years)
@@ -2640,17 +2766,20 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 if vartype == '0D:time series':
                     value = np.zeros([ntime], dtype=float) # vartype = '0D:time series' 
                 elif vartype == '1D:meridional':
-                    value = np.zeros([ntime, vardims[1]], dtype=float)
+                    _, ndim1 = data_var.shape
+                    value = np.zeros([ntime, ndim1], dtype=float)
                 elif '2D' in vartype:
-                    value = np.zeros([ntime, vardims[1], vardims[2]], dtype=float)
+                    _, ndim1, ndim2 = data_var.shape
+                    value = np.zeros([ntime, ndim1, ndim2], dtype=float)
+
                 # really initialize with missing values (NaNs)
                 value[:] = np.nan 
                 
                 # Loop over years in dataset (less memory intensive...otherwise need to deal with large arrays) 
                 for i in range(ntime):
-                    tindsyr   = [k for k,d in enumerate(dates_years) if d == years[i]    and dates_months[k] in year_current]
-                    tindsyrm1 = [k for k,d in enumerate(dates_years) if d == years[i]-1. and dates_months[k] in year_before]
-                    tindsyrp1 = [k for k,d in enumerate(dates_years) if d == years[i]+1. and dates_months[k] in year_follow]
+                    tindsyr   = [k for k,d in enumerate(dates.year) if d == years[i]    and dates.month[k] in year_current]
+                    tindsyrm1 = [k for k,d in enumerate(dates.year) if d == years[i]-1. and dates.month[k] in year_before]
+                    tindsyrp1 = [k for k,d in enumerate(dates.year) if d == years[i]+1. and dates.month[k] in year_follow]
                     indsyr = tindsyrm1+tindsyr+tindsyrp1
 
                     if vartype == '0D:time series':
@@ -2668,48 +2797,87 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
                 climo = np.mean(climo_month[indsclimo], axis=0)
 
             else:
-                print('ERROR: Specified averaging requires monthly data')
-                print('       Here we have data with temporal resolution of ', time_resolution, 'years')
-                print('       Exiting!')
-                raise SystemExit()
-                
-        elif list(outtimeavg.keys())[0] == 'multiyear':
-            print('Averaging period (years):', outtimeavg['multiyear'])
+                raise SystemExit('In read_gridded_data_TraCE21ka: '
+                                 'Specified averaging requires monthly data '
+                                 'but data has temporal resolution of %f years. '
+                                 'Exiting' %time_resolution)
 
-            avg_period = float(outtimeavg['multiyear'][0])
+        elif year_avg > 1:
+            # Multiyear averaging, possible seasonal as well
+            # ----------------------------------------------
+            print('Averaging period (years):', year_avg)
+
+            avg_period = float(year_avg)
 
             # check if specified avg. period compatible with the available data
             if avg_period < time_resolution:
-                print('ERROR: Specified averaging requires data with higher temporal resolution!')
-                print('       Here we have data with temporal resolution of ', time_resolution, 'years')
-                print('       while specified averaging period is:', avg_period, ' yrs')
-                print('       Exiting!')
-                raise SystemExit()
+                raise SystemExit('In read_gridded_data_TraCE21ka: '
+                                 'Specified averaging requires data with higher temporal resolution. '
+                                 'Data has temporal resolution of %f years, '
+                                 'while specified averaging period is %f years. '
+                                 'Exiting.' %(time_resolution, avg_period))
             else:
                 pass # ok, do nothing here
 
+
             # How many averaged data can be calculated w/ the dataset?
+            years = dates.year
             nbpts = int(avg_period/time_resolution)
             years_range = years[-1] - years[0]
-            nbintervals = int(math.modf(years_range/avg_period)[1])
+            nbintervals = int(math.modf(years_range/avg_period)[1])            
 
+            # Is averaging over specific season requested?
+            # If so, is monthly data available?
+            if season_avg:
+                if timetype != 'time_months':
+                    raise SystemExit('In read_gridded_data_TraCE21ka: '
+                                     'Averaging over a season is requested, but monthly '
+                                     'information is not available in data. Exiting.')
+
+                # data available, do the seasonal averaging
+                # use np.take to extract the proper data slice
+                indices = [item-1 for item in season_avg]
+                data_var_to_average = np.nanmean(np.take(data_var, indices, axis=1), axis=1)
+                
+            else:
+                # no seasonal averaging requested
+                if timetype == 'time_months':
+                    # monthly info available, average over the annual period
+                    indices = list(range(0,12))
+                    data_var_to_average = np.nanmean(np.take(data_var, indices, axis=1), axis=1)
+                else:
+                    # simply use original array used for next step
+                    data_var_to_average = data_var
+
+
+            # Do the multiyear averaging
+            # --------------------------
             datesYears = np.zeros([nbintervals])
             if vartype == '0D:time series':
                 value = np.zeros([nbintervals], dtype=float)
             elif vartype == '1D:meridional':
-                value = np.zeros([nbintervals, vardims[1]], dtype=float)
-            elif '2D' in vartype: 
-                value = np.zeros([nbintervals, vardims[1], vardims[2]])
-            # really initialize with missing values (NaNs)
+                _, ndim1 = data_var_to_average.shape
+                value = np.zeros([nbintervals, ndim1], dtype=float)
+            elif '2D' in vartype:
+                _, ndim1, ndim2 = data_var_to_average.shape
+                value = np.zeros([nbintervals, ndim1, ndim2])
+
+            # initialize array with missing values (NaNs)
             value[:] = np.nan
 
             for i in range(nbintervals):
                 edgel = i*nbpts
                 edger = edgel+nbpts
                 datesYears[i] = np.mean(years[edgel:edger])
-                value[i] = np.nanmean(data_var[edgel:edger], axis=0)
+                value[i] = np.nanmean(data_var_to_average[edgel:edger], axis=0)
 
-        
+                
+            print(var_to_extract, ': Global(time-averaged): mean=', np.nanmean(value), ' , std-dev=', np.nanstd(value))
+
+            
+        # ------------
+        # For output :
+        # ------------
         # Dictionary of dictionaries
         # ex. data access : datadict['tas_sfc_Amon']['years'] => arrays containing years of the 'tas' data
         #                   datadict['tas_sfc_Amon']['value'] => array of 'tas' data values etc ...
@@ -2718,15 +2886,16 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
         d['years']   = datesYears
         d['value']   = value
         d['climo']   = climo
-        d['spacecoords'] = spacecoords
-        if vartype == '1D:meridional':
-            d[spacecoords[0]] = spacevar1
-        elif '2D' in vartype:
-            d[spacecoords[0]] = spacevar1
-            d[spacecoords[1]] = spacevar2
+
+        if vartype != '0D:time series':
+            d['spacecoords'] = tuple(spacecoords_dict.keys())
+            for coord in tuple(spacecoords_dict.keys()):
+                d[coord] = spacecoords_dict[coord]
+        else:
+            d['spacecoords'] = None
+
 
         datadict[vardef] = d
-
 
     return datadict
 
