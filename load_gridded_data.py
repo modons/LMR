@@ -2423,7 +2423,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 
             # RT ... ... ... NOT YET FULLY FUNCTIONAL ... ... ... 
             # ... not compatible with all the data types (dims) that are now handled by this function ...
-            raise SystemExit('Detrending of the prior not yet completely functional for the TraCE data.'
+            raise SystemExit('Detrending of the prior not yet completely functional for the TraCE data.')
 
             
             print('Detrending the prior for variable: '+var_to_extract)
