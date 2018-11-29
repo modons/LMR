@@ -291,7 +291,7 @@ ccsm3_trace21ka:
                      'prw_int_Adec', 'pr_sfc_Adec',
                      'zg_500hPa_Adec', 'zg_850hPa_Adec', 'wap_700hPa_Adec',
                      'ta_1000hPa_Adec', 'ta_850hPa_Adec', 'ta_700hPa_Adec', 'ta_600hPa_Adec', 'ta_500hPa_Adec', 
-                     'tos_sfc_Odec', 'sos_sfc_Odec']
+                     'tos_sfc_Odec', 'sos_sfc_Odec', 'tos_sfc_Odecmon', 'sos_sfc_Odecmon', 'toGA_0-200m_Odec']
 
   datadir: null
   datafile: '[vardef_template]_CCSM3_TraCE21ka.nc'

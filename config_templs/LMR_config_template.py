@@ -1493,7 +1493,8 @@ class psm(ConfigGroup):
             super().__init__(**kwargs)
 
             # define state variable needed to calculate Ye's
-            self.psm_required_variables = {'tos_sfc_Odec': 'full'}
+            #self.psm_required_variables = {'tos_sfc_Odec': 'full'}
+            self.psm_required_variables = {'tos_sfc_Odecmon': 'full'}            
 
 
     class bayesreg_tex86(ConfigGroup):
@@ -1520,8 +1521,9 @@ class psm(ConfigGroup):
             super().__init__(**kwargs)
 
             # define state variable needed to calculate Ye's
-            self.psm_required_variables = {'tos_sfc_Odec': 'full'}
-
+            #self.psm_required_variables = {'tos_sfc_Odec': 'full'}
+            #self.psm_required_variables = {'tos_sfc_Odecmon': 'full'}
+            self.psm_required_variables = {'toGA_0-200m_Odec': 'full'}
 
     class bayesreg_d18o(ConfigGroup):
         """
@@ -1548,8 +1550,9 @@ class psm(ConfigGroup):
             super().__init__(**kwargs)
 
             # define state variable needed to calculate Ye's
-            self.psm_required_variables = {'tos_sfc_Odec': 'full', 'sos_sfc_Odec': 'full'}
-
+            #self.psm_required_variables = {'tos_sfc_Odec': 'full', 'sos_sfc_Odec': 'full'}
+            self.psm_required_variables = {'tos_sfc_Odecmon': 'full', 'sos_sfc_Odecmon': 'full'}
+            
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
         self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))

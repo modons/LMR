@@ -1715,12 +1715,15 @@ class BayesRegUK37PSM(BayesRegPSM):
         # ----------------------
 
         # Defining state variables to consider in the calculation of Ye's
-
-        state_var = list(self.psm_required_variables.keys())[0]  # TODO(brews): This is going to be a problem if we need more than one variable for the PSM.
-        if state_var not in list(X_state_info.keys()):
-            raise KeyError('Needed variable not in state vector for Ye'
-                           ' calculation.')
-
+        # 
+        for state_var in list(self.psm_required_variables.keys()):
+            try:
+                varok = X_state_info[state_var]                
+            except KeyError as ekey:
+                print('In BayesRegUK37PSM: Needed variable (%s) not in state vector for Ye calculation.'
+                      %ekey)
+                raise SystemExit()
+        
         var_startidx, var_endidx = X_state_info[state_var]['pos']
         ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
         ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
@@ -1733,10 +1736,18 @@ class BayesRegUK37PSM(BayesRegPSM):
                                                  getvalid=True)
 
         # check if gridpoint_data is in K: need deg. C for forward model
-        # crude check...
-        if np.nanmin(var_data) > 200.0:
-            gridpoint_data = gridpoint_data - 273.15
-
+        # crude check...        
+        #if np.nanmin(var_data) > 200.0:
+        #    gridpoint_data = gridpoint_data - 273.15
+        # RT - 11/18: More robust use of "units" metadata now included in state vector info.
+        if np.isfinite(gridpoint_data).all() and np.any(gridpoint_data):
+            if X_state_info[state_var]['units']:
+                if X_state_info[state_var]['units'] == 'K' or X_state_info[state_var]['units'] == 'Kelvin':
+                    gridpoint_data = gridpoint_data - 273.15
+        else:
+            gridpoint_data[:] = np.nan
+            
+            
         Ye_ens = self._mcmc_predict(x=gridpoint_data)
         # take the mean of the ensemble of estimates
         Ye = np.mean(Ye_ens, axis=1)
@@ -1831,12 +1842,14 @@ class BayesRegTEX86PSM(BayesRegPSM):
 
         # Defining state variables to consider in the calculation of Ye's
         #
-        state_var = list(self.psm_required_variables.keys())[
-            0]  # TODO(brews): This is going to be a problem if we need more than one variable for the PSM.
-        if state_var not in list(X_state_info.keys()):
-            raise KeyError('Needed variable not in state vector for Ye'
-                           ' calculation.')
-
+        for state_var in list(self.psm_required_variables.keys()):
+            try:
+                varok = X_state_info[state_var]                
+            except KeyError as ekey:
+                print('In BayesRegTEX86PSM: Needed variable (%s) not in state vector for Ye calculation.'
+                      %ekey)
+                raise SystemExit()
+        
         var_startidx, var_endidx = X_state_info[state_var]['pos']
         ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
         ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
@@ -1850,9 +1863,16 @@ class BayesRegTEX86PSM(BayesRegPSM):
 
         # check if gridpoint_data is in K: need deg. C for forward model
         # crude check...
-        if np.nanmin(var_data) > 200.0:
-            gridpoint_data = gridpoint_data - 273.15
-
+        #if np.nanmin(var_data) > 200.0:
+        #    gridpoint_data = gridpoint_data - 273.15
+        # RT - 11/18: More robust use of "units" metadata now included in state vector info.
+        if np.isfinite(gridpoint_data).all() and np.any(gridpoint_data):
+            if X_state_info[state_var]['units']:
+                if X_state_info[state_var]['units'] == 'K' or X_state_info[state_var]['units'] == 'Kelvin':
+                    gridpoint_data = gridpoint_data - 273.15
+        else:
+            gridpoint_data[:] = np.nan
+                
         ye_ens = self._mcmc_predict(x=gridpoint_data)
         ye = np.mean(ye_ens, axis=1)
         return ye
@@ -1960,17 +1980,28 @@ class BayesRegD18oPSM(BayesRegPSM):
         # Defining state variables to consider in the calculation of Ye's
         #
         for state_var in list(self.psm_required_variables.keys()):
-            if state_var not in list(X_state_info.keys()):
-                raise KeyError('Needed variable not in state vector for Ye calculation.')
-
-        xb_sst = self._get_gridpoint_data('tos_sfc_Odec', Xb, X_state_info, X_coords)
-        xb_sos = self._get_gridpoint_data('sos_sfc_Odec', Xb, X_state_info, X_coords)
+            try:
+                varok = X_state_info[state_var]                
+            except KeyError as ekey:
+                print('In BayesRegD18oPSM: Needed variable (%s) not in state vector for Ye calculation.'
+                      %ekey)
+                raise SystemExit()
+                
+        xb_sst = self._get_gridpoint_data('tos_sfc_Odecmon', Xb, X_state_info, X_coords)
+        xb_sos = self._get_gridpoint_data('sos_sfc_Odecmon', Xb, X_state_info, X_coords)
 
         # check if gridpoint_data is in K: need deg. C for forward model
         # crude check...
-        if np.nanmin(xb_sst) > 200.0:
-            xb_sst = xb_sst - 273.15
-
+        #if np.nanmin(xb_sst) > 200.0:
+        #    xb_sst = xb_sst - 273.15
+        # RT - 11/18: More robust use of "units" metadata now included in state vector info.
+        if np.isfinite(xb_sst).all() and np.any(xb_sst):
+            if X_state_info['tos_sfc_Odecmon']['units']:
+                if X_state_info['tos_sfc_Odecmon']['units'] == 'K' or X_state_info['tos_sfc_Odecmon']['units'] == 'Kelvin':
+                    xb_sst = xb_sst - 273.15
+        else:
+            xb_sst[:] = np.nan
+                
         ye_ens = self._mcmc_predict(xb_sst, xb_sos)
         ye = np.mean(ye_ens, axis=1)
         return ye

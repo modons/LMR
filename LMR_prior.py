@@ -124,7 +124,8 @@ class prior_master(object):
         for var in list(self.prior_dict.keys()):
 
             vartype = self.prior_dict[var]['vartype']
-
+            units = self.prior_dict[var]['units']
+            
             dct = {}
             timedim.append(len(self.prior_dict[var]['years']))
 
@@ -178,6 +179,8 @@ class prior_master(object):
                 dct['spacecoords'] = None
                 dct['spacedims'] = None
                 dct['vartype'] = '0D:time series'
+
+            dct['units'] = units
                 
             # assign to master dictionary
             state_vect_info[var] = dct

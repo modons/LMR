@@ -166,7 +166,7 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
     dist = haversine(lon_pt, lat_pt, lon_data, lat_data)
     workdist = np.ravel(dist)
     sorteddist = np.sort(workdist)
-
+    
     # Find closest grid point with *valid* data.
     # Impose max of search distance equal to twice the representative distance
     # Start with min dist.
@@ -187,13 +187,16 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
 
             if len(inds) == 2:
                 test_valid = np.isfinite(data[:,inds[0],inds[1]])
-            elif len(inds) == 1:
+                test_valid2 = np.all(data[:,inds[0],inds[1]])
+            elif len(inds) == 1:                
                 #test_valid = np.isfinite(data[:,inds])
                 test_valid = np.isfinite(data[inds,:])
+                test_valid2 = np.all(data[inds,:])                
             else:
                 print('ERROR in distance calc in get_data_closest_gridpt!')
                 raise SystemExit(1)            
-            if np.all(test_valid): valid = True
+            #if np.all(test_valid): valid = True
+            if np.all(test_valid) and test_valid2: valid = True
             i +=1
             distpt = sorteddist[i]
 

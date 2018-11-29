@@ -142,11 +142,14 @@ def main(cfgin=None, config_path=None):
     # Finished checking ...
 
     # Loop over all psm types found in the configuration
-    for psm_key in unique_psm_keys:
+    for psm_key in sorted(unique_psm_keys):
         _log.info('Loading psm information for psm type:' + str(psm_key) + ' ...')
         # re-assign current psm type to all proxy records
         # TODO: Could think of implementing filter to restrict to relevant proxy records only
-        for p in proxy_types: proxy_cfg.proxy_psm_type[p] = psm_key
+        # RT 11/18: Only do this if NOT the DADT baysreg PSM. Stricter association of PSM type and proxy type
+        # and proxy type for these, compared to the regression-based PSMs used for Last Millennium recons.
+        if 'bayesreg' not in psm_key:
+            for p in proxy_types: proxy_cfg.proxy_psm_type[p] = psm_key
 
         proxy_objects = proxy_class.load_all_annual_no_filtering(cfg)
 
@@ -183,25 +186,29 @@ def main(cfgin=None, config_path=None):
             for item in list(statevars.keys()): statevars[item] = vkind
         elif psm_key == 'bayesreg_uk37':
             statevars = cfg.psm.bayesreg_uk37.psm_required_variables
-            psm_avg = 'multiyear'
+            #psm_avg = 'multiyear'
+            psm_avg = 'multiyear-season'
         elif psm_key == 'bayesreg_tex86':
             statevars = cfg.psm.bayesreg_tex86.psm_required_variables
             psm_avg = 'multiyear'
-            # for now ... statevars = cfg.psm.bayesreg_tex86.psm_required_variables
         elif psm_key == 'bayesreg_d18o_pachyderma':
             statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            psm_avg = 'multiyear'
+            #psm_avg = 'multiyear'
+            psm_avg = 'multiyear-season'
         elif psm_key == 'bayesreg_d18o_bulloides':
             statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            psm_avg = 'multiyear'
+            #psm_avg = 'multiyear'
+            psm_avg = 'multiyear-season'
         elif psm_key == 'bayesreg_d18o_sacculifer':
             statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            psm_avg = 'multiyear'
+            #psm_avg = 'multiyear'
+            psm_avg = 'multiyear-season'
         elif psm_key == 'bayesreg_d18o_ruberwhite':
             statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            psm_avg = 'multiyear'
+            #psm_avg = 'multiyear'
+            psm_avg = 'multiyear-season'
         else:
-            raise SystemExit
+            raise SystemExit()
 
         # Define required temporal averaging
         if psm_avg == 'annual':
@@ -245,7 +252,19 @@ def main(cfgin=None, config_path=None):
 
             base_time_interval = 'annual'
 
-        elif  psm_avg == 'multiyear':
+        elif psm_avg == 'multiyear-season':
+            base_time_interval = 'multiyear'
+
+            # map out all possible seasonality vectors that will have to be considered
+            season_vects = []
+            for pobj in proxy_objects:
+                if pobj.psm_obj.psm_key == psm_key:
+                    season_vects.append(pobj.seasonality)
+            season_unique = []
+            for item in season_vects:
+                if item not in season_unique:season_unique.append(item)
+            
+        elif psm_avg == 'multiyear':
             season_unique = [cfg.prior.avgInterval['multiyear']]
             base_time_interval = 'multiyear'
 
@@ -273,9 +292,13 @@ def main(cfgin=None, config_path=None):
 
             # Load the prior data, averaged over interval corresponding
             # to current "season" (i.e. proxy seasonality)
-            #X.avgInterval = season
-            X.avgInterval = {base_time_interval: season} # new definition
+            # RT Nov 2018: additional (crude) logic to handle special case of DADT "seasonal" PSMs
+            if psm_avg == 'multiyear-season':
+                X.avgInterval = {'multiyear': cfg.prior.avgInterval['multiyear'], 'season': season}                
+            else:
+                X.avgInterval = {base_time_interval: season}
 
+            # populate the prior state vector
             X.populate_ensemble(cfg.prior.prior_source, cfg.prior)
 
             statedim = X.ens.shape[0]
@@ -285,7 +308,7 @@ def main(cfgin=None, config_path=None):
             # Calculate the Ye values
             # -----------------------
             if firstloop:
-                # Declare array of ye values if first time in loop
+                # Declare array of ye values if first time in loop over psm types
                 ye_out = np.zeros((num_proxy, ntottime))
                 # initialize with nan
                 ye_out[:] = np.nan
@@ -306,9 +329,20 @@ def main(cfgin=None, config_path=None):
                             _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
                             ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
                 else:
-                    _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
-                    ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
+                    # "multiyear" PSM:
+                    # Restrict to proxy records associated with current PSM (psm_key)                    
+                    if 'bayesreg' in psm_key and pobj.psm_obj.psm_key == psm_key:
+                        if psm_avg == 'multiyear-season':
+                            # Restrict to proxy records with current 'season'
+                            if pobj.seasonality == season:
+                                _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
+                                ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
+                        else:
+                            # no proxy seasonality to consider
+                            _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
+                            ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
 
+        # -> here: end of loop on definitions of time averages (e.g. season)
 
         elapsed = timeit.default_timer() - masterstarttime
         _log.info('Elapsed time:' + str(elapsed) + ' secs')
