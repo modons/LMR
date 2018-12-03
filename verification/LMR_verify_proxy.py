@@ -109,17 +109,30 @@ niters = len(dirset)
 # query config found in first MC directory
 # check for experiment config information in input directory 
 
-yaml_file = join(dirset[0], 'config.yml.brewster_merge')
-cfgpy_file = join(dirset[0], 'LMR_config.py')
-if isfile(yaml_file):
+cfgfiles = glob.glob(dirset[0]+'/config*.yml')
+if len(cfgfiles) == 1:
+    yaml_file = cfgfiles[0]
+elif len(cfgfiles) > 1:
+    print('Multiple config*.yml files have been found in %s. Only one should be there.' %dirset[0])
+else:
+    yaml_file = None
+    cfgfiles = glob.glob(dirset[0]+'/LMR_config*.py')
+    if len(cfgfiles) == 1:
+        cfgpy_file = cfgfiles[0]
+    elif len(cfgfiles) > 1:
+        print('Multiple LMR_config*.py have been found in %s. Only one should be there.' %dirset[0])
+    else:
+        cfgpy_file = None
+
+
+if yaml_file:
     # .yml file?
     print('Loading configuration: {}'.format(yaml_file))
-
     f = open(yaml_file, 'r')
     yml_dict = yaml.load(f)
     update_result = LMR_config.update_config_class_yaml(yml_dict,
                                                         LMR_config)
-elif isfile(cfgpy_file):
+elif cfgpy_file:
     # LMR_config.py file?
     print('Loading configuration: {}'.format(cfgpy_file))
     file_name = cfgpy_file.split('/')[-1]
@@ -162,6 +175,8 @@ ids_by_grp, proxy_objects = proxy_class.load_all(cfg,verif_period,None)
 print('\ntotal number of iterations in directory: ' + str(ntotiters))
 print('number of iterations considered        : ' + str(niters))
 
+recon_resolution = cfg.core.recon_timescale
+proxy_resolution = proxy_cfg.proxy_resolution[0]
 
 # ---------------------------------------------
 # Loop over the Monte-Carlo reconstructions ---
@@ -193,9 +208,6 @@ for dir in dirset:
     stateDim = Xprior_statevector['stateDim']    
     # extract the Ye values from the state vector
     Ye_prior = Xb_one_aug[stateDim:,:]
-    
-    #print Xb_one_aug.shape, Ye_prior.shape, len(prx_sites)
-
     
     # ---------------------
     # Loop over proxies ---
@@ -241,8 +253,45 @@ for dir in dirset:
         df.columns = headers
         
         # Add proxy data        
-        frame = pd.DataFrame({'time':pobj.time, 'y': pobj.values})
-        df = df.merge(frame, how='outer', on='time')
+        # --------------
+        # - check order of proxy data, flip if needed (need to be in order of older to recent)
+        if pobj.time[0] > pobj.time[-1]:
+            prx_time = np.flipud(pobj.time)
+            prx_vals = np.flipud(pobj.values)
+        else:
+            prx_time = pobj.time
+            prx_vals = pobj.values
+
+        # check time information about proxies vs reconstruction
+        if float(recon_resolution) == 1.0 and (proxy_resolution == 1.0):
+            # ... LM configuration ...
+            frame_prx = pd.DataFrame({'time':prx_time, 'y': prx_vals})
+
+        else:
+            # ... DADT configuration ...
+            # - correspondance with recon. times: redefine proxy times based on intervals in recon.
+            nt, = Ye_years.shape
+            time_bounds = np.zeros([nt,2])
+            time_bounds[:,0] = Ye_years - recon_resolution*0.5
+            time_bounds[:,1] = Ye_years + recon_resolution*0.5
+
+            prx_yrs = np.zeros(prx_time.shape)
+            for i,yr in enumerate(prx_time):
+                inds = [j for j,bnd in enumerate(time_bounds) if bnd[0] <= yr < bnd[1]]
+                if len(inds) > 0:
+                    prx_yrs[i] = Ye_years[inds[0]]
+                else:
+                    prx_yrs[i] = yr
+
+            frame = pd.DataFrame({'time':prx_yrs, 'y': prx_vals})
+            # handle possible multiple proxy values time interval: if so, calculate mean 
+            frame_prx = frame.groupby('time')['y'].mean()
+            # make sure we have a properly indexed DataFrame
+            frame_prx = frame_prx.to_frame()
+            frame_prx = frame_prx.reset_index()
+
+        # merge proxy series with recon. proxy estimates
+        df = df.merge(frame_prx, how='outer', on='time')
 
         # ensure all df entries are floats: if not, some calculations choke
         df = df.astype(np.float)
@@ -259,8 +308,6 @@ for dir in dirset:
         if obcount < 50:
             # too few points for verification, move to next record
             continue
-
-        pcount_tot += 1
 
 
         indok = df['y'].notnull()
@@ -282,9 +329,9 @@ for dir in dirset:
         dfp = pd.DataFrame(ye_data)
         dfp.columns = headers
         
-        # Add proxy data        
-        frame = pd.DataFrame({'time':pobj.time, 'y': pobj.values})
-        dfp = dfp.merge(frame, how='outer', on='time')
+        # Add proxy data
+        # --------------
+        dfp = dfp.merge(frame_prx, how='outer', on='time')
 
         # ensure all df entries are floats: if not, some calculations choke
         dfp = dfp.astype(np.float)
@@ -310,7 +357,8 @@ for dir in dirset:
 
         
         if verbose > 0:
-            print('================================================')
+            if pcount_tot == 0:
+                print('=======================================================')
             print('Site:', p)
             print('status:', pstatus)
             print('Number of verification points    :', obcount)            
@@ -330,7 +378,7 @@ for dir in dirset:
             print('Ensemble-mean Correlation(prior) :', corr)
             print('Ensemble-mean CE(prior)          :', coefficient_efficiency(dfp['y'][indok],dfp['Ye_prior_ensMean'][indok]))
             print('Ensemble calibration ratio(prior):', prior_calib_ratio)
-            print('================================================')
+            print('=======================================================')
 
 
         # Fill dictionaries with verification statistics for this MC iteration
@@ -397,7 +445,9 @@ for dir in dirset:
             dict_verif[p]['ts_PriorEnsMean'] = dfp['Ye_prior_ensMean'][indok].values            
         else:
             print('proxy status undefined...')
-                        
+
+        pcount_tot += 1
+            
     verif_listdict.append(dict_verif)
     assim_listdict.append(dict_assim)
 
@@ -595,6 +645,6 @@ if nb_tot_assim > 0:
 
     
 verif_time = time() - begin_time
-print('=======================================================')
+print('\n=======================================================')
 print('Verification completed in '+ str(verif_time/3600.0)+' hours')
 print('=======================================================')

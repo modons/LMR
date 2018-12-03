@@ -76,7 +76,7 @@ fcolor = ['blue', 'red']
 
 #proxies = 'PAGES2kv1'
 proxies = 'LMRdb'
-
+#proxies = 'NCDCdadt'
 
 # Assign symbol to proxy types for plotting: dependent on proxy database used.
 if proxies == 'PAGES2kv1':
@@ -116,7 +116,16 @@ elif proxies == 'LMRdb':
                    'Bivalve_d18O'                  :'8',\
                    'Speleothems_d18O'              :'h',\
     }
-
+elif proxies == 'NCDCdadt':
+    # DADT proxies
+    proxy_verif = {\
+                   'Marine sediments_uk37'            :'s',\
+                   'Marine sediments_tex86'           :'o',\
+                   'Marine sediments_d18o_ruberwhite' :'^',\
+                   'Marine sediments_d18o_sacculifer' :'v',\
+                   'Marine sediments_d18o_bulloides'  :'>',\
+                   'Marine sediments_d18o_pachyderma' :'<',\
+    }
 else:
     raise SystemExit('ERROR in the especification of the proxy dataset to be considered. Exiting!')
 
@@ -262,8 +271,14 @@ def main():
                     else:
                         proxy_types = proxy
 
-                    tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types]
+
+                    #stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    stat = [item for sublist in tmp for item in sublist if np.isfinite(item)] # flatten list of lists & eliminate NaNs
                     nbdata = len(stat)
                     mean_stat[p] = np.mean(stat)
                     std_stat[p] = np.std(stat)
@@ -280,7 +295,11 @@ def main():
                         stat_comp.append(stat)
 
                     # Accumulate prior stat
-                    tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types]
                     prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
 
@@ -342,8 +361,14 @@ def main():
                     else:
                         proxy_types = proxy
 
-                    tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types]
+
+                    #stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    stat = [item for sublist in tmp for item in sublist if np.isfinite(item)] # flatten list of lists & eliminate NaNs
                     nbdata = len(stat)
                     mean_stat[p] = np.mean(stat)
                     std_stat[p] = np.std(stat)
@@ -362,7 +387,11 @@ def main():
                         stat_comp.append(stat)
 
                     # Accumulate prior stat
-                    tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types]
                     prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
 
@@ -418,8 +447,18 @@ def main():
                     else:
                         proxy_types = proxy
 
-                    tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types]
+                        
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):                    
+                        tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types]
+
                     statPost  = [item for sublist in tmpPost for item in sublist]  # flatten list of lists
                     statPrior = [item for sublist in tmpPrior for item in sublist] # flatten list of lists
 
