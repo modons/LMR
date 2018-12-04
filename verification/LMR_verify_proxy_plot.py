@@ -18,6 +18,8 @@ Revisions:
             over two different time periods [R. Tardif - U. of Washington, Dec. 2017]
           - Added the production of plots showing results per individual proxy records.
             [R. Tardif - U. of Washington, March 2018]
+          - Now can be run with NCDCdadt proxies
+            [R. Tardif - U. of Washington, March 2018]
 """
 import os
 import numpy as np
@@ -125,6 +127,8 @@ elif proxies == 'NCDCdadt':
                    'Marine sediments_d18o_sacculifer' :'v',\
                    'Marine sediments_d18o_bulloides'  :'>',\
                    'Marine sediments_d18o_pachyderma' :'<',\
+                   'Marine sediments_mgca_pooled_bcp' :'H',\'
+                   'Marine sediments_mgca_pooled_red' :'h',\'
     }
 else:
     raise SystemExit('ERROR in the especification of the proxy dataset to be considered. Exiting!')
@@ -144,12 +148,11 @@ r_crit = 0.0
 datadir_input = '/Users/hakim/data/LMR_python3/archive/'
 
 # Name of experiment
-#nexp = 'test'
-nexp = 'dadt_allprior'
+nexp = 'test'
 
 #verif_period = [[1880,2000],[0,1879]]
 #verif_period = [[1900,2000],[1800,1899]]
-verif_period = [[-22000,-200],[-22000,-200]]
+verif_period = [[-22000,-200],[-199,2000]]
 
 # Output directory, where the figs will be dumped.
 #datadir_output = datadir_input # if want to keep things tidy

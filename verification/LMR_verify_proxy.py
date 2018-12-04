@@ -27,6 +27,8 @@ Revisions:
            - General re-org. of code for input of estimated proxy values from 
              withheld records now stored in analysis_Ye.pckl file. 
              [R. Tardif, U. of Washington, Sept 2017]
+           - Modifs. enabling application of module on low resolution proxies from NCDCdadt db.
+             [R. Tardif, U. of Washington, Nov. 2018]
 """
 import os, sys
 import numpy as np
@@ -51,13 +53,13 @@ verbose = 1
 # Input directory, where to find the reconstruction experiment data
 #datadir_input  = '/home/disk/kalman2/wperkins/LMR_output/archive' # production recons
 #datadir_input  = '/home/disk/kalman3/hakim/LMR/'
-datadir_input  = '/home/disk/kalman3/rtardif/LMR/output'
+#datadir_input  = '/home/disk/kalman3/rtardif/LMR/output'
 #datadir_input  = '/home/disk/ekman4/rtardif/LMR/output'
 datadir_input = '/Users/hakim/data/LMR_python3/archive/'
 
 # Name of experiment
 nexp = 'test'
-nexp = 'dadt_allprior'
+
 # perform verification using all recon. MC realizations ( MCset = None )
 # or over a custom selection ( MCset = (begin,end) )
 # ex. MCset = (0,0)    -> only the first MC run
@@ -71,7 +73,7 @@ MCset = None
 #verif_period = (0, 1879)
 #verif_period = (1880, 2000)
 #verif_period = (1900, 2000)
-verif_period = (-22000,-200)
+verif_period = (-22000,2000)
 
 # Output directory, where the verification results & figs will be dumped.
 datadir_output = datadir_input # if want to keep things tidy
