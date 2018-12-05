@@ -1009,7 +1009,7 @@ def main():
             cellsPost = [item for item in cells if item[0] in indPost]
             for c in cellsPost: cellDict[c].set_facecolor('darkgray')
 
-            figname = figdir+'/'+nexp+'_verify_proxy_'+sitename
+            figname = figdir+'/'+nexp+'_verify_proxy_'+sitename.replace('/','_')
             plt.savefig(figname+'.png')
             plt.close()
 
