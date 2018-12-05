@@ -278,13 +278,15 @@ for dir in dirset:
             time_bounds[:,1] = Ye_years + recon_resolution*0.5
 
             prx_yrs = np.zeros(prx_time.shape)
+            prx_yrs[:] = np.nan
             for i,yr in enumerate(prx_time):
-                inds = [j for j,bnd in enumerate(time_bounds) if bnd[0] <= yr < bnd[1]]
+                inds = [j for j,bnd in enumerate(time_bounds) if bnd[0] <= yr <= bnd[1]]
                 if len(inds) > 0:
                     prx_yrs[i] = Ye_years[inds[0]]
-                else:
-                    prx_yrs[i] = yr
 
+            prx_vals = prx_vals[~np.isnan(prx_yrs)]
+            prx_yrs  = prx_yrs[~np.isnan(prx_yrs)]
+                    
             frame = pd.DataFrame({'time':prx_yrs, 'y': prx_vals})
             # handle possible multiple proxy values time interval: if so, calculate mean 
             frame_prx = frame.groupby('time')['y'].mean()
@@ -550,6 +552,7 @@ if nb_tot_verif > 0:
         summary_stats_verif[list_sites[k]]['ts_MeanPrior']   = np.mean(ts_prior,axis=0)
         summary_stats_verif[list_sites[k]]['ts_SpreadPrior'] = np.std(ts_prior,axis=0)
 
+        summary_stats_verif[list_sites[k]]['recon_resolution'] = recon_resolution
         
     # Dump data to pickle file
     outfile = open('%s/reconstruction_eval_withheld_proxy_summary.pckl' % (outdir),'wb')
@@ -639,6 +642,7 @@ if nb_tot_assim > 0:
         summary_stats_assim[list_sites[k]]['ts_MeanPrior']   = np.mean(ts_prior,axis=0)
         summary_stats_assim[list_sites[k]]['ts_SpreadPrior'] = np.std(ts_prior,axis=0)
 
+        summary_stats_assim[list_sites[k]]['recon_resolution'] = recon_resolution
         
     # Dump data to pickle file
     outfile = open('%s/reconstruction_eval_assimilated_proxy_summary.pckl' % (outdir),'wb')

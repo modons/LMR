@@ -593,14 +593,15 @@ def main():
 
                 # loop over proxy sites
                 for sitetag in sites:
-                    sitetype = sitetag[0]
-                    sitename = sitetag[1]
-                    sitemarker = proxy_verif[sitetype]
+                    if np.isfinite(workdict[p][sitetag]['MeanCorr']):
+                        sitetype = sitetag[0]
+                        sitename = sitetag[1]
+                        sitemarker = proxy_verif[sitetype]
 
-                    lat = workdict[p][sitetag]['lat']
-                    lon = workdict[p][sitetag]['lon']
-                    x, y = m(lon,lat)
-                    Gplt = m.scatter(x,y,35,c=workdict[p][sitetag]['MeanCorr'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
+                        lat = workdict[p][sitetag]['lat']
+                        lon = workdict[p][sitetag]['lon']
+                        x, y = m(lon,lat)
+                        Gplt = m.scatter(x,y,35,c=workdict[p][sitetag]['MeanCorr'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
 
                 cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
                 cbar.outline.set_linewidth(1.0)
@@ -855,7 +856,9 @@ def main():
                 ts_recon_m_assim = assim_dict[p][site]['ts_MeanRecon']
                 ts_recon_v_assim = assim_dict[p][site]['ts_SpreadRecon']
 
-                ts_years_plot = np.linspace(np.min(ts_years_assim),np.max(ts_years_assim),(np.max(ts_years_assim)-np.min(ts_years_assim))+1)
+                time_resolution = assim_dict[p][site]['recon_resolution']
+                ts_years_plot = np.arange(np.min(ts_years_assim),np.max(ts_years_assim)+1,time_resolution)
+                
                 ts_prior_m_plot = np.zeros(ts_years_plot.shape); ts_prior_m_plot[:] = np.nan
                 ts_recon_m_plot = np.zeros(ts_years_plot.shape); ts_recon_m_plot[:] = np.nan
 
@@ -871,8 +874,8 @@ def main():
 
                 # make the upper subplot
                 ax[0].plot(ts_years_assim,ts_obs_assim, '.', color='#5CB8E6',  label='Proxy values')
-                ax[0].plot(ts_years_plot,ts_prior_m_plot,'-k',lw=3,alpha=0.5,  label='Prior')
-                ax[0].plot(ts_years_plot,ts_recon_m_plot,'-r',lw=2,alpha=0.75, label='Analysis')
+                ax[0].plot(ts_years_plot,ts_prior_m_plot,linestyle='-',marker='.',markersize=3,color='k',lw=3,alpha=0.5,  label='Prior')
+                ax[0].plot(ts_years_plot,ts_recon_m_plot,linestyle='-',marker='.',markersize=2,color='r',lw=2,alpha=0.75, label='Analysis')
 
                 stitle = str(site)+'\nAssimilated'
                 ax[0].set_title(stitle,fontsize=10)
@@ -891,6 +894,8 @@ def main():
                     ts_years_verif = verif_dict[p][site]['ts_years']
                     ts_obs_verif   = verif_dict[p][site]['ts_ProxyValues']
 
+                    time_resolution = verif_dict[p][site]['recon_resolution']
+                    
                     ts_prior_m_verif = verif_dict[p][site]['ts_MeanPrior']
                     ts_prior_v_verif = verif_dict[p][site]['ts_SpreadPrior']
 
@@ -906,6 +911,8 @@ def main():
                     ts_years_verif = assim_dict[p][site]['ts_years']
                     ts_obs_verif   = assim_dict[p][site]['ts_ProxyValues']
 
+                    time_resolution = assim_dict[p][site]['recon_resolution']
+                    
                     ts_prior_m_verif = np.zeros(ts_years_verif.shape); ts_prior_m_verif[:] = np.nan
                     ts_prior_v_verif = np.zeros(ts_years_verif.shape); ts_prior_v_verif[:] = np.nan
 
@@ -918,7 +925,7 @@ def main():
                     VerifReconCE[p] = '{:.2f}'.format(np.nan)
                     
 
-                ts_years_plot = np.linspace(np.min(ts_years_verif),np.max(ts_years_verif),(np.max(ts_years_verif)-np.min(ts_years_verif))+1)
+                ts_years_plot = np.arange(np.min(ts_years_verif),np.max(ts_years_verif)+1,time_resolution)
                 ts_prior_m_plot = np.zeros(ts_years_plot.shape); ts_prior_m_plot[:] = np.nan
                 ts_recon_m_plot = np.zeros(ts_years_plot.shape); ts_recon_m_plot[:] = np.nan
                 
@@ -929,12 +936,12 @@ def main():
                 # make the lower subplot
                 if p == 0:
                     ax[1].plot(ts_years_verif,ts_obs_verif, '.', color='#5CB8E6',label='Proxy data')
-                    ax[1].plot(ts_years_plot,ts_prior_m_plot,'-k',lw=3,alpha=0.5,label='Prior')
-                    ax[1].plot(ts_years_plot,ts_recon_m_plot,'-r',lw=2,alpha=0.75,label='Analysis')
+                    ax[1].plot(ts_years_plot,ts_prior_m_plot,linestyle='-',marker='.',markersize=3,color='k',lw=3,alpha=0.5,label='Prior')
+                    ax[1].plot(ts_years_plot,ts_recon_m_plot,linestyle='-',marker='.',markersize=2,color='r',lw=2,alpha=0.75,label='Analysis')
                 else:
                     ax[1].plot(ts_years_verif,ts_obs_verif, '.', color='#5CB8E6')
-                    ax[1].plot(ts_years_plot,ts_prior_m_plot,'-k',lw=3,alpha=0.5)
-                    ax[1].plot(ts_years_plot,ts_recon_m_plot,'-r',lw=2,alpha=0.75)
+                    ax[1].plot(ts_years_plot,ts_prior_m_plot,linestyle='-',marker='.',markersize=3,color='k',lw=3,alpha=0.5)
+                    ax[1].plot(ts_years_plot,ts_recon_m_plot,linestyle='-',marker='.',markersize=2,color='r',lw=2,alpha=0.75)
 
                 ax[1].set_title('Withheld',fontsize=10)
                 ax[1].set_ylabel('Proxy value')
