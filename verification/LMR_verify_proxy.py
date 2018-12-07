@@ -223,11 +223,15 @@ for dir in dirset:
         # check if proxy data available over verification interval
         indp = [i for i, pobj in enumerate(proxy_objects) if pobj.id == p[1]]
 
+        print('ntimes, nens:',ntimes,nens)
+        print('indp:',indp)
+        
         if len(Ye_years) > 0 and indp:
             pobj = proxy_objects[indp[0]]
             Ye_HXa = Ye_data_MC[p]['HXa'][(Ye_data_MC[p]['years'] >= verif_period[0]) &
                                           (Ye_data_MC[p]['years'] <= verif_period[1])]
         else:
+            print('skipping this proxy!!!')
             continue # move to next record
             
                 
@@ -258,6 +262,7 @@ for dir in dirset:
                                                      
         if obcount < 50:
             # too few points for verification, move to next record
+            print('obcount too small...skipping this record',obcount)
             continue
 
         pcount_tot += 1
@@ -412,16 +417,22 @@ fname = '_'.join(['verifProxy',str(verif_period[0])+'to'+str(verif_period[1])])
 outdir = join(datadir_output,nexp,fname)
 if not os.path.isdir(outdir):
     os.system('mkdir %s' % outdir)
+print('will write results to directory: ',outdir)
 
 # check total nb. of sites in verif. and assim sets
 nb_tot_verif = sum([len(verif_listdict[k]) for k in range(len(verif_listdict))])
 nb_tot_assim = sum([len(assim_listdict[k]) for k in range(len(assim_listdict))])    
 
+print('number of proxies to verify:',nb_tot_verif)
+print('number of proxies assimilated:',nb_tot_assim)
+
 # --------------------
 # - withheld proxies -
 # --------------------
+
 if nb_tot_verif > 0:
     if write_full_verif_dict:
+        print('writing full withheld proxy file...')
         # Dump dictionary to pickle files
         outfile = open('%s/reconstruction_eval_withheld_proxy_full.pckl' % (outdir),'wb')
         pickle.dump(verif_listdict,outfile,protocol=2)
@@ -500,6 +511,7 @@ if nb_tot_verif > 0:
 
         
     # Dump data to pickle file
+    print('writing withheld proxies file...')
     outfile = open('%s/reconstruction_eval_withheld_proxy_summary.pckl' % (outdir),'wb')
     pickle.dump(summary_stats_verif,outfile,protocol=2)
     outfile.close()
@@ -511,6 +523,7 @@ if nb_tot_verif > 0:
 # -----------------------
 if nb_tot_assim > 0:
     if write_full_verif_dict:
+        print('writing assimilated proxies file...')
         # Dump dictionary to pickle files
         outfile = open('%s/reconstruction_eval_assimilated_proxy_full.pckl' % (outdir),'wb')
         pickle.dump(assim_listdict,outfile,protocol=2)
