@@ -18,6 +18,8 @@ Revisions:
             over two different time periods [R. Tardif - U. of Washington, Dec. 2017]
           - Added the production of plots showing results per individual proxy records.
             [R. Tardif - U. of Washington, March 2018]
+          - Now can be run with NCDCdadt proxies
+            [R. Tardif - U. of Washington, March 2018]
 """
 import os
 import numpy as np
@@ -76,7 +78,7 @@ fcolor = ['blue', 'red']
 
 #proxies = 'PAGES2kv1'
 proxies = 'LMRdb'
-
+#proxies = 'NCDCdadt'
 
 # Assign symbol to proxy types for plotting: dependent on proxy database used.
 if proxies == 'PAGES2kv1':
@@ -116,7 +118,18 @@ elif proxies == 'LMRdb':
                    'Bivalve_d18O'                  :'8',\
                    'Speleothems_d18O'              :'h',\
     }
-
+elif proxies == 'NCDCdadt':
+    # DADT proxies
+    proxy_verif = {\
+                   'Marine sediments_uk37'            :'s',\
+                   'Marine sediments_tex86'           :'o',\
+                   'Marine sediments_d18o_ruberwhite' :'^',\
+                   'Marine sediments_d18o_sacculifer' :'v',\
+                   'Marine sediments_d18o_bulloides'  :'>',\
+                   'Marine sediments_d18o_pachyderma' :'<',\
+                   'Marine sediments_mgca_pooled_bcp' :'H',\'
+                   'Marine sediments_mgca_pooled_red' :'h',\'
+    }
 else:
     raise SystemExit('ERROR in the especification of the proxy dataset to be considered. Exiting!')
 
@@ -135,12 +148,11 @@ r_crit = 0.0
 datadir_input = '/Users/hakim/data/LMR_python3/archive/'
 
 # Name of experiment
-#nexp = 'test'
-nexp = 'dadt_allprior'
+nexp = 'test'
 
 #verif_period = [[1880,2000],[0,1879]]
 #verif_period = [[1900,2000],[1800,1899]]
-verif_period = [[-22000,-200],[-22000,-200]]
+verif_period = [[-22000,-200],[-199,2000]]
 
 # Output directory, where the figs will be dumped.
 #datadir_output = datadir_input # if want to keep things tidy
@@ -262,8 +274,14 @@ def main():
                     else:
                         proxy_types = proxy
 
-                    tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types]
+
+                    #stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    stat = [item for sublist in tmp for item in sublist if np.isfinite(item)] # flatten list of lists & eliminate NaNs
                     nbdata = len(stat)
                     mean_stat[p] = np.mean(stat)
                     std_stat[p] = np.std(stat)
@@ -280,7 +298,11 @@ def main():
                         stat_comp.append(stat)
 
                     # Accumulate prior stat
-                    tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types]
                     prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
 
@@ -342,8 +364,14 @@ def main():
                     else:
                         proxy_types = proxy
 
-                    tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types]
+
+                    #stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    stat = [item for sublist in tmp for item in sublist if np.isfinite(item)] # flatten list of lists & eliminate NaNs
                     nbdata = len(stat)
                     mean_stat[p] = np.mean(stat)
                     std_stat[p] = np.std(stat)
@@ -362,7 +390,11 @@ def main():
                         stat_comp.append(stat)
 
                     # Accumulate prior stat
-                    tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types]
                     prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
 
@@ -418,8 +450,18 @@ def main():
                     else:
                         proxy_types = proxy
 
-                    tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):
+                        tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmpPost  = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types]
+                        
+                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                    if all('corr' in item for item in PSMinfo):                    
+                        tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                    else:
+                        tmpPrior = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types]
+
                     statPost  = [item for sublist in tmpPost for item in sublist]  # flatten list of lists
                     statPrior = [item for sublist in tmpPrior for item in sublist] # flatten list of lists
 
@@ -551,14 +593,15 @@ def main():
 
                 # loop over proxy sites
                 for sitetag in sites:
-                    sitetype = sitetag[0]
-                    sitename = sitetag[1]
-                    sitemarker = proxy_verif[sitetype]
+                    if np.isfinite(workdict[p][sitetag]['MeanCorr']):
+                        sitetype = sitetag[0]
+                        sitename = sitetag[1]
+                        sitemarker = proxy_verif[sitetype]
 
-                    lat = workdict[p][sitetag]['lat']
-                    lon = workdict[p][sitetag]['lon']
-                    x, y = m(lon,lat)
-                    Gplt = m.scatter(x,y,35,c=workdict[p][sitetag]['MeanCorr'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
+                        lat = workdict[p][sitetag]['lat']
+                        lon = workdict[p][sitetag]['lon']
+                        x, y = m(lon,lat)
+                        Gplt = m.scatter(x,y,35,c=workdict[p][sitetag]['MeanCorr'],marker=sitemarker,edgecolor='black',linewidth='1',zorder=4,cmap=cmap,norm=norm)
 
                 cbar = m.colorbar(Gplt,location='right',pad="2%",size="2%",ticks=cbarticks,format=cbarfmt,extend='both')
                 cbar.outline.set_linewidth(1.0)
@@ -813,7 +856,9 @@ def main():
                 ts_recon_m_assim = assim_dict[p][site]['ts_MeanRecon']
                 ts_recon_v_assim = assim_dict[p][site]['ts_SpreadRecon']
 
-                ts_years_plot = np.linspace(np.min(ts_years_assim),np.max(ts_years_assim),(np.max(ts_years_assim)-np.min(ts_years_assim))+1)
+                time_resolution = assim_dict[p][site]['recon_resolution']
+                ts_years_plot = np.arange(np.min(ts_years_assim),np.max(ts_years_assim)+1,time_resolution)
+                
                 ts_prior_m_plot = np.zeros(ts_years_plot.shape); ts_prior_m_plot[:] = np.nan
                 ts_recon_m_plot = np.zeros(ts_years_plot.shape); ts_recon_m_plot[:] = np.nan
 
@@ -829,8 +874,8 @@ def main():
 
                 # make the upper subplot
                 ax[0].plot(ts_years_assim,ts_obs_assim, '.', color='#5CB8E6',  label='Proxy values')
-                ax[0].plot(ts_years_plot,ts_prior_m_plot,'-k',lw=3,alpha=0.5,  label='Prior')
-                ax[0].plot(ts_years_plot,ts_recon_m_plot,'-r',lw=2,alpha=0.75, label='Analysis')
+                ax[0].plot(ts_years_plot,ts_prior_m_plot,linestyle='-',marker='.',markersize=3,color='k',lw=3,alpha=0.5,  label='Prior')
+                ax[0].plot(ts_years_plot,ts_recon_m_plot,linestyle='-',marker='.',markersize=2,color='r',lw=2,alpha=0.75, label='Analysis')
 
                 stitle = str(site)+'\nAssimilated'
                 ax[0].set_title(stitle,fontsize=10)
@@ -849,6 +894,8 @@ def main():
                     ts_years_verif = verif_dict[p][site]['ts_years']
                     ts_obs_verif   = verif_dict[p][site]['ts_ProxyValues']
 
+                    time_resolution = verif_dict[p][site]['recon_resolution']
+                    
                     ts_prior_m_verif = verif_dict[p][site]['ts_MeanPrior']
                     ts_prior_v_verif = verif_dict[p][site]['ts_SpreadPrior']
 
@@ -864,6 +911,8 @@ def main():
                     ts_years_verif = assim_dict[p][site]['ts_years']
                     ts_obs_verif   = assim_dict[p][site]['ts_ProxyValues']
 
+                    time_resolution = assim_dict[p][site]['recon_resolution']
+                    
                     ts_prior_m_verif = np.zeros(ts_years_verif.shape); ts_prior_m_verif[:] = np.nan
                     ts_prior_v_verif = np.zeros(ts_years_verif.shape); ts_prior_v_verif[:] = np.nan
 
@@ -876,7 +925,7 @@ def main():
                     VerifReconCE[p] = '{:.2f}'.format(np.nan)
                     
 
-                ts_years_plot = np.linspace(np.min(ts_years_verif),np.max(ts_years_verif),(np.max(ts_years_verif)-np.min(ts_years_verif))+1)
+                ts_years_plot = np.arange(np.min(ts_years_verif),np.max(ts_years_verif)+1,time_resolution)
                 ts_prior_m_plot = np.zeros(ts_years_plot.shape); ts_prior_m_plot[:] = np.nan
                 ts_recon_m_plot = np.zeros(ts_years_plot.shape); ts_recon_m_plot[:] = np.nan
                 
@@ -887,12 +936,12 @@ def main():
                 # make the lower subplot
                 if p == 0:
                     ax[1].plot(ts_years_verif,ts_obs_verif, '.', color='#5CB8E6',label='Proxy data')
-                    ax[1].plot(ts_years_plot,ts_prior_m_plot,'-k',lw=3,alpha=0.5,label='Prior')
-                    ax[1].plot(ts_years_plot,ts_recon_m_plot,'-r',lw=2,alpha=0.75,label='Analysis')
+                    ax[1].plot(ts_years_plot,ts_prior_m_plot,linestyle='-',marker='.',markersize=3,color='k',lw=3,alpha=0.5,label='Prior')
+                    ax[1].plot(ts_years_plot,ts_recon_m_plot,linestyle='-',marker='.',markersize=2,color='r',lw=2,alpha=0.75,label='Analysis')
                 else:
                     ax[1].plot(ts_years_verif,ts_obs_verif, '.', color='#5CB8E6')
-                    ax[1].plot(ts_years_plot,ts_prior_m_plot,'-k',lw=3,alpha=0.5)
-                    ax[1].plot(ts_years_plot,ts_recon_m_plot,'-r',lw=2,alpha=0.75)
+                    ax[1].plot(ts_years_plot,ts_prior_m_plot,linestyle='-',marker='.',markersize=3,color='k',lw=3,alpha=0.5)
+                    ax[1].plot(ts_years_plot,ts_recon_m_plot,linestyle='-',marker='.',markersize=2,color='r',lw=2,alpha=0.75)
 
                 ax[1].set_title('Withheld',fontsize=10)
                 ax[1].set_ylabel('Proxy value')
@@ -960,7 +1009,7 @@ def main():
             cellsPost = [item for item in cells if item[0] in indPost]
             for c in cellsPost: cellDict[c].set_facecolor('darkgray')
 
-            figname = figdir+'/'+nexp+'_verify_proxy_'+sitename
+            figname = figdir+'/'+nexp+'_verify_proxy_'+sitename.replace('/','_')
             plt.savefig(figname+'.png')
             plt.close()
 

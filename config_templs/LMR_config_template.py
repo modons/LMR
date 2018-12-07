@@ -860,6 +860,8 @@ class proxies(ConfigGroup):
             'Marine sediments_d18o_sacculifer',
             'Marine sediments_d18o_bulloides',
             'Marine sediments_d18o_pachyderma',
+            'Marine sediments_mgca_pooled_bcp',
+            'Marine sediments_mgca_pooled_red',
             ]
 
         # Assignment of psm type per proxy type
@@ -868,7 +870,7 @@ class proxies(ConfigGroup):
         #  The h_interp forward model is to be used for isotope proxies when
         #  the prior is taken from an isotope-enabled GCM output. 
         proxy_psm_type = {
-            'Marine Cores_uk37'               : 'bayesreg_uk37',
+        #    'Marine Cores_uk37'               : 'bayesreg_uk37',
             'Marine sediments_uk37'           : 'bayesreg_uk37',
             'Marine Cores_tex86'              : 'bayesreg_tex86',
             'Marine sediments_tex86'          : 'bayesreg_tex86',
@@ -876,11 +878,13 @@ class proxies(ConfigGroup):
             'Marine sediments_d18o_sacculifer': 'bayesreg_d18o_sacculifer',
             'Marine sediments_d18o_bulloides' : 'bayesreg_d18o_bulloides',
             'Marine sediments_d18o_pachyderma': 'bayesreg_d18o_pachyderma',
+            'Marine sediments_mgca_pooled_bcp': 'bayesreg_mgca_pooled_bcp',
+            'Marine sediments_mgca_pooled_red': 'bayesreg_mgca_pooled_red',
         }
         
         proxy_assim2 = {
-            'Marine Cores_uk37'                : ['uk37', 'UK37'],
-            'Marine sediments_uk37'            : ['UK37'],
+        #    'Marine Cores_uk37'                : ['uk37', 'UK37'],
+            'Marine sediments_uk37'            : ['uk37', 'UK37'],
             'Marine Cores_tex86'               : ['tex86', 'TEX86'],
             'Marine sediments_tex86'           : ['tex86', 'TEX86'],
             'Marine sediments_d18o_ruberwhite' : ['d18o_ruber', 'd18O_ruber', 'd18O_ruber_stricto', 'd18O_ruber_lato',
@@ -888,6 +892,20 @@ class proxies(ConfigGroup):
             'Marine sediments_d18o_sacculifer' : ['d18o_sacculifer', 'd18O_sacculifer'],
             'Marine sediments_d18o_bulloides'  : ['d18o_bulloides', 'd18O_bulloides'],
             'Marine sediments_d18o_pachyderma' : ['d18o_pachyderma', 'd18O_pachyderma'],
+            'Marine sediments_mgca_pooled_red' : ['mgca_ruber:reductive',
+                                                  'mgca_ruber_lato:reductive',
+                                                  'mgca_ruber_stricto:reductive',
+                                                  'mgca_sacculifer:reductive',
+                                                  'mgca_bulloides:reductive',
+                                                  'mgca_pachyderma:reductive',
+                                                 ],
+            'Marine sediments_mgca_pooled_bcp' : ['mgca_ruber:barker',
+                                                  'mgca_ruber_lato:barker',
+                                                  'mgca_ruber_stricto:barker',
+                                                  'mgca_sacculifer:barker',
+                                                  'mgca_bulloides:barker',
+                                                  'mgca_pachyderma:barker',
+                                                 ],
         }
 
         # A blacklist on proxy records, to prevent assimilation of specific

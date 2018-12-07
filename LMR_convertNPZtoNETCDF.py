@@ -42,8 +42,8 @@ nexp = 'test'
 
 # -- Which type of output to netcdf file(s) --
 #    uncomment one of the lines below to choose
-#archive_type = 'ensemble_mean'
-archive_type = 'ensemble_mean_spread'
+archive_type = 'ensemble_mean'
+#archive_type = 'ensemble_mean_spread'
 #archive_type = 'ensemble_subsample'; Nsample = 10
 #archive_type = 'ensemble_full'
 
@@ -55,6 +55,8 @@ archive_type = 'ensemble_mean_spread'
 #      MCset = (80,100) -> the 80th to 100th MC runs (21 realizations)
 MCset = None
 #MCset = (0,10)
+
+dataset_tag = 'NOAA Last Millennium Reanalysis version 1 Annual Averages'
 
 
 # Dictionary containing definitions of variables that handled by this code
@@ -329,9 +331,6 @@ var_desc = \
     }
 
 
-
-dataset_tag = 'NOAA Last Millennium Reanalysis version 1 Annual Averages'
-
 # attempt additional compression (Note: possible issues with use of FillValue depending of NCO version)
 run_ncpdq = False
 
@@ -395,7 +394,7 @@ def main():
             input_type = 'ensemble_full'
             statistic = ('Ensemble Members', )
         else:
-            print('Full ensemble archiving selected, but full ensemble not available in input!'
+            print('Full ensemble archiving selected, but full ensemble not available in input! '
                   'Cannot proceed.')
             raise SystemExit(1)
 
@@ -418,7 +417,7 @@ def main():
             input_type = 'ensemble_full'
         else:
             print('Archiving of ensemble mean & spread selected, but necessary input'
-                  ' (full ensemble, or ensemble-mean and variance) not avilable.'
+                  ' (full ensemble, or ensemble-mean and variance) not available.'
                   ' Cannot proceed.')
             raise SystemExit(1)
         statistic = ('Ensemble Mean', 'Ensemble Spread')
@@ -455,13 +454,18 @@ def main():
 
 
     # look for files corresponding to desired input_type
-    listdirfiles = glob.glob(workdir+'/'+input_type+'_*')
+    if type(input_type) is tuple:
+        input_file = input_type[0]
+    else:
+        input_file = input_type
+    listdirfiles = glob.glob(workdir+'/'+input_file+'_*')
+
     # including gmt_ensemble
     listdirfiles.extend(glob.glob(workdir+'/gmt_ensemble.npz'))
     # strip directory name, keep file name only
     listfiles = [item.split('/')[-1] for item in listdirfiles]
     # strip everything but variable name
-    listvars = [(item.replace(input_type+'_','')).replace('.npz','') for item in listfiles]
+    listvars = [(item.replace(input_file+'_','')).replace('.npz','') for item in listfiles]
 
     print('Variables:', listvars, '\n')
 
@@ -491,7 +495,7 @@ def main():
                 archive_type_var = 'ensemble_full'
                 input_type = 'ensemble_full'
             else:
-                fname = expdir+'/'+dir+'/'+input_type+'_'+var+'.npz'
+                fname = expdir+'/'+dir+'/'+input_file+'_'+var+'.npz'
                 time_name = 'years'
                 archive_type_var = archive_type
 
@@ -635,7 +639,21 @@ def main():
 
             # if we need to extact another field from input (e.g. ensemble variance)
             if len(npfile_to_extract) > 1:
-                field_values2 = npzfile[npfile_to_extract[1]]
+
+                # do we need to look in a separate file?
+                if input_type == ('ensemble_mean', 'ensemble_variance'):
+                    # get only file name
+                    ftmp = fname.split('/')[-1]
+                    # rename file to other part of input
+                    ftmp2 = ftmp.replace(input_type[0], input_type[1])
+                    # reform complete dir & file name 
+                    fname2 = expdir+'/'+dir+'/'+ftmp2
+                    # read the separate file
+                    npzfile2 = np.load(fname2)
+                    # extract the needed array
+                    field_values2 = npzfile2[npfile_to_extract[1]]
+                else:
+                    field_values2 = npzfile[npfile_to_extract[1]]
 
             
             # Any data processing required ?
