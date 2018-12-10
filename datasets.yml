@@ -123,7 +123,9 @@ ccsm4_last_millenium:
   info:
     multiple_vars: True
     template: '[vardef_template]'
-    available_vars: [tas_sfc_Amon, psl_sfc_Amon, zg_500hPa_Amon,
+    available_vars: [tas_sfc_Amon, psl_sfc_Amon,
+                     zg_850hPa_Amon, zg_500hPa_Amon,
+                     ta_850hPa_Amon, ta_500hPa_Amon,
                      wap_500hPa_Amon, wap_700hPa_Amon, wap_850hPa_Amon,
                      gmt_sfc_Amon, nhmt_sfc_Amon, shmt_sfc_Amon,
                      pr_sfc_Amon, prw_int_Amon, scpdsi_sfc_Amon,

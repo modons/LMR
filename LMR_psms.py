@@ -1450,8 +1450,9 @@ class h_interpPSM(BasePSM):
             self.elev = None        
         self.sensitivity = None
         self.RadiusInfluence = config.psm.h_interp.radius_influence
+        self.psm_required_variables = config.psm.h_interp.psm_required_variables
         
-        # Try finding file containing obs. error variance info for **d18O** ??
+        # Try finding file containing obs. error variance info
         # and assign the R value to proxy psm object
         try:
             if R_data is None:
@@ -1459,8 +1460,10 @@ class h_interpPSM(BasePSM):
             self.R = R_data[(self.proxy, self.site)]
         except (KeyError, IOError) as e:
             # No obs. error variance file found
+            print(('WARNING:Cannot find obs. error variance data for:' + str((self.proxy, self.site))))
             _log.error(e)
             _log.info('Cannot find obs. error variance data for:' + str((self.proxy, self.site)))
+
 
     # TODO: Ideally prior state info and coordinates should all be in single obj
     def psm(self, Xb, X_state_info, X_coords):
@@ -1486,14 +1489,17 @@ class h_interpPSM(BasePSM):
         # Calculate the Ye's ...
         # ----------------------
         
-        # define state variable (which isotope) that should be interpolated to proxy site
-        # Now, d18O is the only isotope considered, irrespective of the proxy type to be assimilated.
-        # (TODO: more comprehensive & flexible way to do this...)
-        state_var = 'd18O_sfc_Amon'
+        # define state variable that is to be interpolated to proxy site
+        required_vars = list(self.psm_required_variables.keys())
+        if len(required_vars) == 1:
+            state_var = required_vars[0]
+        else:
+            raise SystemExit('Multiple variables specified for h_interp PSM.'
+                            ' There should be only one. Exiting.')
         
         if state_var not in list(X_state_info.keys()):
-            raise KeyError('Needed variable not in state vector for Ye'
-                           ' calculation.')
+            raise KeyError('Needed variable %s not in state vector for Ye'
+                           ' calculation.' %state_var)
         
         # TODO: end index should already be +1, more pythonic
         statevar_startidx, statevar_endidx = X_state_info[state_var]['pos']
@@ -1549,25 +1555,27 @@ class h_interpPSM(BasePSM):
     
     @staticmethod
     def _load_psm_data(config):
-        """Helper method for loading from dataframe"""
+        """Helper method for loading from file"""
 
         R_data_file = config.psm.h_interp.datafile_obsError
-
+        
         if R_data_file:
-            # check if file exists
+            # a file is specified, check if it exists
             if not os.path.isfile(R_data_file):
-                raise SystemExit
-
+                raise SystemExit('in h_interp PSM: Cannot find file containing obs. error variance data: %s'
+                                 %R_data_file)
             else:
-                # this returns an array of tuples (proxy type of type string, proxy site name of type string, R value of type float)
+                # this returns an array of tuples:
+                # (proxy type of type string, proxy site name of type string, R value of type float)
                 # transformed into a list
-                Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None).tolist()
-
+                Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None, encoding='ascii').tolist()
+                
                 # transform into a dictionary with (proxy type, proxy site) tuples as keys and R as the paired values
                 Rdata_dict = dict([((item[0],item[1]),item[2]) for item in Rdata_list])
-
         else:
-            Rdata_dict = {}
+            # a file has not been specified: raise an error
+            raise SystemExit('in h_interp PSM: A file containing obs. error variance data '
+                             'has not been specified. Exiting.')
 
         return Rdata_dict
 

@@ -44,6 +44,8 @@ proxies:
 #  use_from: [PAGES2kv1]
   use_from: [LMRdb]
 #  use_from: [NCDCdadt]  
+#  use_from: [DAPSpseudoproxies]
+
   proxy_frac: 0.75
   proxy_timeseries_kind: asis
   proxy_availability_filter: False
@@ -320,6 +322,25 @@ proxies:
 #                                         'mgca_pachyderma:barker',
 #                                         ]
 
+  DAPSpseudoproxies:
+    dbversion: 'v1'
+    datadir_proxy: null
+    datafile_proxy: 'DAPSpseudoproxies_{}_Proxies.df.pckl'
+    metafile_proxy: 'DAPSpseudoproxies_{}_Metadata.df.pckl'
+    dataformat_proxy: 'DF'
+    regions: []
+    proxy_resolution: [1.0]
+    proxy_blacklist: []
+    proxy_order: [
+      'PseudoProxy_temperature',
+    ]
+    proxy_psm_type:
+      PseudoProxy_temperature: h_interp
+
+    proxy_assim2:
+      PseudoProxy_temperature: ['temperature', 'Temperature']
+
+
 psm:
   all_calib_sources:
     temperature: [GISTEMP, MLOST, NOAAGlobalTemp, HadCRUT, BerkeleyEarth]
@@ -351,10 +372,11 @@ psm:
 
   h_interp:
     radius_influence: 50.0
-    datadir_obsError: ./
+    datadir_obsError: null
     filename_obsError: R.txt
     dataformat_obsError: TXT
-    datafile_obsError: None
+    psm_required_variables: 
+      tas_sfc_Amon : full
 
 prior:
   prior_source: ccsm4_last_millenium

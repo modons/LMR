@@ -96,6 +96,8 @@ def main(cfgin=None, config_path=None):
         proxy_cfg = cfg.proxies.ncdc
     elif proxy_database == 'NCDCdadt':
         proxy_cfg = cfg.proxies.NCDCdadt
+    elif proxy_database == 'DAPSpseudoproxies':
+        proxy_cfg = cfg.proxies.DAPSpseudoproxies
     else:
         _log.error('ERROR in specification of proxy database.')
         raise SystemExit()

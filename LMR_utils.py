@@ -1878,6 +1878,8 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
     elif proxy_str == 'NCDCdadt':
         proxy_str = proxy_str + str(config.proxies.NCDCdadt.dbversion)
+    elif proxy_str == 'DAPSpseudoproxies':
+        proxy_str = proxy_str + str(config.proxies.DAPSpseudoproxies.dbversion)
         
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
@@ -2168,8 +2170,10 @@ def validate_config(config):
         proxy_cfg = config.proxies.PAGES2kv1
     elif proxy_database == 'NCDCdadt':
         proxy_cfg = config.proxies.NCDCdadt
+    elif proxy_database == 'DAPSpseudoproxies':
+        proxy_cfg = config.proxies.DAPSpseudoproxies
     else:
-        print('ERROR in specification of proxy database.')
+        print('ERROR in validate_config: Unrecognized specification of proxy database.')
         raise SystemExit()
 
     # proxy types activated in configuration

@@ -1038,7 +1038,239 @@ class ProxyNCDCdadt(BaseProxyObject):
         # Constant error for now
         return 0.1
 
+
+class ProxyDAPSpseudoproxies(BaseProxyObject):
+
+    @staticmethod
+    def get_psm_obj(config,proxy_type):
+        psm_key = config.proxies.DAPSpseudoproxies.proxy_psm_type[proxy_type]
+        return LMR_psms.get_psm_class(psm_key)
     
+    @classmethod
+    @augment_docstr
+    def load_site(cls, config, site, data_range=None, meta_src=None,
+                  data_src=None):
+        """%%aug%%
+
+        Expects meta_src, data_src to be pickled pandas DataFrame objects.
+        """
+
+        DAPSpseudoproxies_cfg = config.proxies.DAPSpseudoproxies
+        if meta_src is None:
+            meta_src = load_data_frame(DAPSpseudoproxies_cfg.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(DAPSpseudoproxies_cfg.datafile_proxy)
+            data_src = data_src.to_dense()
+            
+        site_meta = meta_src[meta_src['Proxy ID'] == site]
+        pid = site_meta['Proxy ID'].iloc[0]
+        pmeasure = site_meta['Proxy measurement'].iloc[0]
+        DAPSpseudoproxies_type = site_meta['Archive type'].iloc[0]
+        try:
+            proxy_type = DAPSpseudoproxies_cfg.proxy_type_mapping[(DAPSpseudoproxies_type,pmeasure)]
+        except (KeyError, ValueError) as e:
+            print('Proxy type/measurement not found in mapping: {}'.format(e))
+            raise ValueError(e)
+        
+        start_yr = site_meta['Youngest (C.E.)'].iloc[0]
+        end_yr = site_meta['Oldest (C.E.)'].iloc[0]
+        lat = site_meta['Lat (N)'].iloc[0]
+        lon = site_meta['Lon (E)'].iloc[0]
+        elev = site_meta['Elev'].iloc[0]
+        site_data = data_src[site]
+        seasonality = site_meta['Seasonality'].iloc[0]
+        # make sure a list is returned
+        if type(seasonality) is not list: seasonality = ast.literal_eval(seasonality)
+        
+        if data_range is not None:
+            start, finish = data_range
+            values = site_data[(site_data.index >= start) &
+                               (site_data.index <= finish)]
+        else:
+            values = site_data
+            
+        # Might need to remove following line
+        values = values[values.notnull()]
+        times = values.index.values
+        
+        # transform in "anomalies" (time-mean removed) if option activated
+        if config.proxies.DAPSpseudoproxies.proxy_timeseries_kind == 'anom':
+            values = values - values.mean() 
+            
+        if len(values) == 0:
+            raise ValueError('No observations in specified time range.')
+
+        
+        return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
+                   seasonality, values, times)
+
+    @classmethod
+    @augment_docstr
+    def load_all(cls, config, data_range, meta_src=None,
+                 data_src=None):
+        """%%aug%%
+
+        Expects meta_src, data_src to be pickled pandas DataFrame objects.
+        """        
+
+        # Load source data files
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.DAPSpseudoproxies.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.DAPSpseudoproxies.datafile_proxy)
+            data_src = data_src.to_dense()
+            
+        filters = config.proxies.DAPSpseudoproxies.simple_filters
+        proxy_order = config.proxies.DAPSpseudoproxies.proxy_order
+        ptype_filters = config.proxies.DAPSpseudoproxies.proxy_assim2
+        proxy_blacklist = config.proxies.DAPSpseudoproxies.proxy_blacklist
+        availability_filter = config.proxies.DAPSpseudoproxies.proxy_availability_filter
+        availability_fraction = config.proxies.DAPSpseudoproxies.proxy_availability_fraction
+        
+        # initial mask all true before filtering
+        useable = meta_src[meta_src.columns[0]] == 0
+        useable |= True
+        availability_mask = meta_src[meta_src.columns[0]] == 0
+        availability_mask |= True
+        
+        # Find indices matching simple filter specifications
+        for colname, filt_list in filters.items():
+            simple_mask = meta_src[colname] == 0
+            simple_mask &= False
+
+            for value in filt_list:
+                simple_mask |= meta_src[colname] == value
+
+            useable &= simple_mask
+
+    
+        # Filtering proxy records on conditions of availability during
+        # the reconstruction period (recon_period in configuration, or
+        # data_range here).
+        if availability_filter: # if not None
+            start, finish = data_range
+            # Checking proxy metadata's period of availability against
+            # reconstruction period.
+            availability_mask = ((meta_src['Oldest (C.E.)'] <= start) &
+                                 (meta_src['Youngest (C.E.)'] >= finish))
+            # Checking level of completeness of record within the reconstruction
+            # period (ignore record if fraction of available data is below user-defined
+            # threshold (proxy_availability_fraction in config).
+            maxnb = (finish - start) + 1
+            proxies_to_test = meta_src['Proxy ID'][availability_mask & useable].values
+            for prx in proxies_to_test.tolist():                
+                values = data_src[prx][(data_src[:].index >= start) & (data_src[:].index <= finish)]
+                values = values[values.notnull()]
+                frac_available = float(len(values))/float(maxnb)
+                if frac_available < availability_fraction:
+                    availability_mask[meta_src[meta_src['Proxy ID'] == prx].index] = False
+
+                    
+        # Define mask of proxies listed in a user-defined "blacklist"
+        # (see LMR_config).
+        # boolean array set with right dimension & all set to True
+        blacklist_mask = meta_src['Proxy ID'] != ' '
+        if proxy_blacklist:
+            # If site listed in blacklist, modify corresponding elements of
+            # boolean array to False
+            for pbl in proxy_blacklist:
+                tmp = meta_src['Proxy ID'].map(lambda x: x.startswith(pbl))
+                inds = meta_src['Proxy ID'][tmp].index
+                blacklist_mask[inds] = False
+                
+        # Create proxy id lists
+        proxy_id_by_type = {}
+        all_proxy_ids = []
+
+        type_col = 'Archive type'
+        measure_col = 'Proxy measurement'
+        for name in proxy_order:
+
+            type_mask = meta_src[type_col] == 0
+            type_mask |= True
+
+            # Filter to proxies of a certain type
+            ptype = name.split('_', 1)[0]
+            type_mask &= meta_src[type_col] == ptype
+            
+            # Reduce to listed measures
+            measure_mask = meta_src[measure_col] == 0
+            measure_mask &= False
+
+            for measure in ptype_filters[name]:
+                measure_mask |= meta_src[measure_col] == measure
+
+            # Extract proxy ids using mask and append to lists
+            proxies = meta_src['Proxy ID'][measure_mask & type_mask &
+                                          blacklist_mask &
+                                          availability_mask & useable].values
+            # If we have ids after filtering add them to the type list
+            if len(proxies) > 0:
+                proxy_id_by_type[name] = proxies.tolist()
+
+            all_proxy_ids += proxies.tolist()
+
+
+        # Create proxy objects list
+        all_proxies = []
+        for site in all_proxy_ids:
+            try:                
+                pobj = cls.load_site(config, site, data_range,
+                                     meta_src=meta_src, data_src=data_src)
+                all_proxies.append(pobj)
+            except ValueError as e:
+                # Proxy had no obs or didn't meet psm r crit
+                for group in list(proxy_id_by_type.values()):
+                    if site in group:
+                        group.remove(site)
+                        break  # Should only be one instance
+                    
+        return proxy_id_by_type, all_proxies
+
+    @classmethod
+    def load_all_annual_no_filtering(cls, config, meta_src=None,
+                                     data_src=None):
+        """
+        Method created to facilitate the loading of all possible proxy records
+        that can be calibrated with annual resolution.
+
+        Note: This is still subject to constraints from the PSM calibration (
+        i.e. if there is an r_crit or not enough calibration data the proxy
+        will not be loaded)
+
+        Returns
+        -------
+        proxy_objs: list(BaseProxyObject like)
+        """
+
+        # Load source data files
+        if meta_src is None:
+            meta_src = load_data_frame(config.proxies.DAPSpseudoproxies.metafile_proxy)
+        if data_src is None:
+            data_src = load_data_frame(config.proxies.DAPSpseudoproxies.datafile_proxy)
+            data_src = data_src.to_dense()
+
+        # TODO: For now hard coded to annual resolution - AP
+        useable = meta_src['Resolution (yr)'] == 1.0
+
+        proxy_ids = meta_src['Proxy ID'][useable].values
+
+        proxy_objs = []
+        for site in proxy_ids:
+            try:
+                pobj = cls.load_site(config, site,
+                                     meta_src=meta_src, data_src=data_src)
+                proxy_objs.append(pobj)
+            except ValueError as e:
+                print(e)
+
+        return proxy_objs
+
+    def error(self):
+        # Constant error for now
+        return 0.1
+
+
 def fix_lon(lon):
     """
     Fixes negative longitude values.
@@ -1053,9 +1285,7 @@ def fix_lon(lon):
     return lon
 
 
-#_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdadt': ProxyNCDCdadt}
-#_proxy_classes = {'pages': ProxyPages, 'NCDC': ProxyNCDC, 'NCDCdadt': ProxyNCDCdadt}
-_proxy_classes = {'PAGES2kv1': ProxyPAGES2kv1, 'LMRdb': ProxyLMRdb, 'NCDCdadt': ProxyNCDCdadt}
+_proxy_classes = {'PAGES2kv1': ProxyPAGES2kv1, 'LMRdb': ProxyLMRdb, 'NCDCdadt': ProxyNCDCdadt, 'DAPSpseudoproxies': ProxyDAPSpseudoproxies}
 
 def get_proxy_class(proxy_key):
     """

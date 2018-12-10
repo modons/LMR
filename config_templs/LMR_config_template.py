@@ -77,6 +77,8 @@ Revisions:
  - Clearer more flexible options to save ensemble information other than the mean
    (i.e. full ensemble, ensemble variance, percentiles or subset of members)
    [ R. Tardif, Univ. of Washington, April 2018 ]
+ - Added class definitions related to DAPS intercomparison reconstruction experiments
+   [ R. Tardif, Univ. of Washington, Dec 2018 ]
 """
 
 from os.path import join
@@ -376,7 +378,8 @@ class proxies(ConfigGroup):
     use_from = ['PAGES2kv1']
     #use_from = ['LMRdb']
     #use_from = ['NCDCdadt']
-
+    #use_from = ['DAPSpseudoproxies']
+    
     proxy_frac = 1.0
     #proxy_frac = 0.75
 
@@ -954,13 +957,147 @@ class proxies(ConfigGroup):
 
             self.simple_filters = {'Resolution (yr)': self.proxy_resolution}
 
+
+    class DAPSpseudoproxies(ConfigGroup):
+        """
+        Parameters for DAPSpseudoproxies proxy class
+
+        Notes
+        -----
+        proxy_type_mappings and simple_filters are creating during instance
+        creation.
+
+        Attributes
+        ----------
+        datadir_proxy: str
+            Absolute path to proxy data *or* None if using default lmr_path
+        datafile_proxy: str
+            proxy records filename
+        metafile_proxy: str
+            proxy metadata filename
+        dataformat_proxy: str
+            File format of the proxy data
+        regions: list(str)
+            List of proxy data regions (data keys) to use.
+        proxy_resolution: list(float)
+            List of proxy time resolutions to use
+        database_filter: list(str)
+            List of databases from which to limit the selection of proxies.
+            Use [] (empty list) if no restriction, or ['db_name1', db_name2'] to
+            limit to proxies contained in "db_name1" OR "db_name2".
+            Possible choices are: 'DAPS'
+        proxy_order: list(str):
+            Order of assimilation by proxy type key
+        proxy_assim2: dict{ str: list(str)}
+            Proxy types to be assimilated.
+            Uses dictionary with structure {<<proxy type>>: [.. list of
+            measuremant tags ..] where "proxy type" is written as
+            "<<archive type>>_<<measurement type>>"
+        proxy_type_mapping: dict{(str,str): str}
+            Maps proxy type and measurement to our proxy type keys.
+            (e.g. {('Tree ring', 'TRW'): 'Tree ring_Width'} )
+        proxy_psm_type: dict{str:str}
+            Association between proxy type and psm type.
+        simple_filters: dict{'str': Iterable}
+            List mapping proxy metadata sheet columns to a list of values
+            to filter by.
+        """
+
+        ##** BEGIN User Parameters **##
+
+        dbversion = 'v1'
+        
+        datadir_proxy = None
+        datafile_proxy = 'DAPSpseudoproxies_{}_Proxies.df.pckl'
+        metafile_proxy = 'DAPSpseudoproxies_{}_Metadata.df.pckl'
+        dataformat_proxy = 'DF'
+
+        # This is not activated yet...
+        regions = []
+
+        # Restrict uploaded proxy records to those within specified
+        # range of temporal resolutions. 
+        proxy_resolution = [1.0]
+
+        # Limit proxies to those included in the following list of databases
+        # Note: Empty list = no restriction
+        #       If list has more than one element, only records contained in ALL
+        #       databases listed will be retained.
+        database_filter = []
+        
+        # DO NOT CHANGE *FORMAT* BELOW
+        proxy_order = [
+            'PseudoProxy_temperature',
+            ]
+
+        # Assignment of psm type per proxy type
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        #  The linear PSM can be used on *all* proxies.
+        #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
+        #  PSMs are aimed at *tree ring* proxies in particular
+        #  The h_interp forward model is to be used for isotope proxies when
+        #  the prior is taken from an isotope-enabled GCM output. 
+        proxy_psm_type = {
+            'PseudoProxy_temperature' : 'h_interp',
+        }
+         
+        proxy_assim2 = {
+            'PseudoProxy_temperature' : ['temperature', 'Temperature'],
+        }
+
+        # A blacklist on proxy records, to prevent assimilation of specific
+        # chronologies known to be duplicates or to have errors.
+        proxy_blacklist = []
+        
+        ##** END User Parameters **##
+
+        def __init__(self, lmr_path=None, **kwargs):
+            super(self.__class__, self).__init__(**kwargs)
+            if lmr_path is None:
+                lmr_path = core.lmr_path
+
+            if self.datadir_proxy is None:
+                self.datadir_proxy = join(lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_proxy = self.datadir_proxy
+
+            self.datafile_proxy = self.datafile_proxy.format(self.dbversion)
+            self.metafile_proxy = self.metafile_proxy.format(self.dbversion)
+                
+            self.datafile_proxy = join(self.datadir_proxy,
+                                       self.datafile_proxy)
+            self.metafile_proxy = join(self.datadir_proxy,
+                                       self.metafile_proxy)
+
+            self.dataformat_proxy = self.dataformat_proxy
+            self.regions = list(self.regions)
+            self.proxy_resolution = list(self.proxy_resolution)
+            self.proxy_timeseries_kind = proxies.proxy_timeseries_kind
+            self.proxy_order = list(self.proxy_order)
+            self.proxy_psm_type = deepcopy(self.proxy_psm_type)
+            self.proxy_assim2 = deepcopy(self.proxy_assim2)
+            self.database_filter = list(self.database_filter)
+            self.proxy_blacklist = list(self.proxy_blacklist)
+            self.proxy_availability_filter = proxies.proxy_availability_filter
+            self.proxy_availability_fraction = proxies.proxy_availability_fraction
+            
+            self.proxy_type_mapping = {}
+            for ptype, measurements in self.proxy_assim2.items():
+                # Fetch proxy type name that occurs before underscore
+                type_name = ptype.split('_', 1)[0]
+                for measure in measurements:
+                    self.proxy_type_mapping[(type_name, measure)] = ptype
+
+            self.simple_filters = {'Resolution (yr)': self.proxy_resolution}
+            
     
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, seed=None, **kwargs):
         self.PAGES2kv1 = self.PAGES2kv1(lmr_path=lmr_path, **kwargs.pop('PAGES2kv1', {}))
         self.LMRdb = self.LMRdb(lmr_path=lmr_path, **kwargs.pop('LMRdb', {}))
         self.NCDCdadt = self.NCDCdadt(lmr_path=lmr_path, **kwargs.pop('NCDCdadt', {}))
-
+        self.DAPSpseudoproxies = self.DAPSpseudoproxies(lmr_path=lmr_path, **kwargs.pop('DAPSpseudoproxies', {}))
+        
         super(self.__class__, self).__init__(**kwargs)
         
         self.use_from = list(self.use_from)
@@ -968,8 +1105,7 @@ class proxies(ConfigGroup):
         if seed is None:
             seed = core.seed
         self.seed = seed
-
-
+        
 
 class psm(ConfigGroup):
     """
@@ -1452,19 +1588,24 @@ class psm(ConfigGroup):
         datadir_obsError = './'
         filename_obsError = 'R.txt'
         dataformat_obsError = 'TXT'
-
         datafile_obsError = None
 
+        psm_required_variables = {'d18O_sfc_Amon': 'full'} # default
+        
         ##** END User Parameters **##
 
         def __init__(self, **kwargs):
             super(self.__class__, self).__init__(**kwargs)
 
             self.radius_influence = self.radius_influence
-            self.datadir_obsError = self.datadir_obsError
             self.filename_obsError = self.filename_obsError
             self.dataformat_obsError = self.dataformat_obsError 
 
+            if self.datadir_obsError is None:
+                self.datadir_obsError = join(core.lmr_path, 'data', 'proxies')
+            else:
+                self.datadir_obsError = self.datadir_obsError
+            
             if self.datafile_obsError is None:
                 self.datafile_obsError = join(self.datadir_obsError,
                                               self.filename_obsError)
@@ -1472,8 +1613,6 @@ class psm(ConfigGroup):
                 self.datafile_obsError = self.datafile_obsError
 
             # define state variable needed to calculate Ye's
-            # only d18O for now ...
-
             # psm requirements depend on settings in proxies class 
             proxy_kind = proxies.proxy_timeseries_kind
             if proxies.proxy_timeseries_kind == 'asis':
@@ -1484,7 +1623,7 @@ class psm(ConfigGroup):
                 raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
                                  ' Unable to assign kind to psm_required_variables'
                                  ' in h_interp psm class.')
-            self.psm_required_variables = {'d18O_sfc_Amon': psm_var_kind}
+            self.psm_required_variables = self.psm_required_variables
 
 
     class bayesreg_uk37(ConfigGroup):
