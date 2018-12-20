@@ -279,31 +279,29 @@ def main():
                         tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
                     else:
                         tmp = [workdict[p][k]['MCensCorr'] for k in sitetag if k[0] in proxy_types]
-
-                    #stat = [item for sublist in tmp for item in sublist] # flatten list of lists
+                    
                     stat = [item for sublist in tmp for item in sublist if np.isfinite(item)] # flatten list of lists & eliminate NaNs
                     nbdata = len(stat)
-                    mean_stat[p] = np.mean(stat)
-                    std_stat[p] = np.std(stat)
-                    results, edges = np.histogram(stat, bins=bins_corr, normed=True)
-                    plt.bar(edges[:-1]+binwidth/2,results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,align="center")
+                    if nbdata > 0:
+                        mean_stat[p] = np.mean(stat)
+                        std_stat[p] = np.std(stat)
+                        results, edges = np.histogram(stat, bins=bins_corr, normed=True)
+                        plt.bar(edges[:-1]+binwidth/2,results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0,align="center")
 
-                    #  kernel density estimation
-                    statv = np.asarray(stat)
-                    kde = sm.nonparametric.KDEUnivariate(statv)
-                    nbpts, = statv.shape
-                    if nbpts > 0:
+                        #  kernel density estimation
+                        statv = np.asarray(stat)
+                        kde = sm.nonparametric.KDEUnivariate(statv)
                         kde.fit(kernel='gau')
                         plt.plot(kde.support,kde.density,color=fcolor[p],lw=2,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))
                         stat_comp.append(stat)
 
-                    # Accumulate prior stat
-                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
-                    if all('corr' in item for item in PSMinfo):
-                        tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    else:
-                        tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types]
-                    prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
+                        # Accumulate prior stat
+                        PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                        if all('corr' in item for item in PSMinfo):
+                            tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                        else:
+                            tmp = [workdict[p][k]['PriorMCensCorr'] for k in sitetag if k[0] in proxy_types]
+                        prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
 
                 # Kolmogorov-Smirnov significance testing of difference between distributions from both tested periods
@@ -370,32 +368,30 @@ def main():
                     else:
                         tmp = [workdict[p][k]['MCensCE'] for k in sitetag if k[0] in proxy_types]
 
-                    #stat = [item for sublist in tmp for item in sublist] # flatten list of lists
                     stat = [item for sublist in tmp for item in sublist if np.isfinite(item)] # flatten list of lists & eliminate NaNs
                     nbdata = len(stat)
-                    mean_stat[p] = np.mean(stat)
-                    std_stat[p] = np.std(stat)
-                    # Since CE is not bounded at the lower end, assign values smaller than 1st bin to value of 1st bin 
-                    #stat = [bins[0] if x<bins[0] else x for x in stat]
-                    results, edges = np.histogram(stat, bins=bins_ce, normed=True)
-                    plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0)
+                    if nbdata > 0:
+                        mean_stat[p] = np.mean(stat)
+                        std_stat[p] = np.std(stat)
+                        # Since CE is not bounded at the lower end, assign values smaller than 1st bin to value of 1st bin 
+                        #stat = [bins[0] if x<bins[0] else x for x in stat]
+                        results, edges = np.histogram(stat, bins=bins_ce, normed=True)
+                        plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0)
 
-                    #  kernel density estimation
-                    statv = np.asarray(stat)
-                    kde = sm.nonparametric.KDEUnivariate(statv)
-                    nbpts, = statv.shape
-                    if nbpts > 0:
+                        #  kernel density estimation
+                        statv = np.asarray(stat)
+                        kde = sm.nonparametric.KDEUnivariate(statv)
                         kde.fit(kernel='gau')
                         plt.plot(kde.support,kde.density,color=fcolor[p],lw=2,label=str(verif_period[p][0])+' to '+str(verif_period[p][1]))                
                         stat_comp.append(stat)
 
-                    # Accumulate prior stat
-                    PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
-                    if all('corr' in item for item in PSMinfo):
-                        tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
-                    else:
-                        tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types]
-                    prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
+                        # Accumulate prior stat
+                        PSMinfo =  [workdict[p][k]['PSMinfo'].keys() for k in sitetag if k[0] in proxy_types]
+                        if all('corr' in item for item in PSMinfo):
+                            tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types and np.abs(workdict[p][k]['PSMinfo']['corr'])>=r_crit]
+                        else:
+                            tmp = [workdict[p][k]['PriorMCensCE'] for k in sitetag if k[0] in proxy_types]
+                        prior_tmp.append([item for sublist in tmp for item in sublist]) # flatten list of lists
 
 
                 # Kolmogorov-Smirnov significance testing of difference between distributions from both tested periods
@@ -468,32 +464,33 @@ def main():
                     # difference
                     stat = [statPost[i]-statPrior[i] for i in range(len(statPost))]
                     nbdata = len(stat)
-                    mean_stat = np.mean(stat)
-                    std_stat = np.std(stat)
-                    # % of positive change
-                    dCEplus = [stat[i] for i in range(len(stat)) if stat[i] > 0.0]
                     if nbdata > 0:
+                        mean_stat = np.mean(stat)
+                        std_stat = np.std(stat)
+                        # % of positive change
+                        dCEplus = [stat[i] for i in range(len(stat)) if stat[i] > 0.0]
                         frac = int(float(len(dCEplus))/float(len(stat))*100.)
                         fractiondCEplus = str(int('%d' % frac ))
-                    else:
-                        fractiondCEplus = 'n/a'
 
-                    print('CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), str('%8s' %str(len(stat))), \
-                        ' Fraction of +change:', fractiondCEplus, '%')
+                        print('CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str(len(dCEplus))), \
+                              str('%8s' %str(len(stat))), ' Fraction of +change:', str('%3s' %fractiondCEplus), '%')
 
-                    results, edges = np.histogram(stat, bins=bins_ce, normed=True)
-                    leg = str(verif_period[p][0])+' to '+str(verif_period[p][1])+' : % +change='+str(fractiondCEplus)
-                    plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0)
+                        results, edges = np.histogram(stat, bins=bins_ce, normed=True)
+                        leg = str(verif_period[p][0])+' to '+str(verif_period[p][1])+' : % +change='+str(fractiondCEplus)
+                        plt.bar(edges[:-1],results,binwidth,color=fcolor[p],alpha=alpha,linewidth=0)
 
-                    #  kernel density estimation
-                    statv = np.asarray(stat)
-                    kde = sm.nonparametric.KDEUnivariate(statv)
-                    nbpts, = statv.shape
-                    if nbpts > 0:
+                        #  kernel density estimation
+                        statv = np.asarray(stat)
+                        kde = sm.nonparametric.KDEUnivariate(statv)
                         kde.fit(kernel='gau')
                         plt.plot(kde.support,kde.density,color=fcolor[p],lw=2,label=leg)
                         stat_comp.append(stat)
 
+                    else:
+                        print('CE_stats: period= ', str('%12s' %verif_period[p]), ' category= ', v, ':', str('%8s' %str('n/a')), \
+                              str('%8s' %str(len(stat))), ' Fraction of +change: n/a %')
+                        
+                        
                 # Kolmogorov-Smirnov significance testing of difference between distributions from both periods
                 nbdist = len(stat_comp)
                 if nbdist > 1:
@@ -564,6 +561,7 @@ def main():
                 l = []
                 for sitetype in sorted(proxy_types):                
                     l.append(m.scatter(x,y,35,c='white',marker=proxy_verif[sitetype],edgecolor='black',linewidth='1'))
+
 
                 # ===========================================================================
                 # 2) Maps with proxy sites plotted with dots colored according to correlation
