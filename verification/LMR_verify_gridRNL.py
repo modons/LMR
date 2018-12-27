@@ -89,7 +89,10 @@ MCset = None
 verif_dict = \
     {
     #'psl_sfc_Amon'    : ('anom', 'MSLP', 'Mean sea level pressure',-8.0,8.0,'(hPa)',0.01), \
+    #'zg_850hPa_Amon'  : ('anom','Z850', '850hPa geopotential height',-60.0,60.0,'(m)',1.0), \
     'zg_500hPa_Amon'  : ('anom','Z500', '500hPa geopotential height',-60.0,60.0,'(m)',1.0), \
+    #'ta_850hPa_Amon'  : ('anom','T850', '850hPa temperature',-1.0,1.0,'(K)',1.0), \
+    #'ta_500hPa_Amon'  : ('anom','T500', '500hPa temperature',-1.0,1.0,'(K)',1.0), \
     #'wap_500hPa_Amon' : ('anom','W500', '500hPa vertical motion',-0.04,0.04,'(Pa/s)',1.0), \
     #'ua_1000hPa_Amon' : ('anom','U1000', '1000hPa zonal wind',-2.0,2.0,'(m/s)',1.0), \
     #'va_1000hPa_Amon' : ('anom','V1000', '1000hPa meridional wind',-2.0,2.0,'(m/s)',1.0), \
@@ -116,7 +119,12 @@ trange = [1850,2000] #works for nya = 0
 #ref_period = [1951, 1980] # as in instrumental-era products (e.g. GISTEMP)
 ref_period = [1900, 1999] # 20th century
 
-valid_frac = 0.0
+# If True: regrid all products to common T42 grid,
+# if False: use LMR grid as target grid and regrid reanalyses to this target grid
+regrid_lmr = True
+
+# threshold for fraction of valid data in calculation of verif. stats
+valid_frac = 0.5
 
 # number of contours for plots
 nlevs = 21
@@ -327,35 +335,48 @@ for var in verif_vars:
     ERA20C = ERA20C - np.mean(ERA20C[smatch:ematch,:,:],axis=0)
 
 
+    iplot_loc= False
+    
     # -----------------------------------
     # Regridding the data for comparisons
     # -----------------------------------
-    print('\n regridding data to a common T42 grid...\n')
 
-    iplot_loc= False
-    #iplot_loc= True
+    if regrid_lmr:
+        print('\n regridding data to a common T42 grid...\n')
+        # truncate to a lower resolution grid (common:21, 42, 62, 63, 85, 106, 255, 382, 799)
+        ntrunc_new = 42 # T42
+        ifix = np.remainder(ntrunc_new,2.0).astype(int)
+        nlat_new = ntrunc_new + ifix
+        nlon_new = int(nlat_new*1.5)
+        # lat, lon grid in the truncated space
+        dlat = 90./((nlat_new-1)/2.)
+        dlon = 360./nlon_new
+        veclat = np.arange(-90.,90.+dlat,dlat)
+        veclon = np.arange(0.,360.,dlon)
+        blank = np.zeros([nlat_new,nlon_new])
+        lat2_new = (veclat + blank.T).T  
+        lon2_new = (veclon + blank)
 
+
+        # create instance of the spherical harmonics object for lmr
+        specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
+        # create instance of the spherical harmonics object for the new grid
+        specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
+
+
+    else:
+        # create instance of the spherical harmonics object for lmr
+        specob_new = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
+        nlat_new = nlat
+        nlon_new = nlon
+        lat2_new = lat2
+        lon2_new = lon2
+        veclat = lat[:,0]
+        veclon = lon[0,:]
+    
     # create instance of the spherical harmonics object for each grid
-    specob_lmr = Spharmt(nlon,nlat,gridtype='regular',legfunc='computed')
     specob_tcr = Spharmt(nlon_TCR,nlat_TCR,gridtype='regular',legfunc='computed')
     specob_era20c = Spharmt(nlon_ERA20C,nlat_ERA20C,gridtype='regular',legfunc='computed')
-
-    # truncate to a lower resolution grid (common:21, 42, 62, 63, 85, 106, 255, 382, 799)
-    ntrunc_new = 42 # T42
-    ifix = np.remainder(ntrunc_new,2.0).astype(int)
-    nlat_new = ntrunc_new + ifix
-    nlon_new = int(nlat_new*1.5)
-    # lat, lon grid in the truncated space
-    dlat = 90./((nlat_new-1)/2.)
-    dlon = 360./nlon_new
-    veclat = np.arange(-90.,90.+dlat,dlat)
-    veclon = np.arange(0.,360.,dlon)
-    blank = np.zeros([nlat_new,nlon_new])
-    lat2_new = (veclat + blank.T).T  
-    lon2_new = (veclon + blank)  
-
-    # create instance of the spherical harmonics object for the new grid
-    specob_new = Spharmt(nlon_new,nlat_new,gridtype='regular',legfunc='computed')
 
 
     # loop over years of interest and transform...specify trange at top of file
@@ -388,9 +409,13 @@ for var in verif_vars:
         print('                   %5s LMR index= %5s : LMR year= %5s' % (str(yr), str(LMR_smatch),str(LMR_time[LMR_smatch])))
 
         # LMR
-        pdata_lmr = np.mean(LMR[LMR_smatch:LMR_ematch,:,:],0)    
-        lmr_trunc = regrid(specob_lmr, specob_new, pdata_lmr, ntrunc=nlat_new-1, smooth=None)
-    
+        pdata_lmr = np.mean(LMR[LMR_smatch:LMR_ematch,:,:],0)
+        if regrid_lmr:
+            lmr_trunc = regrid(specob_lmr, specob_new, pdata_lmr, ntrunc=nlat_new-1, smooth=None)
+        else:
+            lmr_trunc = pdata_lmr
+
+            
         # TCR
         if TCR_smatch and TCR_ematch:
             pdata_tcr = np.mean(TCR[TCR_smatch:TCR_ematch,:,:],0)
@@ -398,7 +423,7 @@ for var in verif_vars:
             pdata_tcr = np.zeros(shape=[nlat_TCR,nlon_TCR])
             pdata_tcr.fill(np.nan)
 
-        # regrid on LMR grid
+        # regrid on common grid
         if np.isnan(pdata_tcr).all():
             tcr_trunc = np.zeros(shape=[nlat_new,nlon_new])
             tcr_trunc.fill(np.nan)
@@ -459,6 +484,12 @@ for var in verif_vars:
 
         # LMR
         lmr_zm[k,:] = np.mean(lmr_trunc,1)
+        fracok    = np.sum(np.isfinite(lmr_trunc),axis=1,dtype=np.float16)/float(nlon_new)
+        boolok    = np.where(fracok >= valid_frac)
+        boolnotok = np.where(fracok < valid_frac)
+        for i in boolok:
+            lmr_zm[k,i] = np.nanmean(lmr_trunc[i,:],axis=1)
+        lmr_zm[k,boolnotok]  = np.NAN
 
         # TCR
         fracok    = np.sum(np.isfinite(tcr_trunc),axis=1,dtype=np.float16)/float(nlon_TCR)
@@ -541,7 +572,10 @@ for var in verif_vars:
         era20cvec = np.reshape(era20c_trunc,(1,nlat_new*nlon_new))
 
         # lmr <-> tcr
-        indok = np.isfinite(tcrvec); nbok = np.sum(indok); nball = tcrvec.shape[1]
+        indok_tcr = np.isfinite(tcrvec);
+        indok_lmr = np.isfinite(lmrvec);
+        indok = np.logical_and(indok_lmr,indok_tcr)
+        nbok = np.sum(indok); nball = tcrvec.shape[1]
         ratio = float(nbok)/float(nball)
         if ratio > valid_frac:
             lt_csave[k] = np.corrcoef(lmrvec[indok],tcrvec[indok])[0,1]
@@ -550,7 +584,10 @@ for var in verif_vars:
         print('  lmr-tcr correlation  : %s' % str(lt_csave[k]))
 
         # lmr <-> era
-        indok = np.isfinite(era20cvec); nbok = np.sum(indok); nball = era20cvec.shape[1]
+        indok_era = np.isfinite(era20cvec);
+        indok_lmr = np.isfinite(lmrvec);
+        indok = np.logical_and(indok_lmr,indok_era)
+        nbok = np.sum(indok); nball = era20cvec.shape[1]
         ratio = float(nbok)/float(nball)
         if ratio > valid_frac:
             le_csave[k] = np.corrcoef(lmrvec[indok],era20cvec[indok])[0,1]
@@ -559,7 +596,10 @@ for var in verif_vars:
         print('  lmr-era correlation  : %s' % str(le_csave[k]))
 
         # tcr <-> era
-        indok = np.isfinite(era20cvec); nbok = np.sum(indok); nball = era20cvec.shape[1]
+        indok_tcr = np.isfinite(tcrvec);
+        indok_era = np.isfinite(era20cvec);
+        indok = np.logical_and(indok_tcr,indok_era)
+        nbok = np.sum(indok); nball = era20cvec.shape[1]
         ratio = float(nbok)/float(nball)
         if ratio > valid_frac:
             te_csave[k] = np.corrcoef(tcrvec[indok],era20cvec[indok])[0,1]
@@ -721,17 +761,20 @@ for var in verif_vars:
     ce_te = np.zeros([nlat_new,nlon_new])
 
     # bias
-
+    # ...
+    
     # CE
-    ce_lt = coefficient_efficiency(tcr_allyears,lmr_allyears)
-    ce_le = coefficient_efficiency(era20c_allyears,lmr_allyears)
-    ce_te = coefficient_efficiency(era20c_allyears,tcr_allyears)
+    ce_lt = coefficient_efficiency(tcr_allyears,lmr_allyears,valid_frac)
+    ce_le = coefficient_efficiency(era20c_allyears,lmr_allyears,valid_frac)
+    ce_te = coefficient_efficiency(era20c_allyears,tcr_allyears,valid_frac)
 
     # Correlation
     for la in range(nlat_new):
         for lo in range(nlon_new):
             # LMR-TCR
-            indok = np.isfinite(tcr_allyears[:,la,lo])
+            indok_tcr = np.isfinite(tcr_allyears[:,la,lo])
+            indok_lmr = np.isfinite(lmr_allyears[:,la,lo])
+            indok = np.logical_and(indok_lmr,indok_tcr)
             nbok = np.sum(indok)
             nball = lmr_allyears[:,la,lo].shape[0]
             ratio = float(nbok)/float(nball)
@@ -739,9 +782,12 @@ for var in verif_vars:
                 r_lt[la,lo] = np.corrcoef(lmr_allyears[indok,la,lo],tcr_allyears[indok,la,lo])[0,1]
             else:
                 r_lt[la,lo] = np.nan
+                ce_lt[la,lo] = np.nan
 
             # LMR-ERA20C
-            indok = np.isfinite(era20c_allyears[:,la,lo])
+            indok_era = np.isfinite(era20c_allyears[:,la,lo])
+            indok_lmr = np.isfinite(lmr_allyears[:,la,lo])
+            indok = np.logical_and(indok_lmr,indok_era)
             nbok = np.sum(indok)
             nball = lmr_allyears[:,la,lo].shape[0]
             ratio = float(nbok)/float(nball)
@@ -749,9 +795,12 @@ for var in verif_vars:
                 r_le[la,lo] = np.corrcoef(lmr_allyears[indok,la,lo],era20c_allyears[indok,la,lo])[0,1]
             else:
                 r_le[la,lo] = np.nan
+                ce_le[la,lo] = np.nan
 
             # TCR-ERA20C
-            indok = np.isfinite(era20c_allyears[:,la,lo])
+            indok_era = np.isfinite(era20c_allyears[:,la,lo])
+            indok_tcr = np.isfinite(tcr_allyears[:,la,lo])
+            indok = np.logical_and(indok_tcr,indok_era)
             nbok = np.sum(indok)
             nball = tcr_allyears[:,la,lo].shape[0]
             ratio = float(nbok)/float(nball)
@@ -759,6 +808,7 @@ for var in verif_vars:
                 r_te[la,lo] = np.corrcoef(tcr_allyears[indok,la,lo],era20c_allyears[indok,la,lo])[0,1]
             else:
                 r_te[la,lo] = np.nan
+                ce_te[la,lo] = np.nan
 
     # median
 
@@ -832,7 +882,9 @@ for var in verif_vars:
     for la in range(nlat_new):
         # LMR-TCR
         ce_lt_zm[la] = coefficient_efficiency(tcr_zm[:,la],lmr_zm[:,la],valid=valid_frac)
-        indok = np.isfinite(tcr_zm[:,la])
+        indok_tcr = np.isfinite(tcr_zm[:,la])
+        indok_lmr = np.isfinite(lmr_zm[:,la])
+        indok = np.logical_and(indok_lmr,indok_tcr)
         nbok = np.sum(indok)
         nball = len(cyears)
         ratio = float(nbok)/float(nball)
@@ -840,10 +892,13 @@ for var in verif_vars:
             r_lt_zm[la] = np.corrcoef(lmr_zm[indok,la],tcr_zm[indok,la])[0,1]
         else:
             r_lt_zm[la]  = np.nan
+            ce_lt_zm[la]  = np.nan
 
         # LMR-ERA20C
         ce_le_zm[la] = coefficient_efficiency(era20c_zm[:,la],lmr_zm[:,la],valid=valid_frac)    
-        indok = np.isfinite(era20c_zm[:,la])
+        indok_era = np.isfinite(era20c_zm[:,la])
+        indok_lmr = np.isfinite(lmr_zm[:,la])
+        indok = np.logical_and(indok_lmr,indok_era)
         nbok = np.sum(indok)
         nball = len(cyears)
         ratio = float(nbok)/float(nball)
@@ -851,7 +906,7 @@ for var in verif_vars:
             r_le_zm[la] = np.corrcoef(lmr_zm[indok,la],era20c_zm[indok,la])[0,1]
         else:
             r_le_zm[la]  = np.nan
-
+            ce_le_zm[la]  = np.nan
     #
     # END r and CE
     #
@@ -895,37 +950,37 @@ for var in verif_vars:
     if iplot:
         fig = plt.figure()
         ax = fig.add_subplot(4,2,1)    
-        LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
+        LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,2)    
-        LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
+        LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,3)    
-        LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
+        LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - ERA-20C '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,4)    
-        LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
+        LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('LMR - ERA-20C '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,5)    
-        LMR_plotter(r_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
+        LMR_plotter(r_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('20CR-V2 - ERA-20C '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_rmean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
 
         ax = fig.add_subplot(4,2,6)    
-        LMR_plotter(ce_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
+        LMR_plotter(ce_te,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
         plt.title('20CR-V2 - ERA-20C '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(te_cemean_global))
         plt.clim(-1,1)
         ax.title.set_position([.5, 1.05])
@@ -942,25 +997,25 @@ for var in verif_vars:
 
             fig = plt.figure()
             ax = fig.add_subplot(4,2,1)    
-            LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
+            LMR_plotter(r_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
             plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_rmean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
 
             ax = fig.add_subplot(4,2,2)    
-            LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
+            LMR_plotter(ce_lt,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
             plt.title('LMR - 20CR-V2 '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(lt_cemean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
 
             ax = fig.add_subplot(4,2,3)    
-            LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',cbarfmt=cbarfmt,nticks=nticks)
+            LMR_plotter(r_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='neither',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
             plt.title('LMR - ERA-20C '+verif_dict[var][1]+' r '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_rmean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
 
             ax = fig.add_subplot(4,2,4)    
-            LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',cbarfmt=cbarfmt,nticks=nticks)
+            LMR_plotter(ce_le,lat2_new,lon2_new,'bwr',nlevs,vmin=-1,vmax=1,extend='min',backg='lightgrey',cbarfmt=cbarfmt,nticks=nticks)
             plt.title('LMR - ERA-20C '+verif_dict[var][1]+' CE '+str(cyears[0])+'-'+str(cyears[-1]) + ' mean='+str(le_cemean_global))
             plt.clim(-1,1)
             ax.title.set_position([.5, 1.05])
