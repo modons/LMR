@@ -1832,7 +1832,11 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         state_vars_for_ye = config.psm.bilinear.psm_required_variables
         
     elif psm_key == 'h_interp':
-        calib_avgPeriod = None
+        # python3 access to dict keys to check if avg. interval is ' multiyear'
+        if list(config.prior.avgInterval)[0] == 'multiyear':
+            calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        else:
+            calib_avgPeriod = None            
         calib_str = ''
         state_vars_for_ye = config.psm.h_interp.psm_required_variables
 
