@@ -375,6 +375,7 @@ psm:
     datadir_obsError: null
     filename_obsError: R.txt
     dataformat_obsError: TXT
+    datafile_obsError: None
 
 prior:
   prior_source: ccsm4_last_millenium

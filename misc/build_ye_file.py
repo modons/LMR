@@ -187,8 +187,8 @@ def main(cfgin=None, config_path=None):
             else:
                 _log.error('ERROR: Unrecognized value of *proxy_timeseries_kind* attribute in proxies configuration.')
                 raise SystemExit()
-            statevars = cfg.psm.h_interp.psm_required_variables
-            for item in list(statevars.keys()): statevars[item] = vkind
+            statevars = {psm_key.split(',')[1]: vkind}
+            #for item in list(statevars.keys()): statevars[item] = vkind
         elif psm_key == 'bayesreg_uk37':
             statevars = cfg.psm.bayesreg_uk37.psm_required_variables
             #psm_avg = 'multiyear'

@@ -1438,7 +1438,8 @@ class h_interpPSM(BasePSM):
     """
     def __init__(self, config, proxy_obj, R_data=None):
 
-        self.psm_key = 'h_interp'
+        proxy_db = config.proxies.use_from[0]
+        self.psm_key = getattr(config.proxies, proxy_db).proxy_psm_type[proxy_obj.type]
         
         self.proxy = proxy_obj.type
         self.site = proxy_obj.id
@@ -1487,10 +1488,14 @@ class h_interpPSM(BasePSM):
         # ----------------------
         # Calculate the Ye's ...
         # ----------------------
+
+        # define state variable that should be interpolated to proxy site
+        state_var = list(X_state_info.keys())[0]
         
-        if state_var not in list(X_state_info.keys()):
-            raise KeyError('Needed variable %s not in state vector for Ye'
-                           ' calculation.' %state_var)
+        #JBadgeley commented this out for more flexibility with the psms
+        #if state_var not in list(X_state_info.keys()):
+        #    raise KeyError('Needed variable not in state vector for Ye'
+        #                   ' calculation.')
         
         # TODO: end index should already be +1, more pythonic
         statevar_startidx, statevar_endidx = X_state_info[state_var]['pos']

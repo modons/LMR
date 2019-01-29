@@ -1584,7 +1584,6 @@ class psm(ConfigGroup):
         # gridpoints
         # radius_influence = None
         radius_influence = 50. # distance-scale in km
-        hinterp_var = 'd18O_sfc_Amon'
         
         datadir_obsError = './'
         filename_obsError = 'R.txt'
@@ -1599,6 +1598,7 @@ class psm(ConfigGroup):
             super(self.__class__, self).__init__(**kwargs)
 
             self.radius_influence = self.radius_influence
+            self.datadir_obsError = self.datadir_obsError
             self.filename_obsError = self.filename_obsError
             self.dataformat_obsError = self.dataformat_obsError 
 

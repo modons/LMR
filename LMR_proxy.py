@@ -319,7 +319,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
     @staticmethod
     def get_psm_obj(config,proxy_type):
         psm_key = config.proxies.PAGES2kv1.proxy_psm_type[proxy_type]
-        return LMR_psms.get_psm_class(psm_key)
+        return LMR_psms.get_psm_class(psm_key.split(',')[0])
 
     @classmethod
     @augment_docstr
@@ -532,7 +532,7 @@ class ProxyLMRdb(BaseProxyObject):
     @staticmethod
     def get_psm_obj(config,proxy_type):
         psm_key = config.proxies.LMRdb.proxy_psm_type[proxy_type]
-        return LMR_psms.get_psm_class(psm_key)
+        return LMR_psms.get_psm_class(psm_key.split(',')[0])
 
     @classmethod
     @augment_docstr
@@ -781,7 +781,7 @@ class ProxyNCDCdadt(BaseProxyObject):
     @staticmethod
     def get_psm_obj(config,proxy_type):
         psm_key = config.proxies.NCDCdadt.proxy_psm_type[proxy_type]
-        return LMR_psms.get_psm_class(psm_key)
+        return LMR_psms.get_psm_class(psm_key.split(',')[0])
 
     @classmethod
     @augment_docstr
