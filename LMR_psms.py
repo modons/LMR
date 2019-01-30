@@ -764,6 +764,7 @@ class LinearPSM_TorP(LinearPSM):
                 self.slope = psm_site_data_T['PSMslope']
                 self.intercept = psm_site_data_T['PSMintercept']
                 self.R = psm_site_data_T['PSMmse']
+                self.seasonality = psm_site_data_T['Seasonality']
             else:
                 # smaller residual errors w.r.t. precipitation/moisture
                 self.sensitivity = 'moisture'
@@ -771,7 +772,8 @@ class LinearPSM_TorP(LinearPSM):
                 self.slope = psm_site_data_P['PSMslope']
                 self.intercept = psm_site_data_P['PSMintercept']
                 self.R = psm_site_data_P['PSMmse']
-
+                self.seasonality = psm_site_data_P['Seasonality']
+                
         elif (proxy, site) in list(psm_data_T.keys()) and (proxy, site) not in list(psm_data_P.keys()):
             # calibrated for temperature and NOT for precipitation, assign as "temperature" sensitive
             self.sensitivity = 'temperature'
@@ -779,6 +781,7 @@ class LinearPSM_TorP(LinearPSM):
             self.slope = psm_site_data_T['PSMslope']
             self.intercept = psm_site_data_T['PSMintercept']
             self.R = psm_site_data_T['PSMmse']
+            self.seasonality = psm_site_data_T['Seasonality']
         elif (proxy, site) not in list(psm_data_T.keys()) and (proxy, site) in list(psm_data_P.keys()):
             # calibrated for precipitation/moisture and NOT for temperature, assign as "moisture" sensitive
             self.sensitivity = 'moisture'
@@ -786,6 +789,7 @@ class LinearPSM_TorP(LinearPSM):
             self.slope = psm_site_data_P['PSMslope']
             self.intercept = psm_site_data_P['PSMintercept']
             self.R = psm_site_data_P['PSMmse']
+            self.seasonality = psm_site_data_P['Seasonality']
         else:
             raise ValueError('Could not find proxy in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
