@@ -1044,7 +1044,7 @@ class ProxyDAPSpseudoproxies(BaseProxyObject):
     @staticmethod
     def get_psm_obj(config,proxy_type):
         psm_key = config.proxies.DAPSpseudoproxies.proxy_psm_type[proxy_type]
-        return LMR_psms.get_psm_class(psm_key)
+        return LMR_psms.get_psm_class(psm_key.split(',')[0])
     
     @classmethod
     @augment_docstr
