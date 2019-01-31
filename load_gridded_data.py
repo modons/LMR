@@ -2341,7 +2341,7 @@ def read_gridded_data_TraCE21ka(data_dir,data_file,data_vars,outtimeavg,detrend=
 
                 # indices corresponding to reference period                
                 if anom_ref is not None:
-                    indsyrref = [j for j,v in enumerate(dates) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
+                    indsyrref = [j for j,v in enumerate(dates.year) if ((v >= anom_ref[0]) and (v <= anom_ref[1]))]
                     # overlap?
                     if len(indsyrref) > 0:
                         climo = np.nanmean(data_var[indsyrref],axis=0)
