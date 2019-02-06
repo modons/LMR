@@ -36,10 +36,20 @@ import LMR_prior
 import LMR_proxy
 import LMR_utils
 import pandas as pd
+from scipy import stats
 
 def make_gmt_figure(analysis_data,analysis_time,fsave=None):
 
-    # work in progress...
+    # a "lite" version of the original in LMR_verify_GM.py
+    
+    plt.rcParams['figure.figsize'] = 10, 10  # that's default image size for this interactive session
+    plt.rcParams['axes.linewidth'] = 2.0 #set the value globally
+    plt.rcParams['font.weight'] = 'bold' #set the font weight globally
+    plt.rc('text', usetex=False)
+    #plt.rc('text', usetex=True)
+
+    # compute verification statistics 
+    verif,analysis_detrended = compute_gmt_verification(analysis_data,analysis_time)
     
     alpha = 0.5 # alpha transparency
     lw = 1 # line width
@@ -66,34 +76,67 @@ def make_gmt_figure(analysis_data,analysis_time,fsave=None):
 
     plt.xlim(xl_loc)
     plt.ylim(yl_loc)
+    txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.45
+    tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.2
+    offset = 0.05
+    plt.text(txl,tyl,'(LMR,GISTEMP)  : r= ' + verif['lgc'].ljust(5,' ') + ' CE= ' + verif['lgce'].ljust(5,' '), fontsize=14, family='monospace')
+    tyl = tyl-offset
+    plt.text(txl,tyl,'(LMR,HadCRUT4) : r= ' + verif['lcc'].ljust(5,' ') + ' CE= ' + verif['lcce'].ljust(5,' '), fontsize=14, family='monospace')
+    tyl = tyl-offset
+    plt.text(txl,tyl,'(LMR,BE)       : r= ' + verif['lbc'].ljust(5,' ') + ' CE= ' + verif['lbce'].ljust(5,' '), fontsize=14, family='monospace')
+    tyl = tyl-offset
+    plt.text(txl,tyl,'(LMR,MLOST)    : r= ' + verif['lmc'].ljust(5,' ') + ' CE= ' + verif['lmce'].ljust(5,' '), fontsize=14, family='monospace')
+    tyl = tyl-offset
+    plt.text(txl,tyl,'(LMR,consensus): r= ' + verif['loc'].ljust(5,' ') + ' CE= ' + verif['loce'].ljust(5,' '), fontsize=14, family='monospace')
+
+    plt.plot(xl_loc,[0,0],color='gray',linestyle=':',lw=2)
     plt.legend(loc=2)
     if fsave:
         print('saving to .png')
         plt.savefig(fsave+'_GMT_annual.png',dpi=300)
         
-"""
-    plt.fill_between(recon_times,gmt_min,gmt_max,facecolor='gray',alpha = 0.5,linewidth=0.)
+    # detrended figure
+    plt.figure()
+    for dset in list(analysis_data.keys()):
+        time = analysis_time['time']
+        gm = analysis_detrended[dset]
+        stime = time[0]
+        etime =time[-1]
+        if dset == 'LMR':
+            lww = lw*2
+            alphaa = 1.
+        else:
+            lww = lw
+            alphaa = alpha
+            
+        plt.plot(time,gm,color=dset_color[dset],linewidth=lww,label=dset,alpha=alphaa)
+
+    plt.title('Detrended global mean temperature',weight='bold',y=1.025)
+    plt.xlabel('Year CE',fontweight='bold')
+    plt.ylabel('Temperature anomaly (K)',fontweight='bold')
+    xl_loc = [stime,etime]
+    yl_loc = [-1.,1.]
+
+    plt.xlim(xl_loc)
+    plt.ylim(yl_loc)
     txl = xl_loc[0] + (xl_loc[1]-xl_loc[0])*.45
     tyl = yl_loc[0] + (yl_loc[1]-yl_loc[0])*.2
     offset = 0.05
-
-    plt.text(txl,tyl,'(LMR,GISTEMP)  : r= ' + lgc.ljust(5,' ') + ' CE= ' + lgce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,GISTEMP)  : r= ' + verif['lgrd'].ljust(5,' ') + ' CE= ' + verif['lgcd'].ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,HadCRUT4) : r= ' + lcc.ljust(5,' ') + ' CE= ' + lcce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,HadCRUT4) : r= ' + verif['lcrd'].ljust(5,' ') + ' CE= ' + verif['lccd'].ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,BE)       : r= ' + lbc.ljust(5,' ') + ' CE= ' + lbce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,BE)       : r= ' + verif['lbrd'].ljust(5,' ') + ' CE= ' + verif['lbcd'].ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,MLOST)    : r= ' + lmc.ljust(5,' ') + ' CE= ' + lmce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,MLOST)    : r= ' + verif['lmrd'].ljust(5,' ') + ' CE= ' + verif['lmcd'].ljust(5,' '), fontsize=14, family='monospace')
     tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,20CR-V2)  : r= ' + ltc.ljust(5,' ') + ' CE= ' + ltce.ljust(5,' '), fontsize=14, family='monospace')
-    tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,ERA-20C)  : r= ' + lec.ljust(5,' ') + ' CE= ' + lece.ljust(5,' '), fontsize=14, family='monospace')
-    tyl = tyl-offset
-    plt.text(txl,tyl,'(LMR,consensus): r= ' + loc.ljust(5,' ') + ' CE= ' + loce.ljust(5,' '), fontsize=14, family='monospace')
+    plt.text(txl,tyl,'(LMR,consensus): r= ' + verif['lconrd'].ljust(5,' ') + ' CE= ' + verif['lconcd'].ljust(5,' '), fontsize=14, family='monospace')
 
     plt.plot(xl_loc,[0,0],color='gray',linestyle=':',lw=2)
-
-"""
+    plt.legend(loc=2)
+    if fsave:
+        print('saving to .png')
+        plt.savefig(fsave+'_GMT_annual_detrended.png',dpi=300)
 
 def make_plot(vplot,grid,figsize=10,savefig=None,vmax=None):
 
@@ -380,7 +423,7 @@ def load_config(yaml_file,verbose=False):
         if not proceed:
             raise SystemExit()
         else:
-            #print('OK!')
+            print('OK!')
             pass
     
     if verbose:
@@ -472,10 +515,11 @@ def load_proxies(cfg,verbose=True):
     return prox_manager
 
 
-def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox_inds=None,prox_type=None,verbose=False):
+def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox_inds=None,prox_type=None,prox_ID=None,replace_r=None,r_crit=None,verbose=False):
 
     # revisions:
     # 27 December 2018: added prox_type optional parameter to filter to only those proxies
+    # 4 February 2018: added option replace_r to replace the observation error variance
     
     begin_time = time()
     core = cfg.core
@@ -484,7 +528,8 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
     if verbose:
         print('finding proxy records for year:' + str(target_year))
         print('recon_timescale = ' + str(recon_timescale))
-        if prox_type: print('limiting to proxies of type:',prox_type)
+        if prox_type: print('limiting to proxies of type: ',prox_type)
+        if prox_ID: print('limiting to a single proxy: ',prox_ID)
             
     tas_var = [item for item in list(cfg.prior.state_variables.keys()) if 'tas_sfc_' in item]
 
@@ -497,7 +542,9 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
     vT = []
     for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
         if prox_type and prox_type not in Y.type: continue
-            
+        if prox_ID and prox_ID not in Y.id: continue
+        if r_crit and np.abs(Y.psm_obj.corr) < r_crit: continue # implementation of Robert's r_crit threshhold
+
         # Check if we have proxy ob for current time interval
         if recon_timescale > 1:
             # exclude lower bound to not include same obs in adjacent time intervals
@@ -520,17 +567,24 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
             pass
         else:
             if verbose and prox_type: print('got obs for this year for proxy ',Y.id,Y.type)
+            if verbose and prox_ID: print('got obs for this year for single proxy ',Y.id,Y.type)
             nYobs = len(Yvals)
             Yobs =  Yvals.mean()
             ob_err = Y.psm_obj.R/nYobs
  #           if (target_year >=start_yr) & (target_year <= end_yr):
             vY.append(Yobs)
-            vR.append(ob_err)
+            if replace_r:
+                vR.append(replace_r[proxy_idx])
+            else:
+                vR.append(ob_err)
             vP.append(proxy_idx)
             vT.append(Y.type)
     vYe = Ye_assim[vP,:]
     vYe_coords = Ye_assim_coords[vP,:]
    
+    if len(vY) == 0:
+        print('Zero valid proxies for the chosen year!')
+        
     elapsed_time = time() - begin_time
     if verbose:
         print('-----------------------------------------------------')
@@ -970,7 +1024,7 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
         # LMR GMT was passed to this routine for inclusion in the dictionary
         if np.any(lmr_gm):
             lmr_smatch, lmr_ematch = LMR_utils.find_date_indices(lmr_time,svtime,evtime)
-            analysis_data['LMR'] = lmr_gm[lmr_smatch:lmr_ematch]
+            analysis_data['LMR'] = np.squeeze(lmr_gm[lmr_smatch:lmr_ematch])
         
     # lat and lon don't inform on global means, but consistent return with full field
     print('returning global means...')
@@ -1176,3 +1230,172 @@ def prior_regrid(cfg,X,Xb_one,verbose=False):
     X.trunc_state_info = new_state_info
     
     return X, Xb_one
+
+def compute_gmt_verification(analysis_data,analysis_time):
+    
+    """pulled from LMR_verify_GM"""
+    
+    # put all return values in a dictionary
+    verif = {}
+    # -------------------------------------------------------
+    # correlation coefficients & CE over chosen time interval 
+    # -------------------------------------------------------
+    #['GIS', 'CRU', 'BE', 'MLOST', 'CON', 'LMR']
+    
+    stime = analysis_time['time'][0]
+    etime = analysis_time['time'][-1]
+    
+    # LMR-GIS
+    # overlaping years within verification interval
+    lmr_gis_corr = np.corrcoef(analysis_data['GIS'],analysis_data['LMR'])
+    lmr_gis_ce = LMR_utils.coefficient_efficiency(analysis_data['GIS'],analysis_data['LMR'])
+    lmr_cru_corr = np.corrcoef(analysis_data['CRU'],analysis_data['LMR'])
+    lmr_cru_ce = LMR_utils.coefficient_efficiency(analysis_data['CRU'],analysis_data['LMR'])
+    lmr_be_corr = np.corrcoef(analysis_data['BE'],analysis_data['LMR'])
+    lmr_be_ce = LMR_utils.coefficient_efficiency(analysis_data['BE'],analysis_data['LMR'])
+    lmr_mlost_corr = np.corrcoef(analysis_data['MLOST'],analysis_data['LMR'])
+    lmr_mlost_ce = LMR_utils.coefficient_efficiency(analysis_data['MLOST'],analysis_data['LMR'])
+    lmr_con_corr = np.corrcoef(analysis_data['CON'],analysis_data['LMR'])
+    lmr_con_ce = LMR_utils.coefficient_efficiency(analysis_data['CON'],analysis_data['LMR'])
+
+    lgc = str(float('%.2f' % lmr_gis_corr[0,1]))
+    lcc = str(float('%.2f' % lmr_cru_corr[0,1]))
+    lbc = str(float('%.2f' % lmr_be_corr[0,1]))
+    loc = str(float('%.2f' % lmr_con_corr[0,1]))
+    lmc = str(float('%.2f' % lmr_mlost_corr[0,1]))
+    lgce = str(float('%.2f' % lmr_gis_ce))
+    lcce = str(float('%.2f' % lmr_cru_ce))
+    lbce = str(float('%.2f' % lmr_be_ce))
+    lmce = str(float('%.2f' % lmr_mlost_ce))
+    loce = str(float('%.2f' % lmr_con_ce))
+
+    print('--------------------------------------------------')
+    print('verification of detrended data')
+    print('--------------------------------------------------')
+
+    verif_yrs = np.arange(stime,etime+1,1)
+
+    xvar = list(range(len(analysis_data['LMR'])))
+    lmr_slope, lmr_intercept, r_value, p_value, std_err = stats.linregress(xvar,analysis_data['LMR'])
+    lmr_trend = lmr_slope*np.squeeze(xvar) + lmr_intercept
+    lmr_gm_detrend = analysis_data['LMR'] - lmr_trend
+    print('LMR trend: ',lmr_slope*100)
+    gis_slope, gis_intercept, r_value, p_value, std_err = stats.linregress(xvar,analysis_data['GIS'])
+    gis_trend = gis_slope*np.squeeze(xvar) + gis_intercept
+    gis_gm_detrend = analysis_data['GIS'] - gis_trend
+    print('GIS trend: ',gis_slope*100)
+    cru_slope, cru_intercept, r_value, p_value, std_err = stats.linregress(xvar,analysis_data['CRU'])
+    cru_trend = cru_slope*np.squeeze(xvar) + cru_intercept
+    cru_gm_detrend = analysis_data['CRU'] - cru_trend
+    print('CRU trend: ',cru_slope*100)
+    be_slope, be_intercept, r_value, p_value, std_err = stats.linregress(xvar,analysis_data['BE'])
+    be_trend = be_slope*np.squeeze(xvar) + be_intercept
+    be_gm_detrend = analysis_data['BE'] - be_trend
+    print('BE trend: ',be_slope*100)
+    mlost_slope, mlost_intercept, r_value, p_value, std_err = stats.linregress(xvar,analysis_data['MLOST'])
+    mlost_trend = mlost_slope*np.squeeze(xvar) + mlost_intercept
+    mlost_gm_detrend = analysis_data['MLOST'] - mlost_trend
+    print('MLOST trend: ',mlost_slope*100)
+    con_slope, con_intercept, r_value, p_value, std_err = stats.linregress(xvar,analysis_data['CON'])
+    con_trend = con_slope*np.squeeze(xvar) + con_intercept
+    con_gm_detrend = analysis_data['CON'] - con_trend
+    print('CON trend: ',con_slope*100)
+
+    # r and ce on detrended data
+    lmr_con_corr_detrend = np.corrcoef(lmr_gm_detrend,con_gm_detrend)
+    lmr_detrend_err = lmr_gm_detrend - con_gm_detrend
+    lmr_gis_ce_detrend = LMR_utils.coefficient_efficiency(gis_gm_detrend,lmr_gm_detrend)
+    lmr_gis_corr_detrend = np.corrcoef(lmr_gm_detrend,gis_gm_detrend)
+    lmr_detrend_err = lmr_gm_detrend - cru_gm_detrend
+    lmr_cru_ce_detrend = LMR_utils.coefficient_efficiency(cru_gm_detrend,lmr_gm_detrend)
+    lmr_cru_corr_detrend = np.corrcoef(lmr_gm_detrend,cru_gm_detrend)
+    lmr_detrend_err = lmr_gm_detrend - be_gm_detrend
+    lmr_be_ce_detrend = LMR_utils.coefficient_efficiency(be_gm_detrend,lmr_gm_detrend)
+    lmr_be_corr_detrend = np.corrcoef(lmr_gm_detrend,be_gm_detrend)
+    lmr_detrend_err = lmr_gm_detrend - mlost_gm_detrend
+    lmr_mlost_ce_detrend = LMR_utils.coefficient_efficiency(mlost_gm_detrend,lmr_gm_detrend)
+    lmr_mlost_corr_detrend = np.corrcoef(lmr_gm_detrend,mlost_gm_detrend)
+    lmr_detrend_err = lmr_gm_detrend - con_gm_detrend
+    lmr_con_ce_detrend = LMR_utils.coefficient_efficiency(con_gm_detrend,lmr_gm_detrend)
+
+    lgrd   =  str(float('%.2f' % lmr_gis_corr_detrend[0,1]))
+    lgcd   =  str(float('%.2f' % lmr_gis_ce_detrend))
+    lcrd   =  str(float('%.2f' % lmr_cru_corr_detrend[0,1]))
+    lccd   =  str(float('%.2f' % lmr_cru_ce_detrend))
+    lbrd   =  str(float('%.2f' % lmr_be_corr_detrend[0,1]))
+    lbcd   =  str(float('%.2f' % lmr_be_ce_detrend))
+    lmrd   =  str(float('%.2f' % lmr_mlost_corr_detrend[0,1]))
+    lmcd   =  str(float('%.2f' % lmr_mlost_ce_detrend))
+    lconrd   =  str(float('%.2f' % lmr_con_corr_detrend[0,1]))
+    lconcd   =  str(float('%.2f' % lmr_con_ce_detrend))
+
+    gmt_verification_stats = {}
+    stat_vars = ['stime','etime',
+             'lgc','lcc','lbc','lmc','loc',    
+             'lgce','lcce','lbce','lmce','loce',
+             'lgrd','lcrd','lbrd','lmrd','lconrd',
+             'lgcd','lccd','lbcd','lmcd','lconcd',
+             'lmr_slope']
+                 
+    # pack local variables by name into a dictionary
+    for var in stat_vars:
+        gmt_verification_stats[var] = locals()[var]
+
+    # send back detrended time series
+    analysis_detrended = {}
+    analysis_detrended['GIS'] = gis_gm_detrend
+    analysis_detrended['CRU'] = cru_gm_detrend
+    analysis_detrended['BE'] = be_gm_detrend
+    analysis_detrended['MLOST'] = mlost_gm_detrend
+    analysis_detrended['CON'] = con_gm_detrend
+    analysis_detrended['LMR'] = lmr_gm_detrend
+    
+    return gmt_verification_stats,analysis_detrended
+
+def proxy_error_ensemble_calibration(prox_manager,Ye_assim):
+
+    """
+    compute proxy error variance using ensemble calibration
+    sends back lists for both the old r values and the ones from ensemble calibration
+    """
+    
+    # option to limit ensemble calibration to a time range
+    tcond = True
+    #tcond = False
+    start_yr=1850; end_yr = 2000
+    #start_yr=0; end_yr = 1849
+
+    # lists that archive the r values, original, and new
+    r_old = []
+    r_ens = []
+    debug = False
+
+    for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
+        if debug: print(Y.id,Y.type)
+            
+        ye_mean = np.mean(Ye_assim[proxy_idx,:])
+        if tcond:
+            # conditioned on time range
+            Yvals = Y.values[(Y.values.index > start_yr) & (Y.values.index <= end_yr)].values   
+        else:
+            # uncondition proxy values:
+            Yvals = Y.values.values
+
+        ye_mean_err = ye_mean - Yvals
+        ye_mean_err_var = np.var(ye_mean_err,ddof=1)
+        evar = np.var(Ye_assim[proxy_idx,:],ddof=1)
+        new_r = ye_mean_err_var-evar
+        if new_r < 0: new_r = 0
+        r_old.append(Y.psm_obj.R)
+        r_ens.append(new_r)
+
+        if debug: print('em err var:',ye_mean_err_var)
+        if debug: print('ensemble var:',evar)
+        if debug: print('ensemble calibration:',ye_mean_err_var/(evar+Y.psm_obj.R))
+        if debug: print('proxy error:',Y.psm_obj.R)
+        if debug: print('proxy error from ensemble calibration:',new_r)
+
+    nproc = len(r_old)
+    print('\n processed ',nproc,' proxies')
+    
+    return r_ens,r_old
