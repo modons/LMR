@@ -1664,7 +1664,7 @@ def PAGES2K_regional_means(field,lat,lon):
     #debug = False
     
     # number of geographical regions (default, as defined in PAGES2K(2013) paper
-    nregions = 9
+    nregions = 13
     
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3: # time is a dimension
@@ -1683,42 +1683,59 @@ def PAGES2K_regional_means(field,lat,lon):
     # lat and lon range for each region (first value is lower limit, second is upper limit)
     rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
     reg_names = []
-    # 1. Arctic: north of 60N 
-    reg_names.append('Arctic')
-    rlat[0,0] = 60.; rlat[0,1] = 90.
+    
+    # 1. Global
+    reg_names.append('Global')
+    rlat[0,0] = -90.; rlat[0,1] = 90.
     rlon[0,0] = 0.; rlon[0,1] = 360.
-    # 2. Europe: 35-70N, 10W-40E
+    # 2. N. Hemisphere
+    reg_names.append('Northern Hemisphere')
+    rlat[1,0] = 0.; rlat[1,1] = 90.
+    rlon[1,0] = 0.; rlon[1,1] = 360.
+    # 3. S. Hemisphere
+    reg_names.append('Southern Hemisphere')
+    rlat[2,0] = -90.; rlat[2,1] = 0.
+    rlon[2,0] = 0.; rlon[2,1] = 360.
+    # 4. Arctic: north of 60N 
+    reg_names.append('Arctic')
+    rlat[3,0] = 60.; rlat[3,1] = 90.
+    rlon[3,0] = 0.; rlon[3,1] = 360.
+    # 5. Europe: 35-70N, 10W-40E
     reg_names.append('Europe')
-    rlat[1,0] = 35.; rlat[1,1] = 70.
-    rlon[1,0] = 350.; rlon[1,1] = 40.
-    # 3. Asia: 23-55N; 60-160E (from map)
+    rlat[4,0] = 35.; rlat[4,1] = 70.
+    rlon[4,0] = 350.; rlon[4,1] = 40.
+    # 6. Asia: 23-55N; 60-160E (from map)
     reg_names.append('Asia')
-    rlat[2,0] = 23.; rlat[2,1] = 55.
-    rlon[2,0] = 60.; rlon[2,1] = 160.
-    # 4. North America 1 (trees):  30-55N, 75-130W 
+    rlat[5,0] = 23.; rlat[5,1] = 55.
+    rlon[5,0] = 60.; rlon[5,1] = 160.
+    # 7. North America 1 (trees):  30-55N, 75-130W 
     reg_names.append('North America')
-    rlat[3,0] = 30.; rlat[3,1] = 55.
-    rlon[3,0] = 55.; rlon[3,1] = 230.
-    # 5. South America: Text: 20S-65S and 30W-80W
+    rlat[6,0] = 30.; rlat[6,1] = 55.
+    rlon[6,0] = 55.; rlon[6,1] = 230.
+    # 8. South America: Text: 20S-65S and 30W-80W
     reg_names.append('South America')
-    rlat[4,0] = -65.; rlat[4,1] = -20.
-    rlon[4,0] = 280.; rlon[4,1] = 330.
-    # 6. Australasia: 110E-180E, 0-50S 
+    rlat[7,0] = -65.; rlat[7,1] = -20.
+    rlon[7,0] = 280.; rlon[7,1] = 330.
+    # 9. Australasia: 110E-180E, 0-50S 
     reg_names.append('Australasia')
-    rlat[5,0] = -50.; rlat[5,1] = 0.
-    rlon[5,0] = 110.; rlon[5,1] = 180.
-    # 7. Antarctica: south of 60S (from map)
+    rlat[8,0] = -50.; rlat[8,1] = 0.
+    rlon[8,0] = 110.; rlon[8,1] = 180.
+    # 10. Antarctica: south of 60S (from map)
     reg_names.append('Antarctica')
-    rlat[6,0] = -90.; rlat[6,1] = -60.
-    rlon[6,0] = 0.; rlon[6,1] = 360.
-    # 8. Greenland
+    rlat[9,0] = -90.; rlat[9,1] = -60.
+    rlon[9,0] = 0.; rlon[9,1] = 360.
+    # 11. Greenland
     reg_names.append('Greenland')
-    rlat[7,0] = 59.; rlat[7,1] = 85.
-    rlon[7,0] = 285.; rlon[7,1] = 350.
-    # 9. NE Atlantic
+    rlat[10,0] = 59.; rlat[10,1] = 85.
+    rlon[10,0] = 285.; rlon[10,1] = 350.
+    # 12. NE Atlantic
     reg_names.append('NE Atlantic')
-    rlat[8,0] = 50.; rlat[8,1] = 75.
-    rlon[8,0] = 285.; rlon[8,1] = 25.
+    rlat[11,0] = 50.; rlat[11,1] = 75.
+    rlon[11,0] = 285.; rlon[11,1] = 25.
+    # 13. Nino3.4
+    reg_names.append('Nino3.4')
+    rlat[12,0] = -5.; rlat[12,1] = 5.
+    rlon[12,0] = 190.; rlon[12,1] = 240.
     # ...add other regions here...
     
     # latitude weighting 
