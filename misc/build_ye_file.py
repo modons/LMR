@@ -195,6 +195,15 @@ def main(cfgin=None, config_path=None):
             psm_avg = 'multiyear'
             if cfg.psm.bayesreg_d18o.seasonal_seatemp:
                 psm_avg = 'multiyear-season'
+        elif psm_key in ['bayesreg_mgca_pachyderma_red', 'bayesreg_mgca_pachyderma_bcp',
+                         'bayesreg_mgca_bulloides_red', 'bayesreg_mgca_bulloides_bcp',
+                         'bayesreg_mgca_sacculifer_red', 'bayesreg_mgca_sacculifer_bcp',
+                         'bayesreg_mgca_ruberwhite_red', 'bayesreg_mgca_ruberwhite_bcp',
+                         'bayesreg_mgca_pooled_red', 'bayesreg_mgca_pooled_bcp']:
+            statevars = cfg.psm.bayesreg_mgca.psm_required_variables
+            psm_avg = 'multiyear'
+            if cfg.psm.bayesreg_mgca.seasonal_seatemp:
+                psm_avg = 'multiyear-season'
         else:
             raise KeyError('ERROR: psm_key: {}'.format(psm_key))
 
@@ -250,7 +259,7 @@ def main(cfgin=None, config_path=None):
             season_unique = []
             for item in season_vects:
                 if item not in season_unique:season_unique.append(item)
-            
+
         elif psm_avg == 'multiyear':
             season_unique = [cfg.prior.avgInterval['multiyear']]
             base_time_interval = 'multiyear'
@@ -279,7 +288,7 @@ def main(cfgin=None, config_path=None):
             # to current "season" (i.e. proxy seasonality)
             # RT Nov 2018: additional (crude) logic to handle special case of DADT "seasonal" PSMs
             if psm_avg == 'multiyear-season':
-                X.avgInterval = {'multiyear': cfg.prior.avgInterval['multiyear'], 'season': season}                
+                X.avgInterval = {'multiyear': cfg.prior.avgInterval['multiyear'], 'season': season}
             else:
                 X.avgInterval = {base_time_interval: season}
 
@@ -315,7 +324,7 @@ def main(cfgin=None, config_path=None):
                             ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
                 else:
                     # "multiyear" PSM:
-                    # Restrict to proxy records associated with current PSM (psm_key)                    
+                    # Restrict to proxy records associated with current PSM (psm_key)
                     if 'bayesreg' in psm_key and pobj.psm_obj.psm_key == psm_key:
                         if psm_avg == 'multiyear-season':
                             # Restrict to proxy records with current 'season'

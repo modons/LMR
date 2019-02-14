@@ -373,6 +373,13 @@ psm:
     psm_d18osw_from_salinity: True
     seasonal_seatemp: True
 
+  bayesreg_mgca:
+    psm_seatemp_variable:
+      tos_sfc_Odec: 'full'
+#    psm_omega_variable:
+#      omg_sfc_Odecmon: 'full'
+    seasonal_seatemp: False
+#    seawater_age: 65.0
 
 prior:
   prior_source: ccsm4_last_millenium

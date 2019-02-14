@@ -1563,7 +1563,51 @@ class psm(ConfigGroup):
             used.
             """
             return {**self.psm_seatemp_variable, **self.psm_d18osw_variable}
-            
+
+
+    class bayesreg_mgca(ConfigGroup):
+        """
+        Parameters for the foraminifera Mg/Ca PSMs, ``LMR_psms.BayesRegMgcaPSM`` subclasses.
+
+        Attributes
+        ----------
+        psm_required_variables
+        psm_seatemp_variable : dict
+            Required sea-surface temperature state variable for the PSM to
+            calculate Ye. The dict has a str key giving the state variable name
+            and str value indicating whether full field (`full`) or anomaly
+            (`anom`) is to be used.
+        psm_omega_variable : dict
+            Optional seawater omega (carbonate ion saturation state) state
+            variable for the PSM to calculate Ye. The dict has a str key giving
+            the state variable name and str value indicating whether full field
+            (`full`) or anomaly (`anom`) is to be used. Will be passed to
+            ``baymag.predict_mgca``.
+        seasonal_seatemp : bool
+            Indicates whether to use the calibration from seasonal sea-surface
+            temperatures (``True``) or annual sea-surface temperatures
+            (``False``).
+        seawater_age : float or None
+            Optional correction to Mg/Ca for "old" seawater for deep-time
+            assimilations. No correction is applied if `None`, otherwise give
+            the approximate water age (Ma).
+        """
+        psm_seatemp_variable = {'tos_sfc_Odecmon': 'full'}
+        psm_omega_variable = {}
+        seasonal_seatemp = True
+        seawater_age = None
+
+        @property
+        def psm_required_variables(self):
+            """Get dict of required state variables for the PSM to calculate Ye.
+
+            The dict has a str key giving the state variable name and str value
+            indicating whether full field (`full`) or anomaly (`anom`) is to be
+            used.
+            """
+            return {**self.psm_seatemp_variable, **self.psm_omega_variable}
+
+
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
         self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))
@@ -1579,6 +1623,17 @@ class psm(ConfigGroup):
         self.bayesreg_d18o_bulloides = self.bayesreg_d18o
         self.bayesreg_d18o_pachyderma = self.bayesreg_d18o
         self.bayesreg_d18o_incompta = self.bayesreg_d18o
+        self.bayesreg_mgca = self.bayesreg_mgca(**kwargs.pop('bayesreg_mgca', {}))
+        self.bayesreg_mgca_sacculifer_red = self.bayesreg_mgca
+        self.bayesreg_mgca_sacculifer_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_ruberwhite_red = self.bayesreg_mgca
+        self.bayesreg_mgca_ruberwhite_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_bulloides_red = self.bayesreg_mgca
+        self.bayesreg_mgca_bulloides_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_pachyderma_red = self.bayesreg_mgca
+        self.bayesreg_mgca_pachyderma_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_pooled_red = self.bayesreg_mgca
+        self.bayesreg_mgca_pooled_bcp = self.bayesreg_mgca
 
         super().__init__(**kwargs)
         self.avgPeriod = self.avgPeriod
