@@ -184,27 +184,17 @@ def main(cfgin=None, config_path=None):
             for item in list(statevars.keys()): statevars[item] = vkind
         elif psm_key == 'bayesreg_uk37':
             statevars = cfg.psm.bayesreg_uk37.psm_required_variables
-            #psm_avg = 'multiyear'
             psm_avg = 'multiyear-season'
         elif psm_key == 'bayesreg_tex86':
             statevars = cfg.psm.bayesreg_tex86.psm_required_variables
             psm_avg = 'multiyear'
-        elif psm_key == 'bayesreg_d18o_pachyderma':
+        elif psm_key in ['bayesreg_d18o_pachyderma', 'bayesreg_d18o_bulloides',
+                         'bayesreg_d18o_sacculifer', 'bayesreg_d18o_ruberwhite',
+                         'bayesreg_d18o_incompta', 'bayesreg_d18o_pooled']:
             statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
-        elif psm_key == 'bayesreg_d18o_bulloides':
-            statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
-        elif psm_key == 'bayesreg_d18o_sacculifer':
-            statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
-        elif psm_key == 'bayesreg_d18o_ruberwhite':
-            statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
+            psm_avg = 'multiyear'
+            if cfg.psm.bayesreg_d18o.seasonal_seatemp:
+                psm_avg = 'multiyear-season'
         else:
             raise KeyError('ERROR: psm_key: {}'.format(psm_key))
 

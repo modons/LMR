@@ -1848,22 +1848,18 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_tex86.psm_required_variables
 
-    elif psm_key == 'bayesreg_d18o_pachyderma':
-        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
-        calib_str = ''
-        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+    elif psm_key in ['bayesreg_d18o_pachyderma', 'bayesreg_d18o_bulloides',
+                     'bayesreg_d18o_sacculifer', 'bayesreg_d18o_ruberwhite',
+                     'bayesreg_d18o_incompta', 'bayesreg_d18o_pooled']:
+        d18osw_str = 'd18osw'
+        if config.psm.bayesreg_d18o.psm_d18osw_from_salinity:
+            d18osw_str = 'salinity'
 
-    elif psm_key == 'bayesreg_d18o_bulloides':
-        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
-        calib_str = ''
-        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+        seatemp_avg_str = 'annual'
+        if config.psm.bayesreg_d18o.seasonal_seatemp:
+            seatemp_avg_str = 'seasonal'
 
-    elif psm_key == 'bayesreg_d18o_sacculifer':
-        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
-        calib_str = ''
-        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
-
-    elif psm_key == 'bayesreg_d18o_ruberwhite':
+        psmkey_str = '{}-{}-{}'.format(psm_key, seatemp_avg_str, d18osw_str)
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
@@ -1938,13 +1934,9 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
             pkind = 'full'
         elif psm_key == 'bayesreg_tex86':
             pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_ruberwhite':
-            pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_sacculifer':
-            pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_bulloides':
-            pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_pachyderma':
+        elif psm_key in ['bayesreg_d18o_ruberwhite', 'bayesreg_d18o_sacculifer',
+                         'bayesreg_d18o_bulloides', 'bayesreg_d18o_pachyderma',
+                         'bayesreg_d18o_incompta', 'bayesreg_d18o_pooled']:
             pkind = 'full'
         else:
             raise ValueError('Unrecognized PSM key.')

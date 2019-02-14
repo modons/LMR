@@ -365,6 +365,14 @@ psm:
     psm_required_variables:
       tos_sfc_Odecmon: 'full'
 
+  bayesreg_d18o:
+    psm_seatemp_variable:
+      tos_sfc_Odecmon: 'full'
+    psm_d18osw_variable:
+      sos_sfc_Odecmon: 'full'
+    psm_d18osw_from_salinity: True
+    seasonal_seatemp: True
+
 
 prior:
   prior_source: ccsm4_last_millenium

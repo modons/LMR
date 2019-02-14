@@ -1916,12 +1916,19 @@ class BayesRegD18oPSM(BayesRegPSM):
         ...
     """
 
-    def __init__(self, config, proxy_obj, spp):
+    def __init__(self, config, proxy_obj, spp=None):
         super().__init__(config, proxy_obj)
         self.psm_key = 'bayesreg_d18o'
-        self.sensitivity = 'sst'  # TODO(brews): Also need 'sss'?
+        self.sensitivity = None
+
         self.psm_required_variables = config.psm.bayesreg_d18o.psm_required_variables
-        self.spp = str(spp)
+        self.psm_seatemp_variable = config.psm.bayesreg_d18o.psm_seatemp_variable
+        self.psm_d18osw_variable = config.psm.bayesreg_d18o.psm_d18osw_variable
+        self.psm_d18osw_from_salinity = config.psm.bayesreg_d18o.psm_d18osw_from_salinity
+
+        self.seasonal_seatemp = config.psm.bayesreg_d18o.seasonal_seatemp
+
+        self.spp = spp
 
         tmin, tmax = (dfox.foram_sst_minmax(self.spp))
         self.R = self._estimate_r(tmin, tmax+1)
@@ -1938,20 +1945,24 @@ class BayesRegD18oPSM(BayesRegPSM):
     def _mcmc_predict(self, sst, sos=None, d18osw=None):
         """Get MCMC ensemble prediction for input variables
         """
-        assert sos is not None or d18osw is not None
+        assert (sos is not None) ^ (d18osw is not None), 'requires `d18osw` or `sos` as input'
+
+        predict_kwargs = {'seatemp': sst,
+                          'spp': self.spp,
+                          'salinity': sos,
+                          'd18osw': d18osw,
+                          'latlon': None,
+                          'seasonal_seatemp': self.seasonal_seatemp}
 
         if d18osw is None:
-            # Without seawater d18O, we need latlon and sea-surface salinity.
-
+            # Without d18Osw, we need latlon and SOS.
             # Longitude is often over 180, raising error in deltaoxfox.
             lon = float(self.lon)
             if lon > 180:
                 lon -= 360
+            predict_kwargs['latlon'] = (self.lat, lon)
 
-            y = dfox.predict_d18oc(seatemp=sst, spp=self.spp, d18osw=None,
-                                   salinity=sos, latlon=(self.lat, lon))
-        else:
-            y = dfox.predict_d18oc(seatemp=sst, spp=self.spp, d18osw=d18osw)
+        y = dfox.predict_d18oc(**predict_kwargs)
 
         return y.ensemble
 
@@ -1973,6 +1984,8 @@ class BayesRegD18oPSM(BayesRegPSM):
         Ye:
             Equivalent observation from prior
         """
+        sst_var_name = list(self.psm_seatemp_variable.keys())[0]
+        d18osw_var_name = list(self.psm_d18osw_variable.keys())[0]
 
         # ----------------------
         # Calculate the Ye's ...
@@ -1988,8 +2001,8 @@ class BayesRegD18oPSM(BayesRegPSM):
                       %ekey)
                 raise SystemExit()
                 
-        xb_sst = self._get_gridpoint_data('tos_sfc_Odecmon', Xb, X_state_info, X_coords)
-        xb_sos = self._get_gridpoint_data('sos_sfc_Odecmon', Xb, X_state_info, X_coords)
+        xb_sst = self._get_gridpoint_data(sst_var_name, Xb, X_state_info, X_coords)
+        xb_d18osw = self._get_gridpoint_data(d18osw_var_name, Xb, X_state_info, X_coords)
 
         # check if gridpoint_data is in K: need deg. C for forward model
         # crude check...
@@ -1997,13 +2010,21 @@ class BayesRegD18oPSM(BayesRegPSM):
         #    xb_sst = xb_sst - 273.15
         # RT - 11/18: More robust use of "units" metadata now included in state vector info.
         if np.isfinite(xb_sst).all() and np.any(xb_sst):
-            if X_state_info['tos_sfc_Odecmon']['units']:
-                if X_state_info['tos_sfc_Odecmon']['units'] == 'K' or X_state_info['tos_sfc_Odecmon']['units'] == 'Kelvin':
+            if X_state_info[sst_var_name]['units']:
+                if X_state_info[sst_var_name]['units'] == 'K' or X_state_info[sst_var_name]['units'] == 'Kelvin':
                     xb_sst = xb_sst - 273.15
         else:
             xb_sst[:] = np.nan
-                
-        ye_ens = self._mcmc_predict(xb_sst, xb_sos)
+
+        # Build args to pass to self._mcmc_predict() to handle whether SOS or
+        # d18Osw is available in state vector.
+        predict_kwargs = {'sst' : xb_sst}
+        if self.psm_d18osw_from_salinity:
+            predict_kwargs['sos'] = xb_d18osw
+        else:
+            predict_kwargs['d18osw'] = xb_d18osw
+
+        ye_ens = self._mcmc_predict(**predict_kwargs)
         ye = np.mean(ye_ens, axis=1)
         return ye
 
@@ -2011,6 +2032,13 @@ class BayesRegD18oPSM(BayesRegPSM):
     @staticmethod
     def error():
         return 0.1
+
+
+@class_docs_fixer
+class BayesRegD18oPooledPSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, spp=None)
+        self.psm_key = 'bayesreg_d18o_pooled'
 
 
 @class_docs_fixer
@@ -2037,8 +2065,15 @@ class BayesRegD18oBulloidesPSM(BayesRegD18oPSM):
 @class_docs_fixer
 class BayesRegD18oPachydermaPSM(BayesRegD18oPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'N. pachyderma sinistral')
+        super().__init__(config, proxy_obj, 'N. pachyderma')
         self.psm_key = 'bayesreg_d18o_pachyderma'
+
+
+@class_docs_fixer
+class BayesRegD18oIncomptaPSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, 'N. incompta')
+        self.psm_key = 'bayesreg_d18o_incompta'
 
 
 # Mapping dict to PSM object type, this is where proxy_type/psm relations
@@ -2046,7 +2081,9 @@ class BayesRegD18oPachydermaPSM(BayesRegD18oPSM):
 _psm_classes = {'linear': LinearPSM, 'linear_TorP': LinearPSM_TorP,
                 'bilinear': BilinearPSM,'h_interp': h_interpPSM,
                 'bayesreg_uk37': BayesRegUK37PSM, 'bayesreg_tex86': BayesRegTEX86PSM,
+                'bayesreg_d18o_pooled': BayesRegD18oPooledPSM,
                 'bayesreg_d18o_pachyderma': BayesRegD18oPachydermaPSM,
+                'bayesreg_d18o_incompta': BayesRegD18oPachydermaPSM,
                 'bayesreg_d18o_bulloides': BayesRegD18oBulloidesPSM,
                 'bayesreg_d18o_sacculifer': BayesRegD18oSacculiferPSM,
                 'bayesreg_d18o_ruberwhite': BayesRegD18oRuberwhitePSM}

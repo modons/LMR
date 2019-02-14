@@ -1522,31 +1522,47 @@ class psm(ConfigGroup):
 
     class bayesreg_d18o(ConfigGroup):
         """
-        Parameters for the Bayesian regression PSM for d18O of foram.
+        Parameters for the foraminifera d18O PSMs, ``LMR_psms.BayesRegD18oPSM`` subclasses.
 
         Attributes
         ----------
-        radius_influence : real
-            Distance-scale used the calculation of exponentially-decaying
-            weights in interpolator (in km)
-        datadir_obsError: str
-            Absolute path to obs. error variance data
-        filename_obsError: str
-            Filename for obs. error variance data
-        dataformat_obsError: str
-            String indicating the format of the file containing obs. error
-            variance data
-            Note: note currently used by code. For info purpose only.
-        datafile_obsError: str
-            Absolute path/filename of obs. error variance data
+        psm_required_variables
+        psm_seatemp_variable : dict
+            Required sea-surface temperature state variable for the PSM to
+            calculate Ye. The dict has a str key giving the state variable name
+            and str value indicating whether full field (`full`) or anomaly
+            (`anom`) is to be used.
+        psm_d18osw_variable : dict
+            Required seawater d18O or salinity state variable for the PSM to
+            calculate Ye. The dict has a str key giving the state variable name
+            and str value indicating whether full field (`full`) or anomaly
+            (`anom`) is to be used. Must be surface seawater d18O or surface
+            salinity, not both. See the `psm_d18osw_from_salinity` attribute.
+        psm_d18osw_from_salinity : bool
+            If ``True`` then `psm_d18osw_variable` is seawater salinity. If
+            ``False`` then `psm_d18osw_variable` is seawater d18O. This is used
+            to tell the calibration ``bayfox.predict_d18oc`` or
+            ``deltaoxfox.predict_d18oc`` whether it also needs to predict
+            seawater d18o from a modern salinity calibration.
+        seasonal_seatemp : bool
+            Indicates whether to use the calibration from seasonal sea-surface
+            temperatures (``True``) or annual sea-surface temperatures
+            (``False``).
         """
+        psm_seatemp_variable = {'tos_sfc_Odecmon': 'full'}
+        psm_d18osw_variable = {'sos_sfc_Odecmon': 'full'}
+        psm_d18osw_from_salinity = True
+        seasonal_seatemp = True
 
-        def __init__(self, lmr_path=None, **kwargs):
-            super().__init__(**kwargs)
+        @property
+        def psm_required_variables(self):
+            """Get dict of required state variables for the PSM to calculate Ye.
 
-            # define state variable needed to calculate Ye's
-            #self.psm_required_variables = {'tos_sfc_Odec': 'full', 'sos_sfc_Odec': 'full'}
-            self.psm_required_variables = {'tos_sfc_Odecmon': 'full', 'sos_sfc_Odecmon': 'full'}
+            The dict has a str key giving the state variable name and str value
+            indicating whether full field (`full`) or anomaly (`anom`) is to be
+            used.
+            """
+            return {**self.psm_seatemp_variable, **self.psm_d18osw_variable}
             
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
@@ -1557,11 +1573,12 @@ class psm(ConfigGroup):
         self.bayesreg_uk37 = self.bayesreg_uk37(**kwargs.pop('bayesreg_uk37', {}))
         self.bayesreg_tex86 = self.bayesreg_tex86(**kwargs.pop('bayesreg_tex86', {}))
         self.bayesreg_d18o = self.bayesreg_d18o(**kwargs.pop('bayesreg_d18o', {}))
+        self.bayesreg_d18o_pooled = self.bayesreg_d18o
         self.bayesreg_d18o_sacculifer = self.bayesreg_d18o
         self.bayesreg_d18o_ruberwhite = self.bayesreg_d18o
         self.bayesreg_d18o_bulloides = self.bayesreg_d18o
         self.bayesreg_d18o_pachyderma = self.bayesreg_d18o
-
+        self.bayesreg_d18o_incompta = self.bayesreg_d18o
 
         super().__init__(**kwargs)
         self.avgPeriod = self.avgPeriod
