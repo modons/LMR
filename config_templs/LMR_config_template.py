@@ -1489,30 +1489,16 @@ class psm(ConfigGroup):
 
     class bayesreg_uk37(ConfigGroup):
         """
-        Parameters for the Bayesian regression PSM for uk37 proxies.
+        Parameters for the BAYSPLINE UK'37 PSM, LMR_psms.BayesRegUK37PSM.
 
         Attributes
         ----------
-        radius_influence : real
-            Distance-scale used the calculation of exponentially-decaying
-            weights in interpolator (in km)
-        datadir_obsError: str
-            Absolute path to obs. error variance data
-        filename_obsError: str
-            Filename for obs. error variance data
-        dataformat_obsError: str
-            String indicating the format of the file containing obs. error
-            variance data
-            Note: note currently used by code. For info purpose only.
-        datafile_obsError: str
-            Absolute path/filename of obs. error variance data
+        psm_required_variables : dict
+            Required state variables for the PSM to calculate Ye. The dict has a
+            str key giving the state variable name and str value indicating
+            whether full field (`full`) or anomaly (`anom`) is to be used.
         """
-        def __init__(self, lmr_path=None, **kwargs):
-            super().__init__(**kwargs)
-
-            # define state variable needed to calculate Ye's
-            #self.psm_required_variables = {'tos_sfc_Odec': 'full'}
-            self.psm_required_variables = {'tos_sfc_Odecmon': 'full'}            
+        psm_required_variables = {'tos_sfc_Odecmon': 'full'}
 
 
     class bayesreg_tex86(ConfigGroup):

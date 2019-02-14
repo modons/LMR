@@ -361,6 +361,10 @@ psm:
       toGA_0-200m_Odec: 'full'
     temptype: 'subt'
 
+  bayesreg_uk37:
+    psm_required_variables:
+      tos_sfc_Odecmon: 'full'
+
 
 prior:
   prior_source: ccsm4_last_millenium
