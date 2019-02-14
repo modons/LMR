@@ -1578,7 +1578,7 @@ class psm(ConfigGroup):
             and str value indicating whether full field (`full`) or anomaly
             (`anom`) is to be used.
         psm_omega_variable : dict
-            Optional seawater omega (carbonate ion saturation state) state
+            Optional seawater omega (calcite saturation state) state
             variable for the PSM to calculate Ye. The dict has a str key giving
             the state variable name and str value indicating whether full field
             (`full`) or anomaly (`anom`) is to be used. Will be passed to
