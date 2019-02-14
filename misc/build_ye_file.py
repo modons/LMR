@@ -97,8 +97,7 @@ def main(cfgin=None, config_path=None):
     elif proxy_database == 'NCDCdadt':
         proxy_cfg = cfg.proxies.NCDCdadt
     else:
-        _log.error('ERROR in specification of proxy database.')
-        raise SystemExit()
+        raise KeyError('ERROR in specification of proxy database: {}'.format(proxy_database))
 
     proxy_types = proxy_cfg.proxy_order
     # proxy_types = list(proxy_cfg.proxy_psm_type.keys())
@@ -180,8 +179,7 @@ def main(cfgin=None, config_path=None):
             elif proxy_cfg.proxy_timeseries_kind == 'asis':
                 vkind = 'full'
             else:
-                _log.error('ERROR: Unrecognized value of *proxy_timeseries_kind* attribute in proxies configuration.')
-                raise SystemExit()
+                raise KeyError('ERROR: Unrecognized value of *proxy_timeseries_kind* attribute in proxies configuration: {}'.format(proxy_cfg.proxy_timeseries_kind))
             statevars = cfg.psm.h_interp.psm_required_variables
             for item in list(statevars.keys()): statevars[item] = vkind
         elif psm_key == 'bayesreg_uk37':
@@ -208,7 +206,7 @@ def main(cfgin=None, config_path=None):
             #psm_avg = 'multiyear'
             psm_avg = 'multiyear-season'
         else:
-            raise SystemExit()
+            raise KeyError('ERROR: psm_key: {}'.format(psm_key))
 
         # Define required temporal averaging
         if psm_avg == 'annual':
@@ -240,8 +238,7 @@ def main(cfgin=None, config_path=None):
                 elif cfg.psm.season_source == 'proxy_metadata':
                     for pobj in proxy_objects: season_vects.append(pobj.seasonality)
                 else:
-                    _log.error('ERROR: Unrecognized value of *season_source* attribute in psm configuration.')
-                    raise SystemExit()
+                    raise KeyError('ERROR: Unrecognized value of *season_source* attribute in psm configuration: {}'.format(cfg.psm.season_source))
             else:
                 # attribute does not exist in config., revert to proxy metadata
                 for pobj in proxy_objects: season_vects.append(pobj.seasonality)
@@ -269,9 +266,7 @@ def main(cfgin=None, config_path=None):
             base_time_interval = 'multiyear'
 
         else:
-            _log.error('ERROR in specification of averaging period.')
-            raise SystemExit()
-
+            raise KeyError('ERROR in specification of averaging period: {}'.format(psm_avg))
 
         # Loop over seasonality definitions found in the proxy set
         firstloop = True
@@ -373,8 +368,11 @@ def main(cfgin=None, config_path=None):
     _log.info('Total elapsed time:' + str(elapsedtot/60.0)  + ' mins')
 
 #-------------------- if not called, must be run directly ---------------------------
-if len(sys.argv) > 1:
-    yaml_file = sys.argv[1]
-    main(config_path=yaml_file)
-else:    
-    main()
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG,
+                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    if len(sys.argv) > 1:
+        yaml_file = sys.argv[1]
+        main(config_path=yaml_file)
+    else:
+        main()

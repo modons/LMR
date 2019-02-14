@@ -807,7 +807,7 @@ class ProxyNCDCdadt(BaseProxyObject):
         try:
             proxy_type = ncdcdadt_cfg.proxy_type_mapping[(NCDCdadt_type,pmeasure)]
         except (KeyError, ValueError) as e:
-            _log.error('Proxy type/measurement not found in mapping: {}'.format(e))
+            print('Proxy type/measurement not found in mapping: {}'.format(e))
             raise ValueError(e)
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
