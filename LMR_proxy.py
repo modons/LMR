@@ -1030,7 +1030,7 @@ class ProxyNCDCdadt(BaseProxyObject):
                                      meta_src=meta_src, data_src=data_src)
                 proxy_objs.append(pobj)
             except ValueError as e:
-                _log.error(e)
+                print(e)
 
         return proxy_objs
 
