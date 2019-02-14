@@ -1804,6 +1804,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
 
     proxy_database = config.proxies.use_from[0]
 
+    psmkey_str = psm_key
     # Generate PSM calibration string
     calib_str_ext = ''
     if config.core.anom_reference_period:
@@ -1842,6 +1843,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         state_vars_for_ye = config.psm.bayesreg_uk37.psm_required_variables
 
     elif psm_key == 'bayesreg_tex86':
+        psmkey_str = '{}-{}'.format(psm_key, config.psm.bayesreg_tex86.temptype)
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_tex86.psm_required_variables
@@ -1869,9 +1871,9 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         raise ValueError('Unrecognized PSM key.')
     
     if calib_avgPeriod:
-        psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str
+        psm_str = psmkey_str +'_'+ calib_avgPeriod + '-' + calib_str
     else:
-        psm_str = psm_key + '-' + calib_str
+        psm_str = psmkey_str + '-' + calib_str
 
     proxy_str = str(proxy_database)
     if proxy_str == 'LMRdb':

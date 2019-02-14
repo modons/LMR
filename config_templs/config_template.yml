@@ -356,6 +356,12 @@ psm:
     dataformat_obsError: TXT
     datafile_obsError: None
 
+  bayesreg_tex86:
+    psm_required_variables:
+      toGA_0-200m_Odec: 'full'
+    temptype: 'subt'
+
+
 prior:
   prior_source: ccsm4_last_millenium
 #  prior_source: icesm_last_millennium

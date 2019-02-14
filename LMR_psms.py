@@ -1794,8 +1794,9 @@ class BayesRegTEX86PSM(BayesRegPSM):
     def __init__(self, config, proxy_obj):
         super().__init__(config, proxy_obj)
         self.psm_key = 'bayesreg_tex86'
-        self.sensitivity = 'sst'
+        self.sensitivity = None
         self.psm_required_variables = config.psm.bayesreg_tex86.psm_required_variables
+        self.temptype = str(config.psm.bayesreg_tex86.temptype)
         self.R = self._estimate_r(31)
 
     def _estimate_r(self, *args, **kwargs):
@@ -1814,7 +1815,7 @@ class BayesRegTEX86PSM(BayesRegPSM):
             lon -= 360
 
         y = bayspar.predict_tex(seatemp=x, lat=self.lat, lon=lon,
-                                temptype='sst')
+                                temptype=self.temptype)
         return y.ensemble
 
     def psm(self, Xb, X_state_info, X_coords):
