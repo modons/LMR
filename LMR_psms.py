@@ -2123,7 +2123,7 @@ class BayesRegMgcaPSM(BayesRegPSM):
 
         self.seasonal_seatemp = config.psm.bayesreg_mgca.seasonal_seatemp
         self.seawater_age = config.psm.bayesreg_mgca.seawater_age
-        self.cleaning = np.array(cleaning)
+        self.cleaning = int(cleaning)
 
         self.R = self._estimate_r(15, 16)  # This is temporary. Should consider wider range.
 
@@ -2231,7 +2231,7 @@ class BayesRegMgcaPooledBcpPSM(BayesRegMgcaPSM):
 class BayesRegMgcaRuberwhiteRedPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for ruber white with fully reductive sample cleaning
-        super().__init__(config, proxy_obj, 'ruber_w', cleaning=1)
+        super().__init__(config, proxy_obj, spp='ruber_w', cleaning=1)
         self.psm_key = 'bayesreg_mgca_ruberwhite_red'
 
 
@@ -2239,7 +2239,7 @@ class BayesRegMgcaRuberwhiteRedPSM(BayesRegMgcaPSM):
 class BayesRegMgcaRuberwhiteBcpPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for ruber white with Barker sample cleaning protocol
-        super().__init__(config, proxy_obj, 'ruber_w', cleaning=0)
+        super().__init__(config, proxy_obj, spp='ruber_w', cleaning=0)
         self.psm_key = 'bayesreg_mgca_ruberwhite_bcp'
 
 
@@ -2247,7 +2247,7 @@ class BayesRegMgcaRuberwhiteBcpPSM(BayesRegMgcaPSM):
 class BayesRegMgcaSacculiferRedPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for sacculifer with fully reductive sample cleaning
-        super().__init__(config, proxy_obj, 'sacculifer', cleaning=1)
+        super().__init__(config, proxy_obj, spp='sacculifer', cleaning=1)
         self.psm_key = 'bayesreg_mgca_sacculifer_red'
 
 
@@ -2255,7 +2255,7 @@ class BayesRegMgcaSacculiferRedPSM(BayesRegMgcaPSM):
 class BayesRegMgcaSacculiferBcpPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for sacculifer with Barker sample cleaning protocol
-        super().__init__(config, proxy_obj, 'sacculifer', cleaning=0)
+        super().__init__(config, proxy_obj, spp='sacculifer', cleaning=0)
         self.psm_key = 'bayesreg_mgca_sacculifer_bcp'
 
 
@@ -2263,7 +2263,7 @@ class BayesRegMgcaSacculiferBcpPSM(BayesRegMgcaPSM):
 class BayesRegMgcaBulloidesRedPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for bulloides with fully reductive sample cleaning
-        super().__init__(config, proxy_obj, 'bulloides', cleaning=1)
+        super().__init__(config, proxy_obj, spp='bulloides', cleaning=1)
         self.psm_key = 'bayesreg_mgca_bulloides_red'
 
 
@@ -2271,7 +2271,7 @@ class BayesRegMgcaBulloidesRedPSM(BayesRegMgcaPSM):
 class BayesRegMgcaBulloidesBcpPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for bulloides with Barker sample cleaning protocol
-        super().__init__(config, proxy_obj, 'bulloides', cleaning=0)
+        super().__init__(config, proxy_obj, spp='bulloides', cleaning=0)
         self.psm_key = 'bayesreg_mgca_bulloides_bcp'
 
 
@@ -2279,7 +2279,7 @@ class BayesRegMgcaBulloidesBcpPSM(BayesRegMgcaPSM):
 class BayesRegMgcaPachydermaRedPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for pachyderma sinistral with fully reductive sample cleaning
-        super().__init__(config, proxy_obj, 'pachy_s', cleaning=1)
+        super().__init__(config, proxy_obj, spp='pachy_s', cleaning=1)
         self.psm_key = 'bayesreg_mgca_pachyderma_red'
 
 
@@ -2287,7 +2287,7 @@ class BayesRegMgcaPachydermaRedPSM(BayesRegMgcaPSM):
 class BayesRegMgcaPachydermaBcpPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
         # Mg/Ca for pachyderma sinistral with Barker sample cleaning protocol
-        super().__init__(config, proxy_obj, 'pachy_s', cleaning=0)
+        super().__init__(config, proxy_obj, spp='pachy_s', cleaning=0)
         self.psm_key = 'bayesreg_mgca_pachyderma_bcp'
 
 
