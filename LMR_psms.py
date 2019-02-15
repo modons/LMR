@@ -1924,27 +1924,28 @@ class BayesRegD18oPSM(BayesRegPSM):
         super().__init__(config, proxy_obj)
         self.psm_key = 'bayesreg_d18o'
         self.sensitivity = None
-
         self.psm_required_variables = config.psm.bayesreg_d18o.psm_required_variables
         self.psm_seatemp_variable = config.psm.bayesreg_d18o.psm_seatemp_variable
         self.psm_d18osw_variable = config.psm.bayesreg_d18o.psm_d18osw_variable
         self.psm_d18osw_from_salinity = config.psm.bayesreg_d18o.psm_d18osw_from_salinity
-
         self.seasonal_seatemp = config.psm.bayesreg_d18o.seasonal_seatemp
-
         self.spp = spp
-
-        tmin, tmax = (dfox.foram_sst_minmax(self.spp))
-        self.R = self._estimate_r(tmin, tmax+1)
+        self.R = self._estimate_r()
 
     def _estimate_r(self, *args, **kwargs):
-        """Fit Bayes regression to range of input values and return max variance
+        """Find R, error variance of this PSM. Ignores input args.
         """
-        xrange = np.arange(*args, **kwargs)
-
-        # This assumes that changes in salinity will not influence ensemble variance.
-        ensemble = self._mcmc_predict(sst=xrange, sos=np.array([35.0]))
-        return np.max(np.var(ensemble, axis=1))
+        if self.psm_d18osw_from_salinity:
+            # We can use a single temperature because it shouldn't matter, but We
+            # can't just compute from model parameters because we need to consider
+            # uncertainty from SOS -> d18Osw model in addition to the proxy
+            # forward model.
+            ensemble = self._mcmc_predict(sst=np.array([15.0]), sos=np.array([35.0]))
+        else:
+            # No SOS -> d18Osw model to consider
+            ensemble = self._mcmc_predict(sst=np.array([15.0]), d18osw=np.array([0.0]))
+        out = np.max(np.var(ensemble, axis=1))
+        return out
 
     def _mcmc_predict(self, sst, sos=None, d18osw=None):
         """Get MCMC ensemble prediction for input variables
