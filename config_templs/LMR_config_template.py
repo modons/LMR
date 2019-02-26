@@ -480,7 +480,7 @@ class proxies(ConfigGroup):
             ]
 
         # Assignment of psm type per proxy type
-        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp,[variable]'
         #  The linear PSM can be used on *all* proxies.
         #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
         #  PSMs are aimed at *tree ring* proxies in particular
@@ -663,7 +663,7 @@ class proxies(ConfigGroup):
             ]
 
         # Assignment of psm type per proxy type
-        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp,[variable]'
         #  The linear PSM can be used on *all* proxies.
         #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
         #  PSMs are aimed at *tree ring* proxies in particular
@@ -868,7 +868,7 @@ class proxies(ConfigGroup):
             ]
 
         # Assignment of psm type per proxy type
-        # Choices are: 'linear', 'h_interp', 'bayesreg_uk37', 'bayesreg_tex86'
+        # Choices are: 'linear', 'h_interp,[variable]', 'bayesreg_uk37', 'bayesreg_tex86'
         #  The linear PSM can be used on *all* proxies.
         #  The h_interp forward model is to be used for isotope proxies when
         #  the prior is taken from an isotope-enabled GCM output. 
@@ -1031,14 +1031,14 @@ class proxies(ConfigGroup):
             ]
 
         # Assignment of psm type per proxy type
-        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp'
+        # Choices are: 'linear', 'linear_TorP', 'bilinear', 'h_interp,[variable]'
         #  The linear PSM can be used on *all* proxies.
         #  The linear_TorP and bilinear w.r.t. temperature or/and moisture
         #  PSMs are aimed at *tree ring* proxies in particular
         #  The h_interp forward model is to be used for isotope proxies when
         #  the prior is taken from an isotope-enabled GCM output. 
         proxy_psm_type = {
-            'PseudoProxy_temperature' : 'h_interp',
+            'PseudoProxy_temperature' : 'h_interp,tas_sfc_Amon',
         }
          
         proxy_assim2 = {
@@ -1598,6 +1598,7 @@ class psm(ConfigGroup):
             super(self.__class__, self).__init__(**kwargs)
 
             self.radius_influence = self.radius_influence
+            self.datadir_obsError = self.datadir_obsError
             self.filename_obsError = self.filename_obsError
             self.dataformat_obsError = self.dataformat_obsError 
 
@@ -1623,7 +1624,6 @@ class psm(ConfigGroup):
                 raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
                                  ' Unable to assign kind to psm_required_variables'
                                  ' in h_interp psm class.')
-            self.psm_required_variables = self.psm_required_variables
 
 
     class bayesreg_uk37(ConfigGroup):

@@ -387,6 +387,8 @@ def load_config(yaml_file,verbose=False):
         elapsed_time = time() - begin_time
         print('-----------------------------------------------------')
         print('completed in ' + str(elapsed_time) + ' seconds')
+
+
         print('-----------------------------------------------------')
 
     return cfg 
@@ -470,8 +472,11 @@ def load_proxies(cfg,verbose=True):
     return prox_manager
 
 
-def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox_inds=None,verbose=False):
- 
+def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox_inds=None,prox_type=None,verbose=False):
+
+    # revisions:
+    # 27 December 2018: added prox_type optional parameter to filter to only those proxies
+    
     begin_time = time()
     core = cfg.core
     recon_timescale = core.recon_timescale
@@ -479,7 +484,8 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
     if verbose:
         print('finding proxy records for year:' + str(target_year))
         print('recon_timescale = ' + str(recon_timescale))
-
+        if prox_type: print('limiting to proxies of type:',prox_type)
+            
     tas_var = [item for item in list(cfg.prior.state_variables.keys()) if 'tas_sfc_' in item]
 
     start_yr = int(target_year-recon_timescale//2)
@@ -490,6 +496,8 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
     vP = []
     vT = []
     for proxy_idx, Y in enumerate(prox_manager.sites_assim_proxy_objs()):
+        if prox_type and prox_type not in Y.type: continue
+            
         # Check if we have proxy ob for current time interval
         if recon_timescale > 1:
             # exclude lower bound to not include same obs in adjacent time intervals
@@ -508,9 +516,10 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
                     Yvals = pd.DataFrame()
                     
         if Yvals.empty: 
-            if verbose: print('no obs for this year')
+            if verbose: print('no obs for this year for proxy ',proxy_idx,Y.id,Y.type)
             pass
         else:
+            if verbose and prox_type: print('got obs for this year for proxy ',Y.id,Y.type)
             nYobs = len(Yvals)
             Yobs =  Yvals.mean()
             ob_err = Y.psm_obj.R/nYobs
@@ -587,8 +596,16 @@ def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
 
     begin_time = time()
 
+#    nargs = len(Ye.shape)
+#    if nargs == 1:
+#        # single observation
+#        nobs = 1
+#        nens = Ye.shape[0]
+#    else:
+        # more than one observation
     nobs = Ye.shape[0]
     nens = Ye.shape[1]
+        
     ndof = np.min([nobs,nens])
     
     if verbose:
@@ -600,11 +617,16 @@ def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
     #Xbp = Xb - Xb.mean(axis=1,keepdims=True)
     Xbp = np.subtract(Xb,xbm[:,None])  # "None" means replicate in this dimension
 
+#    if nargs == 1:
+##        R = np.array(vR)
+#        Risr = np.array(1./np.sqrt(vR))
+#        Yem = np.array(Ye).mean(keepdims=True)
+#    else:
     R = np.diag(vR)
     Risr = np.diag(1./np.sqrt(vR))
+    Yem = Ye.mean(axis=1,keepdims=True)
     # (suffix key: m=ensemble mean, p=perturbation from ensemble mean; f=full value)
     # keepdims=True needed for broadcasting to work; (p,1) shape rather than (p,)
-    Yem = Ye.mean(axis=1,keepdims=True)
     Yep = Ye - Yem
     Htp = np.dot(Risr,Yep)/np.sqrt(nens-1)
     Htm = np.dot(Risr,Yem)

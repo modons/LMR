@@ -197,6 +197,7 @@ def main(cfgin=None, config_path=None):
                 psm_avg = 'multiyear'
             else:
                 psm_avg = 'annual'
+
             # Define the psm-dependent required state variables
             #  check compatibility of options between prior and proxies for this psm class
             #  - proxies as 'anom' vs. 'asis' VS. prior as 'anom' vs. 'full'
@@ -208,8 +209,8 @@ def main(cfgin=None, config_path=None):
             else:
                 _log.error('ERROR: Unrecognized value of *proxy_timeseries_kind* attribute in proxies configuration.')
                 raise SystemExit()
-            statevars = cfg.psm.h_interp.psm_required_variables
-            for item in list(statevars.keys()): statevars[item] = vkind
+            statevars = {psm_key.split(',')[1]: vkind}
+            #for item in list(statevars.keys()): statevars[item] = vkind
         elif psm_key == 'bayesreg_uk37':
             statevars = cfg.psm.bayesreg_uk37.psm_required_variables
             #psm_avg = 'multiyear'

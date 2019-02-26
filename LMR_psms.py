@@ -1442,7 +1442,11 @@ class h_interpPSM(BasePSM):
     """
     def __init__(self, config, proxy_obj, R_data=None):
 
-        self.psm_key = 'h_interp'
+        # JBadgeley: More flexible use of h_interp: Now name of state variable associated to
+        # each proxy type specified along h_interp in config.
+        # This assigns psm_key as "h_interp,<<name of state variable>>"
+        proxy_db = config.proxies.use_from[0]
+        self.psm_key = getattr(config.proxies, proxy_db).proxy_psm_type[proxy_obj.type]
         
         self.proxy = proxy_obj.type
         self.site = proxy_obj.id
@@ -1454,7 +1458,6 @@ class h_interpPSM(BasePSM):
             self.elev = None        
         self.sensitivity = None
         self.RadiusInfluence = config.psm.h_interp.radius_influence
-        self.psm_required_variables = config.psm.h_interp.psm_required_variables
         
         # Try finding file containing obs. error variance info
         # and assign the R value to proxy psm object
@@ -1492,18 +1495,14 @@ class h_interpPSM(BasePSM):
         # ----------------------
         # Calculate the Ye's ...
         # ----------------------
+
+        # define state variable that should be interpolated to proxy site
+        state_var = list(X_state_info.keys())[0]
         
-        # define state variable that is to be interpolated to proxy site
-        required_vars = list(self.psm_required_variables.keys())
-        if len(required_vars) == 1:
-            state_var = required_vars[0]
-        else:
-            raise SystemExit('Multiple variables specified for h_interp PSM.'
-                            ' There should be only one. Exiting.')
-        
-        if state_var not in list(X_state_info.keys()):
-            raise KeyError('Needed variable %s not in state vector for Ye'
-                           ' calculation.' %state_var)
+        #JBadgeley commented this out for more flexibility with the psms
+        #if state_var not in list(X_state_info.keys()):
+        #    raise KeyError('Needed variable not in state vector for Ye'
+        #                   ' calculation.')
         
         # TODO: end index should already be +1, more pythonic
         statevar_startidx, statevar_endidx = X_state_info[state_var]['pos']

@@ -1862,14 +1862,14 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.bilinear.psm_required_variables
         
-    elif psm_key == 'h_interp':
+    elif 'h_interp' in psm_key:
         # python3 access to dict keys to check if avg. interval is ' multiyear'
         if list(config.prior.avgInterval)[0] == 'multiyear':
             calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
         else:
-            calib_avgPeriod = None            
+            calib_avgPeriod = None
         calib_str = ''
-        state_vars_for_ye = config.psm.h_interp.psm_required_variables
+        state_vars_for_ye = {psm_key.split(',')[1]: prior_kind}
 
     elif psm_key == 'bayesreg_uk37':
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
@@ -1962,7 +1962,7 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
             pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
         elif psm_key == 'bilinear':
             pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
-        elif psm_key == 'h_interp':
+        elif 'h_interp' in psm_key:
             if config.proxies.proxy_timeseries_kind == 'asis':
                 pkind = 'full'
             elif config.proxies.proxy_timeseries_kind == 'anom':
@@ -2091,7 +2091,7 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
             pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
         elif psm_key == 'bilinear':
             pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
-        elif psm_key == 'h_interp':
+        elif 'h_interp' in psm_key:
             if config.proxies.proxy_timeseries_kind == 'asis':
                 pkind = 'full'
             elif config.proxies.proxy_timeseries_kind == 'anom':
@@ -2221,6 +2221,8 @@ def validate_config(config):
     psm_required_variables = []
     for psm_type in psm_keys:
         #print psm_type, ':', psmclasses[psm_type].psm_required_variables
+        if 'h_interp' in psm_type:
+            psm_type = 'h_interp'
         psm_required_variables.extend(psmclasses[psm_type].psm_required_variables)
     # keep unique values
     psm_required_variables = list(set(psm_required_variables))
@@ -2278,7 +2280,9 @@ def validate_config(config):
 
     # For every PSM class to be used
     for psm_type in psm_keys:
-
+    
+        if 'h_interp' in psm_type:
+            psm_type = 'h_interp'
         required_variables = list(psmclasses[psm_type].psm_required_variables.keys())
         for var in required_variables:
             if var in list(config.prior.state_variables.keys()):
