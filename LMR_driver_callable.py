@@ -209,8 +209,7 @@ def LMR_driver_callable(cfg=None):
         print('Loading completed in ' + str(proxy_load_time) + ' seconds')
         print('-----------------------------------------------------')
 
-
-        
+    
     # ==========================================================================
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
@@ -480,7 +479,7 @@ def LMR_driver_callable(cfg=None):
             print(('Warning: Only saving 2D:horizontal variable. Variable (%s) is of another type' %(var)))
             # TODO: Code mods above are a quick fix. Should allow saving other types of variables here!
     # END new file save
-    
+
     
     # ==========================================================================
     # Loop over all years & proxies and perform assimilation -------------------

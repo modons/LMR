@@ -215,12 +215,16 @@ class LinearPSM(BasePSM):
         except KeyError as e:
             raise ValueError('Could not find proxy in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
+
+        
         except IOError as e:
             # No precalibration found, have to do it for this proxy
-            print(('No pre-calibration file found for'
+            #print(('No pre-calibration file found for'
+            #       ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
+            #                                             proxy_obj.type)))
+            _log.info(('No pre-calibration file found for'
                    ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
                                                          proxy_obj.type)))
-
 
             # check if calibration object already exists
             if calib_obj is None:
@@ -722,7 +726,7 @@ class LinearPSM_TorP(LinearPSM):
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
             # print 'PSM (temperature) not calibrated for:' + str((proxy, site))
-            _log.error(e)
+            #_log.error(e)
             _log.info('PSM (temperature) not calibrated for:' +
                         str((proxy, site)))
 
@@ -734,7 +738,7 @@ class LinearPSM_TorP(LinearPSM):
 
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
-            _log.error(e)
+            #_log.error(e)
             _log.info('PSM (moisture) not calibrated for:' +
                         str((proxy, site)))
 
@@ -800,7 +804,6 @@ class LinearPSM_TorP(LinearPSM):
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
                               'critical threshold ({:.2f}).'
                               ).format(self.corr, r_crit))
-
 
     # TODO: Ideally prior state info and coordinates should all be in single obj
     def psm(self, Xb, X_state_info, X_coords):
@@ -1442,8 +1445,8 @@ class h_interpPSM(BasePSM):
     """
     def __init__(self, config, proxy_obj, R_data=None):
 
-        # JBadgeley: More flexible use of h_interp: Now name of state variable associated to
-        # each proxy type specified along h_interp in config.
+        # JBadgeley: More flexible use of h_interp: Now name of state variable associated
+        # to each proxy type specified along h_interp in config.
         # This assigns psm_key as "h_interp,<<name of state variable>>"
         proxy_db = config.proxies.use_from[0]
         self.psm_key = getattr(config.proxies, proxy_db).proxy_psm_type[proxy_obj.type]
@@ -1458,6 +1461,7 @@ class h_interpPSM(BasePSM):
             self.elev = None        
         self.sensitivity = None
         self.RadiusInfluence = config.psm.h_interp.radius_influence
+        self.psm_required_variables = config.psm.h_interp.psm_required_variables
         
         # Try finding file containing obs. error variance info
         # and assign the R value to proxy psm object
@@ -1466,9 +1470,7 @@ class h_interpPSM(BasePSM):
                 R_data = self._load_psm_data(config)
             self.R = R_data[(self.proxy, self.site)]
         except (KeyError, IOError) as e:
-            # No obs. error variance file found
-            print(('WARNING:Cannot find obs. error variance data for:' + str((self.proxy, self.site))))
-            _log.error(e)
+            # No obs. error variance data found
             _log.info('Cannot find obs. error variance data for:' + str((self.proxy, self.site)))
 
 
@@ -1497,13 +1499,12 @@ class h_interpPSM(BasePSM):
         # ----------------------
 
         # define state variable that should be interpolated to proxy site
-        state_var = list(X_state_info.keys())[0]
-        
-        #JBadgeley commented this out for more flexibility with the psms
-        #if state_var not in list(X_state_info.keys()):
-        #    raise KeyError('Needed variable not in state vector for Ye'
-        #                   ' calculation.')
-        
+        state_var = self.psm_key.split(',')[1]
+
+        if state_var not in list(X_state_info.keys()):
+            raise KeyError('Needed variable %s not in state vector for Ye'
+                           ' calculation.' %state_var)
+
         # TODO: end index should already be +1, more pythonic
         statevar_startidx, statevar_endidx = X_state_info[state_var]['pos']
         ind_lon = X_state_info[state_var]['spacecoords'].index('lon')

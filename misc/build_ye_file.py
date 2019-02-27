@@ -57,7 +57,29 @@ import LMR_proxy
 import LMR_config
 from LMR_utils import create_precalc_ye_filename
 
+# -------------------- logging parameters --------------------
+
+logLevel = logging.DEBUG  # DEBUG, INFO, WARNING, ERROR
+logToFile = False  # write log info into ./build_ye.log file.
+logToScreen = True # write log info to screen
+
+logFormat = '%(levelname)-5.5s : %(message)s'
+
+# ------------------------------------------------------------
+
 _log = logging.getLogger(__name__)
+
+_log.setLevel(logLevel)
+formatter=logging.Formatter(logFormat)
+if logToFile:
+    fh = logging.FileHandler('build_ye.log')
+    fh.setFormatter(formatter)
+    _log.addHandler(fh)
+if logToScreen:
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    _log.addHandler(ch)
+
 
 def main(cfgin=None, config_path=None):
     _log.info('Starting Ye calculations')
@@ -116,7 +138,7 @@ def main(cfgin=None, config_path=None):
     proxy_objects = proxy_class.load_all_annual_no_filtering(cfg)
     # Number of proxy objects (will be a dim of ye_out array)
     num_proxy = len(proxy_objects)
-
+    
     # identify the set of psms to consider
     psm_keys_proxydb_list = []
     for pobj in proxy_objects: psm_keys_proxydb_list.append(pobj.psm_obj.psm_key)
@@ -161,10 +183,11 @@ def main(cfgin=None, config_path=None):
             else:
                 raise SystemExit
     # Finished checking ...
-
+    
+    
     # Loop over all psm types found in the configuration
     for psm_key in sorted(unique_psm_keys):
-        _log.info('Loading psm information for psm type:' + str(psm_key) + ' ...')
+        _log.info('\nLoading psm information for psm type:' + str(psm_key) + ' ...')
 
         # re-assign current psm type to all proxy records
         #  TODO: Could think of implementing filter to restrict to relevant proxy records only
@@ -191,7 +214,8 @@ def main(cfgin=None, config_path=None):
         elif psm_key == 'bilinear':
             statevars = cfg.psm.bilinear.psm_required_variables
             psm_avg = cfg.psm.avgPeriod
-        elif psm_key == 'h_interp':
+#        elif psm_key == 'h_interp':
+        elif 'h_interp' in psm_key:
             # h_interp psm class (interpolation of prior data)
             if list(cfg.prior.avgInterval)[0] == 'multiyear':
                 psm_avg = 'multiyear'
@@ -210,7 +234,6 @@ def main(cfgin=None, config_path=None):
                 _log.error('ERROR: Unrecognized value of *proxy_timeseries_kind* attribute in proxies configuration.')
                 raise SystemExit()
             statevars = {psm_key.split(',')[1]: vkind}
-            #for item in list(statevars.keys()): statevars[item] = vkind
         elif psm_key == 'bayesreg_uk37':
             statevars = cfg.psm.bayesreg_uk37.psm_required_variables
             #psm_avg = 'multiyear'
@@ -235,6 +258,7 @@ def main(cfgin=None, config_path=None):
             #psm_avg = 'multiyear'
             psm_avg = 'multiyear-season'
         else:
+            _log.error('ERROR: Did not find a match to a valid psm key. Exiting.')
             raise SystemExit()
 
         
@@ -373,7 +397,7 @@ def main(cfgin=None, config_path=None):
                             _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
                             ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
 
-                    elif psm_key == 'h_interp' and pobj.psm_obj.psm_key == psm_key:
+                    elif 'h_interp' in psm_key and pobj.psm_obj.psm_key == psm_key:
                         # no proxy seasonality to consider
                         _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
                         ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)

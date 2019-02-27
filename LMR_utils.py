@@ -1870,6 +1870,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
             calib_avgPeriod = None
         calib_str = ''
         state_vars_for_ye = {psm_key.split(',')[1]: prior_kind}
+        psm_key = psm_key.split(',')[0]
 
     elif psm_key == 'bayesreg_uk37':
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
@@ -2250,7 +2251,7 @@ def validate_config(config):
                 proceed_ok = False
 
         # 2) Check if psm_avg is set to 'season' when use_precalc_ye = False
-        #    This combination of optios is not currently no possible as management
+        #    This combination of options is not currently possible as management
         #    of seasonal prior state variables is not enabled.
 
         if config.psm.avgPeriod == 'season':
@@ -2280,10 +2281,18 @@ def validate_config(config):
 
     # For every PSM class to be used
     for psm_type in psm_keys:
-    
+
         if 'h_interp' in psm_type:
+            # check if state variable is specified along with h_interp
+            if len(psm_type.split(',')) != 2:
+                print (' ERROR: state variable missing in specification of h_interp.'
+                       ' Need to specify: h_interp,<<state variable>> in config.')
+                proceed_ok = False
+
             psm_type = 'h_interp'
+
         required_variables = list(psmclasses[psm_type].psm_required_variables.keys())
+        
         for var in required_variables:
             if var in list(config.prior.state_variables.keys()):
                 if psmclasses[psm_type].psm_required_variables[var] != config.prior.state_variables[var]:

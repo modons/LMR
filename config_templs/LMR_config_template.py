@@ -1589,8 +1589,6 @@ class psm(ConfigGroup):
         filename_obsError = 'R.txt'
         dataformat_obsError = 'TXT'
         datafile_obsError = None
-
-        psm_required_variables = {'d18O_sfc_Amon': 'full'} # default
         
         ##** END User Parameters **##
 
@@ -1625,7 +1623,24 @@ class psm(ConfigGroup):
                                  ' Unable to assign kind to psm_required_variables'
                                  ' in h_interp psm class.')
 
+            # check a few things
+            check_cfg = [item for item in getattr(proxies, proxies.use_from[0]).proxy_psm_type.values() if 'h_interp' in item]
+            for item in check_cfg:
+                if len(item.split(',')) != 2:
+                    raise ValueError('ERROR: state variable missing in specification of h_interp.'
+                                     ' Need to specify: h_interp,<<state variable>> in config.')
+            
+            required_vars = list(set([item.split(',')[1] for item in
+                                      getattr(proxies, proxies.use_from[0]).proxy_psm_type.values()
+                                      if 'h_interp' in item]))
+            if len(required_vars) > 0:
+                self.psm_required_variables = {}
+                for var in required_vars:
+                    self.psm_required_variables[var] = psm_var_kind
+            else:
+                self.psm_required_variables = None
 
+    
     class bayesreg_uk37(ConfigGroup):
         """
         Parameters for the Bayesian regression PSM for uk37 proxies.
