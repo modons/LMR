@@ -487,17 +487,20 @@ class LinearPSM(BasePSM):
 
         
         # Perform the regression
+        nobs = None
         try:
             regress = sm.ols(formula="y ~ Calibration", data=df).fit()
             # number of data points used in the regression
             nobs = int(regress.nobs)
-            
-        except:
+        except ValueError: # no overlapping data
             nobs = 0
+        except Exception as exception:
+            print('Exception raised', exception)
 
-            
-        if nobs < 10:  # skip rest if insufficient overlapping data
-            raise ValueError
+        if nobs and nobs < 10:  # skip rest if insufficient overlapping data
+            print('Insufficient obs./calib. overlap'
+                  ' to calibrate psm: nobs=%d' %nobs)
+            raise ValueError()
 
         
         # START NEW (GH) 21 June 2015... RT edit June 2016
@@ -1197,8 +1200,7 @@ class BilinearPSM(BasePSM):
                 avgMonths_P =  proxy.seasonality
 
         else:
-            print('ERROR: Unrecognized value for avgPeriod! Exiting!') 
-            exit(1)
+            raise SystemExit('ERROR: Unrecognized value for avgPeriod! Exiting!')
 
         nbmonths_T = len(avgMonths_T)
         nbmonths_P = len(avgMonths_P)
@@ -1292,15 +1294,20 @@ class BilinearPSM(BasePSM):
         df = df.astype(np.float)
         
         # Perform the regression
+        nobs = None
         try:
             regress = sm.ols(formula="y ~ Temperature + Moisture", data=df).fit()
             # number of data points used in the regression
             nobs = int(regress.nobs)
-        except:
+        except ValueError: # no overlapping data
             nobs = 0
+        except Exception as exception:
+            print('Exception raised', exception)
             
-        if nobs < 10:  # skip rest if insufficient overlapping data
-            raise ValueError
+        if nobs and nobs < 10:  # skip if insufficient overlapping data
+            print('Insufficient obs./calib. overlap'
+                  ' to calibrate psm: nobs=%d' %nobs)
+            raise ValueError()
 
 
         # extract the needed regression parameters
