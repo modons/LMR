@@ -544,7 +544,9 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
         if prox_type and prox_type not in Y.type: continue
         if prox_ID and prox_ID not in Y.id: continue
         if r_crit and np.abs(Y.psm_obj.corr) < r_crit: continue # implementation of Robert's r_crit threshhold
-
+        #if Y.psm_obj.sensitivity != 'moisture': continue  # add hoc for moisture-sensitive trees
+        if Y.psm_obj.sensitivity == 'moisture': continue  # add hoc for temperature-sensitive trees
+            
         # Check if we have proxy ob for current time interval
         if recon_timescale > 1:
             # exclude lower bound to not include same obs in adjacent time intervals
@@ -584,7 +586,9 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
    
     if len(vY) == 0:
         print('Zero valid proxies for the chosen year!')
-        
+    else:
+        print('Number of valid proxies: ',len(vY))
+
     elapsed_time = time() - begin_time
     if verbose:
         print('-----------------------------------------------------')
@@ -820,7 +824,7 @@ def Kalman_optimal_sklearn(Y,vR,Ye,Xb,mindim=None,transform_only=False,verbose=F
     SVD = {'U':U,'s':s,'V':np.transpose(V),'xtinc':xtinc,'T':T,'readme':readme}
     return xam,Xap,SVD
 
-def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,verbose=False):
+def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,X=None,vYe_coords=None,verbose=False):
     import LMR_DA
     
     if verbose:
@@ -833,9 +837,16 @@ def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,verbose=False):
 
     # augmented state vector with Ye appended
     Xb = np.append(Xb_in, vYe, axis=0)
-    
-    #loc_rad = cfg.core.loc_rad
-    # need to add code block to compute localization factor
+    print('Xb shape:',Xb.shape)
+    print('X coords shape',X.coords.shape)
+    tmp = np.append(X.coords,vYe_coords,axis=0)
+    print('X aug coords shape',tmp.shape)
+    loc_rad = cfg.core.loc_rad
+
+    # make a "fake" local proxy object to attach proxy lat,lon data for localization function
+    if loc_rad is not None and X is not None:
+        Yloc = LMR_proxy.BaseProxyObject
+        
     nobs = len(vY)
     if verbose: print('appended state...')
     for k in range(nobs):
@@ -843,7 +854,13 @@ def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,verbose=False):
         obvalue = vY[k]
         ob_err = vR[k]
         Ye = Xb[nx+k,:]
-        Xa = LMR_DA.enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None)   
+        if loc_rad is not None and X is not None:
+            Yloc.lat = vYe_coords[k,0]
+            Yloc.lon = vYe_coords[k,1]
+            loc = LMR_DA.cov_localization(loc_rad, Yloc, X, np.append(X.coords,vYe_coords,axis=0))
+            Xa = LMR_DA.enkf_update_array(Xb, obvalue, Ye, ob_err, loc=loc, inflate=None)   
+        else:
+            Xa = LMR_DA.enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None)   
         Xb = Xa
       
     # ensemble mean and perturbations
@@ -1221,9 +1238,10 @@ def prior_regrid(cfg,X,Xb_one,verbose=False):
         # updating dimension of new state vector
         Nx = Nx + new_dims
 
-        # LMR_lite specific mod: update lat,lon information in X for later use
+        # LMR_lite specific mods: update lat,lon information in X for later use
         X.prior_dict[var]['lat'] = lat_new
         X.prior_dict[var]['lon'] = lon_new
+        X.coords = Xb_one_coords
         
         # end loop over vars
         
