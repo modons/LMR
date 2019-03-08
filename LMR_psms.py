@@ -66,7 +66,11 @@ try:
     import deltaoxfox as dfox
 except ImportError as e3:
     print('Warning:', e3)
-    
+try:
+    import baymag
+except ImportError as e3:
+    print('Warning:', e3)
+
 
 # Logging output utility, configuration controlled by driver
 _log = logging.getLogger(__name__)
@@ -1794,8 +1798,9 @@ class BayesRegTEX86PSM(BayesRegPSM):
     def __init__(self, config, proxy_obj):
         super().__init__(config, proxy_obj)
         self.psm_key = 'bayesreg_tex86'
-        self.sensitivity = 'sst'
+        self.sensitivity = None
         self.psm_required_variables = config.psm.bayesreg_tex86.psm_required_variables
+        self.temptype = str(config.psm.bayesreg_tex86.temptype)
         self.R = self._estimate_r(31)
 
     def _estimate_r(self, *args, **kwargs):
@@ -1814,7 +1819,7 @@ class BayesRegTEX86PSM(BayesRegPSM):
             lon -= 360
 
         y = bayspar.predict_tex(seatemp=x, lat=self.lat, lon=lon,
-                                temptype='sst')
+                                temptype=self.temptype)
         return y.ensemble
 
     def psm(self, Xb, X_state_info, X_coords):
@@ -1915,15 +1920,212 @@ class BayesRegD18oPSM(BayesRegPSM):
         ...
     """
 
-    def __init__(self, config, proxy_obj, spp):
+    def __init__(self, config, proxy_obj, spp=None):
         super().__init__(config, proxy_obj)
         self.psm_key = 'bayesreg_d18o'
-        self.sensitivity = 'sst'  # TODO(brews): Also need 'sss'?
+        self.sensitivity = None
         self.psm_required_variables = config.psm.bayesreg_d18o.psm_required_variables
-        self.spp = str(spp)
+        self.psm_seatemp_variable = config.psm.bayesreg_d18o.psm_seatemp_variable
+        self.psm_d18osw_variable = config.psm.bayesreg_d18o.psm_d18osw_variable
+        self.psm_d18osw_from_salinity = config.psm.bayesreg_d18o.psm_d18osw_from_salinity
+        self.seasonal_seatemp = config.psm.bayesreg_d18o.seasonal_seatemp
+        self.spp = spp
+        self.R = self._estimate_r()
 
-        tmin, tmax = (dfox.foram_sst_minmax(self.spp))
-        self.R = self._estimate_r(tmin, tmax+1)
+    def _estimate_r(self, *args, **kwargs):
+        """Find R, error variance of this PSM. Ignores input args.
+        """
+        if self.psm_d18osw_from_salinity:
+            # We can use a single temperature because it shouldn't matter, but We
+            # can't just compute from model parameters because we need to consider
+            # uncertainty from SOS -> d18Osw model in addition to the proxy
+            # forward model.
+            ensemble = self._mcmc_predict(sst=np.array([15.0]), sos=np.array([35.0]))
+        else:
+            # No SOS -> d18Osw model to consider
+            ensemble = self._mcmc_predict(sst=np.array([15.0]), d18osw=np.array([0.0]))
+        out = np.max(np.var(ensemble, axis=1))
+        return out
+
+    def _mcmc_predict(self, sst, sos=None, d18osw=None):
+        """Get MCMC ensemble prediction for input variables
+        """
+        assert (sos is not None) ^ (d18osw is not None), 'requires `d18osw` or `sos` as input'
+
+        predict_kwargs = {'seatemp': sst,
+                          'spp': self.spp,
+                          'salinity': sos,
+                          'd18osw': d18osw,
+                          'latlon': None,
+                          'seasonal_seatemp': self.seasonal_seatemp}
+
+        if d18osw is None:
+            # Without d18Osw, we need latlon and SOS.
+            # Longitude is often over 180, raising error in deltaoxfox.
+            lon = float(self.lon)
+            if lon > 180:
+                lon -= 360
+            predict_kwargs['latlon'] = (self.lat, lon)
+
+        y = dfox.predict_d18oc(**predict_kwargs)
+
+        return y.ensemble
+
+    def psm(self, Xb, X_state_info, X_coords):
+        """
+        Maps a given state to observations for the given proxy
+
+        Parameters
+        ----------
+        Xb: ndarray
+            State vector to be mapped into observation space (stateDim x ensDim)
+        X_state_info: dict
+            Information pertaining to variables in the state vector
+        X_coords: ndarray
+            Coordinates for the state vector (stateDim x 2)
+
+        Returns
+        -------
+        Ye:
+            Equivalent observation from prior
+        """
+        sst_var_name = list(self.psm_seatemp_variable.keys())[0]
+        d18osw_var_name = list(self.psm_d18osw_variable.keys())[0]
+
+        # ----------------------
+        # Calculate the Ye's ...
+        # ----------------------
+
+        # Defining state variables to consider in the calculation of Ye's
+        #
+        for state_var in list(self.psm_required_variables.keys()):
+            try:
+                varok = X_state_info[state_var]                
+            except KeyError as ekey:
+                print('In BayesRegD18oPSM: Needed variable (%s) not in state vector for Ye calculation.'
+                      %ekey)
+                raise SystemExit()
+                
+        xb_sst = self._get_gridpoint_data(sst_var_name, Xb, X_state_info, X_coords)
+        xb_d18osw = self._get_gridpoint_data(d18osw_var_name, Xb, X_state_info, X_coords)
+
+        # check if gridpoint_data is in K: need deg. C for forward model
+        # crude check...
+        #if np.nanmin(xb_sst) > 200.0:
+        #    xb_sst = xb_sst - 273.15
+        # RT - 11/18: More robust use of "units" metadata now included in state vector info.
+        if np.isfinite(xb_sst).all() and np.any(xb_sst):
+            if X_state_info[sst_var_name]['units']:
+                if X_state_info[sst_var_name]['units'] == 'K' or X_state_info[sst_var_name]['units'] == 'Kelvin':
+                    xb_sst = xb_sst - 273.15
+        else:
+            xb_sst[:] = np.nan
+
+        # Build args to pass to self._mcmc_predict() to handle whether SOS or
+        # d18Osw is available in state vector.
+        predict_kwargs = {'sst' : xb_sst}
+        if self.psm_d18osw_from_salinity:
+            predict_kwargs['sos'] = xb_d18osw
+        else:
+            predict_kwargs['d18osw'] = xb_d18osw
+
+        ye_ens = self._mcmc_predict(**predict_kwargs)
+        ye = np.mean(ye_ens, axis=1)
+        return ye
+
+    # Define a default error model for this proxy
+    @staticmethod
+    def error():
+        return 0.1
+
+
+@class_docs_fixer
+class BayesRegD18oPooledPSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, spp=None)
+        self.psm_key = 'bayesreg_d18o_pooled'
+
+
+@class_docs_fixer
+class BayesRegD18oRuberwhitePSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, 'G. ruber white')
+        self.psm_key = 'bayesreg_d18o_ruberwhite'
+
+
+@class_docs_fixer
+class BayesRegD18oSacculiferPSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, 'G. sacculifer')
+        self.psm_key = 'bayesreg_d18o_sacculifer'
+
+
+@class_docs_fixer
+class BayesRegD18oBulloidesPSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, 'G. bulloides')
+        self.psm_key = 'bayesreg_d18o_bulloides'
+
+
+@class_docs_fixer
+class BayesRegD18oPachydermaPSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, 'N. pachyderma')
+        self.psm_key = 'bayesreg_d18o_pachyderma'
+
+
+@class_docs_fixer
+class BayesRegD18oIncomptaPSM(BayesRegD18oPSM):
+    def __init__(self, config, proxy_obj):
+        super().__init__(config, proxy_obj, 'N. incompta')
+        self.psm_key = 'bayesreg_d18o_incompta'
+
+
+class BayesRegMgcaPSM(BayesRegPSM):
+    """
+    ...
+
+    Attributes
+    ----------
+
+    ...
+
+    lat: float
+        Latitude of associated proxy site
+    lon: float
+        Longitude of associated proxy site
+    elev: float
+        Elevation/depth of proxy site
+    R: float
+        Obs. error variance associated to proxy site
+
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module used for current LMR run.
+    proxy_obj: BaseProxyObject like
+        Proxy object that this PSM is being attached to.
+
+    Raises
+    ------
+    ValueError
+        ...
+    """
+
+    def __init__(self, config, proxy_obj, cleaning, spp=None):
+        super().__init__(config, proxy_obj)
+        self.psm_key = 'bayesreg_mgca'
+        self.sensitivity = None
+        self.psm_seatemp_variable = config.psm.bayesreg_mgca.psm_seatemp_variable
+        self.psm_omega_variable = config.psm.bayesreg_mgca.psm_omega_variable
+        self.psm_required_variables = config.psm.bayesreg_mgca.psm_required_variables
+        self.spp = spp
+
+        self.seasonal_seatemp = config.psm.bayesreg_mgca.seasonal_seatemp
+        self.seawater_age = config.psm.bayesreg_mgca.seawater_age
+        self.cleaning = int(cleaning)
+
+        self.R = self._estimate_r(15, 16)  # This is temporary. Should consider wider range.
 
     def _estimate_r(self, *args, **kwargs):
         """Fit Bayes regression to range of input values and return max variance
@@ -1931,26 +2133,23 @@ class BayesRegD18oPSM(BayesRegPSM):
         xrange = np.arange(*args, **kwargs)
 
         # This assumes that changes in salinity will not influence ensemble variance.
-        ensemble = self._mcmc_predict(sst=xrange, sos=np.array([35.0]))
+        ensemble = self._mcmc_predict(sst=xrange)
         return np.max(np.var(ensemble, axis=1))
 
-    def _mcmc_predict(self, sst, sos=None, d18osw=None):
+    def _mcmc_predict(self, sst, omega=None):
         """Get MCMC ensemble prediction for input variables
         """
-        assert sos is not None or d18osw is not None
+        # Longitude is often over 180.
+        lon = float(self.lon)
+        if lon > 180:
+            lon -= 360
 
-        if d18osw is None:
-            # Without seawater d18O, we need latlon and sea-surface salinity.
+        depth = np.abs(self.elev)  # `baymag` wants positive depths.
 
-            # Longitude is often over 180, raising error in deltaoxfox.
-            lon = float(self.lon)
-            if lon > 180:
-                lon -= 360
-
-            y = dfox.predict_d18oc(seatemp=sst, spp=self.spp, d18osw=None,
-                                   salinity=sos, latlon=(self.lat, lon))
-        else:
-            y = dfox.predict_d18oc(seatemp=sst, spp=self.spp, d18osw=d18osw)
+        y = baymag.predict_mgca(seatemp=sst, spp=self.spp, latlon=(self.lat, lon),
+                                omega=omega, depth=depth, cleaning=self.cleaning,
+                                sw_age=self.seawater_age,
+                                seasonal_seatemp=self.seasonal_seatemp)
 
         return y.ensemble
 
@@ -1980,29 +2179,27 @@ class BayesRegD18oPSM(BayesRegPSM):
         # Defining state variables to consider in the calculation of Ye's
         #
         for state_var in list(self.psm_required_variables.keys()):
-            try:
-                varok = X_state_info[state_var]                
-            except KeyError as ekey:
-                print('In BayesRegD18oPSM: Needed variable (%s) not in state vector for Ye calculation.'
-                      %ekey)
-                raise SystemExit()
-                
-        xb_sst = self._get_gridpoint_data('tos_sfc_Odecmon', Xb, X_state_info, X_coords)
-        xb_sos = self._get_gridpoint_data('sos_sfc_Odecmon', Xb, X_state_info, X_coords)
+            if state_var not in list(X_state_info.keys()):
+                raise KeyError('Needed variable not in state vector for Ye calculation.')
 
-        # check if gridpoint_data is in K: need deg. C for forward model
-        # crude check...
-        #if np.nanmin(xb_sst) > 200.0:
-        #    xb_sst = xb_sst - 273.15
-        # RT - 11/18: More robust use of "units" metadata now included in state vector info.
+        seatemp_var_name = list(self.psm_seatemp_variable.keys())[0]
+        xb_sst = self._get_gridpoint_data(seatemp_var_name, Xb, X_state_info, X_coords)
+
+        # Grab ocean omega if we have it, otherwise `None` and `baymagpy` should
+        # use omega from the modern record.
+        xb_omega = None
+        if self.psm_omega_variable:
+            omega_var_name = list(self.psm_omega_variable.keys())[0]
+            xb_omega = self._get_gridpoint_data(omega_var_name, Xb, X_state_info, X_coords)
+
         if np.isfinite(xb_sst).all() and np.any(xb_sst):
-            if X_state_info['tos_sfc_Odecmon']['units']:
-                if X_state_info['tos_sfc_Odecmon']['units'] == 'K' or X_state_info['tos_sfc_Odecmon']['units'] == 'Kelvin':
+            if X_state_info[seatemp_var_name]['units']:
+                if X_state_info[seatemp_var_name]['units'] == 'K' or X_state_info[seatemp_var_name]['units'] == 'Kelvin':
                     xb_sst = xb_sst - 273.15
         else:
             xb_sst[:] = np.nan
-                
-        ye_ens = self._mcmc_predict(xb_sst, xb_sos)
+
+        ye_ens = self._mcmc_predict(sst=xb_sst, omega=xb_omega)
         ye = np.mean(ye_ens, axis=1)
         return ye
 
@@ -2011,33 +2208,87 @@ class BayesRegD18oPSM(BayesRegPSM):
     def error():
         return 0.1
 
+# Define specific classes 'foram type':'sample cleaning' combinations for Mg/Ca proxies.
+# Might do better as a class factory in the future.
 
 @class_docs_fixer
-class BayesRegD18oRuberwhitePSM(BayesRegD18oPSM):
+class BayesRegMgcaPooledRedPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'G. ruber white')
-        self.psm_key = 'bayesreg_d18o_ruberwhite'
-
-
-@class_docs_fixer
-class BayesRegD18oSacculiferPSM(BayesRegD18oPSM):
-    def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'G. sacculifer')
-        self.psm_key = 'bayesreg_d18o_sacculifer'
+        # Mg/Ca for model with pooled foram species with fully reductive sample cleaning
+        super().__init__(config, proxy_obj, cleaning=1, spp=None)
+        self.psm_key = 'bayesreg_mgca_pooled_red'
 
 
 @class_docs_fixer
-class BayesRegD18oBulloidesPSM(BayesRegD18oPSM):
+class BayesRegMgcaPooledBcpPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'G. bulloides')
-        self.psm_key = 'bayesreg_d18o_bulloides'
+        # Mg/Ca for model with pooled foram species with Barker sample cleaning protocol
+        super().__init__(config, proxy_obj, cleaning=1, spp=None)
+        self.psm_key = 'bayesreg_mgca_pooled_bcp'
 
 
 @class_docs_fixer
-class BayesRegD18oPachydermaPSM(BayesRegD18oPSM):
+class BayesRegMgcaRuberwhiteRedPSM(BayesRegMgcaPSM):
     def __init__(self, config, proxy_obj):
-        super().__init__(config, proxy_obj, 'N. pachyderma sinistral')
-        self.psm_key = 'bayesreg_d18o_pachyderma'
+        # Mg/Ca for ruber white with fully reductive sample cleaning
+        super().__init__(config, proxy_obj, spp='ruber_w', cleaning=1)
+        self.psm_key = 'bayesreg_mgca_ruberwhite_red'
+
+
+@class_docs_fixer
+class BayesRegMgcaRuberwhiteBcpPSM(BayesRegMgcaPSM):
+    def __init__(self, config, proxy_obj):
+        # Mg/Ca for ruber white with Barker sample cleaning protocol
+        super().__init__(config, proxy_obj, spp='ruber_w', cleaning=0)
+        self.psm_key = 'bayesreg_mgca_ruberwhite_bcp'
+
+
+@class_docs_fixer
+class BayesRegMgcaSacculiferRedPSM(BayesRegMgcaPSM):
+    def __init__(self, config, proxy_obj):
+        # Mg/Ca for sacculifer with fully reductive sample cleaning
+        super().__init__(config, proxy_obj, spp='sacculifer', cleaning=1)
+        self.psm_key = 'bayesreg_mgca_sacculifer_red'
+
+
+@class_docs_fixer
+class BayesRegMgcaSacculiferBcpPSM(BayesRegMgcaPSM):
+    def __init__(self, config, proxy_obj):
+        # Mg/Ca for sacculifer with Barker sample cleaning protocol
+        super().__init__(config, proxy_obj, spp='sacculifer', cleaning=0)
+        self.psm_key = 'bayesreg_mgca_sacculifer_bcp'
+
+
+@class_docs_fixer
+class BayesRegMgcaBulloidesRedPSM(BayesRegMgcaPSM):
+    def __init__(self, config, proxy_obj):
+        # Mg/Ca for bulloides with fully reductive sample cleaning
+        super().__init__(config, proxy_obj, spp='bulloides', cleaning=1)
+        self.psm_key = 'bayesreg_mgca_bulloides_red'
+
+
+@class_docs_fixer
+class BayesRegMgcaBulloidesBcpPSM(BayesRegMgcaPSM):
+    def __init__(self, config, proxy_obj):
+        # Mg/Ca for bulloides with Barker sample cleaning protocol
+        super().__init__(config, proxy_obj, spp='bulloides', cleaning=0)
+        self.psm_key = 'bayesreg_mgca_bulloides_bcp'
+
+
+@class_docs_fixer
+class BayesRegMgcaPachydermaRedPSM(BayesRegMgcaPSM):
+    def __init__(self, config, proxy_obj):
+        # Mg/Ca for pachyderma sinistral with fully reductive sample cleaning
+        super().__init__(config, proxy_obj, spp='pachy_s', cleaning=1)
+        self.psm_key = 'bayesreg_mgca_pachyderma_red'
+
+
+@class_docs_fixer
+class BayesRegMgcaPachydermaBcpPSM(BayesRegMgcaPSM):
+    def __init__(self, config, proxy_obj):
+        # Mg/Ca for pachyderma sinistral with Barker sample cleaning protocol
+        super().__init__(config, proxy_obj, spp='pachy_s', cleaning=0)
+        self.psm_key = 'bayesreg_mgca_pachyderma_bcp'
 
 
 # Mapping dict to PSM object type, this is where proxy_type/psm relations
@@ -2045,10 +2296,23 @@ class BayesRegD18oPachydermaPSM(BayesRegD18oPSM):
 _psm_classes = {'linear': LinearPSM, 'linear_TorP': LinearPSM_TorP,
                 'bilinear': BilinearPSM,'h_interp': h_interpPSM,
                 'bayesreg_uk37': BayesRegUK37PSM, 'bayesreg_tex86': BayesRegTEX86PSM,
+                'bayesreg_d18o_pooled': BayesRegD18oPooledPSM,
                 'bayesreg_d18o_pachyderma': BayesRegD18oPachydermaPSM,
+                'bayesreg_d18o_incompta': BayesRegD18oPachydermaPSM,
                 'bayesreg_d18o_bulloides': BayesRegD18oBulloidesPSM,
                 'bayesreg_d18o_sacculifer': BayesRegD18oSacculiferPSM,
-                'bayesreg_d18o_ruberwhite': BayesRegD18oRuberwhitePSM}
+                'bayesreg_d18o_ruberwhite': BayesRegD18oRuberwhitePSM,
+                'bayesreg_mgca_ruberwhite_red': BayesRegMgcaRuberwhiteRedPSM,
+                'bayesreg_mgca_ruberwhite_bcp': BayesRegMgcaRuberwhiteBcpPSM,
+                'bayesreg_mgca_sacculifer_red': BayesRegMgcaSacculiferRedPSM,
+                'bayesreg_mgca_sacculifer_bcp': BayesRegMgcaSacculiferBcpPSM,
+                'bayesreg_mgca_bulloides_red': BayesRegMgcaBulloidesRedPSM,
+                'bayesreg_mgca_bulloides_bcp': BayesRegMgcaBulloidesBcpPSM,
+                'bayesreg_mgca_pachyderma_red': BayesRegMgcaPachydermaRedPSM,
+                'bayesreg_mgca_pachyderma_bcp': BayesRegMgcaPachydermaBcpPSM,
+                'bayesreg_mgca_pooled_red' : BayesRegMgcaPooledRedPSM,
+                'bayesreg_mgca_pooled_bcp' : BayesRegMgcaPooledBcpPSM,
+                }
 
 
 def get_psm_class(psm_type):

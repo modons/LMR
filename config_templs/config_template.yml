@@ -356,6 +356,31 @@ psm:
     dataformat_obsError: TXT
     datafile_obsError: None
 
+  bayesreg_tex86:
+    psm_required_variables:
+      toGA_0-200m_Odec: 'full'
+    temptype: 'subt'
+
+  bayesreg_uk37:
+    psm_required_variables:
+      tos_sfc_Odecmon: 'full'
+
+  bayesreg_d18o:
+    psm_seatemp_variable:
+      tos_sfc_Odecmon: 'full'
+    psm_d18osw_variable:
+      sos_sfc_Odecmon: 'full'
+    psm_d18osw_from_salinity: True
+    seasonal_seatemp: True
+
+  bayesreg_mgca:
+    psm_seatemp_variable:
+      tos_sfc_Odec: 'full'
+#    psm_omega_variable:
+#      omg_sfc_Odecmon: 'full'
+    seasonal_seatemp: False
+#    seawater_age: 65.0
+
 prior:
   prior_source: ccsm4_last_millenium
 #  prior_source: icesm_last_millennium
