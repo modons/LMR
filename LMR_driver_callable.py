@@ -603,7 +603,7 @@ def LMR_driver_callable(cfg=None):
                        str(Ye.mean())))
 
             # Update the state
-            Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc, inflate)
+            Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc)
 
             
             # TODO: AP Temporary fix for no TAS in state

@@ -10,7 +10,7 @@
 import numpy as np
 import LMR_utils
 
-def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
+def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None):
     """
     Function to do the ensemble square-root filter (EnSRF) update
     (ref: Whitaker and Hamill, Mon. Wea. Rev., 2002)
@@ -32,7 +32,6 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
           Ye: background ensemble estimate of the proxy (Nens x 1)
       ob_err: proxy error variance
          loc: localization vector (Nx x 1) [optional]
-     inflate: scalar inflation factor [optional]
     """
 
     # Get ensemble size from passed array: Xb has dims [state vect.,ens. members]
@@ -62,10 +61,6 @@ def enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None):
 
     # numerator of serial Kalman gain (cov(x,Hx))
     kcov = np.dot(Xbp,np.transpose(ye)) / (Nens-1)
-
-    # Option to inflate the covariances by a certain factor
-    #if inflate is not None:
-    #    kcov = inflate * kcov # This implementation is not correct. To be revised later.
 
     # Option to localize the gain
     if loc is not None:
