@@ -126,8 +126,7 @@ def main(cfgin=None, config_path=None):
     elif proxy_database == 'DAPSpseudoproxies':
         proxy_cfg = cfg.proxies.DAPSpseudoproxies
     else:
-        _log.error('ERROR in specification of proxy database.')
-        raise SystemExit()
+        raise KeyError('ERROR in specification of proxy database: {}'.format(proxy_database))
 
     proxy_types = proxy_cfg.proxy_order
     # proxy_types = list(proxy_cfg.proxy_psm_type.keys())
@@ -236,29 +235,28 @@ def main(cfgin=None, config_path=None):
             statevars = {psm_key.split(',')[1]: vkind}
         elif psm_key == 'bayesreg_uk37':
             statevars = cfg.psm.bayesreg_uk37.psm_required_variables
-            #psm_avg = 'multiyear'
             psm_avg = 'multiyear-season'
         elif psm_key == 'bayesreg_tex86':
             statevars = cfg.psm.bayesreg_tex86.psm_required_variables
             psm_avg = 'multiyear'
-        elif psm_key == 'bayesreg_d18o_pachyderma':
+        elif psm_key in ['bayesreg_d18o_pachyderma', 'bayesreg_d18o_bulloides',
+                         'bayesreg_d18o_sacculifer', 'bayesreg_d18o_ruberwhite',
+                         'bayesreg_d18o_incompta', 'bayesreg_d18o_pooled']:
             statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
-        elif psm_key == 'bayesreg_d18o_bulloides':
-            statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
-        elif psm_key == 'bayesreg_d18o_sacculifer':
-            statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
-        elif psm_key == 'bayesreg_d18o_ruberwhite':
-            statevars = cfg.psm.bayesreg_d18o.psm_required_variables
-            #psm_avg = 'multiyear'
-            psm_avg = 'multiyear-season'
+            psm_avg = 'multiyear'
+            if cfg.psm.bayesreg_d18o.seasonal_seatemp:
+                psm_avg = 'multiyear-season'
+        elif psm_key in ['bayesreg_mgca_pachyderma_red', 'bayesreg_mgca_pachyderma_bcp',
+                         'bayesreg_mgca_bulloides_red', 'bayesreg_mgca_bulloides_bcp',
+                         'bayesreg_mgca_sacculifer_red', 'bayesreg_mgca_sacculifer_bcp',
+                         'bayesreg_mgca_ruberwhite_red', 'bayesreg_mgca_ruberwhite_bcp',
+                         'bayesreg_mgca_pooled_red', 'bayesreg_mgca_pooled_bcp']:
+            statevars = cfg.psm.bayesreg_mgca.psm_required_variables
+            psm_avg = 'multiyear'
+            if cfg.psm.bayesreg_mgca.seasonal_seatemp:
+                psm_avg = 'multiyear-season'
         else:
-            _log.error('ERROR: Did not find a match to a valid psm key. Exiting.')
+            _log.error('ERROR: Did not find a match to a valid psm key: {}. Exiting.'.format(psm_key))
             raise SystemExit()
 
         
@@ -293,8 +291,7 @@ def main(cfgin=None, config_path=None):
                     # metadata seasonality is an attribute of the proxy object itself
                     for pobj in proxy_objects: season_vects.append(pobj.seasonality)
                 else:
-                    _log.error('ERROR: Unrecognized value of *season_source* attribute in psm configuration.')
-                    raise SystemExit()
+                    raise KeyError('ERROR: Unrecognized value of *season_source* attribute in psm configuration: {}'.format(cfg.psm.season_source))
             else:
                 # attribute does not exist in config., revert to proxy metadata
                 for pobj in proxy_objects: season_vects.append(pobj.seasonality)
@@ -316,13 +313,13 @@ def main(cfgin=None, config_path=None):
             season_unique = []
             for item in season_vects:
                 if item not in season_unique:season_unique.append(item)
-            
+
         elif psm_avg == 'multiyear':
             season_unique = [cfg.prior.avgInterval['multiyear']]
             base_time_interval = 'multiyear'
             
         else:
-            _log.error('ERROR in specification of averaging period.')
+            _log.error('ERROR in specification of averaging period: {}'.format(psm_avg))
             raise SystemExit()
 
         
@@ -347,7 +344,7 @@ def main(cfgin=None, config_path=None):
             # to current "season" (i.e. proxy seasonality)
             # RT Nov 2018: additional (crude) logic to handle special case of DADT "seasonal" PSMs
             if psm_avg == 'multiyear-season':
-                X.avgInterval = {'multiyear': cfg.prior.avgInterval['multiyear'], 'season': season}                
+                X.avgInterval = {'multiyear': cfg.prior.avgInterval['multiyear'], 'season': season}
             else:
                 X.avgInterval = {base_time_interval: season}
 
@@ -385,7 +382,7 @@ def main(cfgin=None, config_path=None):
 
                 else:
                     # "multiyear" PSM:
-                    # Restrict to proxy records associated with current PSM (psm_key)                    
+                    # Restrict to proxy records associated with current PSM (psm_key)
                     if 'bayesreg' in psm_key and pobj.psm_obj.psm_key == psm_key:
                         if psm_avg == 'multiyear-season':
                             # Restrict to proxy records with current 'season'
@@ -435,8 +432,11 @@ def main(cfgin=None, config_path=None):
 
 #------------------------------------------------------------------------------------
 #-------------------- if not called, must be run directly ---------------------------
-if len(sys.argv) > 1:
-    yaml_file = sys.argv[1]
-    main(config_path=yaml_file)
-else:    
-    main()
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG,
+                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    if len(sys.argv) > 1:
+        yaml_file = sys.argv[1]
+        main(config_path=yaml_file)
+    else:
+        main()

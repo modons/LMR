@@ -1643,88 +1643,125 @@ class psm(ConfigGroup):
     
     class bayesreg_uk37(ConfigGroup):
         """
-        Parameters for the Bayesian regression PSM for uk37 proxies.
+        Parameters for the BAYSPLINE UK'37 PSM, LMR_psms.BayesRegUK37PSM.
 
         Attributes
         ----------
-        radius_influence : real
-            Distance-scale used the calculation of exponentially-decaying
-            weights in interpolator (in km)
-        datadir_obsError: str
-            Absolute path to obs. error variance data
-        filename_obsError: str
-            Filename for obs. error variance data
-        dataformat_obsError: str
-            String indicating the format of the file containing obs. error
-            variance data
-            Note: note currently used by code. For info purpose only.
-        datafile_obsError: str
-            Absolute path/filename of obs. error variance data
+        psm_required_variables : dict
+            Required state variables for the PSM to calculate Ye. The dict has a
+            str key giving the state variable name and str value indicating
+            whether full field (`full`) or anomaly (`anom`) is to be used.
         """
-        def __init__(self, lmr_path=None, **kwargs):
-            super().__init__(**kwargs)
-
-            # define state variable needed to calculate Ye's
-            #self.psm_required_variables = {'tos_sfc_Odec': 'full'}
-            self.psm_required_variables = {'tos_sfc_Odecmon': 'full'}            
+        psm_required_variables = {'tos_sfc_Odecmon': 'full'}
 
 
     class bayesreg_tex86(ConfigGroup):
         """
-        Parameters for the Bayesian regression PSM for TEX86 proxies.
+        Parameters for the BAYSPAR TEX86 PSM, ``LMR_psms.BayesRegTEX86PSM``.
 
         Attributes
         ----------
-        radius_influence : real
-            Distance-scale used the calculation of exponentially-decaying
-            weights in interpolator (in km)
-        datadir_obsError: str
-            Absolute path to obs. error variance data
-        filename_obsError: str
-            Filename for obs. error variance data
-        dataformat_obsError: str
-            String indicating the format of the file containing obs. error
-            variance data
-            Note: note currently used by code. For info purpose only.
-        datafile_obsError: str
-            Absolute path/filename of obs. error variance data
+        psm_required_variables : dict
+            Required state variables for the PSM to calculate Ye. The dict has a
+            str key giving the state variable name and str value indicating
+            whether full field (`full`) or anomaly (`anom`) is to be used.
+        temptype : str
+            Indicates whether to use the sub-surface ('subt') or sea-surface
+            ('sst') calibration. Passed to ``bayspar.predict_tex``. Must be
+            `subt` or `sst`.
         """
-        def __init__(self, lmr_path=None, **kwargs):
-            super().__init__(**kwargs)
+        psm_required_variables = {'toGA_0-200m_Odec': 'full'}
+        temptype = 'subt'
 
-            # define state variable needed to calculate Ye's
-            #self.psm_required_variables = {'tos_sfc_Odec': 'full'}
-            #self.psm_required_variables = {'tos_sfc_Odecmon': 'full'}
-            self.psm_required_variables = {'toGA_0-200m_Odec': 'full'}
 
     class bayesreg_d18o(ConfigGroup):
         """
-        Parameters for the Bayesian regression PSM for d18O of foram.
+        Parameters for the foraminifera d18O PSMs, ``LMR_psms.BayesRegD18oPSM`` subclasses.
 
         Attributes
         ----------
-        radius_influence : real
-            Distance-scale used the calculation of exponentially-decaying
-            weights in interpolator (in km)
-        datadir_obsError: str
-            Absolute path to obs. error variance data
-        filename_obsError: str
-            Filename for obs. error variance data
-        dataformat_obsError: str
-            String indicating the format of the file containing obs. error
-            variance data
-            Note: note currently used by code. For info purpose only.
-        datafile_obsError: str
-            Absolute path/filename of obs. error variance data
+        psm_required_variables
+        psm_seatemp_variable : dict
+            Required sea-surface temperature state variable for the PSM to
+            calculate Ye. The dict has a str key giving the state variable name
+            and str value indicating whether full field (`full`) or anomaly
+            (`anom`) is to be used.
+        psm_d18osw_variable : dict
+            Required seawater d18O or salinity state variable for the PSM to
+            calculate Ye. The dict has a str key giving the state variable name
+            and str value indicating whether full field (`full`) or anomaly
+            (`anom`) is to be used. Must be surface seawater d18O or surface
+            salinity, not both. See the `psm_d18osw_from_salinity` attribute.
+        psm_d18osw_from_salinity : bool
+            If ``True`` then `psm_d18osw_variable` is seawater salinity. If
+            ``False`` then `psm_d18osw_variable` is seawater d18O. This is used
+            to tell the calibration ``bayfox.predict_d18oc`` or
+            ``deltaoxfox.predict_d18oc`` whether it also needs to predict
+            seawater d18o from a modern salinity calibration.
+        seasonal_seatemp : bool
+            Indicates whether to use the calibration from seasonal sea-surface
+            temperatures (``True``) or annual sea-surface temperatures
+            (``False``).
         """
+        psm_seatemp_variable = {'tos_sfc_Odecmon': 'full'}
+        psm_d18osw_variable = {'sos_sfc_Odecmon': 'full'}
+        psm_d18osw_from_salinity = True
+        seasonal_seatemp = True
 
-        def __init__(self, lmr_path=None, **kwargs):
-            super().__init__(**kwargs)
+        @property
+        def psm_required_variables(self):
+            """Get dict of required state variables for the PSM to calculate Ye.
 
-            # define state variable needed to calculate Ye's
-            #self.psm_required_variables = {'tos_sfc_Odec': 'full', 'sos_sfc_Odec': 'full'}
-            self.psm_required_variables = {'tos_sfc_Odecmon': 'full', 'sos_sfc_Odecmon': 'full'}
-            
+            The dict has a str key giving the state variable name and str value
+            indicating whether full field (`full`) or anomaly (`anom`) is to be
+            used.
+            """
+            return {**self.psm_seatemp_variable, **self.psm_d18osw_variable}
+
+
+    class bayesreg_mgca(ConfigGroup):
+        """
+        Parameters for the foraminifera Mg/Ca PSMs, ``LMR_psms.BayesRegMgcaPSM`` subclasses.
+
+        Attributes
+        ----------
+        psm_required_variables
+        psm_seatemp_variable : dict
+            Required sea-surface temperature state variable for the PSM to
+            calculate Ye. The dict has a str key giving the state variable name
+            and str value indicating whether full field (`full`) or anomaly
+            (`anom`) is to be used.
+        psm_omega_variable : dict
+            Optional seawater omega (calcite saturation state) state
+            variable for the PSM to calculate Ye. The dict has a str key giving
+            the state variable name and str value indicating whether full field
+            (`full`) or anomaly (`anom`) is to be used. Will be passed to
+            ``baymag.predict_mgca``.
+        seasonal_seatemp : bool
+            Indicates whether to use the calibration from seasonal sea-surface
+            temperatures (``True``) or annual sea-surface temperatures
+            (``False``).
+        seawater_age : float or None
+            Optional correction to Mg/Ca for "old" seawater for deep-time
+            assimilations. No correction is applied if `None`, otherwise give
+            the approximate water age (Ma).
+        """
+        psm_seatemp_variable = {'tos_sfc_Odecmon': 'full'}
+        psm_omega_variable = {}
+        seasonal_seatemp = True
+        seawater_age = None
+
+        @property
+        def psm_required_variables(self):
+            """Get dict of required state variables for the PSM to calculate Ye.
+
+            The dict has a str key giving the state variable name and str value
+            indicating whether full field (`full`) or anomaly (`anom`) is to be
+            used.
+            """
+            return {**self.psm_seatemp_variable, **self.psm_omega_variable}
+
+
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
         self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))
@@ -1734,11 +1771,23 @@ class psm(ConfigGroup):
         self.bayesreg_uk37 = self.bayesreg_uk37(**kwargs.pop('bayesreg_uk37', {}))
         self.bayesreg_tex86 = self.bayesreg_tex86(**kwargs.pop('bayesreg_tex86', {}))
         self.bayesreg_d18o = self.bayesreg_d18o(**kwargs.pop('bayesreg_d18o', {}))
+        self.bayesreg_d18o_pooled = self.bayesreg_d18o
         self.bayesreg_d18o_sacculifer = self.bayesreg_d18o
         self.bayesreg_d18o_ruberwhite = self.bayesreg_d18o
         self.bayesreg_d18o_bulloides = self.bayesreg_d18o
         self.bayesreg_d18o_pachyderma = self.bayesreg_d18o
-
+        self.bayesreg_d18o_incompta = self.bayesreg_d18o
+        self.bayesreg_mgca = self.bayesreg_mgca(**kwargs.pop('bayesreg_mgca', {}))
+        self.bayesreg_mgca_sacculifer_red = self.bayesreg_mgca
+        self.bayesreg_mgca_sacculifer_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_ruberwhite_red = self.bayesreg_mgca
+        self.bayesreg_mgca_ruberwhite_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_bulloides_red = self.bayesreg_mgca
+        self.bayesreg_mgca_bulloides_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_pachyderma_red = self.bayesreg_mgca
+        self.bayesreg_mgca_pachyderma_bcp = self.bayesreg_mgca
+        self.bayesreg_mgca_pooled_red = self.bayesreg_mgca
+        self.bayesreg_mgca_pooled_bcp = self.bayesreg_mgca
 
         super().__init__(**kwargs)
         self.avgPeriod = self.avgPeriod

@@ -1835,6 +1835,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
 
     proxy_database = config.proxies.use_from[0]
 
+    psmkey_str = psm_key
     # Generate PSM calibration string
     calib_str_ext = ''
     if config.core.anom_reference_period:
@@ -1878,36 +1879,46 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         state_vars_for_ye = config.psm.bayesreg_uk37.psm_required_variables
 
     elif psm_key == 'bayesreg_tex86':
+        psmkey_str = '{}-{}'.format(psm_key, config.psm.bayesreg_tex86.temptype)
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_tex86.psm_required_variables
 
-    elif psm_key == 'bayesreg_d18o_pachyderma':
+    elif psm_key in ['bayesreg_d18o_pachyderma', 'bayesreg_d18o_bulloides',
+                     'bayesreg_d18o_sacculifer', 'bayesreg_d18o_ruberwhite',
+                     'bayesreg_d18o_incompta', 'bayesreg_d18o_pooled']:
+        d18osw_str = 'd18osw'
+        if config.psm.bayesreg_d18o.psm_d18osw_from_salinity:
+            d18osw_str = 'salinity'
+
+        seatemp_avg_str = 'annual'
+        if config.psm.bayesreg_d18o.seasonal_seatemp:
+            seatemp_avg_str = 'seasonal'
+
+        psmkey_str = '{}-{}-{}'.format(psm_key, seatemp_avg_str, d18osw_str)
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
 
-    elif psm_key == 'bayesreg_d18o_bulloides':
-        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+    elif psm_key in ['bayesreg_mgca_pachyderma_red', 'bayesreg_mgca_pachyderma_bcp',
+                     'bayesreg_mgca_bulloides_red', 'bayesreg_mgca_bulloides_bcp',
+                     'bayesreg_mgca_sacculifer_red', 'bayesreg_mgca_sacculifer_bcp',
+                     'bayesreg_mgca_ruberwhite_red', 'bayesreg_mgca_ruberwhite_bcp',
+                     'bayesreg_mgca_pooled_red', 'bayesreg_mgca_pooled_bcp']:
+        seatemp_avg_str = 'annual'
+        if config.psm.bayesreg_mgca.seasonal_seatemp:
+            seatemp_avg_str = 'seasonal'
+        psmkey_str = '{}-{}'.format(psm_key, seatemp_avg_str)
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]), 'yrs'])
         calib_str = ''
-        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
-
-    elif psm_key == 'bayesreg_d18o_sacculifer':
-        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
-        calib_str = ''
-        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
-
-    elif psm_key == 'bayesreg_d18o_ruberwhite':
-        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
-        calib_str = ''
-        state_vars_for_ye = config.psm.bayesreg_d18o.psm_required_variables
+        state_vars_for_ye = config.psm.bayesreg_mgca.psm_required_variables
     else:
-        raise ValueError('Unrecognized PSM key.')
+        raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
     
     if calib_avgPeriod:
-        psm_str = psm_key +'_'+ calib_avgPeriod + '-' + calib_str
+        psm_str = psmkey_str +'_'+ calib_avgPeriod + '-' + calib_str
     else:
-        psm_str = psm_key + '-' + calib_str
+        psm_str = psmkey_str + '-' + calib_str
 
     proxy_str = str(proxy_database)
     if proxy_str == 'LMRdb':
@@ -1974,16 +1985,18 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
             pkind = 'full'
         elif psm_key == 'bayesreg_tex86':
             pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_ruberwhite':
+        elif psm_key in ['bayesreg_d18o_ruberwhite', 'bayesreg_d18o_sacculifer',
+                         'bayesreg_d18o_bulloides', 'bayesreg_d18o_pachyderma',
+                         'bayesreg_d18o_incompta', 'bayesreg_d18o_pooled']:
             pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_sacculifer':
-            pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_bulloides':
-            pkind = 'full'
-        elif psm_key == 'bayesreg_d18o_pachyderma':
+        elif psm_key in ['bayesreg_mgca_pachyderma_red', 'bayesreg_mgca_pachyderma_bcp',
+                         'bayesreg_mgca_bulloides_red', 'bayesreg_mgca_bulloides_bcp',
+                         'bayesreg_mgca_sacculifer_red', 'bayesreg_mgca_sacculifer_bcp',
+                         'bayesreg_mgca_ruberwhite_red', 'bayesreg_mgca_ruberwhite_bcp',
+                         'bayesreg_mgca_pooled_red', 'bayesreg_mgca_pooled_bcp']:
             pkind = 'full'
         else:
-            raise ValueError('Unrecognized PSM key.')
+            raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
 
         load_fname = create_precalc_ye_filename(config,psm_key,pkind)
         _log.info('Loading file:' + load_fname)
@@ -2102,7 +2115,7 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
         elif psm_key == 'bayesreg_uk37':
             pkind = 'full'
         else:
-            raise ValueError('Unrecognized PSM key.')
+            raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
 
         load_fname = create_precalc_ye_filename(config,psm_key,pkind)
         print('  Loading file:', load_fname)
