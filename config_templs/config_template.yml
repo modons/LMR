@@ -374,7 +374,7 @@ psm:
     psm_r_crit: 0.0
 
   h_interp:
-    radius_influence: 50.0
+    radius_influence: null
     datadir_obsError: null
     filename_obsError: R.txt
     dataformat_obsError: TXT
@@ -403,6 +403,13 @@ psm:
 #      omg_sfc_Odecmon: 'full'
     seasonal_seatemp: False
 #    seawater_age: 65.0
+
+  linear_multiyear:
+    datadir_PSM: /Volumes/LaCie/LMR/LMR_py3/
+    filename_PSM: LinearMultiyear_calibfile_d18Otas_CESMAMIP_1yr_LiPDdb_v0.0.3.txt
+    dataformat_PSM: TXT
+    datafile_PSM: /Volumes/LaCie/LMR/LMR_py3/LinearMultiyear_calibfile_d18Otas_CESMAMIP_1yr_LiPDdb_v0.0.3.txt
+    linmult_var: tas_sfc_Amon
 
 prior:
   prior_source: ccsm4_last_millenium

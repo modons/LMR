@@ -255,6 +255,9 @@ def main(cfgin=None, config_path=None):
             psm_avg = 'multiyear'
             if cfg.psm.bayesreg_mgca.seasonal_seatemp:
                 psm_avg = 'multiyear-season'
+        elif psm_key == 'linear_multiyear':
+            statevars = cfg.psm.linear_multiyear.psm_required_variables
+            psm_avg = 'multiyear'
         else:
             _log.error('ERROR: Did not find a match to a valid psm key: {}. Exiting.'.format(psm_key))
             raise SystemExit()

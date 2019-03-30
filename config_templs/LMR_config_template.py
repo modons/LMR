@@ -1772,6 +1772,63 @@ class psm(ConfigGroup):
             return {**self.psm_seatemp_variable, **self.psm_omega_variable}
 
 
+    class linear_multiyear(ConfigGroup):
+        """
+        Parameters for the Linear Multiyear PSM. Made as generic for univariate linear PSMs.
+        
+        Attributes
+        ----------
+        datadir_PSM: str
+            directory for PSM coefficients and error
+        filename_PSM: str
+            file name containing PSM coefficients and error. 
+            The order should be error, slope, intercept.
+        dataformat_PSM: str
+            file format of the file
+        datafile_PSM: str
+            data directory plus the filename
+        linmult_var: str
+            name of the variable on which the PSM should calculate Ye values
+        """
+
+        ##** BEGIN User Parameters **##
+    
+        datadir_PSM = './'
+        filename_PSM = 'LinearMultiyear_calibfile.txt'
+        dataformat_PSM = 'TXT'
+        datafile_PSM = None
+    
+        linmult_var = 'tas_sfc_Amon'
+    
+        ##** END User Parameters **##
+
+        def __init__(self,**kwargs):
+            super(self.__class__, self).__init__(**kwargs)
+    
+            self.datadir_PSM = self.datadir_PSM
+            self.filename_PSM = self.filename_PSM
+            self.dataformat_PSM = self.dataformat_PSM
+    
+            if self.datafile_PSM is None:
+                self.datafile_PSM = join(self.datadir_PSM, self.filename_PSM)
+            else:
+                self.datafile_PSM = self.datafile_PSM
+                
+                self.linmult_var = self.linmult_var
+            
+            proxy_kind = proxies.proxy_timeseries_kind
+            if proxies.proxy_timeseries_kind == 'asis':
+                psm_var_kind = 'full'
+            elif proxies.proxy_timeseries_kind == 'anom':
+                psm_var_kind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
+                                 ' Unable to assign kind to psm_required_variables'
+                                 ' in h_interp psm class.')
+            self.psm_required_variables = {self.linmult_var: psm_var_kind}
+
+
+
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
         self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))
@@ -1798,6 +1855,7 @@ class psm(ConfigGroup):
         self.bayesreg_mgca_pachyderma_bcp = self.bayesreg_mgca
         self.bayesreg_mgca_pooled_red = self.bayesreg_mgca
         self.bayesreg_mgca_pooled_bcp = self.bayesreg_mgca
+        self.linear_multiyear = self.linear_multiyear(**kwargs.pop('linear_multiyear', {}))
 
         super().__init__(**kwargs)
         self.avgPeriod = self.avgPeriod

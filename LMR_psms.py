@@ -2310,6 +2310,181 @@ class BayesRegMgcaPachydermaBcpPSM(BayesRegMgcaPSM):
         self.psm_key = 'bayesreg_mgca_pachyderma_bcp'
 
 
+class linear_multiyearPSM(BasePSM):
+    """
+    Linear PSM (univariate) with slope, intercept, and R given in a text file.
+    Can be used for multiyear reconstructions.
+    
+    The information below may not be fully fleshed-out.
+        
+    Attributes
+    ----------
+    lat: float
+        Latitude of associated proxy site
+    lon: float
+        Longitude of associated proxy site
+    elev: float
+        Elevation/depth of proxy site
+    slope: float
+        Given by text file
+    intercept: float
+        Given by text file
+    R: float
+        Given by text file
+    
+    Parameters
+    ----------
+    config: LMR_config
+        Configuration module used for current LMR run.
+    proxy_obj: BaseProxyObject like
+        Proxy object that this PSM is being attached to
+        
+    Raises
+    ------
+    ...
+    """
+
+    def __init__(self, config, proxy_obj, PSMlm_data=None):
+    
+        self.psm_key = 'linear_multiyear'
+
+        self.proxy = proxy_obj.type
+        self.site = proxy_obj.id
+        self.lat = proxy_obj.lat
+        self.lon = proxy_obj.lon
+        try:
+            self.elev = proxy_obj.elev
+        except:
+            self.elev = None
+        self.sensitivity = None
+        self.psm_required_variables = config.psm.linear_multiyear.psm_required_variables
+        self.datafile_PSM = config.psm.linear_multiyear.datafile_PSM
+        self.linmult_var = config.psm.linear_multiyear.linmult_var
+
+        # Try finding file containing PSM information and
+        # assign the values to the proxy psm object
+        try:
+            if PSMlm_data is None:
+                PSMlm_data = self._load_psm_data(config)
+            self.R = PSMlm_data[(self.proxy, self.site)][0]
+            self.slope = PSMlm_data[(self.proxy, self.site)][1]
+            self.intercept = PSMlm_data[(self.proxy, self.site)][2]
+        except (KeyError, IOError) as e:
+            # No PSM info file found
+            #print(e)
+            #print('Cannot find PSM infor data for:' + str((self.proxy, self.site)))
+            #TODO: fix this exception
+            # If the above exception doesn't work, then this can be a temporary work-around:
+            self.R = 999999
+            self.slope = 0
+            self.intercept = 0
+
+    # TODO: Ideally prior state info and coordinates should all be in single obj
+    def psm(self, Xb, X_state_info, X_coords):
+        """
+        Maps a given state to observations for the given proxy
+        
+        Parameters
+        ----------
+        Xb: ndarray
+            State vector to be mapped into observation space (stateDim x ensDim)
+        X_state_info: dict
+            Information pertaining to variables in the state vector
+        X_coords: ndarray
+            Coordinates for the state vector (stateDim x 2)
+            
+        Returns
+        -------
+        Ye:
+            Equivalent observation from prior
+        """
+
+        # ----------------------
+        # Calculate the Ye's ...
+        # ----------------------
+
+        # define state variable that should be interpolated to proxy site
+        state_var = self.linmult_var
+    
+        if state_var not in X_state_info.keys():
+            raise KeyError('Needed variable not in state vector for Ye'
+                       ' calculation.')
+        
+        # Find row index of X for which [X_lat,X_lon] corresponds to closest
+        # grid point to location of proxy site [self.lat,self.lon]
+
+        # Calclulate distances from proxy site.
+            
+        # TODO: end index should already be +1, more pythonic
+        var_startidx, var_endidx = X_state_info[state_var]['pos']
+        ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
+        ind_lat = X_state_info[state_var]['spacecoords'].index('lat')
+        
+        stateDim = var_endidx - var_startidx + 1
+        ensDim = Xb.shape[1]
+        dist = np.empty(stateDim)
+        dist = haversine(self.lon, self.lat,
+                         X_coords[var_startidx:(var_endidx+1), ind_lon],
+                         X_coords[var_startidx:(var_endidx+1), ind_lat])
+                        
+        # Pick value at nearest grid point
+        # row index of nearest grid pt. in prior (minimum distance)
+        Kind_var = np.unravel_index(dist.argmin(), dist.shape)[0] + var_startidx
+        
+        Ye = self.slope * np.squeeze(Xb[Kind_var, :]) + self.intercept
+                                               
+        return Ye
+
+    # Define a default error model for this proxy
+    @staticmethod
+    def error():
+        return 0.1
+    
+    @staticmethod
+    def get_kwargs(config):
+        try:
+            # PSM info
+            PSMlm_data = linear_multiyearPSM._load_psm_data(config)
+            return {'PSMlm_data': PSMlm_data}
+        except IOError as e:
+            print(e)
+            print('In "linear_multiyearPSM" class: Cannot find PSM calibration file: %s. Exiting!' % PSMlm_data_file)
+            raise SystemExit
+    
+    @staticmethod
+    def _load_psm_data(config):
+        """Helper method for loading from dataframe"""
+        
+        PSMlm_data_file = config.psm.linear_multiyear.datafile_PSM
+        
+        if PSMlm_data_file:
+            # check if file exists
+            if not os.path.isfile(PSMlm_data_file):
+                print('In "linear_multiyearPSM" class: Cannot find PSM calibration file: %s. Exiting!' % PSMlm_data_file)
+                raise SystemExit(1)
+            
+            else:
+                # This returns a python dictionary with entries as: {(proxy type, proxy name): Rvalue}
+                PSMlmdata_dict={}
+                with open(PSMlm_data_file,'r') as f:
+                    linenb = 0
+                    for line in f:
+                        try:
+                            ptype,pname,Rval,pslope,pintercept = line.split(',') # expects commas as field separator
+                            pintercept = pintercept.strip('\n') # remove end-or-line chars
+                            # populate dictionary entry, make sure values are floats
+                            PSMlmdata_dict[(ptype,pname)] = [float(Rval), float(pslope), float(pintercept)]
+                        except:
+                            print('WARNING: In "linear_multiyearPSM", load_psm_data: Error reading/parsing data on line', linenb, ':', line)
+                        
+                        linenb +=1
+
+        else:
+            PSMlmdata_dict = {}
+        
+        return PSMlmdata_dict
+
+
 # Mapping dict to PSM object type, this is where proxy_type/psm relations
 # should be specified (I think.) - AP
 _psm_classes = {'linear': LinearPSM, 'linear_TorP': LinearPSM_TorP,
@@ -2331,6 +2506,7 @@ _psm_classes = {'linear': LinearPSM, 'linear_TorP': LinearPSM_TorP,
                 'bayesreg_mgca_pachyderma_bcp': BayesRegMgcaPachydermaBcpPSM,
                 'bayesreg_mgca_pooled_red' : BayesRegMgcaPooledRedPSM,
                 'bayesreg_mgca_pooled_bcp' : BayesRegMgcaPooledBcpPSM,
+                'linear_multiyear': linear_multiyearPSM,
                 }
 
 
