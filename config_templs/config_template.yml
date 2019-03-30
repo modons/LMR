@@ -32,6 +32,7 @@ core:
   loc_rad: null
   inflation_fact: null
   ob_err_adjust: True
+  revert_to_prior: True
 
   # Ensemble archiving options: ens_full, ens_variance, ens_percentiles, ens_subsample
   save_archive: ens_variance

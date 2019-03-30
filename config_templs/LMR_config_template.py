@@ -233,7 +233,13 @@ class core(ConfigGroup):
     loc_rad: float
         Localization radius for DA (in km)
     inflation_fact : float
-        Covariance inflation factor
+        Prior deviations from the mean inflation factor
+    ob_err_adjust: bool
+        If true, divides the observation error by the number of observations
+        averaged for that proxy and time step.
+    revert_to_prior: bool
+	If true, the posterior equals the prior if no observations are assimilated.
+        If false, the posterior is NaNs if no observations are assimilated.
     seed: int, None
         RNG seed.  Passed to all random function calls. (e.g. prior and proxy
         record sampling)  Overridden by wrapper.multi_seed.
@@ -278,6 +284,8 @@ class core(ConfigGroup):
     inflation_fact = None
 
     ob_err_adjust = True
+
+    revert_to_prior = True
 
     # Reference period w.r.t. which anomalies are to be defined.
     anom_reference_period = (1951, 1980)
