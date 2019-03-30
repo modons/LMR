@@ -97,6 +97,7 @@ def LMR_driver_callable(cfg=None):
     nens = core.nens
     loc_rad = core.loc_rad
     inflation_fact = core.inflation_fact
+    ob_err_adjust = core.ob_err_adjust
     prior_source = prior.prior_source
     datadir_prior = prior.datadir_prior
     datafile_prior = prior.datafile_prior
@@ -591,7 +592,7 @@ def LMR_driver_callable(cfg=None):
             ob_err = Y.psm_obj.R
 
             # if ob is an average of several values, adjust its ob error variance
-            if nYobs > 1: ob_err = ob_err/float(nYobs)
+            if nYobs > 1 and ob_err_adjust: ob_err = ob_err/float(nYobs)
             
             # ------------------------------------------------------------------
             # Do the update (assimilation) -------------------------------------

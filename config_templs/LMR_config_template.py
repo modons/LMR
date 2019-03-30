@@ -277,6 +277,8 @@ class core(ConfigGroup):
 
     inflation_fact = None
 
+    ob_err_adjust = True
+
     # Reference period w.r.t. which anomalies are to be defined.
     anom_reference_period = (1951, 1980)
 
