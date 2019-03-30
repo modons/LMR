@@ -875,6 +875,17 @@ class proxies(ConfigGroup):
             'Marine sediments_d18o_pachyderma',
             'Marine sediments_mgca_pooled_bcp',
             'Marine sediments_mgca_pooled_red',
+            'glacier ice_d18O',
+            'glacier ice_swcorrectedd18O',
+            'glacier ice_upliftcorrectedd18O',
+            'glacier ice_swcorrectedupliftcorrectedd18O',
+            'glacier ice_uncorrectedd18O',
+            'glacier ice_swcorrecteduncorrectedd18O',
+            'glacier ice_Accumulation',
+            'glacier ice_dD',
+            'marine sediment_summerSST',
+            'marine sediment_winterSST',
+            'lake sediment_Pollen',
             ]
 
         # Assignment of psm type per proxy type
@@ -893,6 +904,17 @@ class proxies(ConfigGroup):
             'Marine sediments_d18o_pachyderma': 'bayesreg_d18o_pachyderma',
             'Marine sediments_mgca_pooled_bcp': 'bayesreg_mgca_pooled_bcp',
             'Marine sediments_mgca_pooled_red': 'bayesreg_mgca_pooled_red',
+            'glacier ice_d18O'                           : 'linear_multiyear',
+            'glacier ice_swcorrectedd18O'                : 'linear_multiyear',
+            'glacier ice_upliftcorrectedd18O'            : 'linear_multiyear',
+            'glacier ice_swcorrectedupliftcorrectedd18O' : 'linear_multiyear',
+            'glacier ice_uncorrectedd18O'                : 'linear_multiyear',
+            'glacier ice_swcorrecteduncorrectedd18O'     : 'linear_multiyear',
+            'glacier ice_Accumulation'                   : 'h_interp,pr_sfc_Amon',
+            'glacier ice_dD'                             : 'h_interp,dD_sfc_Amon',
+            'marine sediment_summerSST'                  : 'h_interp,sst_sfc_Omon',
+            'marine sediment_winterSST'                  : 'h_interp,sst_sfc_Omon',
+            'lake sediment_Pollen'                       : 'h_interp,tas_sfc_Amon',
         }
         
         proxy_assim2 = {
@@ -919,6 +941,17 @@ class proxies(ConfigGroup):
                                                   'mgca_bulloides:barker',
                                                   'mgca_pachyderma:barker',
                                                  ],
+            'glacier ice_d18O'                           : ['d18O','delta 18O'],
+            'glacier ice_swcorrectedd18O'                : ['swcorrectedd18O'],
+            'glacier ice_upliftcorrectedd18O'            : ['upliftcorrectedd18O'],
+            'glacier ice_swcorrectedupliftcorrectedd18O' : ['swcorrectedupliftcorrectedd18O'],
+            'glacier ice_uncorrectedd18O'                : ['uncorrectedd18O'],
+            'glacier ice_swcorrecteduncorrectedd18O'     : ['swcorrecteduncorrectedd18O'],
+            'glacier ice_Accumulation'                   : ['accum','accumulation','Accumulation','Accum'],
+            'glacier ice_dD'                             : ['dD','d2H','delta D'],
+            'marine sediment_summerSST'                  : ['summerSST'],
+            'marine sediment_winterSST'                  : ['winterSST'],
+            'lake sediment_Pollen'                       : ['Pollen','pollen','temperature'],
         }
 
         # A blacklist on proxy records, to prevent assimilation of specific
