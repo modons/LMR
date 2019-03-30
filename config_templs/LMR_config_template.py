@@ -191,15 +191,18 @@ class wrapper(ConfigGroup):
 
     iter_range = (0, 0)
     param_search = None
-    multi_seed = None
+    multi_seed_prior = None
+    multi_seed_proxies = None
 
     ##** END User Parameters **##
 
     def __init__(self, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
 
-        if self.multi_seed is not None:
-            self.multi_seed = list(self.multi_seed)
+        if self.multi_seed_prior is not None:
+            self.multi_seed_prior = list(self.multi_seed_prior)
+        if self.multi_seed_proxies is not None:
+            self.multi_seed_proxies = list(self.multi_seed_proxies)
         self.iter_range = self.iter_range
         self.param_search = deepcopy(self.param_search)
 
@@ -277,7 +280,8 @@ class core(ConfigGroup):
     
     nens = 100
 
-    seed = None
+    seed_prior = None
+    seed_proxies = None
 
     loc_rad = None
 
@@ -328,7 +332,10 @@ class core(ConfigGroup):
         self.nens = self.nens
         self.loc_rad = self.loc_rad
         self.inflation_fact = self.inflation_fact
-        self.seed = self.seed
+        self.ob_err_adjust = self.ob_err_adjust
+        self.revert_to_prior = self.revert_to_prior
+        self.seed_prior = self.seed_prior
+        self.seed_proxies = self.seed_proxies
         self.datadir_output = self.datadir_output
         self.archive_dir = self.archive_dir
         self.write_posterior_Ye = self.write_posterior_Ye
@@ -1135,7 +1142,7 @@ class proxies(ConfigGroup):
             
     
     # Initialize subclasses with all attributes
-    def __init__(self, lmr_path=None, seed=None, **kwargs):
+    def __init__(self, lmr_path=None, seed_proxies=None, **kwargs):
         self.PAGES2kv1 = self.PAGES2kv1(lmr_path=lmr_path, **kwargs.pop('PAGES2kv1', {}))
         self.LMRdb = self.LMRdb(lmr_path=lmr_path, **kwargs.pop('LMRdb', {}))
         self.NCDCdadt = self.NCDCdadt(lmr_path=lmr_path, **kwargs.pop('NCDCdadt', {}))
@@ -1145,9 +1152,9 @@ class proxies(ConfigGroup):
         
         self.use_from = list(self.use_from)
         self.proxy_frac = self.proxy_frac
-        if seed is None:
-            seed = core.seed
-        self.seed = seed
+        if seed_proxies is None:
+            seed_proxies = core.seed_proxies
+        self.seed_proxies = seed_proxies
         
 
 class psm(ConfigGroup):
@@ -2030,7 +2037,7 @@ class prior(ConfigGroup):
     ##** END User Parameters **##
 
     
-    def __init__(self, lmr_path=None, seed=None, **kwargs):
+    def __init__(self, lmr_path=None, seed_prior=None, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
 
         self.prior_source = self.prior_source
@@ -2053,9 +2060,9 @@ class prior(ConfigGroup):
         else:
             self.anom_reference = None
         
-        if seed is None:
-            seed = core.seed
-        self.seed = seed
+        if seed_prior is None:
+            seed_prior = core.seed_prior
+        self.seed_prior = seed_prior
 
         if lmr_path is None:
             lmr_path = core.lmr_path
@@ -2107,13 +2114,14 @@ class Config(ConfigGroup):
         self.wrapper = wrapper(**kwargs.pop('wrapper', {}))
         self.core = core(**kwargs.pop('core', {}))
         lmr_path = self.core.lmr_path
-        seed = self.core.seed
+        seed_proxies = self.core.seed_proxies
+        seed_prior = self.core.seed_prior
         self.proxies = proxies(lmr_path=lmr_path,
-                               seed=seed,
+                               seed_proxies=seed_proxies,
                                **kwargs.pop('proxies', {}))
         self.psm = psm(lmr_path=lmr_path, **kwargs.pop('psm', {}))
         self.prior = prior(lmr_path=lmr_path,
-                           seed=seed,
+                           seed_prior=seed_prior,
                            **kwargs.pop('prior', {}))
 
 

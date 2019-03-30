@@ -9,7 +9,8 @@
 wrapper:
   iter_range:  !!python/tuple [0, 0]
   param_search: null
-  multi_seed: null
+  multi_seed_prior: null
+  multi_seed_proxies: null
 
 core:
   nexp: test_recon
@@ -28,7 +29,8 @@ core:
 #  recon_timescale: 250
   anom_reference_period: !!python/tuple [1951, 1980]
   nens: 100
-  seed: null
+  seed_prior: null
+  seed_proxies: null
   loc_rad: null
   inflation_fact: null
   ob_err_adjust: True
