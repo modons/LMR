@@ -593,7 +593,8 @@ def LMR_driver_callable(cfg=None):
             ob_err = Y.psm_obj.R
 
             # if ob is an average of several values, adjust its ob error variance
-            if nYobs > 1 and ob_err_adjust: ob_err = ob_err/float(nYobs)
+            if nYobs > 1 and ob_err_adjust:
+                ob_err = ob_err/float(nYobs)
             
             # ------------------------------------------------------------------
             # Do the update (assimilation) -------------------------------------
