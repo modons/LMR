@@ -129,7 +129,7 @@ def main(cfgin=None, config_path=None):
         raise KeyError('ERROR in specification of proxy database: {}'.format(proxy_database))
 
     proxy_types = proxy_cfg.proxy_order
-    # proxy_types = list(proxy_cfg.proxy_psm_type.keys())
+    #proxy_types = list(proxy_cfg.proxy_psm_type.keys())
     psm_keys = [proxy_cfg.proxy_psm_type[p] for p in proxy_types]
     unique_psm_keys = list(set(psm_keys))
     
@@ -401,7 +401,7 @@ def main(cfgin=None, config_path=None):
                         # no proxy seasonality to consider
                         _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
                         ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
-                        
+
                     elif 'linear_multiyear' in psm_key and pobj.psm_obj.psm_key == psm_key:
                         if psm_avg == 'multiyear-season':
                             # Restrict to proxy records with current 'season'
@@ -412,7 +412,6 @@ def main(cfgin=None, config_path=None):
                             # no proxy seasonality to consider
                             _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
                             ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
-
 
         # -> here: end of loop on definitions of time averages (e.g. season)
 
