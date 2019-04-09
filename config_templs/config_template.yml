@@ -325,7 +325,7 @@ proxies:
       marine sediment_summerSST                  : h_interp,sst_sfc_Omon
       marine sediment_winterSST                  : h_interp,sst_sfc_Omon
       lake sediment_Pollen                       : h_interp,tas_sfc_Amon 
-   proxy_assim2:
+    proxy_assim2:
       Marine Cores_uk37: ['uk37', 'UK37']
       Marine sediments_uk37: ['uk37', 'UK37']
       Marine Cores_tex86: ['tex86', 'TEX86']
