@@ -1956,7 +1956,10 @@ class prior(ConfigGroup):
         Currently supports 't42' and 'reg_4x5deg'.
     state_variables_info: dict
         Defines which variables represent temperature or moisture.
-        Should be modified only if a new temperature or moisture state variable is added. 
+        Should be modified only if a new temperature or moisture state variable is added.
+    prior_timescale: int or None, optional
+        Time interval of prior fields (in years). If None, uses
+        core.recon_timescale to define intervals.
     """
 
     ##** BEGIN User Parameters **##
@@ -2075,12 +2078,19 @@ class prior(ConfigGroup):
         if core.recon_timescale == 1:
             self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
-            # new format for multiyear DADT reconstructions:
-            self.avgInterval = {'multiyear': [core.recon_timescale]}
+            # If user config has prior.prior_timescale set:
+            if (self.prior_timescale is not None) and (self.prior_timescale > 1):
+                self.avgInterval = {'multiyear': [int(self.prior_timescale)]}
+            elif self.prior_timescale is None:
+                # new format for multiyear DADT reconstructions:
+                self.avgInterval = {'multiyear': [core.recon_timescale]}
+            else:
+                raise SystemExit('ERROR in config.: prior.prior_timescale must be > 1!')
         else:
             print('ERROR in config.: unrecognized core.recon_timescale!')
             raise SystemExit()
-        
+
+
         if self.regrid_method != 'esmpy':
             self.regrid_resolution = int(self.regrid_resolution)
         elif self.regrid_method == 'esmpy':
