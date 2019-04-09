@@ -88,28 +88,49 @@ class ProxyManager:
         nsites = len(self.all_proxies)
 
         # Sample subset from all proxies if specified
-        if proxy_frac < 1.0:
+        try:
+            if proxy_frac < 1.0:
 
-            nsites_assim = int(nsites * proxy_frac)
+                nsites_assim = int(nsites * proxy_frac)
 
-            seed(config.proxies.seed_proxies)
-            self.ind_assim = sample(list(range(nsites)), nsites_assim)
-            self.ind_assim.sort()
-            self.ind_eval = list(set(range(nsites)) - set(self.ind_assim))
-            self.ind_eval.sort()
+                seed(config.proxies.seed)
+                self.ind_assim = sample(list(range(nsites)), nsites_assim)
+                self.ind_assim.sort()
+                self.ind_eval = list(set(range(nsites)) - set(self.ind_assim))
+                self.ind_eval.sort()
 
-            # Make list of assimilated proxies by group
+                # Make list of assimilated proxies by group
+                self.assim_ids_by_group = deepcopy(self.all_ids_by_group)
+                for idx in self.ind_eval:
+                    pobj = self.all_proxies[idx]
+                    grp = self.assim_ids_by_group[pobj.type]
+                    if pobj.id in grp:
+                        grp.remove(pobj.id)
+
+            else:
+                self.ind_assim = list(range(nsites))
+                self.ind_eval = None
+                self.assim_ids_by_group = self.all_ids_by_group
+
+        except TypeError:
+            # If proxy_frac is a list of proxy IDs to exclude from DA and use
+            # only for cross-validation.
+            self.ind_assim = []
+            self.ind_eval = []
             self.assim_ids_by_group = deepcopy(self.all_ids_by_group)
-            for idx in self.ind_eval:
-                pobj = self.all_proxies[idx]
-                grp = self.assim_ids_by_group[pobj.type]
-                if pobj.id in grp:
-                    grp.remove(pobj.id)
 
-        else:
-            self.ind_assim = list(range(nsites))
-            self.ind_eval = None
-            self.assim_ids_by_group = self.all_ids_by_group
+            for idx, proxy in enumerate(self.all_proxies):
+                if proxy.id not in proxy_frac:
+                    self.ind_assim.append(idx)
+                else:
+                    self.ind_eval.append(idx)
+                    self.assim_ids_by_group[proxy.type].remove(proxy.id)
+
+            # User might have input an empty list or a list with bad proxy
+            # IDs, then ind_eval should be None, instead of empty.
+            if len(self.ind_eval) == 0:
+                self.ind_eval = None
+        pass
 
     def proxy_obj_generator(self, indexes):
         """

@@ -369,8 +369,9 @@ class proxies(ConfigGroup):
     use_from: list(str)
         A list of keys for proxy classes to load from.  Keys available are
         stored in LMR_proxy_pandas_rework.
-    proxy_frac: float
-        Fraction of available proxy data (sites) to assimilate
+    proxy_frac: float, or list
+        Fraction of available proxy data (sites) to assimilate. Can also be a
+        list of proxy IDs to exclude from assimilation but retain for validation.
     proxy_timeseries_kind: string
         Type of proxy timeseries to use. 'anom' for animalies or 'asis'
         to keep records as included in the database. 
