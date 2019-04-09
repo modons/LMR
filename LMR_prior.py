@@ -39,6 +39,9 @@ Revisions:
             last millennium (0850 to 1850) and of the last millennium to which 
             a modern historical simulation (1850 to 2006) has been concatenated. 
             [R. Tardif, U. of Washington, Nov 2017]
+          - Added the 'icesm_lgm2present' class for isotope-enabled CESM model 
+            "time slice" simulations covering the LGM to present period.
+            [R. Tardif, U. of Washington, Apr 2019]
 
 """
 
@@ -83,6 +86,8 @@ def prior_assignment(iprior):
         prior_object = prior_ccsm3_trace21ka()
     elif iprior == 'cgenie_petm':
         prior_object = prior_cgenie_petm()
+    elif iprior == 'icesm_lgm2present':
+        prior_object = prior_icesm_lgm2present()
 
         
     return prior_object
@@ -100,8 +105,8 @@ class prior_master(object):
     def populate_ensemble(self,prior_source, prior_cfg):
 
         # Load prior data from file(s) - multiple state variables
-        self.read_prior()        
-        
+        self.read_prior()
+
         Nens_max = len(self.prior_dict[list(self.prior_dict.keys())[0]]['years'])
         if self.Nens and self.Nens > Nens_max:
             raise SystemExit('ERROR in populate_ensemble! Specified ensemble size too large for available nb of states. '
@@ -195,18 +200,20 @@ class prior_master(object):
         print('state_vect_info=', state_vect_info)
         
         # time dimension consistent across variables?
-        if all(x == timedim[0] for x in timedim):
-            ntime = timedim[0]
-        else:
+        if any(x != timedim[0] for x in timedim):
             raise SystemExit('ERROR im populate_ensemble: time dimension not consistent across all state variables. Exiting!')
-
+        else:
+            ntime = timedim[0]
+        
         # If Nens is None, use all of prior with no random sampling
         if self.Nens is None:
             take_sample = False
-            self.Nens = ntime
+            #self.Nens = ntime
+            self.Nens = Nens_max
         else:
             take_sample = True
 
+            
         # Array that will contain the prior ensemble (state vector)
         Xb = np.zeros(shape=[Nx,self.Nens]) # no time dimension now...
         # ***NOTE: Following code assumes that data for a given year are located at same array time index across all state variables
@@ -215,13 +222,21 @@ class prior_master(object):
             print('Random selection of', str(self.Nens), 'ensemble members')
             # Populate prior ensemble from randomly sampled states
             seed(prior_cfg.seed)
-            ind_ens = sample(list(range(ntime)), self.Nens)
+            ind_ens = sample(list(range(Nens_max)), self.Nens)
         else:
             print('Using entire consecutive years in prior dataset.')
-            ind_ens = list(range(ntime))
-
-        self.prior_sample_indices = ind_ens
-
+            ind_ens = list(range(Nens_max))
+        
+        
+        firstvar = list(self.prior_dict.keys())[0]
+        if 'member_simuls' in self.prior_dict[firstvar].keys():
+            #print(self.prior_dict[firstvar]['member_simuls_YeIndices'])
+            #print([self.prior_dict[firstvar]['member_simuls_YeIndices'][i] for i in ind_ens])
+            self.prior_sample_indices = [self.prior_dict[firstvar]['member_simuls_YeIndices'][i] for i in ind_ens]
+        else:
+            self.prior_sample_indices = ind_ens
+        
+        
         # To keep spatial coords of gridpoints (needed geo. information)
         Xb_coords = np.empty(shape=[Nx,2]) # 2 is max nb of spatial dim a variable can take
         Xb_coords[:,:] = np.NAN # initialize with Nan's
@@ -288,27 +303,6 @@ class prior_master(object):
             else:
                 raise SystemExit('ERROR im populate_ensemble: variable of unrecognized spatial dimensions. Exiting!')
 
-
-
-            """
-            # RT dev ... ... ...
-            # if anom_reference period is defined, re-centering sample around a mean of zero ? ...
-            
-            print self.prior_dict[var]['climo'].shape
-            print self.prior_dict[var]['value'][ind_ens[0]].shape
-
-
-            print np.mean(Xb[indstart:indend+1,:], axis=1)
-
-            sample_mean = np.mean(Xb[indstart:indend+1,:], axis=1)
-            
-            Xb[indstart:indend+1,:] = Xb[indstart:indend+1,:] - sample_mean[:,np.newaxis]
-
-            print np.mean(Xb[indstart:indend+1,:], axis=1)
-            
-            exit(1)
-            # RT dev ... ... ...
-            """
         
         # Returning state vector Xb as masked array, if it contains
         # at least one invalid value
@@ -454,10 +448,20 @@ class prior_era20c(prior_master):
 class prior_era20cm(prior_master):
 
     def read_prior(self):
-        from load_gridded_data import read_gridded_data_CMIP5_model_ensemble
-        self.prior_dict = read_gridded_data_CMIP5_model_ensemble(self.prior_datadir,
-                                                                 self.prior_datafile,
-                                                                 self.statevars)
+#        from load_gridded_data import read_gridded_data_CMIP5_model_ensemble
+#        self.prior_dict = read_gridded_data_CMIP5_model_ensemble(self.prior_datadir,
+#                                                                 self.prior_datafile,
+#                                                                 self.statevars)
+
+        from load_gridded_data import read_gridded_data_ensemble_runs
+        self.prior_dict = read_gridded_data_ensemble_runs(self.prior_datadir,
+                                                          self.prior_datafile,
+                                                          self.statevars,
+                                                          self.avgInterval,
+                                                          self.detrend,
+                                                          self.anom_reference,
+                                                          self.member_simuls)
+        
         return
 
 # class for the LOVECLIM 1.0 Common Era simulation of Goosse et al. (GRL 2005)
@@ -535,15 +539,31 @@ class prior_ccsm3_trace21ka(prior_master):
         return
 
     
-# class for the cGENIE simulation if the PETM
+# class for the cGENIE simulations of the pre-PETM and PETM
 class prior_cgenie_petm(prior_master):
 
     def read_prior(self):
         from load_gridded_data import read_gridded_data_cGENIE_model
         self.prior_dict = read_gridded_data_cGENIE_model(self.prior_datadir,
-                                                      self.prior_datafile,
-                                                      self.statevars,
-                                                      self.avgInterval,
-                                                      self.detrend,
-                                                      self.anom_reference)
+                                                         self.prior_datafile,
+                                                         self.statevars,
+                                                         self.avgInterval,
+                                                         self.detrend,
+                                                         self.anom_reference)
         return
+
+
+# class for the iCESM LGM to present "time slice" simulations
+class prior_icesm_lgm2present(prior_master):
+
+    def read_prior(self):
+        from load_gridded_data import read_gridded_data_ensemble_runs
+        self.prior_dict = read_gridded_data_ensemble_runs(self.prior_datadir,
+                                                          self.prior_datafile,
+                                                          self.statevars,
+                                                          self.avgInterval,
+                                                          self.detrend,
+                                                          self.anom_reference,
+                                                          self.member_simuls)
+        return
+

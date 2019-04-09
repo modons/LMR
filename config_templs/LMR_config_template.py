@@ -1670,7 +1670,7 @@ class psm(ConfigGroup):
             ('sst') calibration. Passed to ``bayspar.predict_tex``. Must be
             `subt` or `sst`.
         """
-        psm_required_variables = {'toGA_0-200m_Odec': 'full'}
+        psm_required_variables = {'toGA_0-200m_Odecmon': 'full'}
         temptype = 'subt'
 
 
@@ -1925,6 +1925,8 @@ class prior(ConfigGroup):
     state_variables_info = {'temperature': ['tas_sfc_Amon'],
                             'moisture': ['pr_sfc_Amon', 'scpdsi_sfc_Amon']}
 
+    member_simuls = None
+    
     
     ##** END User Parameters **##
 
@@ -1944,6 +1946,7 @@ class prior(ConfigGroup):
         self.state_variables_info = deepcopy(self.state_variables_info)
         self.detrend = self.detrend
         self.regrid_method = self.regrid_method
+        self.member_simuls = self.member_simuls
 
         # check if "anom" has been selected for any state variable
         # and set the anom_reference attribute accordingly

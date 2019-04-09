@@ -303,7 +303,9 @@ proxies:
       Marine sediments_uk37: ['uk37', 'UK37']
       Marine Cores_tex86: ['tex86', 'TEX86']
       Marine sediments_tex86: ['tex86', 'TEX86']
-      Marine sediments_d18o_ruberwhite: ['d18o_ruber', 'd18O_ruber', 'd18O_ruber_stricto', 'd18O_ruber_lato', 'd18o_ruber_stricto', 'd18o_ruber_lato']
+      Marine sediments_d18o_ruberwhite: ['d18o_ruber', 'd18O_ruber',
+                                         'd18O_ruber_stricto', 'd18O_ruber_lato',
+                                         'd18o_ruber_stricto', 'd18o_ruber_lato']
       Marine sediments_d18o_sacculifer: ['d18o_sacculifer', 'd18O_sacculifer']
       Marine sediments_d18o_bulloides: ['d18o_bulloides', 'd18O_bulloides']
       Marine sediments_d18o_pachyderma: ['d18o_pachyderma', 'd18O_pachyderma']
@@ -335,10 +337,10 @@ proxies:
       'PseudoProxy_temperature',
     ]
     proxy_psm_type:
-      PseudoProxy_temperature: h_interp
+      PseudoProxy_temperature: h_interp,tas_sfc_Amon
 
     proxy_assim2:
-      PseudoProxy_temperature: ['temperature', 'Temperature']
+      PseudoProxy_temperature: ['temperature','Temperature']
 
 
 psm:
@@ -378,7 +380,7 @@ psm:
 
   bayesreg_tex86:
     psm_required_variables:
-      toGA_0-200m_Odec: 'full'
+      toGA_0-200m_Odecmon: 'full'
     temptype: 'subt'
 
   bayesreg_uk37:
@@ -405,6 +407,7 @@ prior:
   prior_source: ccsm4_last_millenium
 #  prior_source: icesm_last_millennium
 #  prior_source: ccsm3_trace21ka
+#  prior_source: icesm_lgm2present
 
   state_variables:
     tas_sfc_Amon: anom
@@ -434,6 +437,12 @@ prior:
 #    psl_sfc_Adec: full
 #    tos_sfc_Odec: full
 #    sos_sfc_Odec: full
+#    tas_sfc_Adecmon: full
+
+# If ensemble/time slice simulations as prior, selection of which member/slice to consider.
+# Set to null or comment out to have all available member/slice considered.
+#  member_simuls: ['iPI.01','i03ka.01'] # icesm "lgm2present" time slice simulations
+#  member_simuls: [0,1,2,3,4,5] # ex.: era20cm
 
   detrend: False
 

@@ -93,6 +93,20 @@ SPEI:
   dataformat: NCD
 
 
+icesm_lgm2present:
+  info:
+    multiple_vars: True
+    template: '[vardef_template]'
+    available_vars: [tas_sfc_Adecmon, theta_sfc_Adecmon, 
+                     pr_sfc_Adecmon, d18O_sfc_Adecmon,
+                     tos_sfc_Odecmon, sos_sfc_Odecmon,
+                     toGA_0-200m_Odecmon, d18Osw_sfc_Odecmon]
+
+  datadir: null
+  datafile: '[vardef_template]_iCESM_LGMtoPresent_000101-090012.nc'
+  dataformat: NCD
+
+
 icesm_last_millennium:
   info:
     multiple_vars: True
@@ -262,7 +276,7 @@ era20cm:
     available_vars: ['tas_sfc_Amon', 'zg_500hPa_Amon']
 
   datadir: null
-  datafile: '[vardef_template]_ERA20CM_190001-201012.nc'
+  datafile: '[vardef_template]_ERA20CM_10mem_190001-201012.nc'
   dataformat: NCD
 
 loveclim_goosse2005:
