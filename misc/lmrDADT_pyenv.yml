@@ -1,8 +1,9 @@
-name: lmr_py3
+name: lmrDADT_py3
 
 channels:
   - defaults
   - conda-forge
+  - sbmalev
 
 dependencies:
   - python=3.6
@@ -23,3 +24,10 @@ dependencies:
   - esmpy=7.1
   - pymc3
   - nitime
+  - xarray
+  - gsw
+  - co2syspy
+  - baysplinepy
+  - baymagpy
+  - bayfox
+  - deltaoxfox
