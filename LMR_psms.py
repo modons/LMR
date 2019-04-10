@@ -68,8 +68,8 @@ except ImportError as e3:
     print('Warning:', e3)
 try:
     import baymag
-except ImportError as e3:
-    print('Warning:', e3)
+except ImportError as e4:
+    print('Warning:', e4)
 
 
 # Logging output utility, configuration controlled by driver
@@ -219,12 +219,16 @@ class LinearPSM(BasePSM):
         except KeyError as e:
             raise ValueError('Could not find proxy in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
+
+        
         except IOError as e:
             # No precalibration found, have to do it for this proxy
-            print(('No pre-calibration file found for'
+            #print(('No pre-calibration file found for'
+            #       ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
+            #                                             proxy_obj.type)))
+            _log.info(('No pre-calibration file found for'
                    ' {} ({}) ... calibrating ...'.format(proxy_obj.id,
                                                          proxy_obj.type)))
-
 
             # check if calibration object already exists
             if calib_obj is None:
@@ -487,17 +491,20 @@ class LinearPSM(BasePSM):
 
         
         # Perform the regression
+        nobs = None
         try:
             regress = sm.ols(formula="y ~ Calibration", data=df).fit()
             # number of data points used in the regression
             nobs = int(regress.nobs)
-            
-        except:
+        except ValueError: # no overlapping data
             nobs = 0
+        except Exception as exception:
+            print('Exception raised', exception)
 
-            
-        if nobs < 10:  # skip rest if insufficient overlapping data
-            raise ValueError
+        if nobs and nobs < 10:  # skip rest if insufficient overlapping data
+            print('Insufficient obs./calib. overlap'
+                  ' to calibrate psm: nobs=%d' %nobs)
+            raise ValueError()
 
         
         # START NEW (GH) 21 June 2015... RT edit June 2016
@@ -726,7 +733,7 @@ class LinearPSM_TorP(LinearPSM):
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
             # print 'PSM (temperature) not calibrated for:' + str((proxy, site))
-            _log.error(e)
+            #_log.error(e)
             _log.info('PSM (temperature) not calibrated for:' +
                         str((proxy, site)))
 
@@ -738,7 +745,7 @@ class LinearPSM_TorP(LinearPSM):
 
         except (KeyError, IOError) as e:
             # No precalibration found, have to do it for this proxy
-            _log.error(e)
+            #_log.error(e)
             _log.info('PSM (moisture) not calibrated for:' +
                         str((proxy, site)))
 
@@ -768,6 +775,7 @@ class LinearPSM_TorP(LinearPSM):
                 self.slope = psm_site_data_T['PSMslope']
                 self.intercept = psm_site_data_T['PSMintercept']
                 self.R = psm_site_data_T['PSMmse']
+                self.seasonality = psm_site_data_T['Seasonality']
             else:
                 # smaller residual errors w.r.t. precipitation/moisture
                 self.sensitivity = 'moisture'
@@ -775,7 +783,8 @@ class LinearPSM_TorP(LinearPSM):
                 self.slope = psm_site_data_P['PSMslope']
                 self.intercept = psm_site_data_P['PSMintercept']
                 self.R = psm_site_data_P['PSMmse']
-
+                self.seasonality = psm_site_data_P['Seasonality']
+                
         elif (proxy, site) in list(psm_data_T.keys()) and (proxy, site) not in list(psm_data_P.keys()):
             # calibrated for temperature and NOT for precipitation, assign as "temperature" sensitive
             self.sensitivity = 'temperature'
@@ -783,6 +792,7 @@ class LinearPSM_TorP(LinearPSM):
             self.slope = psm_site_data_T['PSMslope']
             self.intercept = psm_site_data_T['PSMintercept']
             self.R = psm_site_data_T['PSMmse']
+            self.seasonality = psm_site_data_T['Seasonality']
         elif (proxy, site) not in list(psm_data_T.keys()) and (proxy, site) in list(psm_data_P.keys()):
             # calibrated for precipitation/moisture and NOT for temperature, assign as "moisture" sensitive
             self.sensitivity = 'moisture'
@@ -790,6 +800,7 @@ class LinearPSM_TorP(LinearPSM):
             self.slope = psm_site_data_P['PSMslope']
             self.intercept = psm_site_data_P['PSMintercept']
             self.R = psm_site_data_P['PSMmse']
+            self.seasonality = psm_site_data_P['Seasonality']
         else:
             raise ValueError('Could not find proxy in pre-calibration file... '
                              'Skipping: {}'.format(proxy_obj.id))
@@ -800,7 +811,6 @@ class LinearPSM_TorP(LinearPSM):
             raise ValueError(('Proxy model correlation ({:.2f}) does not meet '
                               'critical threshold ({:.2f}).'
                               ).format(self.corr, r_crit))
-
 
     # TODO: Ideally prior state info and coordinates should all be in single obj
     def psm(self, Xb, X_state_info, X_coords):
@@ -1194,8 +1204,7 @@ class BilinearPSM(BasePSM):
                 avgMonths_P =  proxy.seasonality
 
         else:
-            print('ERROR: Unrecognized value for avgPeriod! Exiting!') 
-            exit(1)
+            raise SystemExit('ERROR: Unrecognized value for avgPeriod! Exiting!')
 
         nbmonths_T = len(avgMonths_T)
         nbmonths_P = len(avgMonths_P)
@@ -1289,15 +1298,20 @@ class BilinearPSM(BasePSM):
         df = df.astype(np.float)
         
         # Perform the regression
+        nobs = None
         try:
             regress = sm.ols(formula="y ~ Temperature + Moisture", data=df).fit()
             # number of data points used in the regression
             nobs = int(regress.nobs)
-        except:
+        except ValueError: # no overlapping data
             nobs = 0
+        except Exception as exception:
+            print('Exception raised', exception)
             
-        if nobs < 10:  # skip rest if insufficient overlapping data
-            raise ValueError
+        if nobs and nobs < 10:  # skip if insufficient overlapping data
+            print('Insufficient obs./calib. overlap'
+                  ' to calibrate psm: nobs=%d' %nobs)
+            raise ValueError()
 
 
         # extract the needed regression parameters
@@ -1442,7 +1456,11 @@ class h_interpPSM(BasePSM):
     """
     def __init__(self, config, proxy_obj, R_data=None):
 
-        self.psm_key = 'h_interp'
+        # JBadgeley: More flexible use of h_interp: Now name of state variable associated
+        # to each proxy type specified along h_interp in config.
+        # This assigns psm_key as "h_interp,<<name of state variable>>"
+        proxy_db = config.proxies.use_from[0]
+        self.psm_key = getattr(config.proxies, proxy_db).proxy_psm_type[proxy_obj.type]
         
         self.proxy = proxy_obj.type
         self.site = proxy_obj.id
@@ -1454,17 +1472,18 @@ class h_interpPSM(BasePSM):
             self.elev = None        
         self.sensitivity = None
         self.RadiusInfluence = config.psm.h_interp.radius_influence
+        self.psm_required_variables = config.psm.h_interp.psm_required_variables
         
-        # Try finding file containing obs. error variance info for **d18O** ??
+        # Try finding file containing obs. error variance info
         # and assign the R value to proxy psm object
         try:
             if R_data is None:
                 R_data = self._load_psm_data(config)
             self.R = R_data[(self.proxy, self.site)]
         except (KeyError, IOError) as e:
-            # No obs. error variance file found
-            _log.error(e)
+            # No obs. error variance data found
             _log.info('Cannot find obs. error variance data for:' + str((self.proxy, self.site)))
+
 
     # TODO: Ideally prior state info and coordinates should all be in single obj
     def psm(self, Xb, X_state_info, X_coords):
@@ -1489,16 +1508,14 @@ class h_interpPSM(BasePSM):
         # ----------------------
         # Calculate the Ye's ...
         # ----------------------
-        
-        # define state variable (which isotope) that should be interpolated to proxy site
-        # Now, d18O is the only isotope considered, irrespective of the proxy type to be assimilated.
-        # (TODO: more comprehensive & flexible way to do this...)
-        state_var = 'd18O_sfc_Amon'
-        
+
+        # define state variable that should be interpolated to proxy site
+        state_var = self.psm_key.split(',')[1]
+
         if state_var not in list(X_state_info.keys()):
-            raise KeyError('Needed variable not in state vector for Ye'
-                           ' calculation.')
-        
+            raise KeyError('Needed variable %s not in state vector for Ye'
+                           ' calculation.' %state_var)
+
         # TODO: end index should already be +1, more pythonic
         statevar_startidx, statevar_endidx = X_state_info[state_var]['pos']
         ind_lon = X_state_info[state_var]['spacecoords'].index('lon')
@@ -1553,25 +1570,27 @@ class h_interpPSM(BasePSM):
     
     @staticmethod
     def _load_psm_data(config):
-        """Helper method for loading from dataframe"""
+        """Helper method for loading from file"""
 
         R_data_file = config.psm.h_interp.datafile_obsError
-
+        
         if R_data_file:
-            # check if file exists
+            # a file is specified, check if it exists
             if not os.path.isfile(R_data_file):
-                raise SystemExit
-
+                raise SystemExit('in h_interp PSM: Cannot find file containing obs. error variance data: %s'
+                                 %R_data_file)
             else:
-                # this returns an array of tuples (proxy type of type string, proxy site name of type string, R value of type float)
+                # this returns an array of tuples:
+                # (proxy type of type string, proxy site name of type string, R value of type float)
                 # transformed into a list
-                Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None).tolist()
-
+                Rdata_list = np.genfromtxt(R_data_file,delimiter=',',dtype=None, encoding='ascii').tolist()
+                
                 # transform into a dictionary with (proxy type, proxy site) tuples as keys and R as the paired values
                 Rdata_dict = dict([((item[0],item[1]),item[2]) for item in Rdata_list])
-
         else:
-            Rdata_dict = {}
+            # a file has not been specified: raise an error
+            raise SystemExit('in h_interp PSM: A file containing obs. error variance data '
+                             'has not been specified. Exiting.')
 
         return Rdata_dict
 

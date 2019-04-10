@@ -528,6 +528,7 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
     if verbose:
         print('finding proxy records for year:' + str(target_year))
         print('recon_timescale = ' + str(recon_timescale))
+
         if prox_type: print('limiting to proxies of type: ',prox_type)
         if prox_ID: print('limiting to a single proxy: ',prox_ID)
             

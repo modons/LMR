@@ -58,6 +58,11 @@ exp = 'dadt_full_prior'
 year_range = [-25000,2000]
 #year_range = [-115000,2000]
 
+# for time series, defining the time axis
+#timeaxis = 'yr CE'    # for Common Era recons.
+#timeaxis = 'yr BC/AD' # ...
+timeaxis = 'kyr BP'    # for "deep times" recons
+
 # --
 # MC realizations to consider.
 #  All available : MCset = None
@@ -383,76 +388,105 @@ if make_gmt_plot:
         
         
         # -----------------------------------------------
-        # Plotting time series of global mean temperature
+        # Plotting time series --------------------------
         # -----------------------------------------------
 
+        if timeaxis == 'kyr BP':
+            plot_time = -1.0*((-1.0*recon_years[0,:] + 1950.)/1000.)
+            plot_year_range = -1.0*((-1.0*np.array(year_range) + 1950.)/1000.)
+        else:
+            plot_time = recon_years[0,:]
+            plot_year_range = year_range
+
+        # -------------------------------------------
+        # global mean temperature
+        # -------------------------------------------
+        
         plt.rcParams['font.weight'] = 'bold'    # set the font weight globally
 
         #fig = plt.figure(figsize=[10,6])
-        fig = plt.figure()
+        fig, ax = plt.subplots(figsize=[8,5])
 
-        p1 = plt.plot(recon_years[0,:],recon_gmt_ensmean,'-b',linewidth=2, label='Posterior')
-        plt.fill_between(recon_years[0,:], recon_gmt_low, recon_gmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        p1 = plt.plot(plot_time,recon_gmt_ensmean,'-b',linewidth=2, label='Posterior')
+        plt.fill_between(plot_time, recon_gmt_low, recon_gmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        p2 = plt.plot(plot_time,prior_gmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        plt.fill_between(plot_time, prior_gmt_low, prior_gmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
+
+        plt.axis((plot_year_range[0],plot_year_range[1],pltymin,pltymax))
         xmin,xmax,ymin,ymax = plt.axis()
-        p2 = plt.plot(recon_years[0,:],prior_gmt_ensmean,'-',color='black',linewidth=2,label='Prior')
-        plt.fill_between(recon_years[0,:], prior_gmt_low, prior_gmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
-
         p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
         plt.suptitle(exp, fontsize=12)
         plt.title('Global mean temperature', fontsize=12,fontweight='bold')
-        plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
+        plt.xlabel('Time (%s)' %timeaxis, fontsize=12, fontweight='bold')
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
-        plt.axis((year_range[0],year_range[1],pltymin,pltymax))
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
+        # re-define time axis
+        xlabels = ax.get_xticks()
+        indnonzero = np.where(xlabels != 0.0)        
+        xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
+        ax.set_xticklabels(xlabels)
+        
         plt.savefig('%s/%s_GMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()
 
         # -------------------------------------------
-        # Plotting time series of NH mean temperature
+        # NH mean temperature
         # -------------------------------------------
 
         #fig = plt.figure(figsize=[10,6])
-        fig = plt.figure()
+        fig, ax = plt.subplots(figsize=[8,5])
 
-        p1 = plt.plot(recon_years[0,:],recon_nhmt_ensmean,'-b',linewidth=2, label='Posterior')
-        plt.fill_between(recon_years[0,:], recon_nhmt_low, recon_nhmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        p1 = plt.plot(plot_time,recon_nhmt_ensmean,'-b',linewidth=2, label='Posterior')
+        plt.fill_between(plot_time, recon_nhmt_low, recon_nhmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        p2 = plt.plot(plot_time,prior_nhmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        plt.fill_between(plot_time, prior_nhmt_low, prior_nhmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
+
+        plt.axis((plot_year_range[0],plot_year_range[1],pltymin,pltymax))
         xmin,xmax,ymin,ymax = plt.axis()
-        p2 = plt.plot(recon_years[0,:],prior_nhmt_ensmean,'-',color='black',linewidth=2,label='Prior')
-        plt.fill_between(recon_years[0,:], prior_nhmt_low, prior_nhmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
-
         p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
         plt.suptitle(exp, fontsize=12)
         plt.title('NH mean temperature', fontsize=12,fontweight='bold')
-        plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
+        plt.xlabel('Time (%s)' %timeaxis, fontsize=12, fontweight='bold')
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
-        plt.axis((year_range[0],year_range[1],pltymin,pltymax))
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
+        # re-define time axis
+        xlabels = ax.get_xticks()
+        indnonzero = np.where(xlabels != 0.0)        
+        xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
+        ax.set_xticklabels(xlabels)
+        
         plt.savefig('%s/%s_NHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()
 
         # -------------------------------------------
-        # Plotting time series of SH mean temperature
+        # SH mean temperature
         # -------------------------------------------
 
         #fig = plt.figure(figsize=[10,6])
-        fig = plt.figure()
+        fig, ax = plt.subplots(figsize=[8,5])
 
-        p1 = plt.plot(recon_years[0,:],recon_shmt_ensmean,'-b',linewidth=2, label='Posterior')
-        plt.fill_between(recon_years[0,:], recon_shmt_low, recon_shmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        p1 = plt.plot(plot_time,recon_shmt_ensmean,'-b',linewidth=2, label='Posterior')
+        plt.fill_between(plot_time, recon_shmt_low, recon_shmt_upp,facecolor='blue',alpha=0.2,linewidth=0.0)
+        p2 = plt.plot(plot_time,prior_shmt_ensmean,'-',color='black',linewidth=2,label='Prior')
+        plt.fill_between(plot_time, prior_shmt_low, prior_shmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
+
+        plt.axis((plot_year_range[0],plot_year_range[1],pltymin,pltymax))
         xmin,xmax,ymin,ymax = plt.axis()
-        p2 = plt.plot(recon_years[0,:],prior_shmt_ensmean,'-',color='black',linewidth=2,label='Prior')
-        plt.fill_between(recon_years[0,:], prior_shmt_low, prior_shmt_upp,facecolor='black',alpha=0.2,linewidth=0.0)
-
         p0 = plt.plot([xmin,xmax],[0,0],'--',color='red',linewidth=1)
         plt.suptitle(exp, fontsize=12)
         plt.title('SH mean temperature', fontsize=12,fontweight='bold')
-        plt.xlabel('Year (BC/AD)',fontsize=12,fontweight='bold')
+        plt.xlabel('Time (%s)' %timeaxis, fontsize=12, fontweight='bold')
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
-        plt.axis((year_range[0],year_range[1],pltymin,pltymax))
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
+        # re-define time axis
+        xlabels = ax.get_xticks()
+        indnonzero = np.where(xlabels != 0.0)        
+        xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
+        ax.set_xticklabels(xlabels)
+        
         plt.savefig('%s/%s_SHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()
         

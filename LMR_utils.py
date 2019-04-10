@@ -1664,7 +1664,7 @@ def PAGES2K_regional_means(field,lat,lon):
     #debug = False
     
     # number of geographical regions (default, as defined in PAGES2K(2013) paper
-    nregions = 8
+    nregions = 13
     
     # set number of times, lats, lons; array indices for lat and lon    
     if len(np.shape(field)) == 3: # time is a dimension
@@ -1682,31 +1682,61 @@ def PAGES2K_regional_means(field,lat,lon):
 
     # lat and lon range for each region (first value is lower limit, second is upper limit)
     rlat = np.zeros([nregions,2]); rlon = np.zeros([nregions,2])
-    # 1. Arctic: north of 60N 
-    rlat[0,0] = 60.; rlat[0,1] = 90.
+    reg_names = []
+    
+    # 1. Global
+    reg_names.append('Global')
+    rlat[0,0] = -90.; rlat[0,1] = 90.
     rlon[0,0] = 0.; rlon[0,1] = 360.
-    # 2. Europe: 35-70N, 10W-40E
-    rlat[1,0] = 35.; rlat[1,1] = 70.
-    rlon[1,0] = 350.; rlon[1,1] = 40.
-    # 3. Asia: 23-55N; 60-160E (from map)
-    rlat[2,0] = 23.; rlat[2,1] = 55.
-    rlon[2,0] = 60.; rlon[2,1] = 160.
-    # 4. North America 1 (trees):  30-55N, 75-130W 
-    rlat[3,0] = 30.; rlat[3,1] = 55.
-    rlon[3,0] = 55.; rlon[3,1] = 230.
-    # 5. South America: Text: 20S-65S and 30W-80W
-    rlat[4,0] = -65.; rlat[4,1] = -20.
-    rlon[4,0] = 280.; rlon[4,1] = 330.
-    # 6. Australasia: 110E-180E, 0-50S 
-    rlat[5,0] = -50.; rlat[5,1] = 0.
-    rlon[5,0] = 110.; rlon[5,1] = 180.
-    # 7. Antarctica: south of 60S (from map)
-    rlat[6,0] = -90.; rlat[6,1] = -60.
-    rlon[6,0] = 0.; rlon[6,1] = 360.
+    # 2. N. Hemisphere
+    reg_names.append('Northern Hemisphere')
+    rlat[1,0] = 0.; rlat[1,1] = 90.
+    rlon[1,0] = 0.; rlon[1,1] = 360.
+    # 3. S. Hemisphere
+    reg_names.append('Southern Hemisphere')
+    rlat[2,0] = -90.; rlat[2,1] = 0.
+    rlon[2,0] = 0.; rlon[2,1] = 360.
+    # 4. Arctic: north of 60N 
+    reg_names.append('Arctic')
+    rlat[3,0] = 60.; rlat[3,1] = 90.
+    rlon[3,0] = 0.; rlon[3,1] = 360.
+    # 5. Europe: 35-70N, 10W-40E
+    reg_names.append('Europe')
+    rlat[4,0] = 35.; rlat[4,1] = 70.
+    rlon[4,0] = 350.; rlon[4,1] = 40.
+    # 6. Asia: 23-55N; 60-160E (from map)
+    reg_names.append('Asia')
+    rlat[5,0] = 23.; rlat[5,1] = 55.
+    rlon[5,0] = 60.; rlon[5,1] = 160.
+    # 7. North America 1 (trees):  30-55N, 75-130W 
+    reg_names.append('North America')
+    rlat[6,0] = 30.; rlat[6,1] = 55.
+    rlon[6,0] = 55.; rlon[6,1] = 230.
+    # 8. South America: Text: 20S-65S and 30W-80W
+    reg_names.append('South America')
+    rlat[7,0] = -65.; rlat[7,1] = -20.
+    rlon[7,0] = 280.; rlon[7,1] = 330.
+    # 9. Australasia: 110E-180E, 0-50S 
+    reg_names.append('Australasia')
+    rlat[8,0] = -50.; rlat[8,1] = 0.
+    rlon[8,0] = 110.; rlon[8,1] = 180.
+    # 10. Antarctica: south of 60S (from map)
+    reg_names.append('Antarctica')
+    rlat[9,0] = -90.; rlat[9,1] = -60.
+    rlon[9,0] = 0.; rlon[9,1] = 360.
+    # 11. Greenland
+    reg_names.append('Greenland')
+    rlat[10,0] = 59.; rlat[10,1] = 85.
+    rlon[10,0] = 285.; rlon[10,1] = 350.
+    # 12. NE Atlantic
+    reg_names.append('NE Atlantic')
+    rlat[11,0] = 50.; rlat[11,1] = 75.
+    rlon[11,0] = 285.; rlon[11,1] = 25.
+    # 13. Nino3.4
+    reg_names.append('Nino3.4')
+    rlat[12,0] = -5.; rlat[12,1] = 5.
+    rlon[12,0] = 190.; rlon[12,1] = 240.
     # ...add other regions here...
-    # 8. Greenland
-    rlat[7,0] = 59.; rlat[7,1] = 85.
-    rlon[7,0] = 285.; rlon[7,1] = 350.
     
     # latitude weighting 
     lat_weight = np.cos(np.deg2rad(lat))
@@ -1747,7 +1777,8 @@ def PAGES2K_regional_means(field,lat,lon):
                 rm[region,t] = np.average(field_2d[indok_2d],weights=Wmask[indok_2d])
             else:
                 rm[region,t] = np.nan
-    return rm
+                
+    return reg_names, rm
 
 
 def class_docs_fixer(cls):
@@ -1832,10 +1863,15 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_str = calib_str+calib_str_ext
         state_vars_for_ye = config.psm.bilinear.psm_required_variables
         
-    elif psm_key == 'h_interp':
-        calib_avgPeriod = None
+    elif 'h_interp' in psm_key:
+        # python3 access to dict keys to check if avg. interval is ' multiyear'
+        if list(config.prior.avgInterval)[0] == 'multiyear':
+            calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        else:
+            calib_avgPeriod = None
         calib_str = ''
-        state_vars_for_ye = config.psm.h_interp.psm_required_variables
+        state_vars_for_ye = {psm_key.split(',')[1]: prior_kind}
+        psm_key = psm_key.split(',')[0]
 
     elif psm_key == 'bayesreg_uk37':
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
@@ -1889,6 +1925,8 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         proxy_str = proxy_str + str(config.proxies.LMRdb.dbversion)
     elif proxy_str == 'NCDCdadt':
         proxy_str = proxy_str + str(config.proxies.NCDCdadt.dbversion)
+    elif proxy_str == 'DAPSpseudoproxies':
+        proxy_str = proxy_str + str(config.proxies.DAPSpseudoproxies.dbversion)
         
     # Generate appropriate prior string
     prior_str = '-'.join([config.prior.prior_source] +
@@ -1936,7 +1974,7 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
             pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
         elif psm_key == 'bilinear':
             pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
-        elif psm_key == 'h_interp':
+        elif 'h_interp' in psm_key:
             if config.proxies.proxy_timeseries_kind == 'asis':
                 pkind = 'full'
             elif config.proxies.proxy_timeseries_kind == 'anom':
@@ -1966,7 +2004,8 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
 
         # check if file exists
         if not os.path.isfile(os.path.join(load_dir, load_fname)):
-            _log.error('ERROR: File does not exist! -- run the precalc file builder: misc/build_ye_file.py to generate the missing file')
+            _log.error('ERROR: Ye file {} does not exist! -- run the precalc file builder: '
+                       'misc/build_ye_file.py to generate the missing file'.format(load_fname))
             raise SystemExit()
         precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
 
@@ -2067,7 +2106,7 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
             pkind = list(config.psm.linear_TorP.psm_required_variables.values())[0]
         elif psm_key == 'bilinear':
             pkind = list(config.psm.bilinear.psm_required_variables.values())[0]
-        elif psm_key == 'h_interp':
+        elif 'h_interp' in psm_key:
             if config.proxies.proxy_timeseries_kind == 'asis':
                 pkind = 'full'
             elif config.proxies.proxy_timeseries_kind == 'anom':
@@ -2181,8 +2220,10 @@ def validate_config(config):
         proxy_cfg = config.proxies.PAGES2kv1
     elif proxy_database == 'NCDCdadt':
         proxy_cfg = config.proxies.NCDCdadt
+    elif proxy_database == 'DAPSpseudoproxies':
+        proxy_cfg = config.proxies.DAPSpseudoproxies
     else:
-        print('ERROR in specification of proxy database.')
+        print('ERROR in validate_config: Unrecognized specification of proxy database.')
         raise SystemExit()
 
     # proxy types activated in configuration
@@ -2195,6 +2236,8 @@ def validate_config(config):
     psm_required_variables = []
     for psm_type in psm_keys:
         #print psm_type, ':', psmclasses[psm_type].psm_required_variables
+        if 'h_interp' in psm_type:
+            psm_type = 'h_interp'
         psm_required_variables.extend(psmclasses[psm_type].psm_required_variables)
     # keep unique values
     psm_required_variables = list(set(psm_required_variables))
@@ -2222,7 +2265,7 @@ def validate_config(config):
                 proceed_ok = False
 
         # 2) Check if psm_avg is set to 'season' when use_precalc_ye = False
-        #    This combination of optios is not currently no possible as management
+        #    This combination of options is not currently possible as management
         #    of seasonal prior state variables is not enabled.
 
         if config.psm.avgPeriod == 'season':
@@ -2253,7 +2296,17 @@ def validate_config(config):
     # For every PSM class to be used
     for psm_type in psm_keys:
 
+        if 'h_interp' in psm_type:
+            # check if state variable is specified along with h_interp
+            if len(psm_type.split(',')) != 2:
+                print (' ERROR: state variable missing in specification of h_interp.'
+                       ' Need to specify: h_interp,<<state variable>> in config.')
+                proceed_ok = False
+
+            psm_type = 'h_interp'
+
         required_variables = list(psmclasses[psm_type].psm_required_variables.keys())
+        
         for var in required_variables:
             if var in list(config.prior.state_variables.keys()):
                 if psmclasses[psm_type].psm_required_variables[var] != config.prior.state_variables[var]:
