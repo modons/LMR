@@ -838,9 +838,11 @@ def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,X=None,vYe_coords=None,verbose=False):
     # augmented state vector with Ye appended
     Xb = np.append(Xb_in, vYe, axis=0)
     print('Xb shape:',Xb.shape)
-    print('X coords shape',X.coords.shape)
-    tmp = np.append(X.coords,vYe_coords,axis=0)
-    print('X aug coords shape',tmp.shape)
+    if X:
+        print('X coords shape',X.coords.shape)
+        tmp = np.append(X.coords,vYe_coords,axis=0)
+        print('X aug coords shape',tmp.shape)
+        
     loc_rad = cfg.core.loc_rad
 
     # make a "fake" local proxy object to attach proxy lat,lon data for localization function
@@ -858,9 +860,9 @@ def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,X=None,vYe_coords=None,verbose=False):
             Yloc.lat = vYe_coords[k,0]
             Yloc.lon = vYe_coords[k,1]
             loc = LMR_DA.cov_localization(loc_rad, Yloc, X, np.append(X.coords,vYe_coords,axis=0))
-            Xa = LMR_DA.enkf_update_array(Xb, obvalue, Ye, ob_err, loc=loc, inflate=None)   
+            Xa = LMR_DA.enkf_update_array(Xb, obvalue, Ye, ob_err, loc=loc)   
         else:
-            Xa = LMR_DA.enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None, inflate=None)   
+            Xa = LMR_DA.enkf_update_array(Xb, obvalue, Ye, ob_err, loc=None)   
         Xb = Xa
       
     # ensemble mean and perturbations
