@@ -460,8 +460,8 @@ def LMR_driver_callable(cfg=None):
     # include a header
     prior_samples.write('# List of indices (i.e. years if annual recon) randomly'
                         ' sampled from model output to form the prior(ensemble):\n')
-    if core.seed_prior is not None:
-        prior_samples.write('# with seed=%d \n' %(core.seed_prior))
+    if core.seed is not None:
+        prior_samples.write('# with seed=%d \n' %(core.seed))
     else:
         prior_samples.write('# with seed=None \n')        
     # write out the list

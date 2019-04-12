@@ -221,7 +221,7 @@ class prior_master(object):
         if take_sample:
             print('Random selection of', str(self.Nens), 'ensemble members')
             # Populate prior ensemble from randomly sampled states
-            seed(prior_cfg.seed_prior)
+            seed(prior_cfg.seed)
             ind_ens = sample(list(range(Nens_max)), self.Nens)
         else:
             print('Using entire consecutive years in prior dataset.')
