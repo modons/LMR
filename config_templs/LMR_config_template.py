@@ -2033,6 +2033,8 @@ class prior(ConfigGroup):
                             'moisture': ['pr_sfc_Amon', 'scpdsi_sfc_Amon']}
 
     member_simuls = None
+
+    prior_timescale = None
     
     
     ##** END User Parameters **##
@@ -2054,6 +2056,7 @@ class prior(ConfigGroup):
         self.detrend = self.detrend
         self.regrid_method = self.regrid_method
         self.member_simuls = self.member_simuls
+        self.prior_timescale = self.prior_timescale
 
         # check if "anom" has been selected for any state variable
         # and set the anom_reference attribute accordingly
