@@ -2012,7 +2012,8 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
 
         # check if file exists
         if not os.path.isfile(os.path.join(load_dir, load_fname)):
-            _log.error('ERROR: File does not exist! -- run the precalc file builder: misc/build_ye_file.py to generate the missing file')
+            _log.error('ERROR: Ye file {} does not exist! -- run the precalc file builder: '
+                       'misc/build_ye_file.py to generate the missing file'.format(load_fname))
             raise SystemExit()
         precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
 

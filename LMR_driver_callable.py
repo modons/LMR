@@ -106,8 +106,7 @@ def LMR_driver_callable(cfg=None):
     state_variables_info = prior.state_variables_info
     regrid_method = prior.regrid_method
     regrid_resolution = prior.regrid_resolution
-    
-    
+
     # ==========================================================================
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MAIN CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # ==========================================================================
@@ -153,11 +152,12 @@ def LMR_driver_callable(cfg=None):
     X.detrend = prior.detrend
     print('detrend:', X.detrend)
     X.avgInterval = prior.avgInterval
+    # Specification of ensemble members/time slice simulations, if available
+    X.member_simuls = prior.member_simuls
     
     # Read data file & populate initial prior ensemble
     X.populate_ensemble(prior_source, prior)
     Xb_one_full = X.ens
-
     
     # Prepare to check for files in the prior (work) directory (this object just
     # points to a directory)
@@ -401,6 +401,21 @@ def LMR_driver_callable(cfg=None):
                     Ye_eval_coords[k, :] = np.asarray([proxy.lat, proxy.lon], dtype=np.float64)
 
 
+        # check on validity of the Ye values
+        invalid_Ye = []
+        for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
+            if np.isnan(Ye_assim[k]).any():
+                invalid_Ye.append(proxy.id)
+        if prox_manager.ind_eval:
+            for k, proxy in enumerate(prox_manager.sites_eval_proxy_objs()):
+                if np.isnan(Ye_eval[k]).any():
+                    invalid_Ye.append(proxy.id)
+
+        if len(invalid_Ye) > 0:
+            raise SystemExit('\nInvalid Ye values detected. Revisit prior/PSM characteristics, '
+                             'or consider including the following proxy records in a proxy '
+                             'blacklist for the appropriate proxy class: \n{}'.format(invalid_Ye))
+        
         # ----------------------------------
         # Augment state vector with the Ye's
         # ----------------------------------
@@ -416,6 +431,7 @@ def LMR_driver_callable(cfg=None):
     else:
         Xb_one_aug = Xb_one
 
+        
     # BEGIN---20 August 2018---inflation fix
     if inflation_fact:
         print('**** inflating ensemble perturbations in the augmented state vector ****')
@@ -608,7 +624,7 @@ def LMR_driver_callable(cfg=None):
                        str(Ye.mean())))
 
             # Update the state
-            Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc, inflate)
+            Xa = enkf_update_array(Xb, Yobs, Ye, ob_err, loc)
 
             
             # TODO: AP Temporary fix for no TAS in state

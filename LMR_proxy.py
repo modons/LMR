@@ -365,8 +365,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
         try:
             proxy_type = pages2kv1_cfg.proxy_type_mapping[(pages2kv1_type, pmeasure)]
         except (KeyError, ValueError) as e:
-            print('Proxy type/measurement not found in mapping: {}'.format(e))
-            raise ValueError(e)
+            raise ValueError('Proxy type/measurement not found in mapping: {} {}'.format(e,site))
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
@@ -578,8 +577,7 @@ class ProxyLMRdb(BaseProxyObject):
         try:
             proxy_type = LMRdb_cfg.proxy_type_mapping[(LMRdb_type,pmeasure)]
         except (KeyError, ValueError) as e:
-            print('Proxy type/measurement not found in mapping: {}'.format(e))
-            raise ValueError(e)
+            raise ValueError('Proxy type/measurement not found in mapping: {} {}'.format(e,site))
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
@@ -828,8 +826,7 @@ class ProxyNCDCdadt(BaseProxyObject):
         try:
             proxy_type = ncdcdadt_cfg.proxy_type_mapping[(NCDCdadt_type,pmeasure)]
         except (KeyError, ValueError) as e:
-            print('Proxy type/measurement not found in mapping: {}'.format(e))
-            raise ValueError(e)
+            raise ValueError('Proxy type/measurement not found in mapping: {} {}'.format(e,site))
 
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]
@@ -1090,8 +1087,7 @@ class ProxyDAPSpseudoproxies(BaseProxyObject):
         try:
             proxy_type = DAPSpseudoproxies_cfg.proxy_type_mapping[(DAPSpseudoproxies_type,pmeasure)]
         except (KeyError, ValueError) as e:
-            print('Proxy type/measurement not found in mapping: {}'.format(e))
-            raise ValueError(e)
+            raise ValueError('Proxy type/measurement not found in mapping: {} {}'.format(e,site))
         
         start_yr = site_meta['Youngest (C.E.)'].iloc[0]
         end_yr = site_meta['Oldest (C.E.)'].iloc[0]

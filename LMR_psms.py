@@ -68,8 +68,8 @@ except ImportError as e3:
     print('Warning:', e3)
 try:
     import baymag
-except ImportError as e3:
-    print('Warning:', e3)
+except ImportError as e4:
+    print('Warning:', e4)
 
 
 # Logging output utility, configuration controlled by driver

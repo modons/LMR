@@ -260,7 +260,7 @@ def main(cfgin=None, config_path=None):
             psm_avg = 'multiyear'
         else:
             _log.error('ERROR: Did not find a match to a valid psm key: {}. Exiting.'.format(psm_key))
-            raise SystemExit()
+            raise KeyError()
 
         
         # Define required temporal averaging
@@ -323,7 +323,7 @@ def main(cfgin=None, config_path=None):
             
         else:
             _log.error('ERROR in specification of averaging period: {}'.format(psm_avg))
-            raise SystemExit()
+            raise KeyError()
 
         
         # Loop over seasonality definitions found in the proxy set
@@ -338,11 +338,14 @@ def main(cfgin=None, config_path=None):
             X.prior_datafile = cfg.prior.datafile_prior
             X.detrend = cfg.prior.detrend
             X.avgInterval = cfg.prior.avgInterval
-            X.Nens = None  # None => Load entire prior
             X.statevars = statevars
             X.statevars_info = cfg.prior.state_variables_info
             X.anom_reference = cfg.core.anom_reference_period
-
+            # overriding config. Nens and member_simuls (if ensemble/time slice prior)
+            # to None to ensure loading of complete set of available prior states
+            X.Nens = None
+            X.member_simuls = None
+            
             # Load the prior data, averaged over interval corresponding
             # to current "season" (i.e. proxy seasonality)
             # RT Nov 2018: additional (crude) logic to handle special case of DADT "seasonal" PSMs
@@ -375,12 +378,12 @@ def main(cfgin=None, config_path=None):
                     # corresponding to current "season" loop variable
                     if cfg.psm.season_source == 'proxy_metadata':
                         if pobj.seasonality == season:
-                            _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
+                            _log.info('{:10d} (...of {:d}) {}'.format(i, num_proxy, pobj.id))
                             ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
                             
                     elif cfg.psm.season_source == 'psm_calib':
                         if pobj.psm_obj.seasonality == season:
-                            _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
+                            _log.info('{:10d} (...of {:d}) {}'.format(i, num_proxy, pobj.id))
                             ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
 
                 else:
@@ -390,16 +393,16 @@ def main(cfgin=None, config_path=None):
                         if psm_avg == 'multiyear-season':
                             # Restrict to proxy records with current 'season'
                             if pobj.seasonality == season:
-                                _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
+                                _log.info('{:10d} (...of {:d}) {}'.format(i, num_proxy, pobj.id))
                                 ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
                         else:
                             # no proxy seasonality to consider
-                            _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
+                            _log.info('{:10d} (...of {:d}) {}'.format(i, num_proxy, pobj.id))
                             ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
 
                     elif 'h_interp' in psm_key and pobj.psm_obj.psm_key == psm_key:
                         # no proxy seasonality to consider
-                        _log.info('{:10d} (...of {:d})'.format(i, num_proxy) + pobj.id)
+                        _log.info('{:10d} (...of {:d}) {}'.format(i, num_proxy, pobj.id))
                         ye_out[i] = pobj.psm(X.ens, X.full_state_info, X.coords)
 
                     elif 'linear_multiyear' in psm_key and pobj.psm_obj.psm_key == psm_key:
@@ -447,8 +450,6 @@ def main(cfgin=None, config_path=None):
 #------------------------------------------------------------------------------------
 #-------------------- if not called, must be run directly ---------------------------
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG,
-                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     if len(sys.argv) > 1:
         yaml_file = sys.argv[1]
         main(config_path=yaml_file)
