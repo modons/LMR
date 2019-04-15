@@ -35,15 +35,15 @@ Nsample = None
 # --- Begin section of user-defined parameters ---
 
 # -- root name of directory where the output of LMR experiments are located --
-datadir = '/Volumes/grdata2/archived_LMR/output_LMR_py3'
+datadir = '/home/disk/kalman3/rtardif/LMR/output'
 
 # -- name of the experiment --
-nexp = 'test_Robert_production_develop_02282019'
+nexp = 'test'
 
 # -- Which type of output to netcdf file(s) --
 #    uncomment one of the lines below to choose
-#archive_type = 'ensemble_mean'
-archive_type = 'ensemble_mean_spread'
+archive_type = 'ensemble_mean'
+#archive_type = 'ensemble_mean_spread'
 #archive_type = 'ensemble_subsample'; Nsample = 10
 #archive_type = 'ensemble_full'
 
@@ -839,7 +839,7 @@ def main():
                 varout.statistic     = statistic[k]
                 varout.GRIB_id       = var_desc[var]['GRIB_id']
                 varout.GRIB_name     = var_desc[var]['GRIB_name']        
-                #varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
+                varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
                 varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
@@ -889,7 +889,7 @@ def main():
                 varout.statistic     = statistic[k]
                 varout.GRIB_id       = var_desc[var]['GRIB_id']
                 varout.GRIB_name     = var_desc[var]['GRIB_name']        
-                #varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
+                varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
                 varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
@@ -928,7 +928,7 @@ def main():
                 varout.statistic     = statistic[k]
                 varout.GRIB_id       = var_desc[var]['GRIB_id']
                 varout.GRIB_name     = var_desc[var]['GRIB_name']        
-                #varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
+                varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
                 varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
@@ -958,7 +958,7 @@ def main():
                 varout.statistic     = statistic[k]
                 varout.GRIB_id       = var_desc[var]['GRIB_id']
                 varout.GRIB_name     = var_desc[var]['GRIB_name']        
-                #varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
+                varout.valid_range   = np.array(var_desc[var]['valid_range'],dtype=var_desc[var]['dtype'])
                 varout.dataset       = dataset_tag
                 varout.missing_value = missing_val
                 varout.actual_range  = np.array((minval, maxval), dtype=var_desc[var]['dtype'])
