@@ -3306,7 +3306,7 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
         nc_dims = [dim for dim in data.dimensions]
         dictdims = {}
         for dim in nc_dims:
-            dictdims[dim] = len(data.dimensions[dim])            
+            dictdims[dim] = len(data.dimensions[dim])
             
         # Define the name of the variable to extract from the variable definition (from namelist)
         var_to_extract = vardef.split('_')[0]
@@ -3697,7 +3697,7 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
                     else:
                         fliplat = False
                 else:
-                    print('In read_gridded_data_TraCE21ka: ERROR!')
+                    print('In read_gridded_data_ensemble_runs: ERROR!')
                     raise SystemExit(1)
 
             if fliplat:
@@ -4122,13 +4122,13 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
             # initialize array with missing values (NaNs)
             value[:] = np.nan
 
-            """ old code
+            """# old code
             for i in range(nbintervals):
                 edgel = i*nbpts
                 edger = edgel+nbpts
                 datesYears[i] = np.mean(years[edgel:edger])
                 value[:,i] = np.nanmean(data_var_to_average[:,edgel:edger], axis=1)
-            """ 
+            """
 
             # More efficent method, without loop and with use of np.cumsum
             # Time variable
@@ -4143,6 +4143,7 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
             avg = ret[:,nbpts-1:]/nbpts
             value = avg[:,::nbpts][:,:nbintervals]
 
+            
             for k in [i for i,v in enumerate(indsmem) if v]:
                 print('run=', data.variables[varmem][k], var_to_extract, ': Global(time-averaged): mean=',
                       np.nanmean(value[k,:]), ' , std-dev=', np.nanstd(value[k,:]))
