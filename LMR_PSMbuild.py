@@ -423,16 +423,14 @@ class v_proxies(object):
 
         # DO NOT CHANGE FORMAT BELOW
         proxy_order = [
-#old        'Tree Rings_WidthPages',
             'Tree Rings_WidthPages2',
             'Tree Rings_WidthBreit',
+            'Tree Rings_WoodDensity',
             'Tree Rings_Isotopes',
-            'Tree Rings_Temperature',
             'Corals and Sclerosponges_d18O',
             'Corals and Sclerosponges_SrCa',
             'Corals and Sclerosponges_Rates',
             'Corals and Sclerosponges_Composite',
-            'Corals and Sclerosponges_Temperature',
             'Ice Cores_d18O',
             'Ice Cores_dD',
             'Ice Cores_Accumulation',
@@ -446,6 +444,8 @@ class v_proxies(object):
             'Marine Cores_uk37',
             'Bivalve_d18O',
             'Speleothems_d18O',
+            'Tree Rings_Temperature',
+            'Corals and Sclerosponges_Temperature',
             ]
 
         proxy_assim2 = {
@@ -480,9 +480,6 @@ class v_proxies(object):
             'Speleothems_d13C'              : ['d13C'],
             'Tree Rings_WidthBreit'         : ['trsgi_breit'],
             'Tree Rings_WidthPages2'        : ['trsgi'], 
-#old         'Tree Rings_WidthPages'         : ['TRW',
-#old                                            'ERW',
-#old                                            'LRW'],
             'Tree Rings_WoodDensity'        : ['max_d',
                                                'min_d',
                                                'early_d',
@@ -492,7 +489,6 @@ class v_proxies(object):
                                                'MXD'],
             'Tree Rings_Isotopes'           : ['d18O'],
             'Tree Rings_Temperature'        : ['temperature'],
-            'bivalve_d18O'                  : ['d18O'],
             'borehole_Temperature'          : ['temperature'],
             'documents_Temperature'         : ['temperature'],
             'hybrid_Temperature'            : ['temperature'],
