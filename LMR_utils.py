@@ -158,7 +158,7 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
     # sample axis is assumed to be axis=0
     pt_data = np.zeros(shape=data.shape[0])
     pt_data[:] = np.nan
-
+    
     # Representative distance between grid pts.
     dist = haversine(np.roll(lon_data,1), np.roll(lat_data,1), lon_data, lat_data)
     meandist =  np.mean(dist)
@@ -200,21 +200,21 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
             #  if so look at other nearby grid pts
             #  if not, return the data from gridpoint.
             #if np.all(test_valid) and test_valid2: valid = True
-            if np.any(test_valid) and test_valid2: valid = True
-            
+            if np.any(test_valid) and test_valid2:
+                valid = True
+                break
+                
             i +=1
             distpt = sorteddist[i]
 
     else:
         pass
-
     
     # Extract the data at the identified grid pt.
     if len(inds) == 2:
-        pt_data = data[:,inds[0],inds[1]]
+        pt_data = np.copy(data[:,inds[0],inds[1]])
     elif len(inds) == 1:
-        #pt_data = data[:,inds[0]]
-        pt_data = data[inds[0],:]
+        pt_data = np.copy(data[inds[0],:])
     else:
         pass
 
