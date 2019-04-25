@@ -1921,6 +1921,12 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]), 'yrs'])
         calib_str = ''
         state_vars_for_ye = config.psm.bayesreg_mgca.psm_required_variables
+    
+    elif  psm_key == 'linear_multiyear':
+        calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
+        calib_str = ''
+        state_vars_for_ye = config.psm.linear_multiyear.psm_required_variables
+    
     else:
         raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
     
@@ -2004,6 +2010,8 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
                          'bayesreg_mgca_ruberwhite_red', 'bayesreg_mgca_ruberwhite_bcp',
                          'bayesreg_mgca_pooled_red', 'bayesreg_mgca_pooled_bcp']:
             pkind = 'full'
+        elif psm_key == 'linear_multiyear':
+            pkind = list(config.psm.linear_multiyear.psm_required_variables.values())[0]
         else:
             raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
 
@@ -2124,6 +2132,8 @@ def load_precalculated_ye_vals_psm_per_proxy_onlyobjs(config, proxy_objs, sample
                 raise ValueError('Unrecognized proxy_timeseries_kind in proxies class')
         elif psm_key == 'bayesreg_uk37':
             pkind = 'full'
+        elif psm_key == 'linear_multiyear':
+            pkind = list(config.psm.linear_multiyear.psm_required_variables.values())[0]
         else:
             raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
 

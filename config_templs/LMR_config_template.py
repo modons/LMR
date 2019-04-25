@@ -233,7 +233,13 @@ class core(ConfigGroup):
     loc_rad: float
         Localization radius for DA (in km)
     inflation_fact : float
-        Covariance inflation factor
+        Prior deviations from the mean inflation factor
+    ob_err_adjust: bool
+        If true, divides the observation error by the number of observations
+        averaged for that proxy and time step.
+    revert_to_prior: bool
+	If true, the posterior equals the prior if no observations are assimilated.
+        If false, the posterior is NaNs if no observations are assimilated.
     seed: int, None
         RNG seed.  Passed to all random function calls. (e.g. prior and proxy
         record sampling)  Overridden by wrapper.multi_seed.
@@ -277,6 +283,10 @@ class core(ConfigGroup):
 
     inflation_fact = None
 
+    ob_err_adjust = True
+
+    revert_to_prior = True
+
     # Reference period w.r.t. which anomalies are to be defined.
     anom_reference_period = (1951, 1980)
 
@@ -318,6 +328,8 @@ class core(ConfigGroup):
         self.nens = self.nens
         self.loc_rad = self.loc_rad
         self.inflation_fact = self.inflation_fact
+        self.ob_err_adjust = self.ob_err_adjust
+        self.revert_to_prior = self.revert_to_prior
         self.seed = self.seed
         self.datadir_output = self.datadir_output
         self.archive_dir = self.archive_dir
@@ -352,8 +364,9 @@ class proxies(ConfigGroup):
     use_from: list(str)
         A list of keys for proxy classes to load from.  Keys available are
         stored in LMR_proxy_pandas_rework.
-    proxy_frac: float
-        Fraction of available proxy data (sites) to assimilate
+    proxy_frac: float, or list
+        Fraction of available proxy data (sites) to assimilate. Can also be a
+        list of proxy IDs to exclude from assimilation but retain for validation.
     proxy_timeseries_kind: string
         Type of proxy timeseries to use. 'anom' for animalies or 'asis'
         to keep records as included in the database. 
@@ -865,6 +878,17 @@ class proxies(ConfigGroup):
             'Marine sediments_d18o_pachyderma',
             'Marine sediments_mgca_pooled_bcp',
             'Marine sediments_mgca_pooled_red',
+            'glacier ice_d18O',
+            'glacier ice_swcorrectedd18O',
+            'glacier ice_upliftcorrectedd18O',
+            'glacier ice_swcorrectedupliftcorrectedd18O',
+            'glacier ice_uncorrectedd18O',
+            'glacier ice_swcorrecteduncorrectedd18O',
+            'glacier ice_Accumulation',
+            'glacier ice_dD',
+            'marine sediment_summerSST',
+            'marine sediment_winterSST',
+            'lake sediment_Pollen',
             ]
 
         # Assignment of psm type per proxy type
@@ -883,6 +907,17 @@ class proxies(ConfigGroup):
             'Marine sediments_d18o_pachyderma': 'bayesreg_d18o_pachyderma',
             'Marine sediments_mgca_pooled_bcp': 'bayesreg_mgca_pooled_bcp',
             'Marine sediments_mgca_pooled_red': 'bayesreg_mgca_pooled_red',
+            'glacier ice_d18O'                           : 'linear_multiyear',
+            'glacier ice_swcorrectedd18O'                : 'linear_multiyear',
+            'glacier ice_upliftcorrectedd18O'            : 'linear_multiyear',
+            'glacier ice_swcorrectedupliftcorrectedd18O' : 'linear_multiyear',
+            'glacier ice_uncorrectedd18O'                : 'linear_multiyear',
+            'glacier ice_swcorrecteduncorrectedd18O'     : 'linear_multiyear',
+            'glacier ice_Accumulation'                   : 'h_interp,pr_sfc_Amon',
+            'glacier ice_dD'                             : 'h_interp,dD_sfc_Amon',
+            'marine sediment_summerSST'                  : 'h_interp,sst_sfc_Omon',
+            'marine sediment_winterSST'                  : 'h_interp,sst_sfc_Omon',
+            'lake sediment_Pollen'                       : 'h_interp,tas_sfc_Amon',
         }
         
         proxy_assim2 = {
@@ -909,6 +944,17 @@ class proxies(ConfigGroup):
                                                   'mgca_bulloides:barker',
                                                   'mgca_pachyderma:barker',
                                                  ],
+            'glacier ice_d18O'                           : ['d18O','delta 18O'],
+            'glacier ice_swcorrectedd18O'                : ['swcorrectedd18O'],
+            'glacier ice_upliftcorrectedd18O'            : ['upliftcorrectedd18O'],
+            'glacier ice_swcorrectedupliftcorrectedd18O' : ['swcorrectedupliftcorrectedd18O'],
+            'glacier ice_uncorrectedd18O'                : ['uncorrectedd18O'],
+            'glacier ice_swcorrecteduncorrectedd18O'     : ['swcorrecteduncorrectedd18O'],
+            'glacier ice_Accumulation'                   : ['accum','accumulation','Accumulation','Accum'],
+            'glacier ice_dD'                             : ['dD','d2H','delta D'],
+            'marine sediment_summerSST'                  : ['summerSST'],
+            'marine sediment_winterSST'                  : ['winterSST'],
+            'lake sediment_Pollen'                       : ['Pollen','pollen','temperature'],
         }
 
         # A blacklist on proxy records, to prevent assimilation of specific
@@ -1762,6 +1808,63 @@ class psm(ConfigGroup):
             return {**self.psm_seatemp_variable, **self.psm_omega_variable}
 
 
+    class linear_multiyear(ConfigGroup):
+        """
+        Parameters for the Linear Multiyear PSM. Made as generic for univariate linear PSMs.
+        
+        Attributes
+        ----------
+        datadir_PSM: str
+            directory for PSM coefficients and error
+        filename_PSM: str
+            file name containing PSM coefficients and error. 
+            The order should be error, slope, intercept.
+        dataformat_PSM: str
+            file format of the file
+        datafile_PSM: str
+            data directory plus the filename
+        linmult_var: str
+            name of the variable on which the PSM should calculate Ye values
+        """
+
+        ##** BEGIN User Parameters **##
+    
+        datadir_PSM = './'
+        filename_PSM = 'LinearMultiyear_calibfile.txt'
+        dataformat_PSM = 'TXT'
+        datafile_PSM = None
+    
+        linmult_var = 'tas_sfc_Amon'
+    
+        ##** END User Parameters **##
+
+        def __init__(self,**kwargs):
+            super(self.__class__, self).__init__(**kwargs)
+    
+            self.datadir_PSM = self.datadir_PSM
+            self.filename_PSM = self.filename_PSM
+            self.dataformat_PSM = self.dataformat_PSM
+    
+            if self.datafile_PSM is None:
+                self.datafile_PSM = join(self.datadir_PSM, self.filename_PSM)
+            else:
+                self.datafile_PSM = self.datafile_PSM
+                
+                self.linmult_var = self.linmult_var
+            
+            proxy_kind = proxies.proxy_timeseries_kind
+            if proxies.proxy_timeseries_kind == 'asis':
+                psm_var_kind = 'full'
+            elif proxies.proxy_timeseries_kind == 'anom':
+                psm_var_kind = 'anom'
+            else:
+                raise ValueError('Unrecognized proxy_timeseries_kind value in proxies class.'
+                                 ' Unable to assign kind to psm_required_variables'
+                                 ' in h_interp psm class.')
+            self.psm_required_variables = {self.linmult_var: psm_var_kind}
+
+
+
     # Initialize subclasses with all attributes
     def __init__(self, lmr_path=None, **kwargs):
         self.linear = self.linear(lmr_path=lmr_path, **kwargs.pop('linear', {}))
@@ -1788,6 +1891,7 @@ class psm(ConfigGroup):
         self.bayesreg_mgca_pachyderma_bcp = self.bayesreg_mgca
         self.bayesreg_mgca_pooled_red = self.bayesreg_mgca
         self.bayesreg_mgca_pooled_bcp = self.bayesreg_mgca
+        self.linear_multiyear = self.linear_multiyear(**kwargs.pop('linear_multiyear', {}))
 
         super().__init__(**kwargs)
         self.avgPeriod = self.avgPeriod
@@ -1847,7 +1951,10 @@ class prior(ConfigGroup):
         Currently supports 't42' and 'reg_4x5deg'.
     state_variables_info: dict
         Defines which variables represent temperature or moisture.
-        Should be modified only if a new temperature or moisture state variable is added. 
+        Should be modified only if a new temperature or moisture state variable is added.
+    prior_timescale: int or None, optional
+        Time interval of prior fields (in years). If None, uses
+        core.recon_timescale to define intervals.
     """
 
     ##** BEGIN User Parameters **##
@@ -1926,6 +2033,8 @@ class prior(ConfigGroup):
                             'moisture': ['pr_sfc_Amon', 'scpdsi_sfc_Amon']}
 
     member_simuls = None
+
+    prior_timescale = None
     
     
     ##** END User Parameters **##
@@ -1947,6 +2056,7 @@ class prior(ConfigGroup):
         self.detrend = self.detrend
         self.regrid_method = self.regrid_method
         self.member_simuls = self.member_simuls
+        self.prior_timescale = self.prior_timescale
 
         # check if "anom" has been selected for any state variable
         # and set the anom_reference attribute accordingly
@@ -1969,12 +2079,19 @@ class prior(ConfigGroup):
         if core.recon_timescale == 1:
             self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
-            # new format for multiyear DADT reconstructions:
-            self.avgInterval = {'multiyear': [core.recon_timescale]}
+            # If user config has prior.prior_timescale set:
+            if (self.prior_timescale is not None) and (self.prior_timescale > 1):
+                self.avgInterval = {'multiyear': [int(self.prior_timescale)]}
+            elif self.prior_timescale is None:
+                # new format for multiyear DADT reconstructions:
+                self.avgInterval = {'multiyear': [core.recon_timescale]}
+            else:
+                raise SystemExit('ERROR in config.: prior.prior_timescale must be > 1!')
         else:
             print('ERROR in config.: unrecognized core.recon_timescale!')
             raise SystemExit()
-        
+
+
         if self.regrid_method != 'esmpy':
             self.regrid_resolution = int(self.regrid_resolution)
         elif self.regrid_method == 'esmpy':

@@ -97,6 +97,8 @@ def LMR_driver_callable(cfg=None):
     nens = core.nens
     loc_rad = core.loc_rad
     inflation_fact = core.inflation_fact
+    ob_err_adjust = core.ob_err_adjust
+    revert_to_prior = core.revert_to_prior
     prior_source = prior.prior_source
     datadir_prior = prior.datadir_prior
     datafile_prior = prior.datafile_prior
@@ -187,7 +189,10 @@ def LMR_driver_callable(cfg=None):
 
     # Build dictionaries of proxy sites to assimilate and those set aside for
     # verification
-    prox_manager = LMR_proxy.ProxyManager(cfg, recon_period)
+    # We pass this lookup window instead of recon_period because this window
+    # spans the actual time span that we look for proxies to average together.
+    proxy_lookup_window = [recon_period[0]-recon_timescale//2,recon_period[1]+recon_timescale//2]
+    prox_manager = LMR_proxy.ProxyManager(cfg, proxy_lookup_window)
     type_site_assim = prox_manager.assim_ids_by_group
 
     if verbose > 3:
@@ -607,7 +612,8 @@ def LMR_driver_callable(cfg=None):
             ob_err = Y.psm_obj.R
 
             # if ob is an average of several values, adjust its ob error variance
-            if nYobs > 1: ob_err = ob_err/float(nYobs)
+            if nYobs > 1 and ob_err_adjust:
+                ob_err = ob_err/float(nYobs)
             
             # ------------------------------------------------------------------
             # Do the update (assimilation) -------------------------------------
@@ -655,11 +661,23 @@ def LMR_driver_callable(cfg=None):
             # End of loop on proxies
 
         # Dump Xa to file (use Xb in case no proxies assimilated for
-        # current year)
-        try:
-            np.save(filen, Xb.filled())
-        except AttributeError as e:
-            np.save(filen, Xb)
+        # current year).If not proxies are assimilated, Xa will equal
+        # Xb if revert_to_prior is True and Xa will turn to Nan's if
+        # revert_to_prior is False.
+        if np.array_equal(Xb, Xb_one_aug.copy()) is False or revert_to_prior is True:
+            try:
+                np.save(filen, Xb.filled())
+            except AttributeError as e:
+                np.save(filen, Xb)
+        else:
+            if verbose > 2:
+                print('No proxies were assimilated. Xa was replaced with NaNs.')
+            Xb_nans = np.empty(Xb.shape)
+            Xb_nans[:] = np.nan
+            try:
+                np.save(filen, Xb_nans.filled())
+            except AttributeError as e:
+                np.save(filen, Xb_nans)
 
     end_time = time() - begin_time
 
