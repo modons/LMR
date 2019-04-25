@@ -29,9 +29,9 @@ def load_data_frame(data_src, key=None):
     Pandas dataframe.
     """
     try:
-        out = pandas.read_pickle(data_src)
-    except OSError:  # Thrown if file is hdf.
         out = pandas.read_hdf(data_src, key=key)
+    except OSError:  # Thrown if file is pickle.
+        out = pandas.read_pickle(data_src)
     return out
 
 @lru_cache(maxsize=64)

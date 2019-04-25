@@ -1880,7 +1880,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
             calib_avgPeriod = None
         calib_str = ''
         state_vars_for_ye = {psm_key.split(',')[1]: prior_kind}
-        psm_key = psm_key.split(',')[0]
+        psmkey_str = psm_key.split(',')[0]
 
     elif psm_key == 'bayesreg_uk37':
         calib_avgPeriod = ''.join([str(config.prior.avgInterval['multiyear'][0]),'yrs'])
