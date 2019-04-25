@@ -1031,6 +1031,7 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D,
     """
 
     lons_1D = X_lon2D[0]
+    """
     lon_diff_negative = np.diff(lons_1D) < 0
     if lon_diff_negative.sum() > 1:
         raise ValueError('Expected monotonic value increase with index '
@@ -1043,7 +1044,9 @@ def regrid_esmpy(target_nlat, target_nlon, X_nens, X, X_lat2D, X_lon2D,
         X_lat2D = np.roll(X_lat2D, lon_shift, axis=1)
     else:
         lon_shift = None
-
+    """
+    lon_shift = None
+    
     # Create grid for the input state data
     grid = ESMF.Grid(max_index=np.array((X_nlon, X_nlat)),
                      num_peri_dims=1,
@@ -1307,9 +1310,9 @@ def calculate_latlon_bnds(lats, lons):
     """
     if lats.ndim != 1 or lons.ndim != 1:
         raise ValueError('Expected 1D-array for input lats and lons.')
-    if np.any(np.diff(lats) < 0) or np.any(np.diff(lons) < 0):
-        raise ValueError('Expected monotonic value increase with index for '
-                         'input latitudes and longitudes')
+    #if np.any(np.diff(lats) < 0) or np.any(np.diff(lons) < 0):
+    #    raise ValueError('Expected monotonic value increase with index for '
+    #                     'input latitudes and longitudes')
 
     # Note: assumes lats are monotonic increase with index
     dlat = abs(lats[1] - lats[0]) / 2.
