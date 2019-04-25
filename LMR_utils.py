@@ -142,7 +142,8 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
         lat_pt: float
             Latitude of the reference point (proxy site or other).
         getvalid: bool
-            ...
+            Whether to expand search of nearest prior gridpoint to neareast grid point
+            with valid data, with a distance tolerance (maxdist)
 
         Returns
         -------
@@ -157,30 +158,31 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
     # sample axis is assumed to be axis=0
     pt_data = np.zeros(shape=data.shape[0])
     pt_data[:] = np.nan
-
+    
     # Representative distance between grid pts.
     dist = haversine(np.roll(lon_data,1), np.roll(lat_data,1), lon_data, lat_data)
     meandist =  np.mean(dist)
-    
+    # max. distance in search of valid data pt.
+    maxdist = meandist*2. # factor of "mean" grid resolution
+    #maxdist = 500. # hard limit, in km
+
     # Calculate distances
     dist = haversine(lon_pt, lat_pt, lon_data, lat_data)
     workdist = np.ravel(dist)
     sorteddist = np.sort(workdist)
     
     # Find closest grid point with *valid* data.
-    # Impose max of search distance equal to twice the representative distance
+    # Impose max of search distance equal to maxdist defined above.
     # Start with min dist.
-
     distptmin = sorteddist[0]
     i = 0
     distpt = distptmin
     inds2 = np.where(workdist == distpt)[0][0]
     inds = np.unravel_index(inds2, dist.shape)
-
-
+    
     if getvalid:
         valid = False
-        while not valid and distpt < meandist*2.:
+        while not valid and distpt < maxdist:
 
             inds2 = np.where(workdist == distpt)[0][0]
             inds = np.unravel_index(inds2, dist.shape)
@@ -189,26 +191,30 @@ def get_data_closest_gridpt(data,lon_data,lat_data,lon_pt,lat_pt,getvalid=None):
                 test_valid = np.isfinite(data[:,inds[0],inds[1]])
                 test_valid2 = np.all(data[:,inds[0],inds[1]])
             elif len(inds) == 1:                
-                #test_valid = np.isfinite(data[:,inds])
                 test_valid = np.isfinite(data[inds,:])
                 test_valid2 = np.all(data[inds,:])                
             else:
-                print('ERROR in distance calc in get_data_closest_gridpt!')
-                raise SystemExit(1)            
-            #if np.all(test_valid): valid = True
-            if np.all(test_valid) and test_valid2: valid = True
+                raise SystemExit('ERROR in distance calc in get_data_closest_gridpt!')            
+
+            # RT 04/19: test whether *all* array elements are NaNs,
+            #  if so look at other nearby grid pts
+            #  if not, return the data from gridpoint.
+            #if np.all(test_valid) and test_valid2: valid = True
+            if np.any(test_valid) and test_valid2:
+                valid = True
+                break
+                
             i +=1
             distpt = sorteddist[i]
 
     else:
         pass
-
+    
     # Extract the data at the identified grid pt.
     if len(inds) == 2:
-        pt_data = data[:,inds[0],inds[1]]
+        pt_data = np.copy(data[:,inds[0],inds[1]])
     elif len(inds) == 1:
-        #pt_data = data[:,inds[0]]
-        pt_data = data[inds[0],:]
+        pt_data = np.copy(data[inds[0],:])
     else:
         pass
 

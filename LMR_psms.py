@@ -1759,17 +1759,29 @@ class BayesRegUK37PSM(BayesRegPSM):
                                                  getvalid=True)
 
         # check if gridpoint_data is in K: need deg. C for forward model
-        # crude check...        
-        #if np.nanmin(var_data) > 200.0:
-        #    gridpoint_data = gridpoint_data - 273.15
         # RT - 11/18: More robust use of "units" metadata now included in state vector info.
+        """
         if np.isfinite(gridpoint_data).all() and np.any(gridpoint_data):
             if X_state_info[state_var]['units']:
                 if X_state_info[state_var]['units'] == 'K' or X_state_info[state_var]['units'] == 'Kelvin':
                     gridpoint_data = gridpoint_data - 273.15
         else:
             gridpoint_data[:] = np.nan
-            
+        """
+        mask = np.isfinite(gridpoint_data)
+        if X_state_info[state_var]['units']:
+            if X_state_info[state_var]['units'] == 'K' or X_state_info[state_var]['units'] == 'Kelvin':
+                gridpoint_data[mask] = gridpoint_data[mask] - 273.15
+            elif 'Celsius' in X_state_info[state_var]['units'] or X_state_info[state_var]['units'] == 'C' or \
+                 X_state_info[state_var]['units'] == 'degree C' or X_state_info[state_var]['units'] == 'deg. C' or \
+                 X_state_info[state_var]['units'] == 'degree C.' or X_state_info[state_var]['units'] == 'deg. C.' or \
+                 X_state_info[state_var]['units'] == 'degC' :
+                pass
+            else:
+                raise SystemExit('ERROR in BayesRegUK37PSM: unrecognized definition of units for prior temperature.')
+        else:
+            raise SystemExit('ERROR in BayesRegUK37PSM: units for prior temperature undefined.')
+                
             
         Ye_ens = self._mcmc_predict(x=gridpoint_data)
         # take the mean of the ensemble of estimates
@@ -1886,17 +1898,21 @@ class BayesRegTEX86PSM(BayesRegPSM):
                                                  getvalid=True)
 
         # check if gridpoint_data is in K: need deg. C for forward model
-        # crude check...
-        #if np.nanmin(var_data) > 200.0:
-        #    gridpoint_data = gridpoint_data - 273.15
         # RT - 11/18: More robust use of "units" metadata now included in state vector info.
-        if np.isfinite(gridpoint_data).all() and np.any(gridpoint_data):
-            if X_state_info[state_var]['units']:
-                if X_state_info[state_var]['units'] == 'K' or X_state_info[state_var]['units'] == 'Kelvin':
-                    gridpoint_data = gridpoint_data - 273.15
+        mask = np.isfinite(gridpoint_data)
+        if X_state_info[state_var]['units']:
+            if X_state_info[state_var]['units'] == 'K' or X_state_info[state_var]['units'] == 'Kelvin':
+                gridpoint_data[mask] = gridpoint_data[mask] - 273.15
+            elif 'Celsius' in X_state_info[state_var]['units'] or X_state_info[state_var]['units'] == 'C' or \
+                 X_state_info[state_var]['units'] == 'degree C' or X_state_info[state_var]['units'] == 'deg. C' or \
+                 X_state_info[state_var]['units'] == 'degree C.' or X_state_info[state_var]['units'] == 'deg. C.' or \
+                 X_state_info[state_var]['units'] == 'degC' :
+                pass
+            else:
+                raise SystemExit('ERROR in BayesRegTEX86PSM: unrecognized definition of units for prior temperature.')
         else:
-            gridpoint_data[:] = np.nan
-                
+            raise SystemExit('ERROR in BayesRegUK37PSM: units for prior temperature undefined.')
+
         ye_ens = self._mcmc_predict(x=gridpoint_data)
         ye = np.mean(ye_ens, axis=1)
         return ye
@@ -2029,17 +2045,21 @@ class BayesRegD18oPSM(BayesRegPSM):
         xb_d18osw = self._get_gridpoint_data(d18osw_var_name, Xb, X_state_info, X_coords)
 
         # check if gridpoint_data is in K: need deg. C for forward model
-        # crude check...
-        #if np.nanmin(xb_sst) > 200.0:
-        #    xb_sst = xb_sst - 273.15
         # RT - 11/18: More robust use of "units" metadata now included in state vector info.
-        if np.isfinite(xb_sst).all() and np.any(xb_sst):
-            if X_state_info[sst_var_name]['units']:
-                if X_state_info[sst_var_name]['units'] == 'K' or X_state_info[sst_var_name]['units'] == 'Kelvin':
-                    xb_sst = xb_sst - 273.15
+        mask = np.isfinite(xb_sst)
+        if X_state_info[sst_var_name]['units']:
+            if X_state_info[sst_var_name]['units'] == 'K' or X_state_info[sst_var_name]['units'] == 'Kelvin':
+                xb_sst[mask] = xb_sst[mask] - 273.15
+            elif 'Celsius' in X_state_info[sst_var_name]['units'] or X_state_info[sst_var_name]['units'] == 'C' or \
+                 X_state_info[sst_var_name]['units'] == 'degree C' or X_state_info[sst_var_name]['units'] == 'deg. C' or \
+                 X_state_info[sst_var_name]['units'] == 'degree C.' or X_state_info[sst_var_name]['units'] == 'deg. C.' or \
+                 X_state_info[sst_var_name]['units'] == 'degC' :
+                pass
+            else:
+                raise SystemExit('ERROR in BayesRegD18oPSM: unrecognized definition of units for prior temperature.')
         else:
-            xb_sst[:] = np.nan
-
+            raise SystemExit('ERROR in BayesRegD18oPSM: units for prior temperature undefined.')
+        
         # Build args to pass to self._mcmc_predict() to handle whether SOS or
         # d18Osw is available in state vector.
         predict_kwargs = {'sst' : xb_sst}
@@ -2211,13 +2231,21 @@ class BayesRegMgcaPSM(BayesRegPSM):
             omega_var_name = list(self.psm_omega_variable.keys())[0]
             xb_omega = self._get_gridpoint_data(omega_var_name, Xb, X_state_info, X_coords)
 
-        if np.isfinite(xb_sst).all() and np.any(xb_sst):
-            if X_state_info[seatemp_var_name]['units']:
-                if X_state_info[seatemp_var_name]['units'] == 'K' or X_state_info[seatemp_var_name]['units'] == 'Kelvin':
-                    xb_sst = xb_sst - 273.15
+        # check if gridpoint_data is in K: need deg. C for forward model
+        mask = np.isfinite(xb_sst)
+        if X_state_info[seatemp_var_name]['units']:
+            if X_state_info[seatemp_var_name]['units'] == 'K' or X_state_info[seatemp_var_name]['units'] == 'Kelvin':
+                xb_sst[mask] = xb_sst[mask] - 273.15
+            elif 'Celsius' in X_state_info[seatemp_var_name]['units'] or X_state_info[seatemp_var_name]['units'] == 'C' or \
+                 X_state_info[seatemp_var_name]['units'] == 'degree C' or X_state_info[seatemp_var_name]['units'] == 'deg. C' or \
+                 X_state_info[seatemp_var_name]['units'] == 'degree C.' or X_state_info[seatemp_var_name]['units'] == 'deg. C.' or \
+                 X_state_info[seatemp_var_name]['units'] == 'degC' :
+                pass
+            else:
+                raise SystemExit('ERROR in BayesRegMgcaPSM: unrecognized definition of units for prior temperature.')
         else:
-            xb_sst[:] = np.nan
-
+            raise SystemExit('ERROR in BayesRegMgcaPSM: units for prior temperature undefined.')
+            
         ye_ens = self._mcmc_predict(sst=xb_sst, omega=xb_omega)
         ye = np.mean(ye_ens, axis=1)
         return ye
