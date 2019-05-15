@@ -403,11 +403,11 @@ def LMR_driver_callable(cfg=None):
 
         # check on validity of the Ye values
         invalid_Ye = []
-        for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
+        for k in range(assim_proxy_count):
             if np.isnan(Ye_assim[k]).any():
                 invalid_Ye.append(proxy.id)
         if prox_manager.ind_eval:
-            for k, proxy in enumerate(prox_manager.sites_eval_proxy_objs()):
+            for k in range(eval_proxy_count):
                 if np.isnan(Ye_eval[k]).any():
                     invalid_Ye.append(proxy.id)
 
