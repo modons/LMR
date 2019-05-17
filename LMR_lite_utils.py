@@ -8,6 +8,8 @@ University of Washington
 26 February 2018
 
 Modifications:
+23 April 2019: update BEST and HadCRUT to latest versions
+11 April 2019: fix to regrid routine to copy the prior object X so that the parent doesn't get changed locally
 20 April 2018: new routine prior_regrid for regridding prior (GJH)
 21 March 2018: mod get_valid_proxes to accept proxy indices for filtering (rather than use all) (GJH)
 6 March 2018: fix for the Grid object; new routine make_obs for making "observations" from a gridded dataset (GJH)
@@ -16,6 +18,7 @@ Modifications:
 """
 
 import os
+import copy
 import numpy as np
 import sys
 import yaml
@@ -40,6 +43,14 @@ from scipy import stats
 
 def make_gmt_figure(analysis_data,analysis_time,fsave=None):
 
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+    
     # a "lite" version of the original in LMR_verify_GM.py
     
     plt.rcParams['figure.figsize'] = 10, 10  # that's default image size for this interactive session
@@ -138,7 +149,68 @@ def make_gmt_figure(analysis_data,analysis_time,fsave=None):
         print('saving to .png')
         plt.savefig(fsave+'_GMT_annual_detrended.png',dpi=300)
 
+
+def make_plot_nps(vplot,grid,figsize=10,savefig=None,vmax=None):
+
+    """
+    same as make_plot, but uses North Polar stereographic grid and some tricks to make a nice circular boundary
+
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    12 April 2019
+    """
+    import matplotlib.path as mpath
+
+    """
+    adapted from
+    https://scitools.org.uk/cartopy/docs/latest/gallery/always_circular_stereo.html#custom-boundary-shape
+    """
+
+    # add a wrap point for smooth plotting
+    vplot_wrap, lon_wrap = add_cyclic_point(vplot, coord=grid.lon[0,:], axis=1)
+
+    # figure size
+    plt.rcParams["figure.figsize"] = [figsize,figsize]
+
+    ax = plt.axes(projection=ccrs.NorthPolarStereo())
+    # Limit the map to 40 degrees latitude and above
+    ax.set_extent([-180, 180, 40, 90], ccrs.PlateCarree())
+    ax.coastlines()
+
+    # Compute a circle in axes coordinates, which we can use as a boundary
+    # for the map. We can pan/zoom as much as we like - the boundary will be
+    # permanently circular.
+    theta = np.linspace(0, 2*np.pi, 100)
+    center, radius = [0.5, 0.5], 0.5
+    verts = np.vstack([np.sin(theta), np.cos(theta)]).T
+    circle = mpath.Path(verts * radius + center)
+    ax.set_boundary(circle, transform=ax.transAxes)
+
+    #cs = ax.contourf(lon,lat,vplot,transform=ccrs.PlateCarree(),cmap='bwr')
+    if vmax:
+        maxv = vmax
+    else:
+        maxv = np.nanmax(np.abs(vplot))
+        
+    cs = ax.pcolormesh(lon_wrap,grid.lat[:,0],vplot_wrap,transform=ccrs.PlateCarree(),cmap='bwr',shading='flat',vmin=-maxv,vmax=maxv)
+    plt.colorbar(cs, extend='both', shrink=0.4)
+    if savefig:
+        plt.title(savefig)
+        plt.savefig(savefig+'.png',dpi=300)
+    plt.show()
+
+
 def make_plot(vplot,grid,figsize=10,savefig=None,vmax=None):
+
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
 
     # add a wrap point for smooth plotting
     vplot_wrap, lon_wrap = add_cyclic_point(vplot, coord=grid.lon[0,:], axis=1)
@@ -147,7 +219,9 @@ def make_plot(vplot,grid,figsize=10,savefig=None,vmax=None):
     plt.rcParams["figure.figsize"] = [figsize,figsize]
 
     ax = plt.axes(projection=ccrs.Robinson(central_longitude=-90.))
+    #ax = plt.axes(projection=ccrs.Stereographic(central_longitude=-90.,central_latitude=90.))
     ax.coastlines()
+
     #cs = ax.contourf(lon,lat,vplot,transform=ccrs.PlateCarree(),cmap='bwr')
     if vmax:
         maxv = vmax
@@ -163,8 +237,15 @@ def make_plot(vplot,grid,figsize=10,savefig=None,vmax=None):
 class Grid(object):
     def __init__(self,X=None):
 
+        """
+        Originator:
+
+        Greg Hakim
+        University of Washington
+        26 February 2018
+        """
         if X:
-        # use first variable set in config file
+            # use first variable set in config file
             var = list(X.statevars.keys())[0]
 
             lat = X.prior_dict[var]['lat']
@@ -180,6 +261,13 @@ class Grid(object):
             self.nens = X.Nens
 
 def make_grid(X):
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
     # make an empty class as a handy container for grid information
     
     class Grid:
@@ -205,6 +293,14 @@ def make_grid(X):
 
 
 def make_random_ensemble(Xb_one,max_ens,nens,ranseed=None):
+
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
 
     """
     Purpose: provide random column draws from an existing ensemble matrix
@@ -244,6 +340,14 @@ def make_random_ensemble(Xb_one,max_ens,nens,ranseed=None):
 
 
 def make_random_proxies(prox_manager,Ye,Ye_coords,ens_inds,max_proxies,nproxies,ranseed=None,verbose=False):
+
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
 
     """
     Purpose: provide random column draws from an existing ensemble matrix
@@ -301,6 +405,14 @@ def make_random_proxies(prox_manager,Ye,Ye_coords,ens_inds,max_proxies,nproxies,
 
 def make_proxy_group(prox_manager,pgroup,Ye,Ye_coords,ens_inds,verbose=False):
     """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
+    """
     Purpose: provide single proxy group and Ye from an existing ensemble matrix
     
     Inputs:
@@ -341,6 +453,14 @@ def make_proxy_group(prox_manager,pgroup,Ye,Ye_coords,ens_inds,verbose=False):
  
 
 def load_config(yaml_file,verbose=False):
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
     begin_time = time()
 
     if not LMR_config.LEGACY_CONFIG:
@@ -439,6 +559,14 @@ def load_config(yaml_file,verbose=False):
 
 def load_prior(cfg,verbose=False):
     
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
     core = cfg.core
     prior = cfg.prior
     nexp = core.nexp
@@ -491,6 +619,13 @@ def load_prior(cfg,verbose=False):
 
 def load_proxies(cfg,verbose=True):
 
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
     core = cfg.core
 
     begin_time = time()
@@ -516,6 +651,14 @@ def load_proxies(cfg,verbose=True):
 
 
 def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox_inds=None,prox_type=None,prox_ID=None,replace_r=None,r_crit=None,verbose=False):
+
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
 
     # revisions:
     # 27 December 2018: added prox_type optional parameter to filter to only those proxies
@@ -588,7 +731,7 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
     if len(vY) == 0:
         print('Zero valid proxies for the chosen year!')
     else:
-        print('Number of valid proxies: ',len(vY))
+        if verbose: print('Number of valid proxies: ',len(vY))
 
     elapsed_time = time() - begin_time
     if verbose:
@@ -601,6 +744,14 @@ def get_valid_proxies(cfg,prox_manager,target_year,Ye_assim,Ye_assim_coords,prox
 
 def Kalman_update(vY,vYe,vR,Xb_one,verbose=False):
 
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+    
     if verbose:
         print('solve using tradition Kalman gain...')
 
@@ -635,6 +786,15 @@ def Kalman_update(vY,vYe,vR,Xb_one,verbose=False):
     return xam
 
 def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
+
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
     """
     Y: observation vector (p x 1)
     vR: observation error variance vector (p x 1)
@@ -749,6 +909,15 @@ def Kalman_optimal(Y,vR,Ye,Xb,nsvs=None,transform_only=False,verbose=False):
     return xam,Xap,SVD
 
 def Kalman_optimal_sklearn(Y,vR,Ye,Xb,mindim=None,transform_only=False,verbose=False):
+
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
     """
     THIS ROUTINE IS DEPRECATED. While it produces the right ensemble mean, it cannot produce the ensemble variance because the sklearn svd routine doesn't return null-space vectors.
 
@@ -826,6 +995,14 @@ def Kalman_optimal_sklearn(Y,vR,Ye,Xb,mindim=None,transform_only=False,verbose=F
     return xam,Xap,SVD
 
 def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,X=None,vYe_coords=None,verbose=False):
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
     import LMR_DA
     
     if verbose:
@@ -878,19 +1055,30 @@ def Kalman_ESRF(cfg,vY,vR,vYe,Xb_in,X=None,vYe_coords=None,verbose=False):
 
     return xam,Xap
 
-def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eatime=1999,svtime=1880,evtime=1999):
+def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eatime=1999,svtime=1880,evtime=1999,outfreq='annual'):
 
-    """Need to revise to do two things: 1) GMT for a verification interval
-    and 2) send back the full data from the analyses. Add a flag and switches"""
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
+    """
+    2 May 2019: added outfreq input parameter to pass along to loading routine; allows for monthly or annual data
+
+    full_field: Flag for sending back full fields instead of global means
+    --- define a reference time period for anomalies (e.g., 20th century)
+    satime: starting year of common reference time period
+    setime: ending year of common reference time 
+    --- define the time period for verification
+    svtime: starting year of the verification time period
+    evtime: ending year of the verification time period
+    """
+
+    print('loading '+outfreq+'-mean data...')
     
-    # full_field: Flag for sending back full fields instead of global means
-    # --- define a reference time period for anomalies (e.g., 20th century)
-    # satime: starting year of common reference time period
-    # setime: ending year of common reference time 
-    # --- define the time period for verification
-    # svtime: starting year of the verification time period
-    # evtime: ending year of the verification time period
-
     # check if a global-mean file has been written previously, and if yes, use it
     load = False
     if not full_field:
@@ -929,10 +1117,15 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
 
         # load GISTEMP
         print('loading GISTEMP...')
-        datafile_calib   = 'gistemp1200_ERSSTv4.nc'
+        #datafile_calib   = 'gistemp1200_ERSSTv4.nc'
+        datafile_calib   = 'gistemp1200_ERSSTv5.nc'
+        print('loading ',datafile_calib)
         calib_vars = ['Tsfc']
-        [gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,'annual',[satime,eatime])
-        GIS_time = np.array([d.year for d in gtime])
+        [gtime,GIS_lat,GIS_lon,GIS_anomaly] = read_gridded_data_GISTEMP(datadir_calib,datafile_calib,calib_vars,outfreq,[satime,eatime])
+        if outfreq == 'monthly':
+            GIS_time = gtime
+        else:
+            GIS_time = np.array([d.year for d in gtime])
         # fix longitude shift
         nlon_GIS = len(GIS_lon)
         nlat_GIS = len(GIS_lat)
@@ -945,10 +1138,14 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
 
         # load HadCRUT
         print('loading HadCRUT...')
-        datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
+        #datafile_calib   = 'HadCRUT.4.3.0.0.median.nc'
+        datafile_calib   = 'HadCRUT.4.6.0.0.median.nc'
         calib_vars = ['Tsfc']
-        [ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,'annual',[satime,eatime])
-        CRU_time = np.array([d.year for d in ctime])
+        [ctime,CRU_lat,CRU_lon,CRU_anomaly] = read_gridded_data_HadCRUT(datadir_calib,datafile_calib,calib_vars,outfreq,[satime,eatime])
+        if outfreq == 'monthly':
+            CRU_time = ctime
+        else:
+            CRU_time = np.array([d.year for d in ctime])
        # fix longitude shift
         nlon_CRU = len(CRU_lon)
         nlat_CRU = len(CRU_lat)
@@ -961,11 +1158,15 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
 
         # load BerkeleyEarth
         print('loading BEST...')
-        datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
+        #datafile_calib   = 'Land_and_Ocean_LatLong1.nc'
+        datafile_calib   = 'Land_and_Ocean_LatLong1_28March2019.nc'
         calib_vars = ['Tsfc']
-        [btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,'annual',ref_period=[satime,eatime]
+        [btime,BE_lat,BE_lon,BE_anomaly] = read_gridded_data_BerkeleyEarth(datadir_calib,datafile_calib,calib_vars,outfreq,ref_period=[satime,eatime]
 )
-        BE_time = np.array([d.year for d in btime])
+        if outfreq == 'monthly':
+            BE_time = btime
+        else:
+            BE_time = np.array([d.year for d in btime])
         # fix longitude shift
         nlon_BE = BE_lon.shape[0]
         BE_lon = np.roll(BE_lon,shift=nlon_BE//2,axis=0)
@@ -981,7 +1182,7 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
         #path = datadir_calib + '/NOAA/'
         datafile_calib   = 'MLOST_air.mon.anom_V3.5.4.nc'
         calib_vars = ['Tsfc']
-        [mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,outfreq='annual',ref_period=[satime,eatime])
+        [mtime,MLOST_lat,MLOST_lon,MLOST_anomaly] = read_gridded_data_MLOST(datadir_calib,datafile_calib,calib_vars,outfreq,ref_period=[satime,eatime])
         MLOST_time = np.array([d.year for d in mtime])
         nlat_MLOST = len(MLOST_lat)
         nlon_MLOST = len(MLOST_lon)
@@ -1054,6 +1255,14 @@ def load_analyses(cfg,full_field=False,lmr_gm=None,lmr_time=None,satime=1900,eat
 def make_obs(ob_lat,ob_lon,dat_lat,dat_lon,dat,verbose=False):
 
     """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
+
+    """
     make observations from a gridded dataset given lat and lon locations
     
     Inputs:
@@ -1115,8 +1324,18 @@ def smooth_121(y):
 
 def prior_regrid(cfg,X,Xb_one,verbose=False):
 
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    20 April 2018
+    """
     # scraped from LMR_utils.py on 20 April 2018 and modified for local use
 
+    # first make a copy of X, otherwise import info gets overwritten
+    Xc = copy.copy(X)
+    
     # this block sets variables for compatability with original code
     regrid_method = cfg.prior.regrid_method
     prior = cfg.prior
@@ -1136,11 +1355,15 @@ def prior_regrid(cfg,X,Xb_one,verbose=False):
         # variable indices in full state vector
         ibeg_full = X.full_state_info[var]['pos'][0]
         iend_full = X.full_state_info[var]['pos'][1]
+        #print(ibeg_full,iend_full)
         # extract array corresponding to state variable "var"
         var_array_full = Xb_one_full[ibeg_full:iend_full+1, :]
         # corresponding spatial coordinates
         coords_array_full = X.coords[ibeg_full:iend_full+1, :]
-
+        #print(var_array_full.shape)
+        #print(coords_array_full.shape)
+        #print(X.coords.shape)
+        
         # Are we truncating this variable? (i.e. is it a 2D lat/lon variable?)
 
         if X.full_state_info[var]['vartype'] == '2D:horizontal':
@@ -1150,7 +1373,8 @@ def prior_regrid(cfg,X,Xb_one,verbose=False):
             ind_lat = X.full_state_info[var]['spacecoords'].index('lat')
             nlat = X.full_state_info[var]['spacedims'][ind_lat]
             nlon = X.full_state_info[var]['spacedims'][ind_lon]
-
+            #print('nlat,nlon:',nlat,nlon)
+            
             # calculate the truncated fieldNtimes
             if regrid_method == 'simple':
                 [var_array_new, lat_new, lon_new] = \
@@ -1242,15 +1466,15 @@ def prior_regrid(cfg,X,Xb_one,verbose=False):
         Nx = Nx + new_dims
 
         # LMR_lite specific mods: update lat,lon information in X for later use
-        X.prior_dict[var]['lat'] = lat_new
-        X.prior_dict[var]['lon'] = lon_new
-        X.coords = Xb_one_coords
+        Xc.prior_dict[var]['lat'] = lat_new
+        Xc.prior_dict[var]['lon'] = lon_new
+        Xc.coords = Xb_one_coords
         
         # end loop over vars
         
-    X.trunc_state_info = new_state_info
+    Xc.trunc_state_info = new_state_info
     
-    return X, Xb_one
+    return Xc, Xb_one
 
 def compute_gmt_verification(analysis_data,analysis_time):
     
@@ -1374,6 +1598,14 @@ def compute_gmt_verification(analysis_data,analysis_time):
     return gmt_verification_stats,analysis_detrended
 
 def proxy_error_ensemble_calibration(prox_manager,Ye_assim):
+
+    """
+    Originator:
+
+    Greg Hakim
+    University of Washington
+    26 February 2018
+    """
 
     """
     compute proxy error variance using ensemble calibration
