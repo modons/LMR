@@ -90,7 +90,7 @@ for iter_and_params in itertools.product(*param_iterables):
             curr_seed = LMR_config.wrapper.multi_seed[iter_num]
             cfg_dict = Utils.param_cfg_update('core.seed', curr_seed,
                                               cfg_dict=cfg_dict)
-            print('Setting current iteration seed: {}'.format(curr_seed))
+            print('Setting current prior iteration seed: {}'.format(curr_seed))
         except IndexError:
             print('ERROR: multi_seed activated but current MC iteration out of'
                   ' range for list of seed values provided in config.')
