@@ -34,7 +34,28 @@ from scipy import signal, special
 from scipy.spatial import cKDTree
 from spharm import Spharmt, getspecindx, regrid
 
+# -------------------- logging parameters --------------------
+
+logLevel = logging.DEBUG  # DEBUG, INFO, WARNING, ERROR
+logToFile = False  # write log info into ./build_ye.log file.
+logToScreen = True # write log info to screen
+
+logFormat = '%(levelname)-5.5s : %(message)s'
+
+# ------------------------------------------------------------
+
 _log = logging.getLogger(__name__)
+
+_log.setLevel(logLevel)
+formatter=logging.Formatter(logFormat)
+if logToFile:
+    fh = logging.FileHandler('build_ye.log')
+    fh.setFormatter(formatter)
+    _log.addHandler(fh)
+if logToScreen:
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    _log.addHandler(ch)
 
 def atoi(text):
     try:
@@ -1949,6 +1970,7 @@ def create_precalc_ye_filename(config,psm_key,prior_kind):
 
     return '{}_{}_{}.npz'.format(prior_str, psm_str, proxy_str)
 
+
 def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, sample_idxs):
     """
     Convenience function to load a precalculated Ye file for the current
@@ -1960,6 +1982,8 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
         Current experiment instance of the configuration object.
     proxy_manager: LMR_proxy.ProxyManager
         Current experiment proxy manager
+    proxy_set: str
+        String to indicate which proxy set to handle ('assim' or 'eval')
     sample_idxs: list(int)
         A list of the current sample indices used to create the prior ensemble.
 
@@ -1971,14 +1995,23 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
 
     begin_load = time()
 
-    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')
-
-    num_proxies_assim = len(proxy_manager.ind_assim)
-    num_samples = len(sample_idxs)
-    ye_all = np.zeros((num_proxies_assim, num_samples))
-    ye_all_coords = np.zeros((num_proxies_assim, 2))
+    if proxy_set == 'assim':
+        num_proxies = len(proxy_manager.ind_assim)
+        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))
+        proxy_objs = proxy_manager.sites_assim_proxy_objs()
+    elif proxy_set == 'eval':
+        num_proxies = len(proxy_manager.ind_eval)
+        psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_eval_proxy_objs()]))
+        proxy_objs = proxy_manager.sites_eval_proxy_objs()
+    else:
+        raise SystemExit('ERROR in load_precalculated_ye_vals_psm_per_proxy: '
+                         'Unrecognized proxy_set argument. Exiting.')
     
-    psm_keys = list(set([pobj.psm_obj.psm_key for pobj in proxy_manager.sites_assim_proxy_objs()]))    
+    num_samples = len(sample_idxs)
+    ye_all = np.zeros((num_proxies, num_samples))
+    ye_all_coords = np.zeros((num_proxies, 2))
+
+    load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')    
     precalc_files = {}
     for psm_key in psm_keys:
 
@@ -2016,33 +2049,35 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
             raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
 
         load_fname = create_precalc_ye_filename(config,psm_key,pkind)
-        _log.info('Loading file:' + load_fname)
-        print('loading Ye file: ',load_fname)
+        _log.info('Loading Ye file:' + load_fname)
 
         # check if file exists
         if not os.path.isfile(os.path.join(load_dir, load_fname)):
             _log.error('ERROR: Ye file {} does not exist! -- run the precalc file builder: '
                        'misc/build_ye_file.py to generate the missing file'.format(load_fname))
             raise SystemExit()
+
         precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
 
     
     _log.info('Now extracting proxy type-dependent Ye values...')
-    for i, pobj in enumerate(proxy_manager.sites_assim_proxy_objs()):
+
+    for i, pobj in enumerate(proxy_objs):
         psm_key = pobj.psm_obj.psm_key
         pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
         precalc_vals = precalc_files[psm_key]['ye_vals']
         
         pidx = pid_idx_map[pobj.id]
         ye_all[i] = precalc_vals[pidx, sample_idxs]
-
+            
         ye_all_coords[i,:] = np.asarray([pobj.lat, pobj.lon], dtype=np.float64)
-        
+
     _log.info('Completed in ' +  str(time() - begin_load) + 'secs')
         
     return ye_all, ye_all_coords
 
 #--GH: end new stuff from Brewster--
+
 
 def load_precalculated_ye_vals(config, proxy_manager, sample_idxs):
     """
