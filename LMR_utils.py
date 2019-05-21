@@ -37,7 +37,7 @@ from spharm import Spharmt, getspecindx, regrid
 # -------------------- logging parameters --------------------
 
 logLevel = logging.DEBUG  # DEBUG, INFO, WARNING, ERROR
-logToFile = False  # write log info into ./build_ye.log file.
+logToFile = False  # write log info into ./lmr_utils.log file.
 logToScreen = True # write log info to screen
 
 logFormat = '%(levelname)-5.5s : %(message)s'
@@ -49,7 +49,7 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logLevel)
 formatter=logging.Formatter(logFormat)
 if logToFile:
-    fh = logging.FileHandler('build_ye.log')
+    fh = logging.FileHandler('lmr_utils.log')
     fh.setFormatter(formatter)
     _log.addHandler(fh)
 if logToScreen:
