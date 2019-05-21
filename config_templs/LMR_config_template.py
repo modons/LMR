@@ -79,6 +79,8 @@ Revisions:
    [ R. Tardif, Univ. of Washington, April 2018 ]
  - Added class definitions related to DAPS intercomparison reconstruction experiments
    [ R. Tardif, Univ. of Washington, Dec 2018 ]
+ - Added new variable recon_months to allow the prior to be averaged over arbitrary months, or individual months. Defaults to a list of all months for annual averages.
+   [G. Hakim, University of Washington, May 2019]
 """
 
 from os.path import join
@@ -274,6 +276,7 @@ class core(ConfigGroup):
     #recon_timescale = 100
     #recon_timescale = 250
     #recon_timescale = 500
+    recon_months = [1,2,3,4,5,6,7,8,9,10,11,12]
     
     nens = 100
 
@@ -335,6 +338,7 @@ class core(ConfigGroup):
         self.archive_dir = self.archive_dir
         self.write_posterior_Ye = self.write_posterior_Ye
         self.anom_reference_period = self.anom_reference_period
+        self.recon_months = self.recon_months
 
         
         self.save_archive = self.save_archive
@@ -2076,8 +2080,13 @@ class prior(ConfigGroup):
             self.datadir_prior = join(lmr_path, 'data', 'model',
                                       self.prior_source)
 
+#----30 April 2019: GH add from from new config variable recon_months
         if core.recon_timescale == 1:
-            self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
+            if core.recon_months:
+                self.avgInterval = {'annual': core.recon_months} # annual (calendar) as default
+            else:			  	  
+                print('using 12-month annual average')
+                self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
             # If user config has prior.prior_timescale set:
             if (self.prior_timescale is not None) and (self.prior_timescale > 1):
