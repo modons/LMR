@@ -229,7 +229,13 @@ class core(ConfigGroup):
         exist and the required state variables are missing the reconstruction
         will quit.
     recon_period: tuple(int)
-        Time period for reconstruction
+        Time period for reconstruction (in year CE)
+    recon_timescale: int
+        Timescale of the reconstruction (in years). Defines the averaging of the 
+        prior states and interval over which proxies are assimilated.
+    recon_months: list(int)
+        If recon_timescale is 1 (annual), defines the sequence of months over which  
+        the prior states are averaged. Enables seasonal reconstructions.
     nens: int
         Ensemble size
     loc_rad: float
@@ -273,11 +279,13 @@ class core(ConfigGroup):
     
     # time interval of reconstructed fields (in years). Note: should be of type integer
     recon_timescale = 1    # annual
-    #recon_timescale = 100
-    #recon_timescale = 250
-    #recon_timescale = 500
-    recon_months = [1,2,3,4,5,6,7,8,9,10,11,12]
-    
+    #recon_timescale = 100  # centennial
+
+    # for annual reconstructions, sequence of months over which the prior states are averaged
+    # default is set to None, which translates into the full calendar year:
+    # [1,2,3,4,5,6,7,8,9,10,11,12]
+    recon_months = None
+
     nens = 100
 
     seed = None
@@ -287,7 +295,7 @@ class core(ConfigGroup):
     inflation_fact = None
 
     ob_err_adjust = True
-
+ 
     revert_to_prior = True
 
     # Reference period w.r.t. which anomalies are to be defined.
@@ -2082,12 +2090,13 @@ class prior(ConfigGroup):
 
 #----30 April 2019: GH add from from new config variable recon_months
         if core.recon_timescale == 1:
-            if core.recon_months:
-                self.avgInterval = {'annual': core.recon_months} # annual (calendar) as default
-            else:			  	  
-                print('using 12-month annual average')
+            if core.recon_months is not None:
+                self.avgInterval = {'annual': core.recon_months}
+            else:
                 self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
+            if core.recon_months is not None:
+                core.recon_months = None # this is not activated in multiyear recons. 
             # If user config has prior.prior_timescale set:
             if (self.prior_timescale is not None) and (self.prior_timescale > 1):
                 self.avgInterval = {'multiyear': [int(self.prior_timescale)]}

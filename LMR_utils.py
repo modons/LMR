@@ -505,29 +505,34 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
             vars_to_save_mean = {'nens':nens, 'years':years, \
                                  dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                  coordname1:coord1, coordname2:coord2, \
-                                 'xbm':xbm, 'xam':xam}
+                                 'xbm':xbm, 'xam':xam, \
+                                 'recon_months':cfg_core.recon_months}
                 
             if cfg_core.save_archive == 'ens_full': 
                 vars_to_save_ens  = {'nens':nens, 'years':years, \
                                      dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
-                                     'xb_ens':Xb, 'xa_ens':xa_ens}
+                                     'xb_ens':Xb, 'xa_ens':xa_ens, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_variance':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
-                                     'xbv':xbv, 'xav':xav}                
+                                     'xbv':xbv, 'xav':xav, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
-                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl}
+                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
                                      'years':years, dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
-                                     'xb_subsample':xb_sub, 'xa_subsample':xa_sub}
+                                     'xb_subsample':xb_sub, 'xa_subsample':xa_sub, \
+                                     'recon_months':cfg_core.recon_months}
 
 
         elif state_info[var]['vartype'] == '2D:meridional_vertical':
@@ -599,34 +604,39 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
             vars_to_save_mean = {'nens':nens, 'years':years, \
                                  dimcoord1:state_info[var]['spacedims'][0], \
                                  dimcoord2:state_info[var]['spacedims'][1], \
-                                 coordname1:coord1, coordname2:coord2,
-                                 'xbm':xbm, 'xam':xam}
+                                 coordname1:coord1, coordname2:coord2, \
+                                 'xbm':xbm, 'xam':xam, \
+                                 'recon_months':cfg_core.recon_months}
 
             if cfg_core.save_archive == 'ens_full':
                 vars_to_save_ens  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
                                      dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, \
-                                     'xb_ens':Xb, 'xa_ens':xa_ens}
+                                     'xb_ens':Xb, 'xa_ens':xa_ens,
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_variance':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
                                      dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, \
-                                     'xbv':xbv, 'xav':xav}
+                                     'xbv':xbv, 'xav':xav, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
                                      dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
-                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl}
+                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
                                      'years':years, dimcoord1:state_info[var]['spacedims'][0], \
                                      dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, \
-                                     'xb_subsample':xb_sub, 'xa_subsample':xa_sub}
+                                     'xb_subsample':xb_sub, 'xa_subsample':xa_sub, \
+                                     'recon_months':cfg_core.recon_months}
 
 
         elif state_info[var]['vartype'] == '1D:meridional': 
@@ -692,27 +702,32 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
             # ensemble mean
             vars_to_save_mean = {'nens':nens, 'years':years, \
                                  dimcoord1:state_info[var]['spacedims'][0], \
-                                 coordname1:coord1, 'xbm':xbm, 'xam':xam}            
+                                 coordname1:coord1, 'xbm':xbm, 'xam':xam, \
+                                 'recon_months':cfg_core.recon_months}            
             
             if cfg_core.save_archive == 'ens_full':
                 vars_to_save_ens  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
-                                     coordname1:coord1, 'xb_ens':Xb, 'xa_ens':xa_ens}
+                                     coordname1:coord1, 'xb_ens':Xb, 'xa_ens':xa_ens, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_variance':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
-                                     coordname1:coord1, 'xbv':xbv, 'xav':xav}
+                                     coordname1:coord1, 'xbv':xbv, 'xav':xav, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
                                      coordname1:coord1, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
-                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl}
+                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl, \
+                                     'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
                                      'years':years, dimcoord1:state_info[var]['spacedims'][0], \
                                      coordname1:coord1, \
-                                     'xb_subsample':xb_sub, 'xa_subsample':xa_sub}
+                                     'xb_subsample':xb_sub, 'xa_subsample':xa_sub, \
+                                     'recon_months':cfg_core.recon_months}
                 
                 
         elif state_info[var]['vartype'] == '0D:time series': 
@@ -763,18 +778,23 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                     xa_sub[k,:] = Xa[:,0:cfg_core.save_archive_ens_subsample]
                     
                 
-            vars_to_save_ens = {'nens':nens, 'years':years, 'xb_ens':Xb, 'xa_ens':xa_ens}
-            vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam}
+            vars_to_save_ens = {'nens':nens, 'years':years, 'xb_ens':Xb, 'xa_ens':xa_ens,
+                                'recon_months': cfg_core.recon_months}
+            vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam,
+                                 'recon_months': cfg_core.recon_months}
 
             if cfg_core.save_archive == 'ens_variance':
-                vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav}
+                vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav,
+                                     'recon_months': cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
-                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl}
+                                     'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl,
+                                     'recon_months': cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
-                                     'years':years, 'xb_subsample':xb_sub, 'xa_subsample':xa_sub}
+                                     'years':years, 'xb_subsample':xb_sub, 'xa_subsample':xa_sub,
+                                     'recon_months': cfg_core.recon_months}
 
             # (full) ensemble to file for this variable type
             filen = workdir + '/ensemble_full_' + var

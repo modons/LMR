@@ -452,7 +452,8 @@ def LMR_driver_callable(cfg=None):
 
     np.savez(filen, Xb_one=out_Xb_one, Xb_one_aug=out_Xb_one_aug,
              stateDim=state_dim,
-             Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info)
+             Xb_one_coords=Xb_one_coords, state_info=X.trunc_state_info,
+             recon_months=core.recon_months)
 
     # NEW: write out (to prior_sampling_info.txt file) the info on prior sampling
     # i.e. the list of indices (i.e. years for annual recons) randomly chosen
@@ -495,7 +496,9 @@ def LMR_driver_callable(cfg=None):
             Xb_var = np.reshape(out_Xb_one[ibeg:iend+1,:],(nlat_new,nlon_new,nens))
 
             filen = workdir + '/' + 'Xb_one' + '_' + var 
-            np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,lat=lat_new,lon=lon_new)
+            np.savez(filen,Xb_var=Xb_var,nlat=nlat_new,nlon=nlon_new,nens=nens,
+                     lat=lat_new,lon=lon_new,
+                     recon_months=core.recon_months)
 
         else:
             print(('Warning: Only saving 2D:horizontal variable. Variable (%s) is of another type' %(var)))
@@ -708,15 +711,18 @@ def LMR_driver_callable(cfg=None):
                 shmt_ensemble[iyr, k] = shmt
 
         filen = join(workdir, 'gmt_ensemble')
-        np.savez(filen, gmt_ensemble=gmt_ensemble, nhmt_ensemble=nhmt_ensemble,
-                 shmt_ensemble=shmt_ensemble, recon_times=recon_times)
+        np.savez(filen, gmt_ensemble=gmt_ensemble,
+                 nhmt_ensemble=nhmt_ensemble,
+                 shmt_ensemble=shmt_ensemble,
+                 recon_times=recon_times,
+                 recon_months=core.recon_months)
 
         # save global mean temperature history and the proxies assimilated
         print(('saving global mean temperature update history and ',
                'assimilated proxies...'))
         filen = join(workdir, 'gmt')
         np.savez(filen, gmt_save=gmt_save, nhmt_save=nhmt_save, shmt_save=shmt_save,
-                 recon_times=recon_times,
+                 recon_times=recon_times, recon_months=core.recon_months,
                  apcount=assim_proxy_count,
                  tpcount=assim_proxy_count)
 
