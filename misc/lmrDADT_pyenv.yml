@@ -28,6 +28,7 @@ dependencies:
   - gsw
   - co2syspy
   - baysplinepy
+  - bayspar
   - baymagpy
   - bayfox
   - deltaoxfox

@@ -543,13 +543,19 @@ class prior_ccsm3_trace21ka(prior_master):
 class prior_cgenie_petm(prior_master):
 
     def read_prior(self):
-        from load_gridded_data import read_gridded_data_cGENIE_model
-        self.prior_dict = read_gridded_data_cGENIE_model(self.prior_datadir,
-                                                         self.prior_datafile,
-                                                         self.statevars,
-                                                         self.avgInterval,
-                                                         self.detrend,
-                                                         self.anom_reference)
+        #from load_gridded_data import read_gridded_data_cGENIE_model
+        #self.prior_dict = read_gridded_data_cGENIE_model(self.prior_datadir,
+        #                                                 self.prior_datafile,
+        #                                                 self.statevars,
+        #                                                 self.avgInterval,
+        #                                                 self.detrend,
+        #                                                 self.anom_reference)
+
+        from load_gridded_data import read_gridded_data_cGENIE_equilibrium_runs
+        self.prior_dict = read_gridded_data_cGENIE_equilibrium_runs(self.prior_datadir,
+                                                                    self.prior_datafile,
+                                                                    self.statevars,
+                                                                    self.member_simuls)
         return
 
 

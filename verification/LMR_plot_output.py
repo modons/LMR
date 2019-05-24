@@ -421,11 +421,12 @@ if make_gmt_plot:
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
-        # re-define time axis
-        xlabels = ax.get_xticks()
-        indnonzero = np.where(xlabels != 0.0)        
-        xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
-        ax.set_xticklabels(xlabels)
+        # re-define time axis if needed
+        if timeaxis == 'kyr BP':
+            xlabels = ax.get_xticks()
+            indnonzero = np.where(xlabels != 0.0)        
+            xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
+            ax.set_xticklabels(xlabels)
         
         plt.savefig('%s/%s_GMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()
@@ -451,11 +452,12 @@ if make_gmt_plot:
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
-        # re-define time axis
-        xlabels = ax.get_xticks()
-        indnonzero = np.where(xlabels != 0.0)        
-        xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
-        ax.set_xticklabels(xlabels)
+        # re-define time axis if needed
+        if timeaxis == 'kyr BP':
+            xlabels = ax.get_xticks()
+            indnonzero = np.where(xlabels != 0.0)        
+            xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
+            ax.set_xticklabels(xlabels)
         
         plt.savefig('%s/%s_NHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()
@@ -481,11 +483,12 @@ if make_gmt_plot:
         plt.ylabel(ylabel,fontsize=12,fontweight='bold')
         plt.legend( loc='lower right', numpoints = 1,fontsize=12)
 
-        # re-define time axis
-        xlabels = ax.get_xticks()
-        indnonzero = np.where(xlabels != 0.0)        
-        xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
-        ax.set_xticklabels(xlabels)
+        # re-define time axis if needed
+        if timeaxis == 'kyr BP':
+            xlabels = ax.get_xticks()
+            indnonzero = np.where(xlabels != 0.0)        
+            xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
+            ax.set_xticklabels(xlabels)
         
         plt.savefig('%s/%s_SHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()

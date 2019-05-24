@@ -317,7 +317,8 @@ class core(ConfigGroup):
         super(self.__class__, self).__init__(**kwargs)
 
         # some checks
-        if type(self.recon_timescale) != 'int': self.recon_timescale = int(self.recon_timescale)
+        if not self.recon_timescale.startswith('interval') and type(self.recon_timescale) != 'int':
+            self.recon_timescale = int(self.recon_timescale)
         
         self.nexp = self.nexp
         self.lmr_path = self.lmr_path
@@ -2076,7 +2077,10 @@ class prior(ConfigGroup):
             self.datadir_prior = join(lmr_path, 'data', 'model',
                                       self.prior_source)
 
-        if core.recon_timescale == 1:
+        if core.recon_timescale.startswith('interval:'):
+            self.avgInterval = {'multiyear': [int(core.recon_timescale.split(':')[1])]}
+            core.recon_timescale = int(core.recon_timescale.split(':')[1])
+        elif core.recon_timescale == 1:
             self.avgInterval = {'annual': [1,2,3,4,5,6,7,8,9,10,11,12]} # annual (calendar) as default
         elif core.recon_timescale > 1:
             # If user config has prior.prior_timescale set:
@@ -2088,8 +2092,7 @@ class prior(ConfigGroup):
             else:
                 raise SystemExit('ERROR in config.: prior.prior_timescale must be > 1!')
         else:
-            print('ERROR in config.: unrecognized core.recon_timescale!')
-            raise SystemExit()
+            raise SystemExit('ERROR in config.: unrecognized core.recon_timescale!')
 
 
         if self.regrid_method != 'esmpy':

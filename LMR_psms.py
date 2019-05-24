@@ -501,7 +501,7 @@ class LinearPSM(BasePSM):
         except Exception as exception:
             print('Exception raised', exception)
 
-        if nobs and nobs < 10:  # skip rest if insufficient overlapping data
+        if nobs is not None and nobs < 25:  # skip rest if insufficient overlapping data
             print('Insufficient obs./calib. overlap'
                   ' to calibrate psm: nobs=%d' %nobs)
             raise ValueError()
@@ -601,7 +601,9 @@ class LinearPSM(BasePSM):
         # Model information
         self.AIC = regress.aic
         self.BIC = regress.bic
-
+        self.R2    = regress.rsquared
+        self.R2adj = regress.rsquared_adj
+        
         # Extra diagnostics
         self.calib_time = time_common
         self.calib_refer_values = reg_xa
@@ -1308,7 +1310,7 @@ class BilinearPSM(BasePSM):
         except Exception as exception:
             print('Exception raised', exception)
             
-        if nobs and nobs < 10:  # skip if insufficient overlapping data
+        if nobs is not None and nobs < 25:  # skip if insufficient overlapping data
             print('Insufficient obs./calib. overlap'
                   ' to calibrate psm: nobs=%d' %nobs)
             raise ValueError()
@@ -1331,7 +1333,9 @@ class BilinearPSM(BasePSM):
         # Model information
         self.AIC = regress.aic
         self.BIC = regress.bic
-
+        self.R2    = regress.rsquared
+        self.R2adj = regress.rsquared_adj
+        
         # Extra diagnostics
         # ... add here ...
         

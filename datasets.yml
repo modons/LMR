@@ -319,10 +319,11 @@ cgenie_petm:
   info:
     multiple_vars: True
     template: '[vardef_template]'
-    available_vars: ['tas_sfc_Adec', 'tos_sfc_Adec']
+    available_vars: ['tas_sfc_Aequ', 'tos_sfc_Oequ', 'sos_sfc_Oequ', 'pho_sfc_Oequ',
+                     'thetao_128m_Oequ', 'so_128m_Oequ', 'pho_128m_Oequ']
 
   datadir: null
-  datafile: '[vardef_template]_cgenie_petm.nc'
+  datafile: '[vardef_template]_cGENIE_prePETM-PETMv0.nc'
   dataformat: NCD
 
 
