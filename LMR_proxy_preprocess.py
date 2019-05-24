@@ -67,6 +67,8 @@ def main():
     # Section for User-defined options: begin
     #
 
+    # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
+    
     #proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
 
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
@@ -92,7 +94,7 @@ def main():
     #LMRdb_dbversion = 'v0.2.0'
     #LMRdb_dbversion = 'v0.3.0'
     # LMRdb_dbversion = 'v0.4.0'
-    LMRdb_dbversion = 'v1.0.0'
+    LMRdb_dbversion = 'v1.0.0'  # first release, same as v0.4.0
 
     # File containing info on duplicates in proxy records
     infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMR'+LMRdb_dbversion+'.xlsx'
@@ -116,12 +118,12 @@ def main():
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
 
     # datadir: directory where the original proxy datafiles are located
-    datadir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
-
+    datadir = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    
     # outdir: directory where the proxy database files will be created
     #         The piece before /data/proxies should correspond to your "lmr_path" set in LMR_config.py
-    outdir = '/home/katabatic/wperkins/data/LMR/data/proxies/'
-
+    outdir  = '/home/disk/kalman3/rtardif/LMR/data/proxies/'
+    
     #
     # Section for User-defined options: end
     # ***************************************************************
@@ -476,223 +478,6 @@ def pages_xcel_to_dataframes(filename, metaout, dataout, take_average_out):
     #write data to file
     df = df.to_sparse()
     df.to_pickle(dataout)
-
-# ===================================================================================
-# For PAGES2k v2.0.0 proxy data ---------------------------------------------------------
-# ===================================================================================
-
-def pages2kv2_pickle_to_dataframes(datadir, metaout, dataout, eliminate_duplicates, year_type, gaussianize_data):
-    """
-    Takes in a Pages2k pckl file and converts it to dataframe storage.
-    Authors: R. Tardif, Univ. of Washington, Jan 2016.
-             M. Erb, Univ. of Southern California, Feb 2017
-    """
-
-    # ===============================================================================
-    # Upload proxy data from Pages2k v2 pickle file
-    # ===============================================================================
-
-    # Open the pickle file containing the Pages2k data
-    f = gzip.open(datadir+'PAGES2k_v2.0.0_tempOnly.pklz','rb')
-    pages2k_data = pickle.load(f)
-    f.close()
-
-    # ===============================================================================
-    # Produce a summary of uploaded proxy data &
-    # generate integrated database in pandas DataFrame format
-    # ===============================================================================
-
-    # Summary of the final_proxy_list
-    nbsites = len(pages2k_data)
-    print('----------------------------------------------------------------------')
-    print(' SUMMARY: ')
-    print('  Total nb of records : ', nbsites)
-    print('  ------------------------------------------------------')
-
-    tot = []
-    # Loop over proxy types specified in *main*
-    counter = 0
-    # Build up pandas DataFrame
-    metadf  = pd.DataFrame()
-    headers = ['NCDC ID','Site name','Lat (N)','Lon (E)','Elev','Archive type','Proxy measurement','Resolution (yr)',\
-               'Oldest (C.E.)','Youngest (C.E.)','Location','climateVariable','Realm','Relation_to_climateVariable',\
-               'Seasonality', 'Databases']
-
-    nb = []
-    for counter in range(0,len(pages2k_data)):
-
-        #counter = 13 # An example of a sub-annual record
-
-        # Give each record a unique descriptive name
-        pages2k_data[counter]['siteID'] = "PAGES2kv2_"+pages2k_data[counter]['dataSetName']+"_"+pages2k_data[counter]['paleoData_pages2kID']+":"+pages2k_data[counter]['paleoData_variableName']
-        nb.append(pages2k_data[counter]['siteID'])
-        print("Processing metadata", counter+1, "/", len(pages2k_data), ":",
-              pages2k_data[counter]['paleoData_pages2kID'])
-
-        # If the time axis goes backwards (i.e. newer to older), reverse it.
-        if pages2k_data[counter]['year'][-1] - pages2k_data[counter]['year'][-2] < 0:
-            pages2k_data[counter]['year'].reverse()
-            pages2k_data[counter]['paleoData_values'].reverse()
-
-        # If subannual, average up to annual --------------------------------------------------------
-        time_raw = np.array(pages2k_data[counter]['year'],dtype=np.float)
-        data_raw = np.array(pages2k_data[counter]['paleoData_values'],dtype=np.float)
-
-        # Remove values where either time or data is nan.
-        nan_indices = np.isnan(time_raw)+np.isnan(data_raw)
-        time_raw = time_raw[~nan_indices]
-        data_raw = data_raw[~nan_indices]
-
-        valid_frac = 0.5
-
-        # Use the following function to make annual-means.
-        # Inputs: time_raw, data_raw, valid_frac, year_type.  Outputs: time_annual, data_annual
-        time_annual, data_annual, proxy_resolution = compute_annual_means(time_raw,data_raw,valid_frac,year_type)
-
-        # If gaussianize_data is set to true, transform the proxy data to Gaussian.
-        # This option should only be used when using regressions, not physically-based PSMs.
-        if gaussianize_data == True:
-            data_annual = gaussianize.gaussianize(data_annual)
-
-        # Write the annual data to the dictionary, so they can use written to
-        # the data file outside of this loop.
-        pages2k_data[counter]['time_annual'] = time_annual
-        pages2k_data[counter]['data_annual'] = data_annual
-
-        # Rename the proxy types in the same convention as the NCDC dataset.
-        # Proxy types not renamed: bivalve, borehole, documents, hybrid
-        if (pages2k_data[counter]['archiveType'] == 'coral') or (pages2k_data[counter]['archiveType'] == 'sclerosponge'):
-            pages2k_data[counter]['archiveType'] = 'Corals and Sclerosponges'
-        elif pages2k_data[counter]['archiveType'] == 'glacier ice':
-            pages2k_data[counter]['archiveType'] = 'Ice Cores'
-        elif pages2k_data[counter]['archiveType'] == 'lake sediment':
-            pages2k_data[counter]['archiveType'] = 'Lake Cores'
-        elif pages2k_data[counter]['archiveType'] == 'marine sediment':
-            pages2k_data[counter]['archiveType'] = 'Marine Cores'
-        elif pages2k_data[counter]['archiveType'] == 'speleothem':
-            pages2k_data[counter]['archiveType'] = 'Speleothems'
-        elif pages2k_data[counter]['archiveType'] == 'tree':
-            pages2k_data[counter]['archiveType'] = 'Tree Rings'
-
-        # Rename some of the the proxy measurements to be more standard.
-        if (pages2k_data[counter]['archiveType'] == 'Ice Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'd18O1'):
-            pages2k_data[counter]['paleoData_variableName'] = 'd18O'
-        elif (pages2k_data[counter]['archiveType'] == 'Lake Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'temperature1'):
-            pages2k_data[counter]['paleoData_variableName'] = 'temperature'
-        elif (pages2k_data[counter]['archiveType'] == 'Lake Cores') and (pages2k_data[counter]['paleoData_variableName'] == 'temperature3'):
-            pages2k_data[counter]['paleoData_variableName'] = 'temperature'
-
-        # Not all records have data for elevation.  In these cases, set elevation to nan.
-        if 'geo_meanElev' not in pages2k_data[counter]:
-            pages2k_data[counter]['geo_meanElev'] = np.nan
-
-        # Ensure lon is in [0,360] domain
-        if pages2k_data[counter]['geo_meanLon'] < 0.0:
-            pages2k_data[counter]['geo_meanLon'] = 360 + pages2k_data[counter]['geo_meanLon']
-
-        # Determine the seasonality of the record.
-        # Seasonal names were mapped the three-month climatological seasons.
-        # 'early summer' was mapped to the first two months of summer only.  Is this right????????????
-        # 'growing season' was mapped to summer.
-        season_orig = pages2k_data[counter]['climateInterpretation_seasonality']
-        if any(char.isdigit() for char in season_orig):
-            pages2k_data_seasonality = map(int,season_orig.split(' '))
-        elif season_orig == 'annual':
-            if year_type == 'tropical year': pages2k_data_seasonality = [4,5,6,7,8,9,10,11,12,13,14,15]
-            else: pages2k_data_seasonality = [1,2,3,4,5,6,7,8,9,10,11,12]
-        elif season_orig == 'summer':
-            if pages2k_data[counter]['geo_meanLat'] >= 0: pages2k_data_seasonality = [6,7,8]
-            else: pages2k_data_seasonality = [-12,1,2]
-        elif season_orig == 'winter':
-            if pages2k_data[counter]['geo_meanLat'] >= 0: pages2k_data_seasonality = [-12,1,2]
-            else: pages2k_data_seasonality = [6,7,8]
-        elif season_orig == 'winter/spring':
-            if pages2k_data[counter]['geo_meanLat'] >= 0: pages2k_data_seasonality = [-12,1,2,3,4,5]
-            else: pages2k_data_seasonality = [6,7,8,9,10,11]
-        elif season_orig == 'early summer':
-            if pages2k_data[counter]['geo_meanLat'] >= 0: pages2k_data_seasonality = [6,7]
-            else: pages2k_data_seasonality = [-12,1]
-        elif season_orig == 'growing season':
-            if pages2k_data[counter]['geo_meanLat'] >= 0: pages2k_data_seasonality = [6,7,8]
-            else: pages2k_data_seasonality = [-12,1,2]
-        else:
-            if year_type == 'tropical year': pages2k_data_seasonality = [4,5,6,7,8,9,10,11,12,13,14,15]
-            else: pages2k_data_seasonality = [1,2,3,4,5,6,7,8,9,10,11,12]
-
-        # Spell out the name of the interpretation variable.
-        if pages2k_data[counter]['climateInterpretation_variable'] == 'T':
-            pages2k_data[counter]['climateInterpretation_variable'] = 'temperature'
-
-        # Save to a dataframe
-        frame  = pd.DataFrame({'a':pages2k_data[counter]['siteID'], 'b':pages2k_data[counter]['geo_siteName'], 'c':pages2k_data[counter]['geo_meanLat'], \
-                               'd':pages2k_data[counter]['geo_meanLon'], 'e':pages2k_data[counter]['geo_meanElev'], \
-                               'f':pages2k_data[counter]['archiveType'], 'g':pages2k_data[counter]['paleoData_variableName'], \
-                               'h':proxy_resolution, 'i':pages2k_data[counter]['time_annual'][0], 'j':pages2k_data[counter]['time_annual'][-1], \
-                               'k':pages2k_data[counter]['geo_pages2kRegion'], 'l':pages2k_data[counter]['climateInterpretation_variable'], \
-                               'm':pages2k_data[counter]['climateInterpretation_variableDetail'], \
-                               'n':pages2k_data[counter]['climateInterpretation_interpDirection'], 'o':None, 'p':None}, index=[counter])
-        # To get seasonality & databases *lists* into columns 'o' and 'p' of DataFrame
-        frame.set_value(counter,'o',pages2k_data_seasonality)
-        frame.set_value(counter,'p',['PAGES2kv2'])
-        # Append to main DataFrame
-        metadf = metadf.append(frame)
-
-        #print '   ', '{:40}'.format(key), ' : ', len(nb)
-        tot.append(len(nb))
-    nbtot = sum(tot)
-    print('  ------------------------------------------------------')
-    print('   ','{:40}'.format('Total:'), ' : ', nbtot)
-    print('----------------------------------------------------------------------')
-    print(' ')
-
-
-    # Redefine column headers
-    metadf.columns = headers
-
-    # Write metadata to file
-    print('Now writing metadata to file:', metaout)
-    metadf.to_pickle(metaout)
-
-    # -----------------------------------------------------
-    # Build the proxy **data** DataFrame and output to file
-    # -----------------------------------------------------
-    print(' ')
-    print('Now creating & loading the data in the pandas DataFrame...')
-    print(' ')
-
-    for counter in range(0,len(pages2k_data)):
-        print("Processing metadata", counter+1, "/", len(pages2k_data), ":",
-              pages2k_data[counter]['paleoData_pages2kID'])
-
-        nbdata = len(pages2k_data[counter]['time_annual'])
-
-        # Load data in numpy array
-        frame_data = np.zeros(shape=[nbdata,2])
-        frame_data[:,0] = pages2k_data[counter]['time_annual']
-        frame_data[:,1] = pages2k_data[counter]['data_annual']
-
-        if counter == 0:
-            # Build up pandas DataFrame
-            header = ['NCDC ID', pages2k_data[counter]['siteID']]
-            df = pd.DataFrame({'a':frame_data[:,0], 'b':frame_data[:,1]})
-            df.columns = header
-        else:
-            frame = pd.DataFrame({'NCDC ID':frame_data[:,0], pages2k_data[counter]['siteID']:frame_data[:,1]})
-            df = df.merge(frame, how='outer', on='NCDC ID')
-
-
-    # Fix DataFrame index and column name
-    col0 = df.columns[0]
-    df.set_index(col0, drop=True, inplace=True)
-    df.index.name = 'Year C.E.'
-    df.sort_index(inplace=True)
-
-    # Write data to file
-    print('Now writing to file:', dataout)
-    df.to_pickle(dataout)
-    print(' ')
-    print('Done!')
-
 
 
 # ===================================================================================
@@ -1810,7 +1595,7 @@ def read_proxy_data_NCDCtxt(site, proxy_def, year_type=None, gaussianize_data=Fa
             #proxydata_dict[proxy_name]['Sensitivity']      = d['Sensitivity']
 
             proxydata_dict[proxy_name]['Years']            = time_annual
-            proxydata_dict[proxy_name]['Data']             = data_annual[:, k]
+            proxydata_dict[proxy_name]['Data']             = data_annual[:,k]
 
 
 
