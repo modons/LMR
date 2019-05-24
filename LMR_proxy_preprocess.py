@@ -67,6 +67,9 @@ def main():
     # Section for User-defined options: begin
     #
 
+    # format of file(s) containing the metadata and data DataFrames
+    output_format = 'pickle' # recognized options : 'pickle' or 'hdf5'
+    
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
     
     #proxy_data_source = 'PAGES2Kv1' # proxies from PAGES2k phase 1 (2013)
@@ -1852,9 +1855,6 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     # Redefine column headers
     metadf.columns = headers
 
-    # Write metadata to file
-    print('Now writing metadata to file: %s' %meta_outfile)
-    metadf.to_pickle(meta_outfile)
 
     # -----------------------------------------------------
     # Build the proxy **data** DataFrame and output to file
@@ -1892,13 +1892,38 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     df.index.name = 'Year C.E.'
     df.sort_index(inplace=True)
 
-    # Write data to file
-    print('Now writing to file:', data_outfile)
-    df = df.to_sparse()
-    df.to_pickle(data_outfile)
 
-    print('Done!')
+    # ----------------------------
+    # output dataframes to file(s)
+    # ----------------------------
 
+    if output_format == 'pickle':
+    
+        # Write metadata to pckl file
+        print('Now writing metadata to file: %s' %meta_outfile)
+        metadf.to_pickle(meta_outfile)
+
+        # Write data to pckl file
+        print('Now writing to file:', data_outfile)
+        df = df.to_sparse()
+        df.to_pickle(data_outfile)
+
+    elif output_format == 'hdf5':
+
+        # Write metadata and data to outfile (h5).
+        data_outfile = data_outfile.replace('.pckl', '.h5')
+
+        print('Now writing to file:', data_outfile)
+        metadf.to_hdf(data_outfile,'meta',mode='w')
+        df = df.to_sparse()
+        df.to_hdf(data_outfile,'proxy',mode='a')
+        
+    else:
+        raise ValueError('Unrecognized format for ouput files. '
+                         'Please modify your choice of <<output_format>> parameter')
+    
+    
+    print('LMR_proxy_preprocess done!')
 
 
 # =========================================================================================
