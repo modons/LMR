@@ -68,7 +68,8 @@ def main():
     #
 
     # format of file(s) containing the metadata and data DataFrames
-    output_format = 'pickle' # recognized options : 'pickle' or 'hdf5'
+    # recognized options : 'pickle' or 'hdf5'
+    output_format = 'pickle'
     
     # --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** --- *** ---
     
@@ -250,12 +251,14 @@ def main():
 
         # --- PAGES2k phase2 (2017) data
         if include_PAGES2kphase2:
-            pages2kv2_dict = pages2kv2_pickle_to_dict(datadir, PAGES2kphase2file, proxy_def, year_type, gaussianize_data)
+            pages2kv2_dict = pages2kv2_pickle_to_dict(datadir, PAGES2kphase2file, proxy_def, year_type,
+                                                      gaussianize_data)
         else:
             pages2kv2_dict = []
 
         # --- Merge datasets, scrub duplicates and write metadata & data to file
-        merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile, data_outfile, infoDuplicates, eliminate_duplicates)
+        merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile, data_outfile,
+                                  output_format, infoDuplicates, eliminate_duplicates)
 
 
     elif proxy_data_source == 'DADT':
@@ -328,12 +331,18 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
     else:
         raise SystemExit('ERROR in compute_annual_means: Unrecognized shape of data input array.')
 
+    
+    # -------------------------------------------
+    # Determine temporal resolution of the record
+    # -------------------------------------------
 
+    # time differences between adjacent data pts
     time_between_records = np.diff(time_raw, n=1)
 
-    # Temporal resolution of the data, calculated as the mode of time difference.
-    time_resolution = abs(stats.mode(time_between_records)[0][0])
-
+    # Temporal resolution taken as the mode of the time differences
+    mode_time_between_records = stats.mode(time_between_records)
+    time_resolution = abs(mode_time_between_records.mode[0])
+    
     # check if time_resolution = 0.0 !!! sometimes adjacent records are tagged at same time ...
     if time_resolution == 0.0:
         print('***WARNING! Found adjacent records with same times!')
@@ -342,9 +351,24 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
         time_between_records = np.delete(time_between_records,inderr)
         time_resolution = abs(stats.mode(time_between_records)[0][0])
 
-    max_nb_per_year = int(1.0/time_resolution)
-
-    if time_resolution <=1.0:
+    
+    # some extra checks
+    if mode_time_between_records.count[0] == 1:
+        # all unique time differences
+        # subannual or annual+ ?
+        years_in_dataset = np.floor(time_raw)
+        years_between_records = np.diff(years_in_dataset, n=1)        
+        mode_years_between_records = stats.mode(years_between_records)
+        if mode_years_between_records.mode[0] > 0:
+            # annual+ resolution
+            # take resolution as smallest detected interval that is annual or longer 
+            time_resolution = np.min(years_between_records[years_between_records>0.])
+        else:
+            # subannual
+            time_resolution = np.mean(time_between_records)
+            
+    
+    if time_resolution <= 1.0:
         proxy_resolution = int(1.0) # coarse-graining to annual
     else:
         proxy_resolution = int(time_resolution)
@@ -393,6 +417,7 @@ def compute_annual_means(time_raw,data_raw,valid_frac,year_type):
         # TODO: check nb of non-NaN values !!!!! ... ... ... ... ... ...
 
         if time_resolution <= 1.0:
+            max_nb_per_year = int(1.0/time_resolution)
             frac = float(nbdat)/float(max_nb_per_year)
             if frac > valid_frac:
                 data_annual[i,:] = np.nanmean(data_raw[ind],axis=0)
@@ -1729,7 +1754,7 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
 # =========================================================================================
 
 def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile, data_outfile, \
-                              duplicates_file, eliminate_duplicates):
+                              output_format, duplicates_file, eliminate_duplicates):
     """
     Merges two dictionaries containing proxy metadata and data from two data sources
     (PAGES2k phase 2 and NCDC-templated proxy data files) into one,
@@ -1915,7 +1940,6 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
 
         print('Now writing to file:', data_outfile)
         metadf.to_hdf(data_outfile,'meta',mode='w')
-        df = df.to_sparse()
         df.to_hdf(data_outfile,'proxy',mode='a')
         
     else:
