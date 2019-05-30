@@ -32,6 +32,17 @@ Purpose: Takes proxy data in their native format (e.g. .pckl file for PAGES2k or
             - Renamed the proxy databases to less-confusing convention.
               'pages' renamed as 'PAGES2kv1' and 'NCDC' renamed as 'LMRdb'
               [R. Tardif, U. of Washington, Sept 2017]
+            - Added checks in determination of temporal resolution of proxy records in 
+              compute_annual_means function to improve handling of quirky time tags in
+              some proxy records (ex. PAGES2kv2_Ant-DomeF.Motizuka.2014_Ant_016).
+              [R. Tardif, U. of Washington, May 2019]
+            - Modified merge_dicts_to_dataframes to allow removal of duplicate records
+              only if their subsitute record is loaded in the set of available proxies.
+              Implemented modifications are a variation of changes first suggested by 
+              Feng Zhu, but consider a widerset of conditions and provide more
+              informative listing of runtime output than before.
+              [Feng Zhu, USC & R. Tardif, U. of Washington, May 2019]
+
 """
 import glob
 import os
@@ -98,8 +109,9 @@ def main():
     #LMRdb_dbversion = 'v0.2.0'
     #LMRdb_dbversion = 'v0.3.0'
     # LMRdb_dbversion = 'v0.4.0'
-    LMRdb_dbversion = 'v1.0.0'  # first release, same as v0.4.0
-
+    #LMRdb_dbversion = 'v1.0.0'  # first release, same as v0.4.0
+    LMRdb_dbversion = 'v1.1.0'  # fixed issue in annual-averaging, Ant-DomeF.Motizuki.2014 record has now more data
+    
     # File containing info on duplicates in proxy records
     infoDuplicates = 'Proxy_Duplicates_PAGES2kv2_NCDC_LMR'+LMRdb_dbversion+'.xlsx'
 
@@ -872,8 +884,8 @@ def pages2kv2_pickle_to_dict(datadir, pages2kv2_file, proxy_def, year_type, gaus
 
     print('----------------------------------------------------------------------')
     print(' PAGES2kv2 SUMMARY: ')
-    print('  Total nb of records found in file           : %d' %nbsites)
-    print('  Number of proxy chronologies included in df : %d' %(len(proxy_dict_pagesv2)))
+    print('  Total nb of records found in file         : %d' %nbsites)
+    print('  Number of proxy records included in df    : %d' %(len(proxy_dict_pagesv2)))
     print('  ------------------------------------------------------')
     print(' ')
 
@@ -1712,9 +1724,9 @@ def ncdc_txt_to_dict(datadir, proxy_def, year_type, gaussianize_data):
     print(' ')
     print('----------------------------------------------------------------------')
     print(' NCDC SUMMARY: ')
-    print('  Total nb of files found & queried           : %d' % nbsites)
-    print('  Total nb of files with valid data           : %d' % nbsites_valid)
-    print('  Number of proxy chronologies included in df : %d' % nbchronol)
+    print('  Total nb of files found & queried         : %d' % nbsites)
+    print('  Total nb of files with valid data         : %d' % nbsites_valid)
+    print('  Number of proxy records included in df    : %d' % nbchronol)
     print('  ------------------------------------------------------')
     print(' ')
 
@@ -1777,32 +1789,51 @@ def merge_dicts_to_dataframes(proxy_def, ncdc_dict, pages2kv2_dict, meta_outfile
     totchronol = len(merged_dict)
 
     dupecount = 0
+    badcount = 0
     if eliminate_duplicates:
         print(' ')
         print('Checking list of duplicate/bad records:')
 
         # load info on duplicate records
-        dupes = pd.read_excel(duplicates_file,'ProxyDuplicates')
+        bad_or_dupes = pd.read_excel(duplicates_file,'ProxyDuplicates')
 
-        # numpy array containing names of proxy records to eliminate
-        toflush = dupes['Record_To_Eliminate'].values
-
-        for siteID in list(merged_dict.keys()):
-            if siteID in toflush:
-                try:
+        # array containing names of proxy records to eliminate
+        toflush = bad_or_dupes['Record_To_Eliminate']
+        # array containing names of corresponding proxy records to keep
+        tokeep = bad_or_dupes['Corresponding_Record_To_Keep']
+        tokeep_empty = tokeep.isnull()
+        
+        for idx, siteID in enumerate(toflush.values):
+            if siteID in list(merged_dict.keys()):
+                if tokeep_empty[idx]:
+                    # substitute not provided: record has been flagged as bad
+                    print(f' -- deleting: {siteID}')
                     del merged_dict[siteID]
-                    print(' -- deleting: %s' % siteID)
+                    badcount += 1
+
+                elif tokeep[idx] in list(merged_dict.keys()):
+                    # delete record only when substitute is present in loaded records
+                    print(f' -- deleting duplicate: {siteID}, keeping: {tokeep[idx]}')
+                    del merged_dict[siteID]
                     dupecount += 1
-                except KeyError:
-                    print(' -- not found: %s' % siteID)
+
+                else:
+                    # substitute not present in available records
+                    print(f' -- keeping: {siteID}, duplicate {tokeep[idx]} not found in loaded dataset')
                     pass
+
+            else:
+                #print(f' -- not found: {siteID}')
+                pass
+
 
     print(' ')
     print('----------------------------------------------------------------------')
     print(' FINAL SUMMARY: ')
-    print('  Total number of merged proxy chronologies   : %d' %totchronol)
-    print('  Total number of eliminated chronologies     : %d' %dupecount)
-    print('  Number of proxy chronologies included in df : %d' %len(merged_dict))
+    print('  Total number of merged proxy records      : %d' %totchronol)
+    print('  Total number of eliminated records        : %d' %badcount)
+    print('  Total number of duplicated records        : %d' %dupecount)
+    print('  Number of proxy records included in df    : %d' %len(merged_dict))
     print('  ------------------------------------------------------')
 
     tot = []
