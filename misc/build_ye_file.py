@@ -138,6 +138,9 @@ def main(cfgin=None, config_path=None):
     # Number of proxy objects (will be a dim of ye_out array)
     num_proxy = len(proxy_objects)
     
+    _log.info('Found {:d} records in proxy database: {} version: {}'.format(num_proxy,proxy_database,
+                                                                            proxy_cfg.dbversion))
+
     # identify the set of psms to consider
     psm_keys_proxydb_list = []
     for pobj in proxy_objects: psm_keys_proxydb_list.append(pobj.psm_obj.psm_key)

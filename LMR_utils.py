@@ -703,8 +703,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
             vars_to_save_mean = {'nens':nens, 'years':years, \
                                  dimcoord1:state_info[var]['spacedims'][0], \
                                  coordname1:coord1, 'xbm':xbm, 'xam':xam, \
-                                 'recon_months':cfg_core.recon_months}            
-            
+                                 'recon_months':cfg_core.recon_months}                        
             if cfg_core.save_archive == 'ens_full':
                 vars_to_save_ens  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
@@ -2026,12 +2025,13 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
     else:
         raise SystemExit('ERROR in load_precalculated_ye_vals_psm_per_proxy: '
                          'Unrecognized proxy_set argument. Exiting.')
-    
+
     num_samples = len(sample_idxs)
     ye_all = np.zeros((num_proxies, num_samples))
     ye_all_coords = np.zeros((num_proxies, 2))
 
     load_dir = os.path.join(config.core.lmr_path, 'ye_precalc_files')    
+
     precalc_files = {}
     for psm_key in psm_keys:
 
@@ -2086,7 +2086,7 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
         psm_key = pobj.psm_obj.psm_key
         pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
         precalc_vals = precalc_files[psm_key]['ye_vals']
-        
+
         pidx = pid_idx_map[pobj.id]
         ye_all[i] = precalc_vals[pidx, sample_idxs]
             

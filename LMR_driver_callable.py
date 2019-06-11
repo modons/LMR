@@ -401,7 +401,7 @@ def LMR_driver_callable(cfg=None):
                     Ye_eval_coords[k, :] = np.asarray([proxy.lat, proxy.lon], dtype=np.float64)
 
 
-        # check on validity of the Ye (assimilated and withheld values
+        # check on validity of the Ye (assimilated and withheld) values 
         invalid_Ye = []
         for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
             if np.isnan(Ye_assim[k]).any():

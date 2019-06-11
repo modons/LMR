@@ -391,7 +391,7 @@ class ProxyPAGES2kv1(BaseProxyObject):
             values = values - values.mean()
         
         if len(values) == 0:
-            raise ValueError('No observations in specified time range.')
+            raise ValueError('No observations in specified time range for: {}'.format(site))
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
                    seasonality, values, times)
@@ -605,7 +605,7 @@ class ProxyLMRdb(BaseProxyObject):
             values = values - values.mean() 
 
         if len(values) == 0:
-            raise ValueError('No observations in specified time range.')
+            raise ValueError('No observations in specified time range for: {}'.format(site))
 
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
                    seasonality, values, times)
@@ -858,7 +858,7 @@ class ProxyNCDCdadt(BaseProxyObject):
             values = values - values.mean() 
             
         if len(values) == 0:
-            raise ValueError('No observations in specified time range.')
+            raise ValueError('No observations in specified time range for: {}'.format(site))
         
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
                    seasonality, values, times)
@@ -995,7 +995,7 @@ class ProxyNCDCdadt(BaseProxyObject):
                 proxy_id_by_type[name] = proxies.tolist()
 
             all_proxy_ids += proxies.tolist()
-            
+
         # Create proxy objects list
         all_proxies = []
         for site in all_proxy_ids:
@@ -1115,7 +1115,7 @@ class ProxyDAPSpseudoproxies(BaseProxyObject):
             values = values - values.mean() 
             
         if len(values) == 0:
-            raise ValueError('No observations in specified time range.')
+            raise ValueError('No observations in specified time range for: {}'.format(site))
 
         
         return cls(config, pid, proxy_type, start_yr, end_yr, lat, lon, elev,
