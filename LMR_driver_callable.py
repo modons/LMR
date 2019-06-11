@@ -214,7 +214,7 @@ def LMR_driver_callable(cfg=None):
         print('Loading completed in ' + str(proxy_load_time) + ' seconds')
         print('-----------------------------------------------------')
 
-    #exit(1)
+
     # ==========================================================================
     # Calculate truncated state from prior, if option chosen -------------------
     # ==========================================================================
@@ -410,7 +410,7 @@ def LMR_driver_callable(cfg=None):
             for k, proxy in enumerate(prox_manager.sites_eval_proxy_objs()):
                 if np.isnan(Ye_eval[k]).any():
                     invalid_Ye.append(proxy.id)
-                    
+
         if len(invalid_Ye) > 0:
             raise SystemExit('\nInvalid Ye values detected. Revisit prior/PSM characteristics, '
                              'or consider including the following proxy records in a proxy '

@@ -516,7 +516,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
-                                     'xbv':xbv, 'xav':xav}                
+                                     'xbv':xbv, 'xav':xav}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
@@ -692,7 +692,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
             # ensemble mean
             vars_to_save_mean = {'nens':nens, 'years':years, \
                                  dimcoord1:state_info[var]['spacedims'][0], \
-                                 coordname1:coord1, 'xbm':xbm, 'xam':xam}            
+                                 coordname1:coord1, 'xbm':xbm, 'xam':xam}
             
             if cfg_core.save_archive == 'ens_full':
                 vars_to_save_ens  = {'nens':nens, 'years':years, \
@@ -2049,24 +2049,24 @@ def load_precalculated_ye_vals_psm_per_proxy(config, proxy_manager, proxy_set, s
             raise ValueError('Unrecognized PSM key: {}'.format(psm_key))
 
         load_fname = create_precalc_ye_filename(config,psm_key,pkind)
-        _log.info('Loading file:' + load_fname)
+        _log.info('Loading Ye file:' + load_fname)
 
         # check if file exists
         if not os.path.isfile(os.path.join(load_dir, load_fname)):
             _log.error('ERROR: Ye file {} does not exist! -- run the precalc file builder: '
                        'misc/build_ye_file.py to generate the missing file'.format(load_fname))
             raise SystemExit()
-        
+
         precalc_files[psm_key] = np.load(os.path.join(load_dir, load_fname))
 
     
     _log.info('Now extracting proxy type-dependent Ye values...')
-    
+
     for i, pobj in enumerate(proxy_objs):
         psm_key = pobj.psm_obj.psm_key
         pid_idx_map = precalc_files[psm_key]['pid_index_map'][()]
         precalc_vals = precalc_files[psm_key]['ye_vals']
-        
+
         pidx = pid_idx_map[pobj.id]
         ye_all[i] = precalc_vals[pidx, sample_idxs]
 

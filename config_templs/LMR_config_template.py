@@ -227,7 +227,10 @@ class core(ConfigGroup):
         exist and the required state variables are missing the reconstruction
         will quit.
     recon_period: tuple(int)
-        Time period for reconstruction
+        Time period for reconstruction (in year CE)
+    recon_timescale: int
+        Timescale of the reconstruction (in years). Defines the averaging of the
+        prior states and interval over which proxies are assimilated.
     nens: int
         Ensemble size
     loc_rad: float
@@ -271,10 +274,8 @@ class core(ConfigGroup):
     
     # time interval of reconstructed fields (in years). Note: should be of type integer
     recon_timescale = 1    # annual
-    #recon_timescale = 100
-    #recon_timescale = 250
-    #recon_timescale = 500
-    
+    #recon_timescale = 100  # centennial
+
     nens = 100
 
     seed = None
@@ -317,8 +318,9 @@ class core(ConfigGroup):
         super(self.__class__, self).__init__(**kwargs)
 
         # some checks
-        if not self.recon_timescale.startswith('interval') and type(self.recon_timescale) != 'int':
-            self.recon_timescale = int(self.recon_timescale)
+        if not isinstance(self.recon_timescale, (int)):
+            if not self.recon_timescale.startswith('interval'):
+                self.recon_timescale = int(self.recon_timescale)
         
         self.nexp = self.nexp
         self.lmr_path = self.lmr_path
@@ -2077,7 +2079,7 @@ class prior(ConfigGroup):
             self.datadir_prior = join(lmr_path, 'data', 'model',
                                       self.prior_source)
 
-        if core.recon_timescale.startswith('interval:'):
+        if not isinstance(core.recon_timescale,(int)) and core.recon_timescale.startswith('interval:'):
             self.avgInterval = {'multiyear': [int(core.recon_timescale.split(':')[1])]}
             core.recon_timescale = int(core.recon_timescale.split(':')[1])
         elif core.recon_timescale == 1:

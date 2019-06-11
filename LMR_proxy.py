@@ -962,7 +962,7 @@ class ProxyNCDCdadt(BaseProxyObject):
                 tmp = meta_src['Proxy ID'].map(lambda x: x.startswith(pbl))
                 inds = meta_src['Proxy ID'][tmp].index
                 blacklist_mask[inds] = False
-                
+
         # Create proxy id lists
         proxy_id_by_type = {}
         all_proxy_ids = []
@@ -996,7 +996,7 @@ class ProxyNCDCdadt(BaseProxyObject):
 
             all_proxy_ids += proxies.tolist()
 
-        
+        # Create proxy objects list
         all_proxies = []
         for site in all_proxy_ids:
             try:
