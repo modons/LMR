@@ -294,7 +294,7 @@ def smooth2D(im, n=15):
     return(improc)
 
 
-def ensemble_stats(cfg_core, y_assim, y_eval=None):
+def ensemble_stats(cfg_core, info_intervals, y_assim, y_eval=None):
     """
     Compute the ensemble mean and variance for files in the input directory
 
@@ -506,6 +506,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                  dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                  coordname1:coord1, coordname2:coord2, \
                                  'xbm':xbm, 'xam':xam, \
+                                 'recon_intervals':info_intervals, \
                                  'recon_months':cfg_core.recon_months}
                 
             if cfg_core.save_archive == 'ens_full': 
@@ -513,12 +514,14 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                      dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
                                      'xb_ens':Xb, 'xa_ens':xa_ens, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_variance':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
                                      'xbv':xbv, 'xav':xav, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
@@ -526,12 +529,14 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                      coordname1:coord1, coordname2:coord2, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
                                      'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
                                      'years':years, dimcoord1:ndim1_archive, dimcoord2:ndim2_archive, \
                                      coordname1:coord1, coordname2:coord2, \
                                      'xb_subsample':xb_sub, 'xa_subsample':xa_sub, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
 
 
@@ -606,6 +611,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                  dimcoord2:state_info[var]['spacedims'][1], \
                                  coordname1:coord1, coordname2:coord2, \
                                  'xbm':xbm, 'xam':xam, \
+                                 'recon_intervals':info_intervals, \
                                  'recon_months':cfg_core.recon_months}
 
             if cfg_core.save_archive == 'ens_full':
@@ -614,6 +620,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                      dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, \
                                      'xb_ens':Xb, 'xa_ens':xa_ens,
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_variance':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
@@ -621,6 +628,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                      dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, \
                                      'xbv':xbv, 'xav':xav, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
@@ -629,6 +637,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                      coordname1:coord1, coordname2:coord2, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
                                      'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
@@ -636,6 +645,7 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                      dimcoord2:state_info[var]['spacedims'][1], \
                                      coordname1:coord1, coordname2:coord2, \
                                      'xb_subsample':xb_sub, 'xa_subsample':xa_sub, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
 
 
@@ -703,16 +713,19 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
             vars_to_save_mean = {'nens':nens, 'years':years, \
                                  dimcoord1:state_info[var]['spacedims'][0], \
                                  coordname1:coord1, 'xbm':xbm, 'xam':xam, \
+                                 'recon_intervals':info_intervals, \
                                  'recon_months':cfg_core.recon_months}                        
             if cfg_core.save_archive == 'ens_full':
                 vars_to_save_ens  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
                                      coordname1:coord1, 'xb_ens':Xb, 'xa_ens':xa_ens, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_variance':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      dimcoord1:state_info[var]['spacedims'][0], \
                                      coordname1:coord1, 'xbv':xbv, 'xav':xav, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
@@ -720,12 +733,14 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                                      coordname1:coord1, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
                                      'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
                                      'years':years, dimcoord1:state_info[var]['spacedims'][0], \
                                      coordname1:coord1, \
                                      'xb_subsample':xb_sub, 'xa_subsample':xa_sub, \
+                                     'recon_intervals':info_intervals, \
                                      'recon_months':cfg_core.recon_months}
                 
                 
@@ -778,21 +793,26 @@ def ensemble_stats(cfg_core, y_assim, y_eval=None):
                     
                 
             vars_to_save_ens = {'nens':nens, 'years':years, 'xb_ens':Xb, 'xa_ens':xa_ens,
+                                'recon_intervals':info_intervals,
                                 'recon_months': cfg_core.recon_months}
             vars_to_save_mean = {'nens':nens, 'years':years, 'xbm':xbm, 'xam':xam,
+                                 'recon_intervals':info_intervals,
                                  'recon_months': cfg_core.recon_months}
 
             if cfg_core.save_archive == 'ens_variance':
                 vars_to_save_var  = {'nens':nens, 'years':years, 'xbv':xbv, 'xav':xav,
+                                     'recon_intervals':info_intervals,
                                      'recon_months': cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_percentiles':
                 vars_to_save_var  = {'nens':nens, 'years':years, \
                                      'percentiles': cfg_core.save_archive_percentiles, \
                                      'xb_pctl':xb_pctl, 'xa_pctl':xa_pctl,
+                                     'recon_intervals':info_intervals,
                                      'recon_months': cfg_core.recon_months}
             elif cfg_core.save_archive == 'ens_subsample':
                 vars_to_save_var  = {'nens':nens, 'nsubsample': cfg_core.save_archive_ens_subsample, \
                                      'years':years, 'xb_subsample':xb_sub, 'xa_subsample':xa_sub,
+                                     'recon_intervals':info_intervals,
                                      'recon_months': cfg_core.recon_months}
 
             # (full) ensemble to file for this variable type

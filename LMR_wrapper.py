@@ -132,11 +132,12 @@ for iter_and_params in itertools.product(*param_iterables):
         os.system('rm -f {}'.format(core.datadir_output + '/*'))
 
     # Call the driver
-    assim_proxy_objs, eval_proxy_objs = LMR.LMR_driver_callable(cfg)
+    info_intervals, assim_proxy_objs, eval_proxy_objs = LMR.LMR_driver_callable(cfg)
+
 
     # write the analysis ensemble mean, variance or full ensemble to
     # separate files (per state variable)
-    ensemble_stats(core, assim_proxy_objs, eval_proxy_objs)
+    ensemble_stats(core, info_intervals, assim_proxy_objs, eval_proxy_objs)
     
     
     # start: DO NOT DELETE

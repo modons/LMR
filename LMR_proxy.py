@@ -87,6 +87,20 @@ class ProxyManager:
         proxy_frac = config.proxies.proxy_frac
         nsites = len(self.all_proxies)
 
+
+        # if recon over intervals with defined names, get them
+        # ex. prePETM, PETM etc.
+        if hasattr(pclass,'get_info_time_intervals'):
+            names = pclass.get_info_time_intervals(config)
+            if names:
+                name_indices = list(names.keys())
+                for i in name_indices:
+                    if i < data_range[0] or i > data_range[1]: del names[i]
+            self.info_intervals = names
+        else:
+            self.info_intervals = None
+
+
         # Sample subset from all proxies if specified
         try:
             if proxy_frac < 1.0:
@@ -1056,6 +1070,16 @@ class ProxyNCDCdadt(BaseProxyObject):
         # Constant error for now
         return 0.1
 
+    def get_info_time_intervals(config):
+        try:
+            interval_info = load_data_frame(config.proxies.NCDCdadt.metafile_proxy,
+                                            key='intervals')
+            interval_names = interval_info.to_dict()['Period name']
+        except KeyError:
+            interval_names = None
+
+        return interval_names
+        
 
 class ProxyDAPSpseudoproxies(BaseProxyObject):
 

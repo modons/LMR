@@ -32,8 +32,9 @@ sys.path.append('../')
 from LMR_plot_support import truncate_colormap
 from LMR_utils import global_hemispheric_means, natural_sort
 
-mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
-
+#mapcolor = truncate_colormap(plt.cm.jet,0.15,1.0)
+mapcolor     = truncate_colormap(plt.cm.nipy_spectral,0.05,0.98)
+mapcolor_var = truncate_colormap(plt.cm.nipy_spectral,0.05,0.98)
 
 # ------------------------------------------------
 # --- Begin section of user-defined parameters ---
@@ -50,18 +51,18 @@ datadir = '/Users/hakim/data/LMR_python3/archive/'
 #exp = 'production_gis_ccsm4_pagesall_0.75'
 # --
 exp = 'test'
-exp = 'dadt_full_prior'
 # --
 
 #year_range = [0,2000]
-#year_range = [1850,2000]
-year_range = [-25000,2000]
+year_range = [1850,2000]
+#year_range = [-25000,2000]
 #year_range = [-115000,2000]
+#year_range = [0,2] # PETM intervals (indices)
 
 # for time series, defining the time axis
-#timeaxis = 'yr CE'    # for Common Era recons.
-#timeaxis = 'yr BC/AD' # ...
-timeaxis = 'kyr BP'    # for "deep times" recons
+timeaxis = 'yr CE'    # for Common Era recons.
+#timeaxis = 'yr BC/AD' # a different lavel
+#timeaxis = 'kyr BP'    # for "deep times" recons
 
 # --
 # MC realizations to consider.
@@ -89,29 +90,44 @@ pltymin = -1.5; pltymax = 1.5; ylabel = 'Temperature anomaly (K)'
 #pltymin = -6.0; pltymax = 6.0; ylabel = 'Temperature anomaly (K)'
 # -- full field --
 #pltymin = 276.; pltymax = 290.; ylabel = 'Temperature (K)'
+#pltymin = 290.; pltymax = 315.; ylabel = 'Temperature (K)' # PETM configuration
 
 #infile = 'gmt'
 infile = 'gmt_ensemble'
 
 
 # ==== for map plots:
-# (more concise) dict format 
+# whether to include a subplot with ensemble spread (if data available)
+plot_spread = False
+
+# --- for maps of ensemble mean (more concise dict format) ---
 #                         mapmin    mapmax  mapint     cmap     cbarfmt
 map_plots = {
-#    'tas_sfc_Amon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # temp. anomalies
-#    'tas_sfc_Amon'       : (-6.,        +6.,   2.0, plt.cm.bwr, '%4.0f'), # temp. anomalies(2)
-    'tas_sfc_Adec'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # temp. full field    
-#    'psl_sfc_Amon'       : (98000., 103000., 1000.,   mapcolor, '%4.0f'), # MSLP full field
-#    'wap_850hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies
-#    'wap_700hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'), # omega anomalies
-#    'tos_sfc_Omon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'), # SST anomalies
-#    'tos_sfc_Omon'       : (270.,      300.,    2.,   mapcolor, '%4.0f'), # SST full field
-#    'sos_sfc_Omon'       : (-.5,        +.5,   0.1, plt.cm.bwr, '%4.1f'), # salinity anomalies
-#    'sos_sfc_Omon'       : (20.,        40.,    5.,   mapcolor, '%4.0f'), # salinity ful field
-#    'ohc_0-700m_Omon'    : (-2.e9,    +2.e9,  1.e9, plt.cm.bwr, '%4.0e'), # OHC anomalies
-#    'hfy_depthavg_Omon'  : (-1.e14, +1.e14, 0.5e15, plt.cm.bwr, '%4.0e'), # hfy test
+#    'tas_sfc_Amon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'),  # temp. anomalies
+#    'tas_sfc_Amon'       : (-6.,        +6.,   2.0, plt.cm.bwr, '%4.0f'),  # temp. anomalies(2)
+    'tas_sfc_Adec'       : (270.,      300.,    2.,   mapcolor, '%4.0f'),  # temp. full field (DADT)
+    'tas_sfc_Adecmon'    : (230.,      310.,    10.,   mapcolor, '%4.0f'), # temp. full field (DADT decadal avg. monthly input)
+#    'psl_sfc_Amon'       : (98000., 103000., 1000.,   mapcolor, '%4.0f'),  # MSLP (Pa) full field
+#    'wap_850hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'),  # omega anomalies
+#    'wap_700hPa_Amon'    : (-.04,      +.04,   .01, plt.cm.bwr, '%4.2f'),  # omega anomalies
+#    'tos_sfc_Omon'       : (-2.,        +2.,   0.5, plt.cm.bwr, '%4.1f'),  # SST anomalies
+#    'tos_sfc_Omon'       : (270.,      300.,    2.,   mapcolor, '%4.0f'),  # SST full field
+#    'sos_sfc_Omon'       : (-.5,        +.5,   0.1, plt.cm.bwr, '%4.1f'),  # salinity anomalies
+#    'sos_sfc_Omon'       : (20.,        40.,    5.,   mapcolor, '%4.0f'),  # salinity ful field
+#    'ohc_0-700m_Omon'    : (-2.e9,    +2.e9,  1.e9, plt.cm.bwr, '%4.0e'),  # OHC anomalies
+#    'hfy_depthavg_Omon'  : (-1.e14, +1.e14, 0.5e15, plt.cm.bwr, '%4.0e'),  # hfy test
+    'tas_sfc_Aequ'       : (270.,      310.,    5.,   mapcolor, '%4.0f'),  # temp. full field  PETM config.
+    'tos_sfc_Oequ'       : (275.,      315.,    5.,   mapcolor, '%4.0f'),  # SST full field  PETM config.
 }
 
+# --- for maps of ensemble spread ---
+map_plots_var = {
+    'tas_sfc_Amon'       : (0.,      1.5,   .25,  mapcolor_var, '%5.2f'),  # temp. anomalies Common Era
+    'tas_sfc_Adec'       : (0.,      2.5,    .5,   mapcolor_var, '%5.2f'), # temp. DADT
+    'tas_sfc_Adecmon'    : (0.,      2.5,    .5,   mapcolor_var, '%5.2f'), # temp. DADT
+    'tas_sfc_Aequ'       : (0.,      .7,    .1,   mapcolor_var, '%4.1f'),  # temp. full field  PETM config.
+    'tos_sfc_Oequ'       : (0.,      .7,    .1,   mapcolor_var, '%4.1f'),  # SST full field  PETM config.    
+}
 
 # ---- End section of user-defined parameters ----
 # ------------------------------------------------
@@ -177,6 +193,11 @@ if make_gmt_plot:
         gmt_data     = np.load(list_iters[0]+'/'+infile+'.npz')
         recon_times  = gmt_data['recon_times']
 
+        if 'recon_intervals' in gmt_data.files:
+            recon_intervals = gmt_data['recon_intervals'][()]
+        else:
+            recon_intervals = None
+
         if infile == 'gmt':
             recon_gmt_data     = gmt_data['gmt_save']
             [nbproxy, nbtimes] = recon_gmt_data.shape
@@ -188,8 +209,7 @@ if make_gmt_plot:
             nbproxy = 0
             file_to_read = 'gmt_ensemble'
         else:
-            print('Error in infile! Exiting!')
-            SystemExit(1)
+            SystemExit('Error in infile! Exiting!')
 
 
         # Declare arrays
@@ -391,12 +411,18 @@ if make_gmt_plot:
         # Plotting time series --------------------------
         # -----------------------------------------------
 
-        if timeaxis == 'kyr BP':
-            plot_time = -1.0*((-1.0*recon_years[0,:] + 1950.)/1000.)
-            plot_year_range = -1.0*((-1.0*np.array(year_range) + 1950.)/1000.)
+        if recon_intervals is None:        
+            if timeaxis == 'kyr BP':
+                plot_time = -1.0*((-1.0*recon_years[0,:] + 1950.)/1000.)
+                plot_year_range = -1.0*((-1.0*np.array(year_range) + 1950.)/1000.)
+            else:
+                plot_time = recon_years[0,:]
+                plot_year_range = year_range
         else:
+            timeaxis = 'intervals'
             plot_time = recon_years[0,:]
             plot_year_range = year_range
+
 
         # -------------------------------------------
         # global mean temperature
@@ -427,10 +453,13 @@ if make_gmt_plot:
             indnonzero = np.where(xlabels != 0.0)        
             xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
             ax.set_xticklabels(xlabels)
-        
-        plt.savefig('%s/%s_GMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
-        plt.close()
 
+        if recon_intervals is None:
+            plt.savefig('%s/%s_GMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+        else:
+            plt.savefig('%s/%s_GMT_intervals%sto%s.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+        plt.close()
+        
         # -------------------------------------------
         # NH mean temperature
         # -------------------------------------------
@@ -458,8 +487,11 @@ if make_gmt_plot:
             indnonzero = np.where(xlabels != 0.0)        
             xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
             ax.set_xticklabels(xlabels)
-        
-        plt.savefig('%s/%s_NHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+
+        if recon_intervals is None:
+            plt.savefig('%s/%s_NHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+        else:
+            plt.savefig('%s/%s_NHMT_intervals%sto%s.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()
 
         # -------------------------------------------
@@ -489,8 +521,11 @@ if make_gmt_plot:
             indnonzero = np.where(xlabels != 0.0)        
             xlabels[indnonzero] = -1.0*xlabels[indnonzero]        
             ax.set_xticklabels(xlabels)
-        
-        plt.savefig('%s/%s_SHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+
+        if recon_intervals is None:
+            plt.savefig('%s/%s_SHMT_%sto%syrs.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
+        else:
+            plt.savefig('%s/%s_SHMT_intervals%sto%s.png' % (figdir,exp,str(year_range[0]),str(year_range[1])),bbox_inches='tight')
         plt.close()
         
 
@@ -532,6 +567,16 @@ if make_map_plots:
             tmp = npzfile['xam']
             print('shape of tmp: ' + str(np.shape(tmp)))
 
+            # check if file containing variance data is available
+            var_available = False
+            if plot_spread:
+                ensvarfiln = ensfiln.replace('ensemble_mean', 'ensemble_variance')
+                if os.path.isfile(ensvarfiln):
+                    npzfile_var = np.load(ensvarfiln)
+                    tmp_var = npzfile_var['xav']
+                    var_available = True
+                    varmapmin, varmapmax, varmapint, varcmap, varcbarfmt = map_plots_var[var][:]
+            
             # load prior data
             file_prior = expdir + '/' + dir + '/Xb_one.npz'
             Xprior_statevector = np.load(file_prior)
@@ -548,6 +593,11 @@ if make_map_plots:
                 years = npzfile['years']
                 nyrs =  len(years)
 
+                if 'recon_intervals' in npzfile.files:
+                    recon_intervals = npzfile['recon_intervals'][()]
+                else:
+                    recon_intervals = None
+                
                 lat = npzfile['lat']
                 lon = npzfile['lon']
                 # 1D arrays or already in 2D arrays?
@@ -562,6 +612,9 @@ if make_map_plots:
 
                 xam = np.zeros([nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
                 xam_all = np.zeros([niters,nyrs,np.shape(tmp)[1],np.shape(tmp)[2]])
+                if var_available:
+                    xav_all = np.zeros([niters,nyrs,np.shape(tmp_var)[1],np.shape(tmp_var)[2]])
+
                 # prior
                 [_,Nens] = tas_prior.shape
                 nlatp = state_info[var]['spacedims'][0]
@@ -570,7 +623,8 @@ if make_map_plots:
 
             xam = xam + tmp
             xam_all[k,:,:,:] = tmp
-
+            if var_available: xav_all[k,:,:,:] = tmp_var
+            
             # prior ensemble mean of MC iteration "k"
             tmpp = np.mean(tas_prior,axis=1)
             xbm_all[k,:,:,:] = tmpp.reshape(nlatp,nlonp)
@@ -621,6 +675,10 @@ if make_map_plots:
         xam_var = xam_all.var(0)
         print(np.shape(xam_var))
 
+        # mean (over MC realizations) variance, if available
+        if var_available:
+            xav = xav_all.mean(0)
+        
         print(' shape of the ensemble array: ' + str(np.shape(xam_all)) +'\n')
         print(' shape of the ensemble-mean array: ' + str(np.shape(xam)) +'\n')
         print(' shape of the ensemble-mean prior array: ' + str(np.shape(xbm)) +'\n')
@@ -638,7 +696,7 @@ if make_map_plots:
         # Plotting -------------------------
         # ----------------------------------
 
-        recon_interval = np.diff(recon_times)[0]
+        recon_period = np.diff(recon_times)[0]
         proxsites = list(assimprox.keys())
 
         # loop over recon_times within user specified "year_range"
@@ -650,13 +708,15 @@ if make_map_plots:
         for it in inds_in_range:
 
             year = int(recon_times[it])    
-            print(' plotting:', var, year)
-
+            if recon_intervals is not None:
+                print(' plotting:', var, year, recon_intervals[year])
+            else:
+                print(' plotting:', var, year)
 
             # assimilated proxies
             ndots = 0
             if proxsites:
-                time_range = (year-recon_interval/2., year+recon_interval/2.)
+                time_range = (year-recon_period/2., year+recon_period/2.)
                 lats = []
                 lons = []
                 for s in proxsites:
@@ -673,11 +733,18 @@ if make_map_plots:
             Xam2D = np.ma.masked_invalid(Xam2D)
             nlat,nlon = Xam2D.shape
 
+            if var_available:
+                Xav2D = xav[it,:,:]
+                Xav2D = np.ma.masked_invalid(Xav2D)
+            
             if np.unique(lat2).shape[0] == nlat and np.unique(lon2).shape[0] == nlon :
                 # Regular lat/lon grid
                 plotlat = lat2
                 plotlon = lon2
                 plotdata = Xam2D
+                if var_available:
+                    plotdata2 = Xav2D
+
             else:
                 # Irregular grid: simple regrid to regular lat-lon grid for plotting        
                 longrid = np.linspace(0.,360.,nlon)
@@ -695,24 +762,40 @@ if make_map_plots:
 
 
             # Generating the map...
-            fig = plt.figure()
-            ax  = fig.add_axes([0.1,0.1,0.8,0.8])
+            if var_available:
+                fig = plt.figure(figsize=[8,10])
+                nbframe = 2
+            else:
+                fig = plt.figure(figsize=[8,6])
+                nbframe = 1
+            #ax_master  = fig.add_axes([0.1,0.1,0.8,0.8])
+
+            # --- ensemble mean ----
+            ax = fig.add_subplot(nbframe,1,1)
             m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=30. 
 
             cbnds = [mapmin,mapint,mapmax];
             nlevs = 101
             cints = np.linspace(mapmin, mapmax, nlevs, endpoint=True)
             #cs = m.pcolormesh(plotlon,plotlat,plotdata,shading='flat',vmin=mapmin,vmax=mapmax,cmap=cmap,latlon=True)
-            cs = m.contourf(plotlon,plotlat,plotdata,cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,extend='both',latlon=True)
+            cs = m.contourf(plotlon,plotlat,plotdata,cints,cmap=plt.get_cmap(cmap),vmin=mapmin,vmax=mapmax,
+                            extend='both',latlon=True,corner_mask=False)
 
             cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
             cbar = m.colorbar(cs,location='bottom',pad="5%",ticks=cbarticks, extend='both',format=cbarfmt)
-
+            cbar.set_label('Ensemble mean',fontsize=12,fontweight='bold')
+            
             m.drawmapboundary(fill_color = bckgcolor)
             m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
             m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
             m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
-            plt.title(var+', Year:'+str(year),fontsize=14,fontweight='bold')
+
+            # title
+            if recon_intervals is not None:
+                plt.title(var+', '+recon_intervals[year], fontsize=14,fontweight='bold')
+            else:
+                plt.title(var+', Year:'+str(year),fontsize=14,fontweight='bold')
+
             # Make sure continents appear filled-in for ocean fields
             if 'Omon' in var or 'Odec' in var: 
                 m.fillcontinents(color=bckgcolor)
@@ -724,7 +807,44 @@ if make_map_plots:
                 m.scatter(x,y,10,marker='o',color=dotcolor,edgecolor='black',linewidth='.5',zorder=4)
 
 
-            plt.savefig('%s/%s_%s_%syr.png' % (figdir,exp,var,year),bbox_inches='tight')
+            # --- ensemble spread ---
+            if var_available:
+                ax = fig.add_subplot(nbframe,1,2)
+                m = Basemap(projection='robin', lat_0=0, lon_0=0,resolution='l', area_thresh=700.0); latres = 20.; lonres=30. 
+
+                cbnds = [varmapmin,varmapint,varmapmax];
+                nlevs = 101
+                cints = np.linspace(varmapmin, varmapmax, nlevs, endpoint=True)
+                cs = m.contourf(plotlon,plotlat,np.sqrt(plotdata2),cints,cmap=plt.get_cmap(varcmap),
+                                vmin=varmapmin,vmax=varmapmax,extend='max',latlon=True,corner_mask=False)
+
+                cbarticks = np.linspace(cbnds[0],cbnds[2],num=int((cbnds[2]-cbnds[0])/cbnds[1])+1)
+                cbar = m.colorbar(cs,location='bottom',pad="5%",ticks=cbarticks, extend='both',format=varcbarfmt)
+                cbar.set_label('Ensemble spread',fontsize=12,fontweight='bold')
+                
+                m.drawmapboundary(fill_color = bckgcolor)
+                m.drawcoastlines(linewidth=0.5); m.drawcountries(linewidth=0.5)
+                m.drawparallels(np.arange(-80.,81.,latres),linewidth=0.5)
+                m.drawmeridians(np.arange(-180.,181.,lonres),linewidth=0.5)
+
+                # Make sure continents appear filled-in for ocean fields
+                if 'Omon' in var or 'Odec' in var: 
+                    m.fillcontinents(color=bckgcolor)
+
+                # dots marking sites of assimilated proxies
+                if ndots > 0:
+                    x, y = m(plons,plats)
+                    dotcolor = '#e6e9ef'
+                    dotcolor = '#ffffff' # PETM
+                    m.scatter(x,y,15,marker='o',color=dotcolor,edgecolor='black',linewidth='.5',zorder=4)
+
+
+            # Save figure to file
+            if recon_intervals is not None:
+                plt.savefig('%s/%s_%s_%s_%s.png' % (figdir,exp,var,year,recon_intervals[year]),bbox_inches='tight')
+            else:
+                plt.savefig('%s/%s_%s_%syr.png' % (figdir,exp,var,year),bbox_inches='tight')
+
             if make_movie:
                     plt.savefig('%s/fig_%s.png' % (figdir,str("{:06d}".format(countit))),bbox_inches='tight')
                     # to make it look like a pause at end of animation
@@ -736,7 +856,7 @@ if make_map_plots:
 
             countit += 1
 
-
+        # -----------------------------------------------------
         if make_movie:
             # create the animation
             # check if old files are there, if yes, remove
