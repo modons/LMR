@@ -58,7 +58,7 @@ verbose = 1
 datadir_input = '/Users/hakim/data/LMR_python3/archive/'
 
 # Name of experiment
-nexp = 'test'
+nexp = 'dadt_test_dbv0.1.1_ccsm3Trace200yr'
 
 # perform verification using all recon. MC realizations ( MCset = None )
 # or over a custom selection ( MCset = (begin,end) )

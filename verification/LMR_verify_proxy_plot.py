@@ -47,7 +47,7 @@ from mpl_toolkits.basemap import Basemap
 # ------------------------------
 
 make_plots_hist = True
-make_plots_maps = False
+make_plots_maps = True
 make_plots_individual_sites = False
 make_pdfs = False
 
@@ -77,8 +77,8 @@ fcolor = ['blue', 'red']
 # -------------------------
 
 #proxies = 'PAGES2kv1'
-proxies = 'LMRdb'
-#proxies = 'NCDCdadt'
+#proxies = 'LMRdb'
+proxies = 'NCDCdadt'
 
 # Assign symbol to proxy types for plotting: dependent on proxy database used.
 if proxies == 'PAGES2kv1':
@@ -127,8 +127,8 @@ elif proxies == 'NCDCdadt':
                    'Marine sediments_d18o_sacculifer' :'v',\
                    'Marine sediments_d18o_bulloides'  :'>',\
                    'Marine sediments_d18o_pachyderma' :'<',\
-                   'Marine sediments_mgca_pooled_bcp' :'H',\'
-                   'Marine sediments_mgca_pooled_red' :'h',\'
+                   'Marine sediments_mgca_pooled_bcp' :'H',\
+                   'Marine sediments_mgca_pooled_red' :'h',\
     }
 else:
     raise SystemExit('ERROR in the especification of the proxy dataset to be considered. Exiting!')
@@ -148,15 +148,17 @@ r_crit = 0.0
 datadir_input = '/Users/hakim/data/LMR_python3/archive/'
 
 # Name of experiment
-nexp = 'test'
+#nexp = 'test'
+nexp = 'dadt_test_dbv0.1.1_ccsm3Trace200yr'
 
 #verif_period = [[1880,2000],[0,1879]]
 #verif_period = [[1900,2000],[1800,1899]]
-verif_period = [[-22000,-200],[-199,2000]]
+#verif_period = [[-22000,-200],[-199,2000]]
+verif_period = [[-22000,2000]]
 
 # Output directory, where the figs will be dumped.
-#datadir_output = datadir_input # if want to keep things tidy
-datadir_output = '.'          # if want local plots
+datadir_output = datadir_input # if want to keep things tidy
+#datadir_output = '.'          # if want local plots
 
 # =========================================================================================
 # END:  set user parameters here
@@ -219,6 +221,7 @@ def main():
         figdir = datadir_output+'/VerifFigs'
         if not os.path.isdir(figdir):
             os.system('mkdir %s' % figdir)
+            print('making figure directory in ',figdir)
     else:
         figdir = '.'
 
@@ -325,7 +328,8 @@ def main():
                 #ymax = 0.1; nbins = 5
                 #ymax = 2.0; nbins = 5
                 if proxy == 'All':
-                    ymax = 2.0; nbins = 5
+                    #ymax = 2.0; nbins = 5
+                    ymax = 4.0; nbins = 5
                 else:
                     ymax = ymaxd
 
@@ -414,7 +418,8 @@ def main():
                 #ymax = 0.45
                 #ymax = 0.1 # for r_crit = 0.2
                 #ymax = 0.5; nbins = 5
-                ymax = 12.0; nbins = 6        
+                #ymax = 12.0; nbins = 6        
+                ymax = 4.5; nbins = 6        
 
                 plt.axis((CErange[0],CErange[1],ymin,ymax))
                 plt.legend(loc=2,fontsize=9,frameon=False,handlelength=1.2)
@@ -502,7 +507,8 @@ def main():
                 plt.ylabel("Probability density",fontweight='bold')
                 xmin,xmax,ymin,ymax = plt.axis()
                 ymin = 0.0
-                ymax = 8.0; nbins = 5        
+                #ymax = 8.0; nbins = 5        
+                ymax = 4.5; nbins = 5        
 
                 plt.axis((CEchangerange[0],CEchangerange[1],ymin,ymax))
                 plt.legend(loc=2,fontsize=9,frameon=False,handlelength=1.2)
