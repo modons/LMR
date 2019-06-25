@@ -430,7 +430,6 @@ class v_proxies(object):
             'Corals and Sclerosponges_d18O',
             'Corals and Sclerosponges_SrCa',
             'Corals and Sclerosponges_Rates',
-            'Corals and Sclerosponges_Composite',
             'Ice Cores_d18O',
             'Ice Cores_dD',
             'Ice Cores_Accumulation',
@@ -444,8 +443,9 @@ class v_proxies(object):
             'Marine Cores_uk37',
             'Bivalve_d18O',
             'Speleothems_d18O',
-            'Tree Rings_Temperature',
-            'Corals and Sclerosponges_Temperature',
+#            'Tree Rings_Temperature',
+#            'Corals and Sclerosponges_Temperature',
+#            'Corals and Sclerosponges_Composite',
             ]
 
         proxy_assim2 = {

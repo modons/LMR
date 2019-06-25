@@ -3280,6 +3280,462 @@ def read_gridded_data_cGENIE_model(data_dir,data_file,data_vars,outtimeavg,detre
 
 #==========================================================================================
 
+def read_gridded_data_cGENIE_equilibrium_runs(data_dir,data_file,data_vars,member_simuls=None):
+
+    datadict = {}
+
+    # Loop over state variables to load
+    for v in range(len(data_vars)):
+        vardef = list(data_vars.keys())[v]
+        data_file_read = data_file.replace('[vardef_template]', vardef)
+        
+        # Check if file exists
+        infile = data_dir + '/' + data_file_read
+        if not os.path.isfile(infile):
+            print('Error in specification of gridded dataset')
+            print('File ', infile, ' does not exist! - Exiting ...')
+            raise SystemExit()
+        else:
+            print('Reading file: ', infile)
+
+        # Get file content
+        data = Dataset(infile,'r')
+        
+        # Dimensions used to store the data
+        nc_dims = [dim for dim in data.dimensions]
+        dictdims = {}
+        for dim in nc_dims:
+            dictdims[dim] = len(data.dimensions[dim])
+            
+        # Define the name of the variable to extract from the variable definition (from namelist)
+        var_to_extract = vardef.split('_')[0]
+
+        # Query its dimensions
+        vardims = data.variables[var_to_extract].dimensions
+        nbdims  = len(vardims)
+        # names of variable dims
+        vardimnames = []
+        for d in vardims:
+            vardimnames.append(d)
+        
+        # put everything in lower case for homogeneity
+        vardimnames = [item.lower() for item in vardimnames]
+
+        # extract info on variable units
+        if hasattr(data.variables[var_to_extract], 'units'):
+            units = data.variables[var_to_extract].units
+        else:
+            units = None
+
+
+        # Get info about "ensemble" coordinate, here "run"
+        # ------------------------------------------------
+        if 'run' not in vardims:
+            raise SystemExit('In read_gridded_data_GENIE_equilibrium_runs: '
+                             'Variable does not have *run* as a dimension! Exiting!')
+        else:
+            # read in the run (ensemble) netCDF4.Variable
+            runIDs = data.variables['run'][:]
+
+                
+        # Query about ensemble members (aka time slices)
+        if 'member' in vardimnames:
+            indslice = vardimnames.index('member')
+            slicedims = data.variables['member'][:]
+            nbslice_file = len(slicedims)
+        elif 'slice' in vardimnames:
+            indslice = vardimnames.index('slice')
+            slicedims = data.variables['slice'][:]
+            nbslice_file = len(slicedims)
+        else:
+            indslice = None
+            slicedims = None
+            nbslice_file = 1
+
+        print('In data file: nbslice=', nbslice_file, 'indslice=', indslice)
+
+        # Selection of time slice(s)/ensemble simulations(s)
+        if 'slice' in list(dictdims.keys()):
+            varmem = 'slice'
+        elif 'member' in list(dictdims.keys()):
+            varmem = 'member'
+        else:
+            varmem = None
+        # boolean array indicating appropriate indices on first dimension of data array
+        if member_simuls is None:
+            indsmem = np.ones(dictdims[varmem],dtype=bool)
+        else:
+            indsmem = np.array([item in member_simuls for item in data.variables[varmem][:]])
+
+            # Sanity check
+            if np.sum(indsmem) == 0:
+                raise SystemExit('ERROR in read_gridded_data_GENIE_equilibrium_runs: '
+                                 'Specified ensemble/time slice simulations not found in the prior data.'
+                                 'Verify the << member_simuls >> parameter in your experiment configuration. '
+                                 'Exiting.')
+            
+            elif np.sum(indsmem) < len(member_simuls):
+                print('WARNING in read_gridded_data_GENIE_equilibrium_runs: '
+                      'At least one specified ensemble/time slice simulation has not been '
+                      'found in the prior data.')
+
+        nbslice = np.sum(indsmem)
+        print('User selection: nbslice=', nbslice)
+        
+            
+        # Get info about spatial coordinates
+        # ----------------------------------
+        # get rid of time and others in list of coordinates
+        varspacecoordnames = [item for item in vardims if item != 'time' and item != 'months'
+                              and item != 'slice' and item != 'member' and item != 'strlen' and item != 'run']
+        # remaining must be spatial dims
+        nbspacecoords = len(varspacecoordnames)
+        
+        if nbspacecoords == 0:
+            # data => simple time series
+            vartype = '0D:time series'
+            value = np.zeros([len(years)], dtype=float)
+            
+        elif nbspacecoords == 1:
+            # data => 1D data
+            if 'lat' in varspacecoordnames:
+                # latitudinally-averaged  variable
+                vartype = '1D:meridional' 
+                spacecoords_dict = OrderedDict()
+                spacecoords_dict['lat'] = data.variables['lat'][:]
+                
+        elif ((nbspacecoords == 2) or 
+            (nbspacecoords == 3 and 'plev' in vardims and dictdims['plev'] == 1)):
+            # data => 2D data
+
+            # get rid of plev (pressure level) in list
+            varspacecoordnames = [item for item in varspacecoordnames if item != 'plev'] 
+            # keep info/values on spatial coordinates in ordered dict
+            spacecoords_dict = OrderedDict()
+            for coord in varspacecoordnames:
+                spacecoords_dict[coord] = data.variables[coord][:]
+            
+            if 'lat' in spacecoords_dict.keys() and 'lon' in spacecoords_dict.keys():
+                vartype = '2D:horizontal'
+                #vlat  = data.variables['lat'][:]
+                #vlon  = data.variables['lon'][:]
+                
+            elif 'lat' in spacecoords_dict.keys() and 'lev' in spacecoords_dict.keys():
+                vartype = '2D:meridional_vertical'
+                #vlat  = data.variables['lat'][:]
+                #vlev  = data.variables['lev'][:]
+                
+            else:
+                print('In read_gridded_data_GENIE_equilibrium_runs: Cannot handle this variable yet! '
+                      '2D variable of unrecognized dimensions... Exiting!')
+                raise SystemExit(1)
+
+        else:
+            print('In read_gridded_data_GENIE_equilibrium_runs: Cannot handle this variable yet! '
+                  'Unrecognized array structure/dimensions... Exiting!')
+            raise SystemExit(1)
+
+
+        
+        # load data array
+        data_var = data.variables[var_to_extract]
+        print('Array dims :', vardims)
+        print('Array shape:', data_var.shape)
+
+        
+        
+        # --------------------------------------
+        # processing depending on variable type:
+        # --------------------------------------
+
+        # if 2D:horizontal variable
+        # -------------------------
+        if vartype == '2D:horizontal':
+
+            print('Type of variable:', vartype)
+            
+            # which spatial dim is lat & which is lon?
+            # -- in original array (from file)
+            indlatorig = vardims.index('lat')
+            indlonorig = vardims.index('lon')
+            # -- in array that will be the output of this function
+            indlat = list(spacecoords_dict.keys()).index('lat')
+            indlon = list(spacecoords_dict.keys()).index('lon')
+
+            print('indlat(orig)=', indlatorig, ' indlon(orig)=', indlonorig)            
+            print('indlat      =', indlat,     ' indlon      =', indlon)
+
+            nlat = data.dimensions['lat'].size
+            nlon = data.dimensions['lon'].size
+
+            vlat = spacecoords_dict['lat']
+            vlon = spacecoords_dict['lon']
+
+            # check grid & standardize grid orientation to lat=>[-90,90] & lon=>[0,360] if needed
+            
+            # are coordinates defined as 1d or 2d array?
+            spacevardims = len(vlat.shape)
+            if spacevardims == 1:
+                # 1D to 2D
+                varlat = np.array([vlat,]*nlon).transpose()
+                varlon = np.array([vlon,]*nlat)
+            else:
+                # 2D already
+                varlat = vlat
+                varlon = vlon
+
+            varlatdim = len(varlat.shape)
+            varlondim = len(varlon.shape)
+
+            
+            # Check if latitudes are defined in the [-90,90] domain
+            # and if longitudes are in the [0,360] domain
+            fliplat = None
+
+            # check for monotonically increasing or decreasing values
+            monotone_increase = np.all(np.diff(varlat[:,0]) > 0)
+            monotone_decrease = np.all(np.diff(varlat[:,0]) < 0)
+            if not monotone_increase and not monotone_decrease:
+                # funky grid
+                fliplat = False
+
+            if fliplat is None:
+                if varlatdim == 2: # 2D lat array
+                    if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
+                elif varlatdim == 1: # 1D lat array
+                    if varlat[0] > varlat[-1]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
+                else:
+                    raise SystemExit('In read_gridded_data_GENIE_equilibrium_runs: ERROR!')
+
+            if fliplat:
+                varlat = np.flipud(varlat)
+                # flip the data along the appropriate axis
+                tmp = np.flip(data_var, axis=indlatorig)
+                data_var = tmp
+            
+            
+            # Transform longitudes from [-180,180] domain to [0,360] domain if needed
+            # flip or roll along longitudes?
+            # This code assumes a possible longitude array structure as (example)
+            # [-175. -165. -155. ...,  155.  165.  175.] to be transformed to
+            # [   5.,   15.,   25., ...,  335.,  345.,  355.]
+            indneg = np.where(varlon[0,:] < 0)
+            nbneg = len(indneg[0])
+            varlon = np.roll(varlon,nbneg,axis=1)
+            # do same for data array
+            tmp = np.roll(data_var,nbneg,axis=3)
+            data_var = tmp
+                
+            # negative lon values to positive
+            indneg = np.where(varlon < 0)
+            if len(indneg) > 0: # if non-empty
+                varlon[indneg] = 360.0 + varlon[indneg]
+            # ---------------------------------------------------------------------------------
+
+            # Coords back into right arrays 
+            spacecoords_dict['lat'] = varlat
+            spacecoords_dict['lon'] = varlon
+            
+
+        # if 2D:meridional_vertical variable
+        # ----------------------------------
+        elif vartype == '2D:meridional_vertical':
+
+            print('Type of variable:', vartype)
+
+            # which spatial dim is lat and which is lev?
+            # -- in original array (from file)
+            indlatorig = vardims.index('lat')
+            indlevorig = vardims.index('lev')
+            # -- in array that will be the output of this function
+            indlat = list(spacecoords_dict.keys()).index('lat')
+            indlev = list(spacecoords_dict.keys()).index('lev')
+
+            print('indlat(orig)=', indlatorig, ' indlev(orig)=', indlevorig)            
+            print('indlat      =', indlat,     ' indlev      =', indlev)
+
+            nlat = data.dimensions['lat'].size
+            nlev = data.dimensions['lev'].size
+
+            vlat = spacecoords_dict['lat']
+            vlev = spacecoords_dict['lev']
+
+
+            # check grid & standardize grid orientation to lat=>[-90,90] if needed
+            
+            # are coordinates defined as 1d or 2d array?
+            spacevardims = len(vlat.shape)
+            if spacevardims == 1:
+                # 1D to 2D
+                varlat = np.array([vlat,]*nlev).transpose()
+                varlev = np.array([vlev,]*nlat)
+            else:
+                # 2D already
+                varlat = vlat
+                varlev = vlev
+
+            varlatdim = len(varlat.shape)
+            varlevdim = len(varlev.shape)
+
+
+            # Check if latitudes are defined in the [-90,90] domain
+            fliplat = None
+
+            # check for monotonically increasing or decreasing values
+            monotone_increase = np.all(np.diff(varlat[:,0]) > 0)
+            monotone_decrease = np.all(np.diff(varlat[:,0]) < 0)
+            if not monotone_increase and not monotone_decrease:
+                # funky grid
+                fliplat = False
+                
+            if fliplat is None:
+                if varlatdim == 2: # 2D lat array
+                    if varlat[0,0] > varlat[-1,0]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
+                elif varlatdim == 1: # 1D lat array
+                    if varlat[0] > varlat[-1]: # lat not as [-90,90] => array upside-down
+                        fliplat = True
+                    else:
+                        fliplat = False
+                else:
+                    print('In read_gridded_data_ensemble_runs: ERROR!')
+                    raise SystemExit(1)
+
+            if fliplat:
+                varlat = np.flipud(varlat)
+                # flip the data along the appropriate axis
+                tmp = np.flip(data_var, axis=indlatorig)
+                data_var = tmp
+                
+
+            # Back into right arrays
+            spacecoords_dict['lat'] = varlat
+            spacecoords_dict['lev'] = varlev
+
+                
+        # if 1D:meridional (latitudinally-averaged) variable
+        # --------------------------------------------------
+        elif vartype == '1D:meridional':
+
+            print('Type of variable:', vartype)
+            
+            # which dim is lat?
+            # -- in original array (from file)
+            indlatorig = vardims.index('lat')
+            # -- in array that will be the output of this function
+            indlat = list(spacecoords_dict.keys()).index('lat')
+
+            print('indlat(orig)=', indlatorig, ' indlon(orig)=', indlonorig)            
+            print('indlat      =', indlat,     ' indlon      =', indlon)
+
+            nlat = data.dimensions['lat'].size
+            vlat = spacecoords_dict['lat']
+
+            # check grid & standardize grid orientation to lat=>[-90,90] if needed
+            fliplat = None
+            # check for monotonically increasing or decreasing values
+            monotone_increase = np.all(np.diff(vlat) > 0)
+            monotone_decrease = np.all(np.diff(vlat) < 0)
+            if not monotone_increase and not monotone_decrease:
+                # funky grid
+                fliplat = False
+
+            if fliplat is None:
+                if vlat[0] > vlat[-1]: # lat not as [-90,90] => array upside-down
+                    fliplat = True
+
+            if fliplat:
+                vlat = np.flipud(vlat)
+                # flip the data along the appropriate axis
+                tmp = np.flip(data_var, axis=indlatorig)
+                data_var = tmp
+
+            # Back into right array
+            spacecoords_dict['lat'] = vlat
+
+
+        # ------------------------------------
+        # ====== other data processing ======
+        
+        value = np.copy(data_var)
+
+        # climatology (mean over the various model runs (runIDs)
+        climo = np.mean(value, axis=1)
+
+        
+        for k in [i for i,v in enumerate(indsmem) if v]:    
+            print('run=', data.variables[varmem][k], var_to_extract, ': Global: mean=',
+                  np.nanmean(value[k,:]), ' , std-dev=', np.nanstd(value[k,:]))
+        
+                
+        # Check array for mask and/or invalid data
+        # If variable with mask, making sure mask is carried forward with
+        # NaN as the missing flag. If no mask and invalid data, add mask.
+        if hasattr(value,'mask'):
+            value[value.mask] = np.nan
+            value.mask = np.isnan(value)
+        elif np.isnan(value).any():
+            value = np.ma.masked_invalid(value)
+
+        
+        # ------------
+        # For output :
+        # ------------
+        # Dictionary of dictionaries
+        # ex. data access : datadict['tas_sfc_Amon']['years'] => arrays containing years of the 'tas' data
+        #                   datadict['tas_sfc_Amon']['value'] => array of 'tas' data values etc ...
+        d = {}
+        d['vartype'] = vartype
+        d['units']   = units
+
+        # actual indices of selected slices
+        imem, = np.where(indsmem)
+        
+        if nbslice > 1:
+            runIDs_all = np.tile(runIDs,nbslice)
+            # 1st slice
+            value_all = value[imem[0],:]
+            # append other selected slices            
+            for mem in range(1,nbslice):
+                value_all = np.append(value_all,value[imem[mem],:],axis=0)
+                
+            d['years'] = runIDs_all
+            d['value'] = value_all
+        else:
+            d['years']   = runIDs
+            d['value']   = value[imem[0],:] # return only the selected slices/ensemble simulations
+        
+        d['climo']   = climo[indsmem,:] # return only the selected slices/ensemble simuls.
+        d['member_simuls'] = [str(item) for item in data.variables[varmem][indsmem]] # name of selected slices/ensemble simuls. as list
+        nruns = len(runIDs)
+        indsYe=[]
+        for i in imem:
+            indsYe.extend(np.arange(i*nruns,i*nruns+nruns))
+        d['member_simuls_YeIndices'] = indsYe
+
+        
+        if vartype != '0D:time series':
+            d['spacecoords'] = tuple(spacecoords_dict.keys())
+            for coord in tuple(spacecoords_dict.keys()):
+                d[coord] = spacecoords_dict[coord]
+        else:
+            d['spacecoords'] = None
+
+        datadict[vardef] = d
+
+    return datadict
+    
+
+#==========================================================================================
+
 def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
                                     detrend=None,anom_ref=None,member_simuls=None):
 
@@ -3334,7 +3790,7 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
 
         # One of the dims has to be time!
         if 'time' not in vardims:
-            raise SystemExit('In read_gridded_data_equilibrium_runs: '
+            raise SystemExit('In read_gridded_data_ensemble_runs: '
                              'Variable does not have *time* as a dimension! Exiting!')
         else:
             # Query information on time included in file
@@ -3349,7 +3805,7 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
             elif len(timedims) == 2 and 'time' in timedims and 'months' in timedims:
                 timetype = 'time_months'
             else:
-                raise SystemExit('In read_gridded_data_equilibrium_runs: '
+                raise SystemExit('In read_gridded_data_ensemble_runs: '
                                  'Unrecognized time coordinates. Exiting.')
             
             # read in the time netCDF4.Variable
@@ -3529,12 +3985,12 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
                 #vlev  = data.variables['lev'][:]
                 
             else:
-                print('In read_gridded_data_equilibrium_runs: Cannot handle this variable yet! '
+                print('In read_gridded_data_ensemble_runs: Cannot handle this variable yet! '
                       '2D variable of unrecognized dimensions... Exiting!')
                 raise SystemExit(1)
 
         else:
-            print('In read_gridded_data_equilibrium_runs: Cannot handle this variable yet! '
+            print('In read_gridded_data_ensemble_runs: Cannot handle this variable yet! '
                   'Unrecognized array structure/dimensions... Exiting!')
             raise SystemExit(1)
 
@@ -3614,7 +4070,7 @@ def read_gridded_data_ensemble_runs(data_dir,data_file,data_vars,outtimeavg,
                     else:
                         fliplat = False
                 else:
-                    print('In read_gridded_data_TraCE21ka: ERROR!')
+                    print('In read_gridded_data_ensemble_runs: ERROR!')
                     raise SystemExit(1)
 
             

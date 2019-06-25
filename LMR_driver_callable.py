@@ -193,8 +193,8 @@ def LMR_driver_callable(cfg=None):
     # spans the actual time span that we look for proxies to average together.
     proxy_lookup_window = [recon_period[0]-recon_timescale//2,recon_period[1]+recon_timescale//2]
     prox_manager = LMR_proxy.ProxyManager(cfg, proxy_lookup_window)
-    type_site_assim = prox_manager.assim_ids_by_group
-
+    type_site_assim = prox_manager.assim_ids_by_group    
+    
     if verbose > 3:
         print('Assimilating proxy types/sites:', type_site_assim)
 
@@ -401,7 +401,7 @@ def LMR_driver_callable(cfg=None):
                     Ye_eval_coords[k, :] = np.asarray([proxy.lat, proxy.lon], dtype=np.float64)
 
 
-        # check on validity of the Ye (assimilated and withheld values
+        # check on validity of the Ye (assimilated and withheld) values 
         invalid_Ye = []
         for k, proxy in enumerate(prox_manager.sites_assim_proxy_objs()):
             if np.isnan(Ye_assim[k]).any():
@@ -715,6 +715,7 @@ def LMR_driver_callable(cfg=None):
                  nhmt_ensemble=nhmt_ensemble,
                  shmt_ensemble=shmt_ensemble,
                  recon_times=recon_times,
+                 recon_intervals=prox_manager.info_intervals,
                  recon_months=core.recon_months)
 
         # save global mean temperature history and the proxies assimilated
@@ -722,7 +723,9 @@ def LMR_driver_callable(cfg=None):
                'assimilated proxies...'))
         filen = join(workdir, 'gmt')
         np.savez(filen, gmt_save=gmt_save, nhmt_save=nhmt_save, shmt_save=shmt_save,
-                 recon_times=recon_times, recon_months=core.recon_months,
+                 recon_times=recon_times,
+                 recon_intervals=prox_manager.info_intervals,
+                 recon_months=core.recon_months,
                  apcount=assim_proxy_count,
                  tpcount=assim_proxy_count)
 
@@ -749,7 +752,7 @@ def LMR_driver_callable(cfg=None):
         print('=====================================================')
 
     # TODO: best method for Ye saving?
-    return prox_manager.sites_assim_proxy_objs(), prox_manager.sites_eval_proxy_objs()
+    return prox_manager.info_intervals, prox_manager.sites_assim_proxy_objs(), prox_manager.sites_eval_proxy_objs()
 # ------------------------------------------------------------------------------
 # --------------------------- end of main code ---------------------------------
 # ------------------------------------------------------------------------------
